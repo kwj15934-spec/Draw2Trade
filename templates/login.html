@@ -163,10 +163,27 @@
       margin-top: 12px;
       text-align: center;
     }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 20px;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .btn-back:hover { color: #d1d4dc; }
   </style>
 </head>
 <body>
   <div class="login-card">
+    <a href="/" class="btn-back">&#8592; 메인으로</a>
     <div class="brand">Draw2Trade</div>
     <div class="subtitle">패턴 유사도 기반 종목 검색</div>
 
