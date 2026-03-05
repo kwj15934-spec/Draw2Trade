@@ -520,7 +520,7 @@
     return filtered && filtered.length >= 2 ? filtered : null;
   }
 
-  // ── 자동 추세선: 선형 회귀 ────────────────────────────────────────────────
+  // ── 자동 꺾은선: 실제 종가 폴리라인 ──────────────────────────────────────
   function autoDrawTrend() {
     var filtered = getFilteredCandles();
     if (!filtered) {
@@ -529,41 +529,28 @@
     }
     var n = filtered.length;
 
-    // 선형 회귀 (종가 기준)
-    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    for (var i = 0; i < n; i++) {
-      sumX  += i;
-      sumY  += filtered[i].close;
-      sumXY += i * filtered[i].close;
-      sumXX += i * i;
-    }
-    var denom     = (n * sumXX - sumX * sumX) || 1;
-    var slope     = (n * sumXY - sumX * sumY) / denom;
-    var intercept = (sumY - slope * sumX) / n;
-
-    var startPrice = intercept;
-    var endPrice   = intercept + slope * (n - 1);
-
     // 해당 기간이 보이도록 스크롤
     D2T.chart.timeScale().setVisibleRange({ from: filtered[0].time, to: filtered[n - 1].time });
 
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        var x0 = D2T.chart.timeScale().timeToCoordinate(filtered[0].time);
-        var y0 = D2T.series.priceToCoordinate(startPrice);
-        var x1 = D2T.chart.timeScale().timeToCoordinate(filtered[n - 1].time);
-        var y1 = D2T.series.priceToCoordinate(endPrice);
+        var pts = [];
+        for (var i = 0; i < n; i++) {
+          var x = D2T.chart.timeScale().timeToCoordinate(filtered[i].time);
+          var y = D2T.series.priceToCoordinate(filtered[i].close);
+          if (x != null && y != null) pts.push({ x: x, y: y });
+        }
 
-        if (x0 == null || y0 == null || x1 == null || y1 == null) {
+        if (pts.length < 2) {
           showStatus('좌표 변환 실패. 차트에 해당 기간이 있는지 확인하세요.', 'error');
           return;
         }
 
         pushHistory();
-        var pts = polylineToPoints([{ x: x0, y: y0 }, { x: x1, y: y1 }]);
-        if (pts) drawPoints = pts;
+        var resampled = polylineToPoints(pts);
+        if (resampled) drawPoints = resampled;
         redraw();
-        showStatus('추세선 자동 완료 (' + n + '봉 회귀선). 검색 버튼을 누르세요.', '');
+        showStatus('꺾은선 자동 완료 (' + n + '봉). 검색 버튼을 누르세요.', '');
       });
     });
   }
