@@ -61,10 +61,10 @@
   firebase.initializeApp(cfg);
   var auth = firebase.auth();
 
-  // Firebase 준비 완료 → Google 버튼 활성화 (SDK 로드 전 클릭 차단 해제)
+  // Firebase 준비 완료 → Google 버튼 활성화
   ['btn-google-login', 'btn-google-signup'].forEach(function(id) {
     var btn = document.getElementById(id);
-    if (btn) btn.disabled = false;
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   });
 
   // ── 3. 백엔드 로그인 ─────────────────────────────────────────────────────
