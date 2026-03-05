@@ -18,11 +18,14 @@
   var PATTERN_LEN = 150;
 
   // ── 상태 ──────────────────────────────────────────────────────────────────
-  var drawPoints   = [];   // 완성된 [{x,y}] — 패턴 검색에 사용
-  var trendPoints  = [];   // 추세선 작업 중 누적 점들
-  var linePoints   = [];   // 직선 작업 중 [시작점, 끝점?]
-  var lastMousePos = null; // 직선/추세선 프리뷰용
-  var activeTool   = null; // 'pen' | 'trend' | 'line' | null
+  var drawPoints      = [];   // 완성된 [{x,y}] — 패턴 검색에 사용
+  var trendPoints     = [];   // 추세선 작업 중 누적 점들
+  var linePoints      = [];   // 직선 작업 중 [시작점, 끝점?]
+  var parallelPoints  = [];   // 평행선: [p1, p2] = 1번선
+  var parallelChannels = [];  // 완성된 평행선 채널 [{p1,p2,p3,p4}]
+  var drawHistory     = [];   // 실행취소 스택 [{drawPoints, parallelChannels}]
+  var lastMousePos = null;    // 직선/추세선/평행선 프리뷰용
+  var activeTool   = null;    // 'pen' | 'trend' | 'line' | 'parallel' | null
   var isPenDown    = false;
   var matchPoints    = null; // 유사 종목 매칭 곡선 (150pt 정규화 배열, 0~1)
   var drawNormalized = null; // 검색에 사용된 내 패턴의 150pt 정규화 배열 (비교 모드용)
@@ -57,9 +60,10 @@
 
   // ── 드로잉 도구 활성화 ────────────────────────────────────────────────────
   function setTool(tool) {
-    activeTool   = tool;
-    trendPoints  = [];
-    linePoints   = [];
+    activeTool      = tool;
+    trendPoints     = [];
+    linePoints      = [];
+    parallelPoints  = [];
 
     document.querySelectorAll('.draw-tool-btn').forEach(function (btn) {
       btn.classList.remove('active');
@@ -71,8 +75,9 @@
       syncCanvas();
       canvas.style.pointerEvents = 'auto';
       canvas.style.cursor = 'crosshair';
-      if (tool === 'trend') showStatus('클릭: 점 추가 · Ctrl+클릭: 완료 · ESC: 취소', '');
-      else if (tool === 'line') showStatus('클릭: 시작점 · 클릭: 끝점 · ESC: 취소', '');
+      if (tool === 'trend')    showStatus('클릭: 점 추가 · Enter/Ctrl+클릭: 완료 · ESC: 취소', '');
+      else if (tool === 'line')     showStatus('클릭: 시작점 → 끝점 · ESC: 취소', '');
+      else if (tool === 'parallel') showStatus('클릭: 1번선 시작점', '');
       else showStatus('', '');
     } else {
       canvas.style.pointerEvents = 'none';
@@ -235,6 +240,90 @@
       }
     }
 
+    // ── 완성된 평행선 채널 ──────────────────────────────────────────────────
+    parallelChannels.forEach(function (ch) {
+      ctx.strokeStyle = '#4fc3f7';
+      ctx.lineWidth   = 2;
+      ctx.lineCap     = 'round';
+      ctx.setLineDash([]);
+      ctx.shadowColor = 'rgba(79,195,247,0.3)';
+      ctx.shadowBlur  = 4;
+
+      ctx.beginPath();
+      ctx.moveTo(ch.p1.x, ch.p1.y);
+      ctx.lineTo(ch.p2.x, ch.p2.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(ch.p3.x, ch.p3.y);
+      ctx.lineTo(ch.p4.x, ch.p4.y);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle  = 'rgba(79,195,247,0.07)';
+      ctx.beginPath();
+      ctx.moveTo(ch.p1.x, ch.p1.y);
+      ctx.lineTo(ch.p2.x, ch.p2.y);
+      ctx.lineTo(ch.p4.x, ch.p4.y);
+      ctx.lineTo(ch.p3.x, ch.p3.y);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // ── 작업 중인 평행선 프리뷰 ─────────────────────────────────────────────
+    if (activeTool === 'parallel' && parallelPoints.length >= 1) {
+      ctx.strokeStyle = '#4fc3f7';
+      ctx.lineWidth   = 2;
+      ctx.lineCap     = 'round';
+      ctx.setLineDash([6, 4]);
+
+      ctx.beginPath();
+      ctx.moveTo(parallelPoints[0].x, parallelPoints[0].y);
+      if (parallelPoints.length >= 2) {
+        ctx.lineTo(parallelPoints[1].x, parallelPoints[1].y);
+      } else if (lastMousePos) {
+        ctx.lineTo(lastMousePos.x, lastMousePos.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      parallelPoints.forEach(function (p) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fill();
+      });
+
+      // 1번선 완료 후 2번선 프리뷰
+      if (parallelPoints.length === 2 && lastMousePos) {
+        var pp1 = parallelPoints[0], pp2 = parallelPoints[1];
+        var pdx = pp2.x - pp1.x, pdy = pp2.y - pp1.y;
+        var plen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+        var pnx = -pdy / plen, pny = pdx / plen;
+        var pdist = (lastMousePos.x - pp1.x) * pnx + (lastMousePos.y - pp1.y) * pny;
+        var pp3 = { x: pp1.x + pdist * pnx, y: pp1.y + pdist * pny };
+        var pp4 = { x: pp2.x + pdist * pnx, y: pp2.y + pdist * pny };
+
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth   = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pp3.x, pp3.y);
+        ctx.lineTo(pp4.x, pp4.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(79,195,247,0.07)';
+        ctx.beginPath();
+        ctx.moveTo(pp1.x, pp1.y);
+        ctx.lineTo(pp2.x, pp2.y);
+        ctx.lineTo(pp4.x, pp4.y);
+        ctx.lineTo(pp3.x, pp3.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
     // ③ 작업 중인 추세선 (점선 프리뷰)
     if (trendPoints.length >= 1) {
       ctx.strokeStyle = '#ff9944';
@@ -309,12 +398,15 @@
 
   // ── 지우기 ────────────────────────────────────────────────────────────────
   window.clearDraw = function () {
-    drawPoints     = [];
-    trendPoints    = [];
-    linePoints     = [];
-    matchPoints    = null;
-    drawNormalized = null;
-    _resultMatches = [];
+    drawPoints       = [];
+    trendPoints      = [];
+    linePoints       = [];
+    parallelPoints   = [];
+    parallelChannels = [];
+    drawHistory      = [];
+    matchPoints      = null;
+    drawNormalized   = null;
+    _resultMatches   = [];
     if (D2T && D2T.series) D2T.series.setMarkers([]);
     if (D2T) D2T.matchPeriodData = null;
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -393,6 +485,50 @@
     return bins.map(function (y) { return 1 - (y - mn) / (mx - mn); });
   }
 
+  // ── 실행취소 히스토리 ─────────────────────────────────────────────────────
+  function pushHistory() {
+    drawHistory.push({
+      drawPoints:       drawPoints.slice(),
+      parallelChannels: parallelChannels.slice(),
+    });
+    if (drawHistory.length > 30) drawHistory.shift();
+  }
+
+  function doUndo() {
+    if (drawHistory.length === 0) return;
+    var prev = drawHistory.pop();
+    drawPoints       = prev.drawPoints;
+    parallelChannels = prev.parallelChannels;
+    trendPoints = []; linePoints = []; parallelPoints = [];
+    redraw();
+    showStatus('실행 취소', '');
+  }
+
+  // ── 평행선 채널 완료 처리 ─────────────────────────────────────────────────
+  function finalizeParallel(mousePos) {
+    if (parallelPoints.length < 2 || !mousePos) return;
+    var p1 = parallelPoints[0], p2 = parallelPoints[1];
+    var dx = p2.x - p1.x, dy = p2.y - p1.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var nx = -dy / len, ny = dx / len; // 수직 단위벡터
+    var dist = (mousePos.x - p1.x) * nx + (mousePos.y - p1.y) * ny;
+    var p3 = { x: p1.x + dist * nx, y: p1.y + dist * ny };
+    var p4 = { x: p2.x + dist * nx, y: p2.y + dist * ny };
+
+    pushHistory();
+    parallelChannels.push({ p1: p1, p2: p2, p3: p3, p4: p4 });
+
+    // 중간선을 drawPoints로 (패턴 검색에 사용)
+    var mid1 = { x: (p1.x + p3.x) / 2, y: (p1.y + p3.y) / 2 };
+    var mid2 = { x: (p2.x + p4.x) / 2, y: (p2.y + p4.y) / 2 };
+    var pts = polylineToPoints([mid1, mid2]);
+    if (pts) drawPoints = pts;
+
+    parallelPoints = [];
+    redraw();
+    showStatus('평행선 완료. 검색 버튼을 누르세요.', '');
+  }
+
   // ── 직선 완료 처리 ────────────────────────────────────────────────────────
   function finalizeLine(endPoint) {
     if (!endPoint && linePoints.length < 2) return;
@@ -402,6 +538,7 @@
       redraw();
       return;
     }
+    pushHistory();
     var pts = polylineToPoints(linePoints);
     if (pts) drawPoints = pts;
     linePoints = [];
@@ -417,6 +554,7 @@
       redraw();
       return;
     }
+    pushHistory();
     var pts = polylineToPoints(trendPoints);
     if (pts) drawPoints = pts;
     trendPoints = [];
@@ -440,6 +578,7 @@
     var p = getCanvasPos(e);
 
     if (activeTool === 'pen') {
+      pushHistory();
       isPenDown  = true;
       drawPoints = [p];
       redraw();
@@ -458,6 +597,15 @@
       } else {
         finalizeLine(p);
       }
+    } else if (activeTool === 'parallel') {
+      if (parallelPoints.length < 2) {
+        parallelPoints.push(p);
+        redraw();
+        if (parallelPoints.length === 1) showStatus('클릭: 1번선 끝점', '');
+        if (parallelPoints.length === 2) showStatus('마우스로 채널 너비 조절 후 클릭', '');
+      } else {
+        finalizeParallel(p);
+      }
     }
   }
 
@@ -467,8 +615,10 @@
     if (activeTool === 'pen' && isPenDown) {
       drawPoints.push(p);
       redraw();
-    } else if ((activeTool === 'line' && linePoints.length === 1) || (activeTool === 'trend' && trendPoints.length >= 1)) {
-      redraw(); // 직선/추세선 프리뷰 갱신
+    } else if ((activeTool === 'line' && linePoints.length === 1) ||
+               (activeTool === 'trend' && trendPoints.length >= 1) ||
+               (activeTool === 'parallel' && parallelPoints.length >= 1)) {
+      redraw(); // 직선/추세선/평행선 프리뷰 갱신
     }
   }
 
@@ -721,17 +871,56 @@
     canvas.addEventListener('mouseup',    onMouseUp);
     canvas.addEventListener('mouseleave', onMouseUp);
 
-    // ESC: 작업 중인 추세선/직선 취소
+    // ── 키보드 단축키 ──────────────────────────────────────────────────────
     document.addEventListener('keydown', function (e) {
-      if (e.key !== 'Escape') return;
-      if (activeTool === 'trend' && trendPoints.length > 0) {
-        trendPoints = [];
-        redraw();
-        showStatus('클릭: 점 추가 · Ctrl+클릭: 완료 · ESC: 취소', '');
-      } else if (activeTool === 'line' && linePoints.length > 0) {
-        linePoints = [];
-        redraw();
-        showStatus('클릭: 시작점 · 클릭: 끝점 · ESC: 취소', '');
+      // 입력 필드에서는 무시
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+      // ESC: 작업 취소 → 도구 없을 때 도구 해제
+      if (e.key === 'Escape') {
+        if (trendPoints.length > 0) {
+          trendPoints = []; redraw();
+          showStatus('클릭: 점 추가 · Enter/Ctrl+클릭: 완료 · ESC: 취소', '');
+        } else if (linePoints.length > 0) {
+          linePoints = []; redraw();
+          showStatus('클릭: 시작점 → 끝점 · ESC: 취소', '');
+        } else if (parallelPoints.length > 0) {
+          parallelPoints = []; redraw();
+          showStatus('클릭: 1번선 시작점', '');
+        } else {
+          setTool(null);
+        }
+        return;
+      }
+
+      // Delete / Backspace: 전체 드로잉 삭제
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        window.clearDraw();
+        setTool(null);
+        return;
+      }
+
+      // Ctrl+Z: 실행취소
+      if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        doUndo();
+        return;
+      }
+
+      // Enter: 추세선 완료
+      if (e.key === 'Enter') {
+        if (activeTool === 'trend' && trendPoints.length >= 2) finalizeTrend(null);
+        return;
+      }
+
+      // 도구 단축키 (Ctrl/Alt/Meta 없을 때만)
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      switch (e.key.toLowerCase()) {
+        case 'p': setTool(activeTool === 'pen'      ? null : 'pen');      break;
+        case 't': setTool(activeTool === 'trend'    ? null : 'trend');    break;
+        case 'l': setTool(activeTool === 'line'     ? null : 'line');     break;
+        case 'c': setTool(activeTool === 'parallel' ? null : 'parallel'); break;
       }
     });
 

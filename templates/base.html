@@ -314,12 +314,22 @@
       min-height: 0;
     }
 
+    #vol-resizer {
+      height: 5px;
+      flex-shrink: 0;
+      background: #2a2e39;
+      cursor: row-resize;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    #vol-resizer:hover, #vol-resizer.dragging { background: #ff6b35; }
+
     #volume-container {
       height: 100px;
       flex-shrink: 0;
-      border-top: 1px solid #2a2e39;
     }
 
+    #chart-wrapper.blank-mode ~ #vol-resizer,
     #chart-wrapper.blank-mode ~ #volume-container {
       display: none;
     }

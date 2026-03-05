@@ -79,9 +79,15 @@
     id="tool-line"
     class="btn-d2t draw-tool-btn"
     data-tool="line"
-    title="직선: 시작점 클릭 → 끝점 클릭"
+    title="직선 (L): 시작점 클릭 → 끝점 클릭"
   >− 직선</button>
-  <button id="btn-clear" class="btn-d2t btn-d2t-danger" title="드로잉 지우기">지우기</button>
+  <button
+    id="tool-parallel"
+    class="btn-d2t draw-tool-btn"
+    data-tool="parallel"
+    title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭"
+  >⟺ 평행선</button>
+  <button id="btn-clear" class="btn-d2t btn-d2t-danger" title="드로잉 지우기 (Delete)">지우기</button>
 
   <div class="vr"></div>
 
@@ -135,6 +141,9 @@
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
     </div>
+
+    <!-- 거래량 패널 리사이저 -->
+    <div id="vol-resizer" title="드래그하여 거래량 패널 크기 조절"></div>
 
     <!-- 거래량 패널 -->
     <div id="volume-container"></div>

@@ -508,6 +508,42 @@
 
     initChart();
 
+    // ── 거래량 패널 리사이저 ────────────────────────────────────────────────
+    (function () {
+      var resizer   = document.getElementById('vol-resizer');
+      var volCont   = document.getElementById('volume-container');
+      var chartWrap = document.getElementById('chart-wrapper');
+      if (!resizer || !volCont || !chartWrap) return;
+
+      var isDragging = false, startY = 0, startH = 0;
+
+      resizer.addEventListener('mousedown', function (e) {
+        isDragging = true;
+        startY = e.clientY;
+        startH = volCont.offsetHeight;
+        resizer.classList.add('dragging');
+        document.body.style.cursor     = 'row-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!isDragging) return;
+        var newH = Math.max(40, Math.min(320, startH - (e.clientY - startY)));
+        volCont.style.height = newH + 'px';
+        if (D2T.volumeChart) D2T.volumeChart.resize(volCont.offsetWidth, newH);
+        if (D2T.chart) D2T.chart.resize(chartWrap.offsetWidth, chartWrap.offsetHeight);
+      });
+
+      document.addEventListener('mouseup', function () {
+        if (!isDragging) return;
+        isDragging = false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor     = '';
+        document.body.style.userSelect = '';
+      });
+    })();
+
     // 카테고리/검색 UI 초기 표시 (KR·US 모두)
     var catGroup = document.getElementById('category-group');
     var searchInp = document.getElementById('ticker-search');
