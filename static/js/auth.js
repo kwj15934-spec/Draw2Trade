@@ -5,8 +5,10 @@
  *   1. /api/auth/config → Firebase 공개 설정 로드
  *   2. Firebase SDK CDN 동적 로드 (compat v10)
  *   3. Google / Email 로그인 → ID 토큰 취득
- *   4. POST /api/auth/login → 세션 쿠키 발급
- *   5. window.location.href = '/'
+ *   4. POST /api/auth/login → 승인 상태 확인
+ *      - approved → /
+ *      - pending  → /pending
+ *      - rejected → 에러 메시지
  */
 (async function () {
   var errEl = document.getElementById('error-msg');
@@ -70,7 +72,15 @@
       var data = await res.json().catch(function() { return {}; });
       throw new Error(data.detail || '로그인 실패 (HTTP ' + res.status + ')');
     }
-    window.location.href = '/';
+    var data = await res.json();
+
+    if (data.status === 'approved') {
+      window.location.href = '/';
+    } else if (data.status === 'pending') {
+      window.location.href = '/pending';
+    } else if (data.status === 'rejected') {
+      throw new Error('가입이 거절되었습니다. 관리자에게 문의하세요.');
+    }
   }
 
   // ── Google 로그인 / 가입 (공통 핸들러) ─────────────────────────────────
@@ -120,6 +130,8 @@
           msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
         } else if (e.code === 'auth/too-many-requests') {
           msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.';
+        } else if (e.message) {
+          msg = e.message;
         }
         showError(msg);
         setLoading('btn-email-login', false);
@@ -162,6 +174,8 @@
           msg = '유효하지 않은 이메일 주소입니다.';
         } else if (e.code === 'auth/weak-password') {
           msg = '비밀번호가 너무 약합니다. 6자 이상으로 설정하세요.';
+        } else if (e.message) {
+          msg = e.message;
         }
         showError(msg);
         setLoading('btn-signup', false);

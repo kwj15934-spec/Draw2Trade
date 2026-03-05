@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 - Draw2Trade</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+      background: #0f1117;
+      color: #d1d4dc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid #1e2130;
+      background: #1a1d2e;
+    }
+
+    .brand { font-size: 18px; font-weight: 700; color: #ff6b35; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    .btn-home, .btn-logout {
+      background: none;
+      border: 1px solid #2a2e39;
+      border-radius: 5px;
+      color: #888;
+      font-size: 12px;
+      padding: 6px 14px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-home:hover, .btn-logout:hover { border-color: #ff6b35; color: #d1d4dc; }
+
+    main { max-width: 860px; margin: 40px auto; padding: 0 24px 60px; }
+
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+    .sub { font-size: 12px; color: #555; margin-bottom: 28px; }
+
+    /* 탭 필터 */
+    .filters { display: flex; gap: 8px; margin-bottom: 20px; }
+    .filter-btn {
+      background: none;
+      border: 1px solid #2a2e39;
+      border-radius: 20px;
+      color: #666;
+      font-size: 12px;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn.active { border-color: #ff6b35; color: #ff6b35; background: rgba(255,107,53,.08); }
+
+    /* 유저 카드 */
+    .user-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #1a1d2e;
+      border: 1px solid #2a2e39;
+      border-radius: 8px;
+      padding: 14px 18px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #2a2e39;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-email { font-size: 11px; color: #666; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-date { font-size: 10px; color: #444; margin-top: 3px; }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .status-pending  { background: rgba(240,165,0,.12);  color: #f0a500; }
+    .status-approved { background: rgba(38,166,91,.12);  color: #26a65b; }
+    .status-rejected { background: rgba(239,83,80,.12);  color: #ef5350; }
+
+    .actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .btn-approve, .btn-reject {
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .btn-approve { background: #26a65b; color: #fff; }
+    .btn-reject  { background: #ef5350; color: #fff; }
+    .btn-approve:hover, .btn-reject:hover { opacity: 0.82; }
+    .btn-approve:disabled, .btn-reject:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .empty { text-align: center; color: #444; font-size: 13px; padding: 48px 0; }
+    .error-bar { background: rgba(239,83,80,.12); border: 1px solid #ef5350; color: #ef5350;
+                 border-radius: 6px; padding: 10px 16px; margin-bottom: 20px; font-size: 12px; display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Draw2Trade</div>
+    <div class="header-right">
+      <a href="/" class="btn-home">메인으로</a>
+      <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>회원 관리</h1>
+    <div class="sub">가입 신청을 검토하고 승인 또는 거절하세요.</div>
+
+    <div class="error-bar" id="error-bar"></div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="pending">대기 중</button>
+      <button class="filter-btn" data-filter="approved">승인됨</button>
+      <button class="filter-btn" data-filter="rejected">거절됨</button>
+    </div>
+
+    <div class="user-list" id="user-list">
+      <div class="empty">로딩 중...</div>
+    </div>
+  </main>
+
+  <script>
+    var currentFilter = 'all';
+    var allUsers = [];
+
+    function showError(msg) {
+      var bar = document.getElementById('error-bar');
+      bar.textContent = msg;
+      bar.style.display = msg ? 'block' : 'none';
+    }
+
+    function statusLabel(s) {
+      return s === 'pending' ? '대기 중' : s === 'approved' ? '승인됨' : '거절됨';
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function renderUsers() {
+      var list = document.getElementById('user-list');
+      var filtered = currentFilter === 'all' ? allUsers : allUsers.filter(function(u) { return u.status === currentFilter; });
+
+      if (!filtered.length) {
+        list.innerHTML = '<div class="empty">해당 유저가 없습니다.</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(function(u) {
+        var isPending = u.status === 'pending';
+        return '<div class="user-card" data-uid="' + u.uid + '">' +
+          (u.picture ? '<img class="avatar" src="' + u.picture + '" onerror="this.style.display=\'none\'">' : '<div class="avatar"></div>') +
+          '<div class="user-info">' +
+            '<div class="user-name">' + (u.name || '(이름 없음)') + '</div>' +
+            '<div class="user-email">' + (u.email || '') + '</div>' +
+            '<div class="user-date">' + formatDate(u.created_at) + ' 가입 신청</div>' +
+          '</div>' +
+          '<span class="status-badge status-' + u.status + '">' + statusLabel(u.status) + '</span>' +
+          '<div class="actions">' +
+            '<button class="btn-approve" ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'approve\')">승인</button>' +
+            '<button class="btn-reject"  ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'reject\')">거절</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function handleAction(uid, action) {
+      showError('');
+      var card = document.querySelector('[data-uid="' + uid + '"]');
+      if (card) {
+        card.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+      }
+
+      try {
+        var res = await fetch('/api/admin/' + action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: uid }),
+        });
+        if (!res.ok) {
+          var d = await res.json().catch(function() { return {}; });
+          throw new Error(d.detail || '처리 실패');
+        }
+        // 로컬 데이터 업데이트
+        var user = allUsers.find(function(u) { return u.uid === uid; });
+        if (user) user.status = action === 'approve' ? 'approved' : 'rejected';
+        renderUsers();
+      } catch (e) {
+        showError(e.message);
+        if (card) {
+          card.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+        }
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        var res = await fetch('/api/admin/users');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (res.status === 403) {
+          document.getElementById('user-list').innerHTML = '<div class="empty">관리자 권한이 없습니다.</div>';
+          return;
+        }
+        var data = await res.json();
+        allUsers = data.users || [];
+        renderUsers();
+      } catch (e) {
+        showError('유저 목록을 불러오지 못했습니다.');
+      }
+    }
+
+    // 필터 버튼
+    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderUsers();
+      });
+    });
+
+    // 로그아웃
+    document.getElementById('btn-logout').addEventListener('click', async function() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>

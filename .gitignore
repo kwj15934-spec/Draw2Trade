@@ -5,6 +5,9 @@
 .env
 secrets/
 
+# 유저 데이터 (서버에서 직접 관리)
+data/users.json
+
 # 런타임 캐시
 cache/ohlcv/
 cache/us/ohlcv/

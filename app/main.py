@@ -86,3 +86,13 @@ async def login_page(request: Request):
 @app.get("/blank", response_class=HTMLResponse)
 async def blank(request: Request):
     return templates.TemplateResponse("blank.html", {"request": request})
+
+
+@app.get("/pending", response_class=HTMLResponse)
+async def pending_page(request: Request):
+    return templates.TemplateResponse("pending.html", {"request": request})
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    return templates.TemplateResponse("admin.html", {"request": request})

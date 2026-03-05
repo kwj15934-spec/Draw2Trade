@@ -6,8 +6,11 @@ Firebase Admin SDK 기반 인증 서비스.
   → verify_firebase_token() → create_session_token()
   → HttpOnly 쿠키 (itsdangerous 서명, 7일 유효)
 """
+import json
 import logging
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 
 import firebase_admin
 from firebase_admin import auth as fb_auth
@@ -22,6 +25,11 @@ SESSION_MAX_AGE = 86400 * 7  # 7일
 _firebase_initialized = False
 _signer: URLSafeTimedSerializer | None = None
 
+# 유저 상태 파일 (프로젝트 루트/data/users.json)
+_USERS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "users.json"
+
+
+# ── Firebase 초기화 ──────────────────────────────────────────────────────────
 
 def init_firebase() -> None:
     """서버 시작 시 1회 호출. Firebase Admin + 세션 서명기 초기화."""
@@ -72,3 +80,64 @@ def decode_session_token(token: str) -> dict | None:
         return _signer.loads(token, max_age=SESSION_MAX_AGE)
     except (BadSignature, SignatureExpired):
         return None
+
+
+# ── 유저 승인 관리 ────────────────────────────────────────────────────────────
+
+def _load_users() -> dict:
+    if _USERS_FILE.exists():
+        return json.loads(_USERS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+
+def _save_users(users: dict) -> None:
+    _USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _USERS_FILE.write_text(json.dumps(users, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def get_user_status(uid: str) -> str | None:
+    """'pending' | 'approved' | 'rejected' | None(미등록)"""
+    users = _load_users()
+    user = users.get(uid)
+    return user["status"] if user else None
+
+
+def register_user(user_info: dict) -> str:
+    """신규 유저를 pending 상태로 등록. 이미 존재하면 기존 상태 반환."""
+    users = _load_users()
+    uid = user_info["uid"]
+    if uid not in users:
+        users[uid] = {
+            **user_info,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _save_users(users)
+        logger.info("신규 유저 등록 (pending): %s", user_info.get("email"))
+        return "pending"
+    return users[uid]["status"]
+
+
+def approve_user(uid: str) -> bool:
+    users = _load_users()
+    if uid not in users:
+        return False
+    users[uid]["status"] = "approved"
+    _save_users(users)
+    logger.info("유저 승인: %s", uid)
+    return True
+
+
+def reject_user(uid: str) -> bool:
+    users = _load_users()
+    if uid not in users:
+        return False
+    users[uid]["status"] = "rejected"
+    _save_users(users)
+    logger.info("유저 거절: %s", uid)
+    return True
+
+
+def get_all_users() -> list:
+    users = _load_users()
+    return sorted(users.values(), key=lambda u: u.get("created_at", ""), reverse=True)

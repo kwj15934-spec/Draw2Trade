@@ -1,35 +1,68 @@
 """
 Auth router
 
-POST /api/auth/login   — Firebase ID 토큰 검증 → 세션 쿠키 발급
-POST /api/auth/logout  — 세션 쿠키 삭제
-GET  /api/auth/me      — 현재 로그인 사용자 정보
-GET  /api/auth/config  — 클라이언트용 Firebase 공개 설정
+POST /api/auth/login        — Firebase ID 토큰 검증 → 승인 여부 확인 → 세션 쿠키 발급
+POST /api/auth/logout       — 세션 쿠키 삭제
+GET  /api/auth/me           — 현재 로그인 사용자 정보
+GET  /api/auth/config       — 클라이언트용 Firebase 공개 설정
+
+GET  /api/admin/users       — 전체 유저 목록 (관리자 전용)
+POST /api/admin/approve     — 유저 승인 (관리자 전용)
+POST /api/admin/reject      — 유저 거절 (관리자 전용)
 """
 import logging
 import os
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from app.dependencies.auth import get_optional_user
-from app.services.auth_service import COOKIE_NAME, create_session_token, verify_firebase_token
+from app.dependencies.auth import get_optional_user, require_admin
+from app.services.auth_service import (
+    COOKIE_NAME,
+    approve_user,
+    create_session_token,
+    get_all_users,
+    get_user_status,
+    register_user,
+    reject_user,
+    verify_firebase_token,
+)
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/auth")
+router = APIRouter()
 
 
 class LoginBody(BaseModel):
     id_token: str
 
 
-@router.post("/login")
+class UserActionBody(BaseModel):
+    uid: str
+
+
+# ── 인증 ─────────────────────────────────────────────────────────────────────
+
+@router.post("/api/auth/login")
 async def login(body: LoginBody, response: Response):
-    """Firebase ID 토큰을 검증하고 세션 쿠키를 발급한다."""
+    """Firebase ID 토큰 검증 → 승인 상태 확인 → 세션 쿠키 발급."""
     user = verify_firebase_token(body.id_token)
     if not user:
         raise HTTPException(status_code=401, detail="유효하지 않은 Firebase 토큰")
 
+    uid = user["uid"]
+    status = get_user_status(uid)
+
+    # 미등록 유저 → pending 등록
+    if status is None:
+        status = register_user(user)
+
+    if status == "pending":
+        return {"status": "pending"}
+
+    if status == "rejected":
+        return {"status": "rejected"}
+
+    # approved
     token = create_session_token(user)
     response.set_cookie(
         key=COOKIE_NAME,
@@ -38,16 +71,16 @@ async def login(body: LoginBody, response: Response):
         samesite="lax",
         max_age=86400 * 7,
     )
-    return {"ok": True, "user": user}
+    return {"status": "approved", "user": user}
 
 
-@router.post("/logout")
+@router.post("/api/auth/logout")
 async def logout(response: Response):
     response.delete_cookie(COOKIE_NAME)
     return {"ok": True}
 
 
-@router.get("/me")
+@router.get("/api/auth/me")
 async def me(request: Request):
     user = get_optional_user(request)
     if not user:
@@ -55,7 +88,7 @@ async def me(request: Request):
     return {"authenticated": True, "user": user}
 
 
-@router.get("/config")
+@router.get("/api/auth/config")
 async def firebase_config():
     """클라이언트 Firebase 설정 반환 (공개 키 — 노출해도 안전)."""
     return {
@@ -66,3 +99,24 @@ async def firebase_config():
         "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID", ""),
         "appId":             os.getenv("FIREBASE_APP_ID", ""),
     }
+
+
+# ── 관리자 API ────────────────────────────────────────────────────────────────
+
+@router.get("/api/admin/users")
+async def admin_users(admin=Depends(require_admin)):
+    return {"users": get_all_users()}
+
+
+@router.post("/api/admin/approve")
+async def admin_approve(body: UserActionBody, admin=Depends(require_admin)):
+    if not approve_user(body.uid):
+        raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+    return {"ok": True}
+
+
+@router.post("/api/admin/reject")
+async def admin_reject(body: UserActionBody, admin=Depends(require_admin)):
+    if not reject_user(body.uid):
+        raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+    return {"ok": True}
