@@ -24,6 +24,9 @@
   var parallelPoints  = [];   // 평행선: [p1, p2] = 1번선
   var parallelChannels = [];  // 완성된 평행선 채널 [{p1,p2,p3,p4}]
   var drawHistory     = [];   // 실행취소 스택 [{drawPoints, parallelChannels}]
+  // 자동 드로잉: 차트 좌표(시간+가격)로 저장 → redraw마다 현재 뷰에 맞게 재변환
+  var autoLineData    = null; // [{time, price}] — 자동 꺾은선
+  var autoChannelData = null; // {highs:[{time,price}], lows:[{time,price}]} — 자동 채널
   var lastMousePos = null;    // 직선/추세선/평행선 프리뷰용
   var activeTool   = null;    // 'pen' | 'trend' | 'line' | 'parallel' | null
   var isPenDown    = false;
@@ -217,6 +220,34 @@
         }
         ctx.stroke();
         ctx.shadowBlur = 0;
+      } else if (autoLineData && autoLineData.length >= 2 && D2T && D2T.chart && D2T.series) {
+        // 자동 꺾은선: 매 redraw마다 차트 좌표에서 픽셀로 재변환 → 줌/스크롤에 따라 갱신
+        var aPts = [];
+        for (var ai = 0; ai < autoLineData.length; ai++) {
+          var aX = D2T.chart.timeScale().timeToCoordinate(autoLineData[ai].time);
+          var aY = D2T.series.priceToCoordinate(autoLineData[ai].price);
+          if (aX != null && aY != null) aPts.push({ x: aX, y: aY });
+        }
+        if (aPts.length >= 2) {
+          ctx.strokeStyle = '#ff6b35';
+          ctx.lineWidth   = 2.5;
+          ctx.lineCap     = 'round';
+          ctx.lineJoin    = 'round';
+          ctx.shadowColor = 'rgba(255,107,53,0.3)';
+          ctx.shadowBlur  = 4;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(aPts[0].x, aPts[0].y);
+          for (var ai2 = 1; ai2 < aPts.length; ai2++) ctx.lineTo(aPts[ai2].x, aPts[ai2].y);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          [aPts[0], aPts[aPts.length - 1]].forEach(function (p) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ff6b35';
+            ctx.fill();
+          });
+        }
       } else if (drawPoints.length >= 2) {
         ctx.strokeStyle = '#ff6b35';
         ctx.lineWidth   = 2.5;
@@ -269,6 +300,52 @@
       ctx.closePath();
       ctx.fill();
     });
+
+    // ── 자동 채널: 실제 고가/저가 폴리라인 ─────────────────────────────────
+    if (autoChannelData && D2T && D2T.chart && D2T.series) {
+      function toPx(d) {
+        var cx = D2T.chart.timeScale().timeToCoordinate(d.time);
+        var cy = D2T.series.priceToCoordinate(d.price);
+        return (cx != null && cy != null) ? { x: cx, y: cy } : null;
+      }
+      var hPts = autoChannelData.highs.map(toPx).filter(Boolean);
+      var lPts = autoChannelData.lows.map(toPx).filter(Boolean);
+
+      if (hPts.length >= 2 && lPts.length >= 2) {
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+
+        // 채널 내부 채우기
+        ctx.fillStyle = 'rgba(79,195,247,0.07)';
+        ctx.beginPath();
+        ctx.moveTo(hPts[0].x, hPts[0].y);
+        for (var hi = 1; hi < hPts.length; hi++) ctx.lineTo(hPts[hi].x, hPts[hi].y);
+        for (var li = lPts.length - 1; li >= 0; li--) ctx.lineTo(lPts[li].x, lPts[li].y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth   = 2;
+        ctx.lineCap     = 'round';
+        ctx.lineJoin    = 'round';
+        ctx.shadowColor = 'rgba(79,195,247,0.3)';
+        ctx.shadowBlur  = 4;
+
+        // 고가 폴리라인
+        ctx.beginPath();
+        ctx.moveTo(hPts[0].x, hPts[0].y);
+        for (var hi2 = 1; hi2 < hPts.length; hi2++) ctx.lineTo(hPts[hi2].x, hPts[hi2].y);
+        ctx.stroke();
+
+        // 저가 폴리라인
+        ctx.beginPath();
+        ctx.moveTo(lPts[0].x, lPts[0].y);
+        for (var li2 = 1; li2 < lPts.length; li2++) ctx.lineTo(lPts[li2].x, lPts[li2].y);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+      }
+    }
 
     // ── 작업 중인 평행선 프리뷰 ─────────────────────────────────────────────
     if (activeTool === 'parallel' && parallelPoints.length >= 1) {
@@ -404,6 +481,8 @@
     parallelPoints   = [];
     parallelChannels = [];
     drawHistory      = [];
+    autoLineData     = null;
+    autoChannelData  = null;
     matchPoints      = null;
     drawNormalized   = null;
     _resultMatches   = [];
@@ -520,7 +599,7 @@
     return filtered && filtered.length >= 2 ? filtered : null;
   }
 
-  // ── 자동 꺾은선: 실제 종가 폴리라인 ──────────────────────────────────────
+  // ── 자동 꺾은선: 실제 종가 폴리라인 (차트 좌표 저장 → 줌/스크롤에 따라 갱신) ──
   function autoDrawTrend() {
     var filtered = getFilteredCandles();
     if (!filtered) {
@@ -529,33 +608,26 @@
     }
     var n = filtered.length;
 
-    // 해당 기간이 보이도록 스크롤
+    pushHistory();
+    // 차트 좌표(시간+가격)로 저장 — 픽셀이 아니라 데이터 좌표
+    autoLineData    = filtered.map(function (c) { return { time: c.time, price: c.close }; });
+    autoChannelData = null;
+    drawPoints      = [];
+    parallelChannels = [];
+
     D2T.chart.timeScale().setVisibleRange({ from: filtered[0].time, to: filtered[n - 1].time });
 
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        var pts = [];
-        for (var i = 0; i < n; i++) {
-          var x = D2T.chart.timeScale().timeToCoordinate(filtered[i].time);
-          var y = D2T.series.priceToCoordinate(filtered[i].close);
-          if (x != null && y != null) pts.push({ x: x, y: y });
-        }
-
-        if (pts.length < 2) {
-          showStatus('좌표 변환 실패. 차트에 해당 기간이 있는지 확인하세요.', 'error');
-          return;
-        }
-
-        pushHistory();
-        var resampled = polylineToPoints(pts);
-        if (resampled) drawPoints = resampled;
+        // drawPoints 초기 계산 (검색용)
+        _syncDrawPointsFromAutoLine();
         redraw();
         showStatus('꺾은선 자동 완료 (' + n + '봉). 검색 버튼을 누르세요.', '');
       });
     });
   }
 
-  // ── 자동 채널: 고가/저가 수평 채널 ────────────────────────────────────────
+  // ── 자동 채널: 실제 고가/저가 폴리라인 (차트 좌표 저장 → 줌/스크롤에 따라 갱신) ──
   function autoDrawChannel() {
     var filtered = getFilteredCandles();
     if (!filtered) {
@@ -563,41 +635,58 @@
       return;
     }
     var n = filtered.length;
-    var maxHigh = -Infinity, minLow = Infinity;
-    filtered.forEach(function (c) {
-      if (c.high > maxHigh) maxHigh = c.high;
-      if (c.low  < minLow)  minLow  = c.low;
-    });
+
+    pushHistory();
+    // 차트 좌표(시간+가격)로 저장 — 각 캔들의 실제 고가/저가 폴리라인
+    autoChannelData = {
+      highs: filtered.map(function (c) { return { time: c.time, price: c.high }; }),
+      lows:  filtered.map(function (c) { return { time: c.time, price: c.low  }; }),
+    };
+    autoLineData     = null;
+    drawPoints       = [];
+    parallelChannels = [];
 
     D2T.chart.timeScale().setVisibleRange({ from: filtered[0].time, to: filtered[n - 1].time });
 
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        var x0    = D2T.chart.timeScale().timeToCoordinate(filtered[0].time);
-        var x1    = D2T.chart.timeScale().timeToCoordinate(filtered[n - 1].time);
-        var yHigh = D2T.series.priceToCoordinate(maxHigh);
-        var yLow  = D2T.series.priceToCoordinate(minLow);
-
-        if (x0 == null || x1 == null || yHigh == null || yLow == null) {
-          showStatus('좌표 변환 실패.', 'error');
-          return;
-        }
-
-        var p1 = { x: x0, y: yHigh }, p2 = { x: x1, y: yHigh };
-        var p3 = { x: x0, y: yLow  }, p4 = { x: x1, y: yLow  };
-
-        pushHistory();
-        parallelChannels.push({ p1: p1, p2: p2, p3: p3, p4: p4 });
-
-        var mid1 = { x: (p1.x + p3.x) / 2, y: (p1.y + p3.y) / 2 };
-        var mid2 = { x: (p2.x + p4.x) / 2, y: (p2.y + p4.y) / 2 };
-        var pts  = polylineToPoints([mid1, mid2]);
-        if (pts) drawPoints = pts;
-
+        _syncDrawPointsFromAutoChannel();
         redraw();
         showStatus('채널 자동 완료 (' + n + '봉 고가-저가). 검색 버튼을 누르세요.', '');
       });
     });
+  }
+
+  // 자동 꺾은선 drawPoints 동기화 (검색용)
+  function _syncDrawPointsFromAutoLine() {
+    if (!autoLineData || !D2T || !D2T.chart || !D2T.series) return;
+    var pts = [];
+    for (var i = 0; i < autoLineData.length; i++) {
+      var x = D2T.chart.timeScale().timeToCoordinate(autoLineData[i].time);
+      var y = D2T.series.priceToCoordinate(autoLineData[i].price);
+      if (x != null && y != null) pts.push({ x: x, y: y });
+    }
+    if (pts.length >= 2) {
+      var rs = polylineToPoints(pts);
+      if (rs) drawPoints = rs;
+    }
+  }
+
+  // 자동 채널 drawPoints 동기화 — 중간선 기준 (검색용)
+  function _syncDrawPointsFromAutoChannel() {
+    if (!autoChannelData || !D2T || !D2T.chart || !D2T.series) return;
+    var pts = [];
+    var len = Math.min(autoChannelData.highs.length, autoChannelData.lows.length);
+    for (var i = 0; i < len; i++) {
+      var x  = D2T.chart.timeScale().timeToCoordinate(autoChannelData.highs[i].time);
+      var yH = D2T.series.priceToCoordinate(autoChannelData.highs[i].price);
+      var yL = D2T.series.priceToCoordinate(autoChannelData.lows[i].price);
+      if (x != null && yH != null && yL != null) pts.push({ x: x, y: (yH + yL) / 2 });
+    }
+    if (pts.length >= 2) {
+      var rs = polylineToPoints(pts);
+      if (rs) drawPoints = rs;
+    }
   }
 
   // ── 실행취소 히스토리 ─────────────────────────────────────────────────────
@@ -605,6 +694,8 @@
     drawHistory.push({
       drawPoints:       drawPoints.slice(),
       parallelChannels: parallelChannels.slice(),
+      autoLineData:     autoLineData,
+      autoChannelData:  autoChannelData,
     });
     if (drawHistory.length > 30) drawHistory.shift();
   }
@@ -614,6 +705,8 @@
     var prev = drawHistory.pop();
     drawPoints       = prev.drawPoints;
     parallelChannels = prev.parallelChannels;
+    autoLineData     = prev.autoLineData    !== undefined ? prev.autoLineData    : null;
+    autoChannelData  = prev.autoChannelData !== undefined ? prev.autoChannelData : null;
     trendPoints = []; linePoints = []; parallelPoints = [];
     redraw();
     showStatus('실행 취소', '');
@@ -622,6 +715,7 @@
   // ── 평행선 채널 완료 처리 ─────────────────────────────────────────────────
   function finalizeParallel(mousePos) {
     if (parallelPoints.length < 2 || !mousePos) return;
+    autoLineData = null; autoChannelData = null;
     var p1 = parallelPoints[0], p2 = parallelPoints[1];
     var dx = p2.x - p1.x, dy = p2.y - p1.y;
     var len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -647,6 +741,7 @@
   // ── 직선 완료 처리 ────────────────────────────────────────────────────────
   function finalizeLine(endPoint) {
     if (!endPoint && linePoints.length < 2) return;
+    autoLineData = null; autoChannelData = null;
     if (endPoint) linePoints.push(endPoint);
     if (linePoints.length < 2) {
       linePoints = [];
@@ -663,6 +758,7 @@
 
   // ── 추세선 완료 처리 ──────────────────────────────────────────────────────
   function finalizeTrend(finalPoint) {
+    autoLineData = null; autoChannelData = null;
     if (finalPoint) trendPoints.push(finalPoint);
     if (trendPoints.length < 2) {
       trendPoints = [];
@@ -693,6 +789,7 @@
     var p = getCanvasPos(e);
 
     if (activeTool === 'pen') {
+      autoLineData = null; autoChannelData = null;
       pushHistory();
       isPenDown  = true;
       drawPoints = [p];
@@ -792,6 +889,10 @@
     // 작업 중인 추세선/직선이 있으면 자동 완료
     if (activeTool === 'trend' && trendPoints.length >= 2) finalizeTrend(null);
     if (activeTool === 'line' && linePoints.length >= 2) finalizeLine(null);
+
+    // 자동 드로잉이 있으면 현재 줌/스크롤 기준으로 drawPoints 재계산
+    if (autoLineData)    _syncDrawPointsFromAutoLine();
+    if (autoChannelData) _syncDrawPointsFromAutoChannel();
 
     var pts;
     if (drawPoints.length >= 2) {
