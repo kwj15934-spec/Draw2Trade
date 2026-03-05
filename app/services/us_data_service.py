@@ -193,11 +193,59 @@ def _ensure_dirs() -> None:
     _US_TICKERS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _fetch_nasdaq_ftp() -> list[tuple[str, str, str]]:
+    """
+    NASDAQ trader FTP에서 NASDAQ + NYSE/AMEX 전체 상장 종목 로드.
+    인증 없이 접근 가능한 공식 공개 파일 사용.
+
+    nasdaqlisted.txt  — NASDAQ 상장 (~4000개)
+    otherlisted.txt   — NYSE / AMEX 등 (~8000개)
+    """
+    import urllib.request as _req
+
+    urls = [
+        "https://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt",
+        "https://ftp.nasdaqtrader.com/symboldirectory/otherlisted.txt",
+    ]
+    seen: set[str] = set()
+    result: list[tuple[str, str, str]] = []
+
+    for url in urls:
+        try:
+            req = _req.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with _req.urlopen(req, timeout=15) as resp:
+                text = resp.read().decode("utf-8", errors="replace")
+            lines = text.strip().split("\n")
+            # 첫 줄은 헤더, 마지막 줄은 "File Creation Time=..." 메타라인
+            for line in lines[1:]:
+                parts = line.strip().split("|")
+                if len(parts) < 2:
+                    continue
+                sym  = parts[0].strip().replace(".", "-")
+                name = parts[1].strip()
+                if not sym or not name:
+                    continue
+                # 테스트 이슈 제외 (nasdaqlisted: col3, otherlisted: col6)
+                test_col = 3 if "nasdaqlisted" in url else 6
+                if len(parts) > test_col and parts[test_col].strip().upper() == "Y":
+                    continue
+                # 메타라인 / 특수 심볼 제외
+                if sym.startswith("File") or "/" in sym or "^" in sym or len(sym) > 6:
+                    continue
+                if sym not in seen:
+                    seen.add(sym)
+                    result.append((sym, name, ""))
+        except Exception as e:
+            logger.warning("NASDAQ FTP 로드 실패 (%s): %s", url, e)
+
+    logger.info("NASDAQ FTP에서 %d개 종목 로드 완료", len(result))
+    return result
+
+
 def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
     """
     NASDAQ screener API에서 전체 미국 상장 주식 목록을 로드.
-    Returns list of (symbol, name, sector).
-    실패 시 빈 리스트 반환.
+    Returns list of (symbol, name, sector). 실패 시 빈 리스트 반환.
     """
     try:
         import urllib.request as _req
@@ -220,7 +268,6 @@ def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
             sym = str(row.get("symbol", "") or "").strip().replace(".", "-").replace("^", "")
             name = str(row.get("name", "") or "").strip()
             sector = str(row.get("sector", "") or "").strip()
-            # 유효하지 않은 행 걸러내기
             if not sym or not name or sym == "Symbol" or "/" in sym or len(sym) > 8:
                 continue
             result.append((sym, name, sector))
@@ -278,20 +325,25 @@ def _build_ticker_list() -> list[dict]:
     if _US_TICKERS_FILE.exists():
         try:
             cached = json.loads(_US_TICKERS_FILE.read_text(encoding="utf-8"))
-            if cached.get("date") == today_str and cached.get("tickers"):
+            # 날짜 일치 + 종목 수 1000개 이상일 때만 캐시 사용 (S&P 500만 있는 캐시 무시)
+            if cached.get("date") == today_str and len(cached.get("tickers", [])) >= 1000:
                 logger.info("US 티커 목록 캐시 사용 (%d개)", len(cached["tickers"]))
                 return cached["tickers"]
         except Exception:
             pass
 
-    # 1순위: NASDAQ 전체 스크리너
-    base_stocks = _fetch_nasdaq_screener()
+    # 1순위: NASDAQ trader FTP (NASDAQ + NYSE/AMEX 전체, ~8000개)
+    base_stocks = _fetch_nasdaq_ftp()
 
-    # 2순위: Wikipedia S&P 500
-    if not base_stocks:
+    # 2순위: NASDAQ screener API
+    if len(base_stocks) < 500:
+        base_stocks = _fetch_nasdaq_screener()
+
+    # 3순위: Wikipedia S&P 500
+    if len(base_stocks) < 500:
         base_stocks = _fetch_sp500_from_wikipedia()
 
-    # 3순위: 하드코딩 fallback
+    # 4순위: 하드코딩 fallback
     if not base_stocks:
         base_stocks = [(s, n, "") for s, n in _FALLBACK_TICKERS]
 
