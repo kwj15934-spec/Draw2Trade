@@ -486,11 +486,6 @@
     var inputType = market === 'US' ? 'date' : 'month';
     if (dtFrom) { dtFrom.type = inputType; dtFrom.value = ''; }
     if (dtTo)   { dtTo.type   = inputType; dtTo.value   = ''; }
-    var autoFrom = document.getElementById('auto-from');
-    var autoTo   = document.getElementById('auto-to');
-    if (autoFrom) { autoFrom.type = inputType; autoFrom.value = ''; }
-    if (autoTo)   { autoTo.type   = inputType; autoTo.value   = ''; }
-
     // lookback 드롭다운 라벨 전환
     var lookbackSel = document.getElementById('lookback-months');
     if (lookbackSel) {
