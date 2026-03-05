@@ -167,18 +167,23 @@
     .btn-back {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       background: none;
-      border: none;
-      color: #555;
-      font-size: 12px;
+      border: 1px solid #2a2e39;
+      border-radius: 5px;
+      color: #90a4ae;
+      font-size: 13px;
       cursor: pointer;
-      padding: 0;
-      margin-bottom: 20px;
+      padding: 6px 14px;
+      margin-bottom: 24px;
       text-decoration: none;
-      transition: color 0.15s;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
-    .btn-back:hover { color: #d1d4dc; }
+    .btn-back:hover {
+      border-color: #ff6b35;
+      color: #ff6b35;
+      background: rgba(255,107,53,0.07);
+    }
   </style>
 </head>
 <body>
