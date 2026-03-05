@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - Draw2Trade</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #0f1117;
+      color: #d1d4dc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 380px;
+      background: #1a1d2e;
+      border: 1px solid #2a2e39;
+      border-radius: 12px;
+      padding: 44px 36px 36px;
+    }
+
+    .brand {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ff6b35;
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: #555;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    /* ── 탭 ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #2a2e39;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #666;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 0;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn.active {
+      color: #ff6b35;
+      border-bottom-color: #ff6b35;
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── 폼 ── */
+    .form-group { margin-bottom: 14px; }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      height: 38px;
+      background: #1e2130;
+      border: 1px solid #2a2e39;
+      border-radius: 5px;
+      color: #d1d4dc;
+      font-size: 13px;
+      padding: 0 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-group input:focus { border-color: #ff6b35; }
+
+    /* ── 버튼 ── */
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 42px;
+      background: #ff6b35;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 6px;
+    }
+
+    .btn-primary:hover { background: #e55c27; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      height: 42px;
+      background: #1e2130;
+      border: 1px solid #2a2e39;
+      border-radius: 5px;
+      color: #d1d4dc;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .btn-google:hover { border-color: #ff6b35; background: #242838; }
+    .btn-google:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── 구분선 ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 18px 0;
+      color: #444;
+      font-size: 11px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #2a2e39;
+    }
+
+    /* ── 에러 ── */
+    .error-msg {
+      min-height: 18px;
+      font-size: 12px;
+      color: #ef5350;
+      margin-top: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="brand">Draw2Trade</div>
+    <div class="subtitle">패턴 유사도 기반 종목 검색</div>
+
+    <!-- 탭 -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="email">로그인</button>
+      <button class="tab-btn" data-tab="signup">회원가입</button>
+    </div>
+
+    <!-- 이메일/비밀번호 로그인 탭 -->
+    <div class="tab-pane active" id="tab-email">
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="input-password" placeholder="비밀번호" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="btn-email-login">로그인</button>
+      <div class="divider">또는</div>
+      <button class="btn-google" id="btn-google-login">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Google로 로그인
+      </button>
+    </div>
+
+    <!-- 회원가입 탭 -->
+    <div class="tab-pane" id="tab-signup">
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>비밀번호 <span style="color:#555;font-size:11px;">(6자 이상)</span></label>
+        <input type="password" id="signup-password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>비밀번호 확인</label>
+        <input type="password" id="signup-password2" placeholder="비밀번호 재입력" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="btn-signup">가입하기</button>
+      <div class="divider">또는</div>
+      <button class="btn-google" id="btn-google-signup">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Google로 가입
+      </button>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <script>
+    // 탭 전환
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        document.getElementById('error-msg').textContent = '';
+      });
+    });
+
+    // Enter 키 지원
+    document.getElementById('input-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('btn-email-login').click();
+    });
+    document.getElementById('signup-password2').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('btn-signup').click();
+    });
+  </script>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>

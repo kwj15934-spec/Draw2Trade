@@ -1,0 +1,17 @@
+# 환경변수 / 비밀키
+.env
+secrets/
+
+# 런타임 캐시
+cache/ohlcv/
+cache/us/ohlcv/
+cache/tickers.json
+cache/us/tickers.json
+
+# 로그
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo

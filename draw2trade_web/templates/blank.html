@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Draw2Trade — 빈 캔버스{% endblock %}
+
+{% block extra_styles %}
+  #blank-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    background:
+      linear-gradient(rgba(42,46,57,0.55) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42,46,57,0.55) 1px, transparent 1px),
+      #131722;
+    background-size: 10% 25%;
+  }
+
+  .blank-axis-label {
+    position: absolute;
+    font-size: 11px;
+    color: #3a3e50;
+    pointer-events: none;
+    user-select: none;
+    z-index: 4;
+    line-height: 1;
+  }
+{% endblock %}
+
+{% block content %}
+
+<!-- ── 네비게이션 바 ─────────────────────────────────────────────────────── -->
+<div class="d2t-nav">
+  <span class="d2t-brand">Draw2Trade</span>
+  <span class="d2t-subtitle">KOSPI 월봉 패턴 유사도 검색</span>
+  <div style="margin-left: auto; display: flex; gap: 6px;">
+    <a href="/" class="btn-d2t" style="text-decoration: none;">📈 차트 모드</a>
+    <a href="/blank" class="btn-d2t active" style="text-decoration: none;">✏️ 빈 캔버스</a>
+  </div>
+</div>
+
+<!-- ── 툴바 ─────────────────────────────────────────────────────────────── -->
+<div class="d2t-toolbar">
+  <label>드로잉</label>
+  <button
+    id="tool-pen"
+    class="btn-d2t draw-tool-btn"
+    data-tool="pen"
+    title="자유곡선: 마우스 드래그"
+  >✎ 자유곡선</button>
+  <button
+    id="tool-trend"
+    class="btn-d2t draw-tool-btn"
+    data-tool="trend"
+    title="추세선: 클릭으로 점 추가, Ctrl+클릭으로 완료"
+  >↗ 추세선</button>
+  <button id="btn-clear" class="btn-d2t btn-d2t-danger" title="드로잉 지우기">지우기</button>
+
+  <div class="vr"></div>
+
+  <div class="lookback-group">
+    <label for="lookback-months">비교</label>
+    <select id="lookback-months" title="비교할 최근 월봉 수">
+      <option value="24">24개월</option>
+      <option value="36" selected>36개월</option>
+      <option value="48">48개월</option>
+      <option value="60">60개월</option>
+    </select>
+  </div>
+
+  <button id="btn-search" class="btn-d2t btn-d2t-primary">
+    🔍 유사 종목 검색
+  </button>
+  <span id="search-status" class="search-status"></span>
+</div>
+
+<!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
+<div class="d2t-main">
+
+  <!-- 좌측: 빈 캔버스 패널 -->
+  <div class="d2t-chart-panel">
+
+    <div id="blank-wrapper">
+      <!-- 축 레이블 -->
+      <span class="blank-axis-label" style="top: 8px; left: 10px;">고가 ↑</span>
+      <span class="blank-axis-label" style="bottom: 34px; left: 10px;">저가 ↓</span>
+      <span class="blank-axis-label" style="bottom: 8px; left: 10px;">← 과거</span>
+      <span class="blank-axis-label" style="bottom: 8px; right: 10px;">현재 →</span>
+
+      <canvas id="draw-canvas"></canvas>
+    </div>
+
+    <div class="d2t-chart-footer">
+      <span class="ticker-label">드로잉 도구를 선택하고 캔버스 위에서 패턴을 그리세요</span>
+      <span class="ticker-label" style="margin-left: auto; color: #444;">
+        결과 종목 클릭 시 차트 모드로 이동합니다
+      </span>
+    </div>
+  </div>
+
+  <!-- 우측: 사이드바 -->
+  <div class="d2t-sidebar">
+    <div class="d2t-sidebar-header">
+      <span class="d2t-sidebar-title">유사 종목</span>
+      <span id="result-count" class="d2t-badge">Top 20</span>
+    </div>
+
+    <div id="results-wrapper">
+      <div id="results-placeholder">
+        패턴을 그린 후<br>
+        <strong style="color: #ff6b35;">유사 종목 검색</strong>을 클릭하세요<br><br>
+        <small>결과 종목 클릭 시<br>차트 모드로 이동해<br>실제 차트를 확인할 수 있습니다</small>
+      </div>
+      <div id="results-list" style="display: none;"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/blank.js"></script>
+<script src="/static/js/draw.js"></script>
+{% endblock %}

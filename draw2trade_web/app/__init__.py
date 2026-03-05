@@ -1,0 +1,1 @@
+"""KOSPI Pattern Scanner application."""

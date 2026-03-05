@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Draw2Trade{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    crossorigin="anonymous"
+  >
+
+  <style>
+    /* ── 기본 레이아웃 ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #0f1117;
+      color: #d1d4dc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+    }
+
+    /* ── 네비게이션 바 ─────────────────────────────────────── */
+    .d2t-nav {
+      height: 48px;
+      background: #1a1d2e;
+      border-bottom: 1px solid #2a2e39;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .d2t-brand {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff6b35;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .d2t-subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* ── 시장 선택 (KR / US) ──────────────────────────────── */
+    .market-selector {
+      margin-left: auto;
+      display: flex;
+      gap: 4px;
+    }
+
+    .market-btn {
+      height: 28px;
+      padding: 0 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .market-btn:hover { border-color: #90caf9; color: #90caf9; }
+    #market-kr.active { background: #1565c0; border-color: #1565c0; color: #fff; }
+    #market-us.active { background: #c62828; border-color: #c62828; color: #fff; }
+
+    /* ── 네브 유저 박스 ────────────────────────────────────── */
+    .nav-user-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 10px;
+      padding-left: 12px;
+      border-left: 1px solid #2a2e39;
+    }
+
+    .nav-user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ff6b35;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .nav-user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .nav-user-name {
+      font-size: 12px;
+      color: #90a4ae;
+      max-width: 110px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-nav-login {
+      margin-left: 10px;
+      padding-left: 12px;
+      border-left: 1px solid #2a2e39;
+      height: 28px;
+      padding: 0 12px;
+      font-size: 12px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      border-radius: 4px;
+      border: 1px solid #ff6b35;
+      color: #ff6b35;
+      background: transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-nav-login:hover { background: rgba(255,107,53,0.12); }
+
+    /* ── 툴바 ─────────────────────────────────────────────── */
+    .d2t-toolbar {
+      min-height: 44px;
+      background: #161925;
+      border-bottom: 1px solid #2a2e39;
+      display: flex;
+      align-items: center;
+      align-content: center;
+      padding: 6px 12px;
+      gap: 6px 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      overflow: visible;
+    }
+
+    .d2t-toolbar .vr {
+      border-color: #2a2e39;
+      opacity: 1;
+      height: 24px;
+      margin: 0 4px;
+    }
+
+    .d2t-toolbar label {
+      color: #888;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .d2t-toolbar select {
+      background: #1e2130;
+      color: #d1d4dc;
+      border: 1px solid #2a2e39;
+      border-radius: 4px;
+      padding: 3px 8px;
+      height: 30px;
+      min-width: 200px;
+      max-width: 250px;
+    }
+
+    .d2t-toolbar select:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+
+    /* 종목 검색 + 카테고리 */
+    .ticker-control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ticker-search-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ticker-search-wrap.kr-mode {
+      flex-direction: column;
+    }
+
+    .ticker-search-wrap.kr-mode #ticker-search {
+      min-width: 180px;
+    }
+
+    .ticker-search-wrap:not(.kr-mode) #ticker-search {
+      display: none !important;
+    }
+
+    .ticker-search-wrap input {
+      background: #1e2130;
+      color: #d1d4dc;
+      border: 1px solid #2a2e39;
+      border-radius: 4px;
+      padding: 3px 8px;
+      height: 30px;
+      min-width: 180px;
+      max-width: 220px;
+      font-size: 13px;
+    }
+
+    .ticker-search-wrap input:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+
+    .ticker-search-wrap input::placeholder {
+      color: #555;
+    }
+
+    #ticker-search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #1e2130;
+      border: 1px solid #2a2e39;
+      border-radius: 4px;
+      margin-top: 2px;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    #ticker-search-dropdown .search-item {
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #161925;
+    }
+
+    #ticker-search-dropdown .search-item:hover {
+      background: #2a2e39;
+    }
+
+    #ticker-search-dropdown .search-item .search-ticker {
+      color: #888;
+      font-size: 11px;
+    }
+
+    #category-select {
+      min-width: 120px;
+      max-width: 160px;
+    }
+
+    /* ── 버튼 스타일 ──────────────────────────────────────── */
+    .btn-d2t {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid #2a2e39;
+      background: #1e2130;
+      color: #d1d4dc;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .btn-d2t:hover { border-color: #ff6b35; color: #ff6b35; }
+    .btn-d2t.active { background: #ff6b35; border-color: #ff6b35; color: #fff; }
+    .btn-d2t:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-d2t-primary {
+      background: #ff6b35;
+      border-color: #ff6b35;
+      color: #fff;
+    }
+    .btn-d2t-primary:hover { background: #e55c27; border-color: #e55c27; color: #fff; }
+    .btn-d2t-primary:disabled { opacity: 0.4; }
+
+    .btn-d2t-danger {
+      border-color: #ef5350;
+      color: #ef5350;
+    }
+    .btn-d2t-danger:hover { background: #ef5350; color: #fff; }
+
+    /* ── 메인 콘텐츠 영역 ────────────────────────────────── */
+    .d2t-main {
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── 차트 패널 ───────────────────────────────────────── */
+    .d2t-chart-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-right: 1px solid #2a2e39;
+    }
+
+    #chart-wrapper {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    #chart-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    #draw-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      cursor: default;
+      z-index: 5;     /* LW Charts 레이어 위에 배치 */
+    }
+
+    .d2t-chart-footer {
+      height: 28px;
+      background: #161925;
+      border-top: 1px solid #2a2e39;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .d2t-chart-footer .ticker-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .search-status {
+      font-size: 12px;
+    }
+
+    /* ── 사이드바 ─────────────────────────────────────────── */
+    .d2t-sidebar {
+      width: 280px;
+      min-width: 240px;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      background: #161925;
+      flex-shrink: 0;
+    }
+
+    .d2t-sidebar-header {
+      height: 48px;
+      border-bottom: 1px solid #2a2e39;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+
+    .d2t-sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #d1d4dc;
+    }
+
+    .d2t-badge {
+      background: #2a2e39;
+      color: #888;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+    }
+
+    #results-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    #results-wrapper::-webkit-scrollbar { width: 4px; }
+    #results-wrapper::-webkit-scrollbar-track { background: #161925; }
+    #results-wrapper::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
+
+    /* ── 결과 placeholder ────────────────────────────────── */
+    #results-placeholder {
+      padding: 40px 16px;
+      text-align: center;
+      color: #555;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    /* ── 결과 카드 ───────────────────────────────────────── */
+    .result-card {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid #1e2130;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .result-card:hover { background: #1e2130; }
+
+    .result-rank {
+      width: 24px;
+      font-size: 11px;
+      color: #555;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .result-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .result-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #d1d4dc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-ticker {
+      font-size: 11px;
+      color: #666;
+      margin-top: 1px;
+    }
+
+    .result-period {
+      font-size: 10px;
+      color: #4a5568;
+      margin-top: 2px;
+    }
+
+    .result-score {
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    /* ── 기간 설정 ───────────────────────────────────────── */
+    .period-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .period-group label {
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+    }
+
+    .period-mode-btn {
+      height: 28px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    #period-recent-controls select,
+    #period-range-controls input[type="month"],
+    #period-range-controls input[type="date"] {
+      height: 30px;
+      padding: 0 6px;
+      background: #1e2130;
+      color: #d1d4dc;
+      border: 1px solid #2a2e39;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    #period-recent-controls select:focus,
+    #period-range-controls input[type="month"]:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+
+    #period-range-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #period-range-controls input[type="month"],
+    #period-range-controls input[type="date"] {
+      width: 130px;
+      color-scheme: dark;
+    }
+
+    .period-sep {
+      color: #666;
+      font-size: 13px;
+    }
+
+    .anchor-today-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: #90a4ae;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .anchor-today-label input[type="checkbox"] {
+      accent-color: #26a69a;
+      cursor: pointer;
+    }
+
+    /* 차트 자동 감지 칩 */
+    .period-chip {
+      display: inline-flex;
+      align-items: center;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 13px;
+      background: rgba(38,166,154,0.15);
+      border: 1px solid rgba(38,166,154,0.4);
+      color: #26a69a;
+      font-size: 12px;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    /* ── 타임프레임 (월봉/주봉/일봉) ────────────────────────── */
+    .timeframe-group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .timeframe-btn {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    /* ── 빈 캔버스 모드 ─────────────────────────────────────── */
+    #chart-wrapper.blank-mode {
+      background:
+        linear-gradient(rgba(42,46,57,0.55) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42,46,57,0.55) 1px, transparent 1px),
+        #131722;
+      background-size: 10% 25%;
+    }
+
+    #chart-wrapper.blank-mode #chart-container {
+      display: none;
+    }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body style="display: flex; flex-direction: column; height: 100vh;">
+
+  {% block content %}{% endblock %}
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    crossorigin="anonymous"
+  ></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

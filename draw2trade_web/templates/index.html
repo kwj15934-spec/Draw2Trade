@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Draw2Trade — KOSPI 패턴 유사도 검색{% endblock %}
+
+{% block content %}
+
+<!-- ── 네비게이션 바 ─────────────────────────────────────────────────────── -->
+<div class="d2t-nav">
+  <span class="d2t-brand">Draw2Trade</span>
+  <span id="d2t-subtitle" class="d2t-subtitle">KOSPI 패턴 유사도 검색</span>
+  <div class="market-selector">
+    <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
+    <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button>
+  </div>
+
+  <!-- 로그인 상태: 유저 박스 -->
+  <div id="nav-user-box" class="nav-user-box" style="display:none;">
+    <div class="nav-user-avatar" id="nav-user-avatar">?</div>
+    <span class="nav-user-name" id="nav-user-name"></span>
+    <button class="btn-d2t" id="btn-nav-logout"
+      style="height:26px;font-size:11px;padding:0 8px;border-color:#ef5350;color:#ef5350;">
+      로그아웃
+    </button>
+  </div>
+
+  <!-- 비로그인: 로그인 버튼 -->
+  <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
+</div>
+
+<!-- ── 툴바 ─────────────────────────────────────────────────────────────── -->
+<div class="d2t-toolbar">
+  <!-- 카테고리 (KR 시장만) -->
+  <div id="category-group" class="ticker-control-group" style="display:none;">
+    <label for="category-select">카테고리</label>
+    <select id="category-select" title="섹터/업종 필터">
+      <option value="">전체</option>
+    </select>
+  </div>
+  <!-- 종목 선택 -->
+  <div class="ticker-control-group">
+    <label for="ticker-select">종목</label>
+    <div class="ticker-search-wrap" id="ticker-search-wrap">
+      <input type="text" id="ticker-search" placeholder="종목명/티커 검색 (KR)" title="검색 후 클릭하여 선택" autocomplete="off" style="display:none;">
+      <div id="ticker-search-dropdown" style="display:none;"></div>
+      <select id="ticker-select" title="종목 선택">
+        <option value="">로딩 중...</option>
+      </select>
+    </div>
+  </div>
+  <button id="btn-load" class="btn-d2t">차트 로드</button>
+  <button id="btn-blank" class="btn-d2t" title="빈 캔버스 모드 전환">✏️ 빈 캔버스</button>
+
+  <div class="vr"></div>
+
+  <!-- 차트 타임프레임 -->
+  <label>봉</label>
+  <div class="timeframe-group">
+    <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월봉</button>
+    <button id="tf-weekly" class="btn-d2t timeframe-btn" data-tf="weekly" title="주봉">주봉</button>
+    <button id="tf-daily" class="btn-d2t timeframe-btn" data-tf="daily" title="일봉">일봉</button>
+  </div>
+
+  <div class="vr"></div>
+
+  <!-- 드로잉 도구 -->
+  <label>드로잉</label>
+  <button
+    id="tool-pen"
+    class="btn-d2t draw-tool-btn"
+    data-tool="pen"
+    title="자유곡선: 마우스 드래그"
+  >✎ 자유곡선</button>
+  <button
+    id="tool-trend"
+    class="btn-d2t draw-tool-btn"
+    data-tool="trend"
+    title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료"
+  >↗ 추세선</button>
+  <button
+    id="tool-line"
+    class="btn-d2t draw-tool-btn"
+    data-tool="line"
+    title="직선: 시작점 클릭 → 끝점 클릭"
+  >− 직선</button>
+  <button id="btn-clear" class="btn-d2t btn-d2t-danger" title="드로잉 지우기">지우기</button>
+
+  <div class="vr"></div>
+
+  <!-- 기간 설정 (재설계) -->
+  <div class="period-group">
+    <label>기간</label>
+
+    <!-- 차트 모드: 자동 감지 칩 -->
+    <span id="period-chart-chip" class="period-chip" title="차트에 표시 중인 봉 수를 자동으로 감지합니다">차트 자동</span>
+
+    <!-- 빈 캔버스 모드: 수동 드롭다운 (기본 숨김) -->
+    <select id="lookback-months" style="display:none;" title="비교할 기간">
+      <option value="3"  data-kr="3개월"  data-us="3개월">3개월</option>
+      <option value="6"  data-kr="6개월"  data-us="6개월">6개월</option>
+      <option value="12" data-kr="12개월" data-us="1년">12개월</option>
+      <option value="24" data-kr="24개월" data-us="2년">24개월</option>
+      <option value="36" data-kr="36개월" data-us="3년" selected>36개월</option>
+      <option value="48" data-kr="48개월" data-us="4년">48개월</option>
+      <option value="60" data-kr="60개월" data-us="5년">60개월</option>
+    </select>
+
+    <!-- 오늘 기준 (고정) -->
+    <span class="period-chip" title="각 종목의 최근 N봉(오늘 종료)만 비교">오늘 기준</span>
+
+    <!-- 날짜 범위 토글 -->
+    <button id="btn-mode-range" class="btn-d2t period-mode-btn" title="날짜 범위 직접 지정">날짜 범위</button>
+
+    <!-- 날짜 범위 입력 (토글 시 표시) -->
+    <div id="period-range-controls" style="display:none;">
+      <input type="month" id="date-from" title="시작 월" placeholder="시작">
+      <span class="period-sep">~</span>
+      <input type="month" id="date-to" title="종료 월" placeholder="종료">
+    </div>
+  </div>
+
+  <!-- 검색 버튼 -->
+  <button id="btn-search" class="btn-d2t btn-d2t-primary">
+    🔍 유사 종목 검색
+  </button>
+  <span id="search-status" class="search-status"></span>
+</div>
+
+<!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
+<div class="d2t-main">
+
+  <!-- 좌측: 차트 패널 -->
+  <div class="d2t-chart-panel">
+
+    <!-- 차트 + 드로잉 오버레이 -->
+    <div id="chart-wrapper">
+      <div id="chart-container"></div>
+      <canvas id="draw-canvas"></canvas>
+    </div>
+
+    <!-- 차트 하단 정보 바 -->
+    <div class="d2t-chart-footer">
+      <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
+      <span class="ticker-label" style="margin-left: auto;">
+        드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
+      </span>
+    </div>
+  </div>
+
+  <!-- 우측: 사이드바 -->
+  <div class="d2t-sidebar">
+    <div class="d2t-sidebar-header">
+      <span class="d2t-sidebar-title">유사 종목</span>
+      <span id="result-count" class="d2t-badge">Top 20</span>
+    </div>
+
+    <div id="results-wrapper">
+      <div id="results-placeholder">
+        패턴을 그린 후<br>
+        <strong style="color: #ff6b35;">유사 종목 검색</strong>을 클릭하세요<br><br>
+        <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
+      </div>
+      <div id="results-list" style="display: none;"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- 네브 유저 박스 초기화 -->
+<script>
+(function () {
+  fetch('/api/auth/me')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var loginBtn = document.getElementById('btn-nav-login');
+      var userBox  = document.getElementById('nav-user-box');
+      if (data.authenticated && data.user) {
+        var u = data.user;
+        var avatarEl = document.getElementById('nav-user-avatar');
+        // 프로필 사진 있으면 이미지, 없으면 이니셜
+        if (u.picture) {
+          avatarEl.innerHTML = '<img src="' + u.picture + '" alt="">';
+        } else {
+          avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
+        }
+        document.getElementById('nav-user-name').textContent = u.name || u.email;
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (userBox)  userBox.style.display  = 'flex';
+      } else {
+        if (loginBtn) loginBtn.style.display = 'flex';
+        if (userBox)  userBox.style.display  = 'none';
+      }
+    })
+    .catch(function () {
+      // 오류 시 로그인 버튼 표시
+      var loginBtn = document.getElementById('btn-nav-login');
+      if (loginBtn) loginBtn.style.display = 'flex';
+    });
+
+  document.getElementById('btn-nav-logout').addEventListener('click', function () {
+    fetch('/api/auth/logout', { method: 'POST' })
+      .then(function () { window.location.href = '/login'; });
+  });
+})();
+</script>
+
+<!-- TradingView Lightweight Charts -->
+<script
+  src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
+  crossorigin="anonymous"
+></script>
+<!-- Draw2Trade JS -->
+<script src="/static/js/chart.js"></script>
+<script src="/static/js/draw.js"></script>
+{% endblock %}

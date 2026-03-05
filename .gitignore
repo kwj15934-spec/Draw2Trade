@@ -1,0 +1,19 @@
+# 민감한 정보
+draw2trade_web/secrets/
+draw2trade_web/logs/
+draw2trade_web/cache/
+draw2trade_web/data/
+
+# Claude
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
