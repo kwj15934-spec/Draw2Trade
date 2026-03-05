@@ -17,6 +17,7 @@
   // ── 전역 상태 ─────────────────────────────────────────────────────────────
   window.D2T = {
     chart:           null,
+    volumeChart:     null,
     series:          null,
     volumeSeries:    null,
     ticker:          null,
@@ -77,14 +78,50 @@
       wickDownColor: '#ef5350',
     });
 
-    // 거래량 히스토그램 (차트 하단 20% 영역)
-    D2T.volumeSeries = D2T.chart.addHistogramSeries({
-      priceFormat:  { type: 'volume' },
-      priceScaleId: 'volume',
-    });
-    D2T.volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.82, bottom: 0 },
-    });
+    // 거래량 — 별도 패널 차트
+    var volContainer = document.getElementById('volume-container');
+    if (volContainer) {
+      D2T.volumeChart = LightweightCharts.createChart(volContainer, {
+        layout: {
+          background: { color: '#131722' },
+          textColor: '#d1d4dc',
+        },
+        grid: {
+          vertLines: { color: '#1e2130' },
+          horzLines: { color: '#1e2130' },
+        },
+        rightPriceScale: {
+          borderColor: '#2a2e39',
+          scaleMargins: { top: 0.1, bottom: 0.05 },
+        },
+        timeScale: {
+          borderColor: '#2a2e39',
+          visible: false,
+        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        handleScroll: { mouseWheel: false, pressedMouseMove: false },
+        handleScale: false,
+      });
+
+      D2T.volumeSeries = D2T.volumeChart.addHistogramSeries({
+        priceFormat: { type: 'volume' },
+      });
+
+      // 시간축 동기화 (양방향)
+      var _syncing = false;
+      D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function (range) {
+        if (_syncing || !range || !D2T.volumeChart) return;
+        _syncing = true;
+        D2T.volumeChart.timeScale().setVisibleLogicalRange(range);
+        _syncing = false;
+      });
+      D2T.volumeChart.timeScale().subscribeVisibleLogicalRangeChange(function (range) {
+        if (_syncing || !range) return;
+        _syncing = true;
+        D2T.chart.timeScale().setVisibleLogicalRange(range);
+        _syncing = false;
+      });
+    }
 
     // 리사이즈 대응
     var wrapper = document.getElementById('chart-wrapper');
@@ -93,9 +130,13 @@
         if (D2T.chart) {
           D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
         }
+        if (D2T.volumeChart && volContainer) {
+          D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight);
+        }
         if (typeof syncCanvas === 'function') syncCanvas();
       });
       ro.observe(wrapper);
+      if (volContainer) ro.observe(volContainer);
     }
   }
 

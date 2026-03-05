@@ -314,6 +314,16 @@
       min-height: 0;
     }
 
+    #volume-container {
+      height: 100px;
+      flex-shrink: 0;
+      border-top: 1px solid #2a2e39;
+    }
+
+    #chart-wrapper.blank-mode ~ #volume-container {
+      display: none;
+    }
+
     #chart-container {
       width: 100%;
       height: 100%;
