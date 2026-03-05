@@ -50,17 +50,26 @@ async def login(body: LoginBody, response: Response):
         raise HTTPException(status_code=401, detail="유효하지 않은 Firebase 토큰")
 
     uid = user["uid"]
+    admin_uid = os.getenv("ADMIN_UID", "")
     status = get_user_status(uid)
 
-    # 미등록 유저 → pending 등록
-    if status is None:
-        status = register_user(user)
+    # 관리자는 항상 자동 승인 (미등록 또는 pending/rejected 상태 무관)
+    if admin_uid and uid == admin_uid:
+        if status is None:
+            register_user(user)
+        if status != "approved":
+            approve_user(uid)
+        status = "approved"
+    else:
+        # 일반 유저: 미등록이면 pending 등록
+        if status is None:
+            status = register_user(user)
 
-    if status == "pending":
-        return {"status": "pending"}
+        if status == "pending":
+            return {"status": "pending"}
 
-    if status == "rejected":
-        return {"status": "rejected"}
+        if status == "rejected":
+            return {"status": "rejected"}
 
     # approved
     token = create_session_token(user)
