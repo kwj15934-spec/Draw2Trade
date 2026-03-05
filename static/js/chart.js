@@ -82,7 +82,8 @@
     var volContainer = document.getElementById('volume-container');
     if (volContainer) {
       D2T.volumeChart = LightweightCharts.createChart(volContainer, {
-        autoSize: true,
+        width:  volContainer.offsetWidth  || 600,
+        height: volContainer.offsetHeight || 100,
         layout: {
           background: { color: '#131722' },
           textColor: '#888',
@@ -124,16 +125,20 @@
       });
     }
 
-    // 리사이즈 대응 (메인 차트만 — volume은 autoSize)
+    // 리사이즈 대응
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.ResizeObserver) {
       var ro = new ResizeObserver(function () {
         if (D2T.chart) {
           D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
         }
+        if (D2T.volumeChart && volContainer) {
+          D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight || 100);
+        }
         if (typeof syncCanvas === 'function') syncCanvas();
       });
       ro.observe(wrapper);
+      if (volContainer) ro.observe(volContainer);
     }
   }
 

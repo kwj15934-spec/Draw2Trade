@@ -233,7 +233,7 @@ def get_monthly_ohlcv(ticker: str, years: int = 10) -> dict[str, Any] | None:
     if cp.exists():
         try:
             data = json.loads(cp.read_text(encoding="utf-8"))
-            if data.get("last_month", "") >= current_month:
+            if data.get("last_month", "") >= current_month and "volume" in data:
                 _mem_ohlcv[ticker] = data
                 return data
         except Exception:
