@@ -91,6 +91,16 @@
 
   <div class="vr"></div>
 
+  <!-- 자동 분석 -->
+  <label>자동</label>
+  <input type="month" id="auto-from" class="auto-date-input" title="분석 시작 월 (비워두면 현재 차트 범위)" placeholder="시작">
+  <span class="period-sep">~</span>
+  <input type="month" id="auto-to" class="auto-date-input" title="분석 종료 월" placeholder="종료">
+  <button id="btn-auto-trend" class="btn-d2t" title="지정 기간 선형 회귀 추세선 자동 생성">📐 추세선</button>
+  <button id="btn-auto-channel" class="btn-d2t" title="지정 기간 고가/저가 채널 자동 생성">📊 채널</button>
+
+  <div class="vr"></div>
+
   <!-- 기간 설정 (재설계) -->
   <div class="period-group">
     <label>기간</label>

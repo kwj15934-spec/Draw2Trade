@@ -485,6 +485,134 @@
     return bins.map(function (y) { return 1 - (y - mn) / (mx - mn); });
   }
 
+  // ── 자동 분석 공통: 날짜 필터 캔들 가져오기 ──────────────────────────────
+  function getFilteredCandles() {
+    var candles = D2T && D2T.candles;
+    if (!candles || candles.length < 2) return null;
+
+    var fromEl  = document.getElementById('auto-from');
+    var toEl    = document.getElementById('auto-to');
+    var fromVal = fromEl && fromEl.value ? fromEl.value : null;
+    var toVal   = toEl   && toEl.value   ? toEl.value   : null;
+
+    var filtered;
+    if (fromVal || toVal) {
+      // month input → "YYYY-MM", date input → "YYYY-MM-DD"
+      var fromDate = fromVal ? (fromVal.length === 7 ? fromVal + '-01' : fromVal) : null;
+      var toDate   = toVal   ? (toVal.length   === 7 ? toVal   + '-31' : toVal)   : null;
+      filtered = candles.filter(function (c) {
+        if (fromDate && c.time < fromDate) return false;
+        if (toDate   && c.time > toDate)   return false;
+        return true;
+      });
+    } else {
+      // 날짜 미지정 → 현재 visible 범위
+      filtered = candles;
+      try {
+        var vr = D2T.chart.timeScale().getVisibleRange();
+        if (vr) {
+          filtered = candles.filter(function (c) {
+            return c.time >= vr.from && c.time <= vr.to;
+          });
+        }
+      } catch (e) {}
+    }
+    return filtered && filtered.length >= 2 ? filtered : null;
+  }
+
+  // ── 자동 추세선: 선형 회귀 ────────────────────────────────────────────────
+  function autoDrawTrend() {
+    var filtered = getFilteredCandles();
+    if (!filtered) {
+      showStatus('차트를 먼저 로드하세요.', 'error');
+      return;
+    }
+    var n = filtered.length;
+
+    // 선형 회귀 (종가 기준)
+    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    for (var i = 0; i < n; i++) {
+      sumX  += i;
+      sumY  += filtered[i].close;
+      sumXY += i * filtered[i].close;
+      sumXX += i * i;
+    }
+    var denom     = (n * sumXX - sumX * sumX) || 1;
+    var slope     = (n * sumXY - sumX * sumY) / denom;
+    var intercept = (sumY - slope * sumX) / n;
+
+    var startPrice = intercept;
+    var endPrice   = intercept + slope * (n - 1);
+
+    // 해당 기간이 보이도록 스크롤
+    D2T.chart.timeScale().setVisibleRange({ from: filtered[0].time, to: filtered[n - 1].time });
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        var x0 = D2T.chart.timeScale().timeToCoordinate(filtered[0].time);
+        var y0 = D2T.series.priceToCoordinate(startPrice);
+        var x1 = D2T.chart.timeScale().timeToCoordinate(filtered[n - 1].time);
+        var y1 = D2T.series.priceToCoordinate(endPrice);
+
+        if (x0 == null || y0 == null || x1 == null || y1 == null) {
+          showStatus('좌표 변환 실패. 차트에 해당 기간이 있는지 확인하세요.', 'error');
+          return;
+        }
+
+        pushHistory();
+        var pts = polylineToPoints([{ x: x0, y: y0 }, { x: x1, y: y1 }]);
+        if (pts) drawPoints = pts;
+        redraw();
+        showStatus('추세선 자동 완료 (' + n + '봉 회귀선). 검색 버튼을 누르세요.', '');
+      });
+    });
+  }
+
+  // ── 자동 채널: 고가/저가 수평 채널 ────────────────────────────────────────
+  function autoDrawChannel() {
+    var filtered = getFilteredCandles();
+    if (!filtered) {
+      showStatus('차트를 먼저 로드하세요.', 'error');
+      return;
+    }
+    var n = filtered.length;
+    var maxHigh = -Infinity, minLow = Infinity;
+    filtered.forEach(function (c) {
+      if (c.high > maxHigh) maxHigh = c.high;
+      if (c.low  < minLow)  minLow  = c.low;
+    });
+
+    D2T.chart.timeScale().setVisibleRange({ from: filtered[0].time, to: filtered[n - 1].time });
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        var x0    = D2T.chart.timeScale().timeToCoordinate(filtered[0].time);
+        var x1    = D2T.chart.timeScale().timeToCoordinate(filtered[n - 1].time);
+        var yHigh = D2T.series.priceToCoordinate(maxHigh);
+        var yLow  = D2T.series.priceToCoordinate(minLow);
+
+        if (x0 == null || x1 == null || yHigh == null || yLow == null) {
+          showStatus('좌표 변환 실패.', 'error');
+          return;
+        }
+
+        var p1 = { x: x0, y: yHigh }, p2 = { x: x1, y: yHigh };
+        var p3 = { x: x0, y: yLow  }, p4 = { x: x1, y: yLow  };
+
+        pushHistory();
+        parallelChannels.push({ p1: p1, p2: p2, p3: p3, p4: p4 });
+
+        var mid1 = { x: (p1.x + p3.x) / 2, y: (p1.y + p3.y) / 2 };
+        var mid2 = { x: (p2.x + p4.x) / 2, y: (p2.y + p4.y) / 2 };
+        var pts  = polylineToPoints([mid1, mid2]);
+        if (pts) drawPoints = pts;
+
+        redraw();
+        showStatus('채널 자동 완료 (' + n + '봉 고가-저가). 검색 버튼을 누르세요.', '');
+      });
+    });
+  }
+
   // ── 실행취소 히스토리 ─────────────────────────────────────────────────────
   function pushHistory() {
     drawHistory.push({
@@ -861,6 +989,12 @@
         redraw();
       });
     }
+
+    // 자동 분석
+    var btnAutoTrend   = document.getElementById('btn-auto-trend');
+    var btnAutoChannel = document.getElementById('btn-auto-channel');
+    if (btnAutoTrend)   btnAutoTrend.addEventListener('click',   autoDrawTrend);
+    if (btnAutoChannel) btnAutoChannel.addEventListener('click', autoDrawChannel);
 
     // 검색
     document.getElementById('btn-search').addEventListener('click', doSearch);

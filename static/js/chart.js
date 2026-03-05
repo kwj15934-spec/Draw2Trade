@@ -20,6 +20,7 @@
     volumeChart:     null,
     series:          null,
     volumeSeries:    null,
+    candles:         null,
     ticker:          null,
     loading:         false,
     timeframe:       'monthly',   // 'monthly' | 'weekly' | 'daily'
@@ -184,6 +185,7 @@
           throw new Error('캔들 데이터 없음');
         }
         D2T.series.setData(data.candles);
+        D2T.candles = data.candles;
         setVolumeData(data.candles);
         D2T.chart.timeScale().fitContent();
         D2T.ticker = ticker;
@@ -242,6 +244,7 @@
           throw new Error('캔들 데이터 없음');
         }
         D2T.series.setData(data.candles);
+        D2T.candles = data.candles;
         setVolumeData(data.candles);
         D2T.ticker = ticker;
 
@@ -483,6 +486,10 @@
     var inputType = market === 'US' ? 'date' : 'month';
     if (dtFrom) { dtFrom.type = inputType; dtFrom.value = ''; }
     if (dtTo)   { dtTo.type   = inputType; dtTo.value   = ''; }
+    var autoFrom = document.getElementById('auto-from');
+    var autoTo   = document.getElementById('auto-to');
+    if (autoFrom) { autoFrom.type = inputType; autoFrom.value = ''; }
+    if (autoTo)   { autoTo.type   = inputType; autoTo.value   = ''; }
 
     // lookback 드롭다운 라벨 전환
     var lookbackSel = document.getElementById('lookback-months');
