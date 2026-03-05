@@ -61,6 +61,12 @@
   firebase.initializeApp(cfg);
   var auth = firebase.auth();
 
+  // Firebase 준비 완료 → Google 버튼 활성화 (SDK 로드 전 클릭 차단 해제)
+  ['btn-google-login', 'btn-google-signup'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (btn) btn.disabled = false;
+  });
+
   // ── 3. 백엔드 로그인 ─────────────────────────────────────────────────────
   async function loginWithToken(idToken) {
     var res = await fetch('/api/auth/login', {
