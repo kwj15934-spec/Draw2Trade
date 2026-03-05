@@ -1,8 +1,8 @@
-name: Deploy to Linux Server
+name: Deploy to server
 
 on:
   push:
-    branches: [ main ]   # main 브랜치에 push 시 자동 실행
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -11,20 +11,22 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host:     ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key:      ${{ secrets.SERVER_SSH_KEY }}
-          port:     ${{ secrets.SERVER_PORT }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
           script: |
             set -e
-            cd /srv/draw2trade
+            cd /home/kwj/formeta_project/draw2trade
+            git fetch origin
+            git reset --hard origin/main
 
-            # 코드 업데이트 (.env, secrets/ 는 git 관리 대상 아니므로 안전)
-            git pull origin main
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
 
-            # 새 패키지가 있으면 설치
-            venv/bin/pip install -q -r requirements.txt
+            ./venv/bin/python -m pip install -U pip setuptools wheel
+            ./venv/bin/pip install -r requirements.txt
 
-            # 서버 재시작
             sudo systemctl restart draw2trade
-            echo "✅ 배포 완료"
+            sudo systemctl status draw2trade --no-pager -l | head -n 30
