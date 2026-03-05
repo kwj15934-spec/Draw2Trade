@@ -16,12 +16,13 @@
 
   // ── 전역 상태 ─────────────────────────────────────────────────────────────
   window.D2T = {
-    chart:          null,
-    series:         null,
-    ticker:         null,
-    loading:        false,
-    timeframe:      'monthly',   // 'monthly' | 'weekly' | 'daily'
-    market:         'KR',        // 'KR' | 'US'
+    chart:           null,
+    series:          null,
+    volumeSeries:    null,
+    ticker:          null,
+    loading:         false,
+    timeframe:       'monthly',   // 'monthly' | 'weekly' | 'daily'
+    market:          'KR',        // 'KR' | 'US'
     matchPeriodData: null,
   };
 
@@ -76,6 +77,15 @@
       wickDownColor: '#ef5350',
     });
 
+    // 거래량 히스토그램 (차트 하단 20% 영역)
+    D2T.volumeSeries = D2T.chart.addHistogramSeries({
+      priceFormat:  { type: 'volume' },
+      priceScaleId: 'volume',
+    });
+    D2T.chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.82, bottom: 0 },
+    });
+
     // 리사이즈 대응
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.ResizeObserver) {
@@ -87,6 +97,19 @@
       });
       ro.observe(wrapper);
     }
+  }
+
+  // ── 거래량 데이터 세팅 헬퍼 ──────────────────────────────────────────────
+  function setVolumeData(candles) {
+    if (!D2T.volumeSeries || !candles) return;
+    var volData = candles.map(function (c) {
+      return {
+        time:  c.time,
+        value: c.volume || 0,
+        color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
+      };
+    });
+    D2T.volumeSeries.setData(volData);
   }
 
   // ── 차트 데이터 로딩 ──────────────────────────────────────────────────────
@@ -114,6 +137,7 @@
           throw new Error('캔들 데이터 없음');
         }
         D2T.series.setData(data.candles);
+        setVolumeData(data.candles);
         D2T.chart.timeScale().fitContent();
         D2T.ticker = ticker;
         var tfLabel = TF_LABELS[data.timeframe || tf] || tf;
@@ -171,6 +195,7 @@
           throw new Error('캔들 데이터 없음');
         }
         D2T.series.setData(data.candles);
+        setVolumeData(data.candles);
         D2T.ticker = ticker;
 
         var tfLabel = TF_LABELS[resultTf] || resultTf;

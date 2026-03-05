@@ -97,13 +97,15 @@ async def chart_data(
     else:
         time_fmt = lambda d: d
 
+    volumes = ohlcv.get("volume", [])
     candles = [
         {
-            "time": time_fmt(d),
-            "open":  round(float(ohlcv["open"][i]),  1),
-            "high":  round(float(ohlcv["high"][i]),  1),
-            "low":   round(float(ohlcv["low"][i]),   1),
-            "close": round(float(ohlcv["close"][i]), 1),
+            "time":   time_fmt(d),
+            "open":   round(float(ohlcv["open"][i]),  1),
+            "high":   round(float(ohlcv["high"][i]),  1),
+            "low":    round(float(ohlcv["low"][i]),   1),
+            "close":  round(float(ohlcv["close"][i]), 1),
+            "volume": int(volumes[i]) if i < len(volumes) else 0,
         }
         for i, d in enumerate(dates)
         if ohlcv["close"][i] > 0

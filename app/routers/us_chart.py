@@ -57,18 +57,18 @@ async def us_chart_data(symbol: str, timeframe: str = "daily"):
     highs = ohlcv["high"]
     lows = ohlcv["low"]
     closes = ohlcv["close"]
+    volumes = ohlcv.get("volume", [])
 
     candles = []
     for i, d in enumerate(dates):
-        # monthly는 YYYY-MM-01, daily/weekly는 YYYY-MM-DD
-        time_str = d
         candles.append(
             {
-                "time":  time_str,
-                "open":  opens[i],
-                "high":  highs[i],
-                "low":   lows[i],
-                "close": closes[i],
+                "time":   d,
+                "open":   opens[i],
+                "high":   highs[i],
+                "low":    lows[i],
+                "close":  closes[i],
+                "volume": int(volumes[i]) if i < len(volumes) else 0,
             }
         )
 
