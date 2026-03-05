@@ -184,6 +184,72 @@
       color: #ff6b35;
       background: rgba(255,107,53,0.07);
     }
+
+    /* ── 승인 대기 모달 ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal-box {
+      background: #1a1d2e;
+      border: 1px solid #2a2e39;
+      border-radius: 14px;
+      padding: 40px 36px 32px;
+      width: 340px;
+      text-align: center;
+    }
+
+    .modal-icon {
+      font-size: 44px;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #d1d4dc;
+      margin-bottom: 10px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .modal-badge {
+      display: inline-block;
+      background: rgba(255,107,53,0.15);
+      border: 1px solid rgba(255,107,53,0.4);
+      color: #ff6b35;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin: 12px 0 24px;
+    }
+
+    .modal-btn {
+      width: 100%;
+      height: 42px;
+      background: #ff6b35;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .modal-btn:hover { background: #e55c27; }
   </style>
 </head>
 <body>
@@ -270,6 +336,53 @@
     document.getElementById('signup-password2').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') document.getElementById('btn-signup').click();
     });
+  </script>
+  <!-- 승인 대기 모달 -->
+  <div class="modal-overlay" id="pending-modal">
+    <div class="modal-box">
+      <div class="modal-icon">📋</div>
+      <div class="modal-title">가입 신청 완료!</div>
+      <div class="modal-desc">
+        관리자 승인 후 서비스를 이용하실 수 있습니다.<br>
+        승인이 완료되면 이메일로 안내해 드립니다.
+      </div>
+      <div class="modal-badge">승인 대기 중</div>
+      <button class="modal-btn" id="pending-modal-close">확인</button>
+    </div>
+  </div>
+
+  <script>
+    // 탭 전환
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        document.getElementById('error-msg').textContent = '';
+      });
+    });
+
+    // Enter 키 지원
+    document.getElementById('input-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('btn-email-login').click();
+    });
+    document.getElementById('signup-password2').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('btn-signup').click();
+    });
+
+    // 모달 닫기
+    document.getElementById('pending-modal-close').addEventListener('click', function() {
+      document.getElementById('pending-modal').classList.remove('show');
+    });
+    document.getElementById('pending-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+
+    // auth.js에서 호출할 전역 함수
+    window.showPendingModal = function() {
+      document.getElementById('pending-modal').classList.add('show');
+    };
   </script>
   <script src="/static/js/auth.js"></script>
 </body>

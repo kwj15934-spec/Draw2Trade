@@ -77,7 +77,11 @@
     if (data.status === 'approved') {
       window.location.href = '/';
     } else if (data.status === 'pending') {
-      window.location.href = '/pending';
+      if (typeof window.showPendingModal === 'function') {
+        window.showPendingModal();
+      } else {
+        window.location.href = '/pending';
+      }
     } else if (data.status === 'rejected') {
       throw new Error('가입이 거절되었습니다. 관리자에게 문의하세요.');
     }

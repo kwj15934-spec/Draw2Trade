@@ -14,7 +14,7 @@ from pathlib import Path
 
 import firebase_admin
 from firebase_admin import auth as fb_auth
-from firebase_admin import credentials
+from firebase_admin import credentials, firestore as fb_firestore
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 logger = logging.getLogger(__name__)
@@ -82,6 +82,17 @@ def decode_session_token(token: str) -> dict | None:
         return None
 
 
+# ── Firestore 동기화 ──────────────────────────────────────────────────────────
+
+def _firestore_upsert_user(uid: str, data: dict) -> None:
+    """Firestore users/{uid} 문서를 upsert (merge=True). 실패해도 로컬 파일엔 영향 없음."""
+    try:
+        db = fb_firestore.client()
+        db.collection("users").document(uid).set(data, merge=True)
+    except Exception as e:
+        logger.warning("Firestore upsert 실패 (uid=%s): %s", uid, e)
+
+
 # ── 유저 승인 관리 ────────────────────────────────────────────────────────────
 
 def _load_users() -> dict:
@@ -107,12 +118,15 @@ def register_user(user_info: dict) -> str:
     users = _load_users()
     uid = user_info["uid"]
     if uid not in users:
-        users[uid] = {
+        now = datetime.now(timezone.utc).isoformat()
+        entry = {
             **user_info,
             "status": "pending",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now,
         }
+        users[uid] = entry
         _save_users(users)
+        _firestore_upsert_user(uid, entry)
         logger.info("신규 유저 등록 (pending): %s", user_info.get("email"))
         return "pending"
     return users[uid]["status"]
@@ -124,6 +138,7 @@ def approve_user(uid: str) -> bool:
         return False
     users[uid]["status"] = "approved"
     _save_users(users)
+    _firestore_upsert_user(uid, {"status": "approved"})
     logger.info("유저 승인: %s", uid)
     return True
 
@@ -134,6 +149,7 @@ def reject_user(uid: str) -> bool:
         return False
     users[uid]["status"] = "rejected"
     _save_users(users)
+    _firestore_upsert_user(uid, {"status": "rejected"})
     logger.info("유저 거절: %s", uid)
     return True
 
