@@ -13,10 +13,11 @@ from fastapi import FastAPI, Request
 
 load_dotenv()  # draw2trade_web/.env 자동 로드
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.dependencies.auth import get_optional_user
 from app.routers import auth, chart, pattern, us_chart
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
@@ -95,4 +96,9 @@ async def pending_page(request: Request):
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
+    import os
+    user = get_optional_user(request)
+    admin_uid = os.getenv("ADMIN_UID", "")
+    if not user or not admin_uid or user.get("uid") != admin_uid:
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("admin.html", {"request": request})
