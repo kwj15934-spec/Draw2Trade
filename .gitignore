@@ -1,19 +1,20 @@
-# 민감한 정보
-draw2trade_web/secrets/
-draw2trade_web/logs/
-draw2trade_web/cache/
-draw2trade_web/data/
-
 # Claude
 .claude/
+
+# 환경변수 / 비밀키
+.env
+secrets/
+
+# 런타임 캐시
+cache/ohlcv/
+cache/us/ohlcv/
+cache/tickers.json
+cache/us/tickers.json
+
+# 로그
+logs/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
-.env
-*.env
-
-# OS
-.DS_Store
-Thumbs.db
