@@ -82,7 +82,7 @@
       priceFormat:  { type: 'volume' },
       priceScaleId: 'volume',
     });
-    D2T.chart.priceScale('volume').applyOptions({
+    D2T.volumeSeries.priceScale().applyOptions({
       scaleMargins: { top: 0.82, bottom: 0 },
     });
 
