@@ -317,26 +317,6 @@
     <div class="error-msg" id="error-msg"></div>
   </div>
 
-  <script>
-    // 탭 전환
-    document.querySelectorAll('.tab-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
-        btn.classList.add('active');
-        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-        document.getElementById('error-msg').textContent = '';
-      });
-    });
-
-    // Enter 키 지원
-    document.getElementById('input-password').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') document.getElementById('btn-email-login').click();
-    });
-    document.getElementById('signup-password2').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') document.getElementById('btn-signup').click();
-    });
-  </script>
   <!-- 승인 대기 모달 -->
   <div class="modal-overlay" id="pending-modal">
     <div class="modal-box">

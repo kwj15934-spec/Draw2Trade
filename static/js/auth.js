@@ -76,12 +76,14 @@
 
     if (data.status === 'approved') {
       window.location.href = '/';
+      return 'approved';
     } else if (data.status === 'pending') {
       if (typeof window.showPendingModal === 'function') {
         window.showPendingModal();
       } else {
         window.location.href = '/pending';
       }
+      return 'pending';
     } else if (data.status === 'rejected') {
       throw new Error('가입이 거절되었습니다. 관리자에게 문의하세요.');
     }
@@ -91,16 +93,19 @@
   async function handleGoogleAuth(btnId) {
     setLoading(btnId, true);
     showError('');
+    var redirecting = false;
     try {
       var provider = new firebase.auth.GoogleAuthProvider();
       var result = await auth.signInWithPopup(provider);
       var idToken = await result.user.getIdToken();
-      await loginWithToken(idToken);
+      var status = await loginWithToken(idToken);
+      if (status === 'approved') redirecting = true;
     } catch (e) {
       if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
       }
-      setLoading(btnId, false);
+    } finally {
+      if (!redirecting) setLoading(btnId, false);
     }
   }
 
