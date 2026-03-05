@@ -193,6 +193,44 @@ def _ensure_dirs() -> None:
     _US_TICKERS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
+    """
+    NASDAQ screener API에서 전체 미국 상장 주식 목록을 로드.
+    Returns list of (symbol, name, sector).
+    실패 시 빈 리스트 반환.
+    """
+    try:
+        import urllib.request as _req
+        url = (
+            "https://api.nasdaq.com/api/screener/stocks"
+            "?tableonly=true&limit=10000&download=true"
+        )
+        req = _req.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://www.nasdaq.com",
+            "Referer": "https://www.nasdaq.com/",
+        })
+        with _req.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        rows = (data.get("data") or {}).get("table", {}).get("rows") or []
+        result = []
+        for row in rows:
+            sym = str(row.get("symbol", "") or "").strip().replace(".", "-").replace("^", "")
+            name = str(row.get("name", "") or "").strip()
+            sector = str(row.get("sector", "") or "").strip()
+            # 유효하지 않은 행 걸러내기
+            if not sym or not name or sym == "Symbol" or "/" in sym or len(sym) > 8:
+                continue
+            result.append((sym, name, sector))
+        logger.info("NASDAQ screener에서 %d개 종목 로드 완료", len(result))
+        return result
+    except Exception as e:
+        logger.warning("NASDAQ screener 로드 실패: %s (다음 소스 시도)", e)
+        return []
+
+
 def _fetch_sp500_from_wikipedia() -> list[tuple[str, str, str]]:
     """Wikipedia에서 S&P 500 종목 목록 로드. (symbol, name, gics_sector)"""
     try:
@@ -227,12 +265,15 @@ def _fetch_sp500_from_wikipedia() -> list[tuple[str, str, str]]:
 
 def _build_ticker_list() -> list[dict]:
     """
-    S&P 500 + NDX supplement + ETF 합쳐서 중복 제거 후 정렬된 목록 반환.
-    결과를 cache/us/tickers.json에 저장.
+    티커 목록 빌드 (우선순위):
+      1. NASDAQ screener API (전체 미국 상장 ~6000개)
+      2. Wikipedia S&P 500 (~503개)
+      3. 하드코딩 fallback (~84개)
+    + NDX supplement + ETF 항상 추가.
+    결과를 cache/us/tickers.json에 저장 (일 1회 갱신).
     """
     _ensure_dirs()
 
-    # 오늘 날짜 캐시 유효 여부 확인
     today_str = date.today().isoformat()
     if _US_TICKERS_FILE.exists():
         try:
@@ -243,18 +284,21 @@ def _build_ticker_list() -> list[dict]:
         except Exception:
             pass
 
-    # 새로 로드
-    sp500 = _fetch_sp500_from_wikipedia()
-    # sp500: list[tuple[str, str, str]] = (sym, name, sector)
-    # fallback은 섹터 없음
-    sp500_with_sector: list[tuple[str, str, str]] = (
-        sp500 if sp500 else [(s, n, "") for s, n in _FALLBACK_TICKERS]
-    )
+    # 1순위: NASDAQ 전체 스크리너
+    base_stocks = _fetch_nasdaq_screener()
 
-    # 중복 없이 합치기 (S&P 500 우선, NDX/ETF는 섹터 없음)
+    # 2순위: Wikipedia S&P 500
+    if not base_stocks:
+        base_stocks = _fetch_sp500_from_wikipedia()
+
+    # 3순위: 하드코딩 fallback
+    if not base_stocks:
+        base_stocks = [(s, n, "") for s, n in _FALLBACK_TICKERS]
+
+    # 중복 없이 합치기 (base 우선, NDX/ETF는 없는 경우만 추가)
     seen: set[str] = set()
     combined: list[tuple[str, str, str]] = []
-    for sym, name, sector in sp500_with_sector:
+    for sym, name, sector in base_stocks:
         if sym not in seen:
             seen.add(sym)
             combined.append((sym, name, sector))
@@ -267,6 +311,8 @@ def _build_ticker_list() -> list[dict]:
             seen.add(sym)
             combined.append((sym, name, "ETF"))
 
+    # 티커 알파벳 순 정렬
+    combined.sort(key=lambda x: x[0])
     tickers = [{"ticker": sym, "name": name, "sector": sector} for sym, name, sector in combined]
 
     try:
@@ -456,11 +502,21 @@ def all_us_names() -> dict[str, str]:
     return _mem_us_names
 
 
+# 자동 프리페치 대상 종목 (S&P 500 상위 + NDX + ETF)
+# 티커 목록이 수천 개로 늘어도 자동 다운로드는 이 범위만 수행
+_PRIORITY_SYMBOLS: set[str] = (
+    {sym for sym, _ in _NDX_SUPPLEMENT}
+    | {sym for sym, _ in _ETFS}
+    | {sym for sym, _ in _FALLBACK_TICKERS}
+)
+
+
 def prefetch_us_ohlcv_background() -> None:
     """
-    서버 시작 시 백그라운드 스레드에서 모든 US 티커 OHLCV를 순차 다운로드.
-    - 유효한 디스크 캐시가 있으면 메모리에 로드 후 스킵 (네트워크 없음)
-    - 없으면 yfinance에서 다운로드 후 디스크 저장
+    서버 시작 시 백그라운드 스레드에서 US OHLCV 프리페치.
+    - 디스크 캐시가 유효하면 메모리 로드 (모든 종목)
+    - 캐시 없거나 만료 → _PRIORITY_SYMBOLS 에 포함된 종목만 yfinance 다운로드
+      (나머지는 사용자가 조회할 때 온디맨드로 다운로드)
     """
     import threading
     import time
@@ -468,11 +524,14 @@ def prefetch_us_ohlcv_background() -> None:
     def _worker() -> None:
         tickers = get_us_tickers()
         today_str = date.today().isoformat()
-        logger.info("US OHLCV 백그라운드 프리페치 시작: %d개 티커", len(tickers))
+        logger.info(
+            "US OHLCV 백그라운드 프리페치 시작: 전체 %d개 (우선순위 자동다운: %d개)",
+            len(tickers), len(_PRIORITY_SYMBOLS),
+        )
         success = 0
         for item in tickers:
             symbol = item["ticker"]
-            # 유효한 디스크 캐시가 있으면 메모리에만 로드
+            # 유효한 디스크 캐시 → 메모리에 로드 (모든 종목)
             cache_path = _US_CACHE_DIR / f"{symbol}.json"
             if cache_path.exists():
                 try:
@@ -486,12 +545,14 @@ def prefetch_us_ohlcv_background() -> None:
                         continue
                 except Exception:
                     pass
-            # 캐시 없거나 만료 → yfinance 다운로드
+            # 캐시 없거나 만료 → 우선순위 종목만 yfinance 다운로드
+            if symbol not in _PRIORITY_SYMBOLS:
+                continue
             data = get_us_ohlcv(symbol)
             if data:
                 success += 1
             time.sleep(0.15)  # yfinance rate limit 방지
-        logger.info("US OHLCV 백그라운드 프리페치 완료: %d/%d 성공", success, len(tickers))
+        logger.info("US OHLCV 백그라운드 프리페치 완료: %d 종목 메모리 로드", success)
 
     t = threading.Thread(target=_worker, daemon=True, name="us-ohlcv-prefetch")
     t.start()
