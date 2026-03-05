@@ -82,9 +82,10 @@
     var volContainer = document.getElementById('volume-container');
     if (volContainer) {
       D2T.volumeChart = LightweightCharts.createChart(volContainer, {
+        autoSize: true,
         layout: {
           background: { color: '#131722' },
-          textColor: '#d1d4dc',
+          textColor: '#888',
         },
         grid: {
           vertLines: { color: '#1e2130' },
@@ -99,7 +100,7 @@
           visible: false,
         },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        handleScroll: { mouseWheel: false, pressedMouseMove: false },
+        handleScroll: false,
         handleScale: false,
       });
 
@@ -123,26 +124,25 @@
       });
     }
 
-    // 리사이즈 대응
+    // 리사이즈 대응 (메인 차트만 — volume은 autoSize)
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.ResizeObserver) {
       var ro = new ResizeObserver(function () {
         if (D2T.chart) {
           D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
         }
-        if (D2T.volumeChart && volContainer) {
-          D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight);
-        }
         if (typeof syncCanvas === 'function') syncCanvas();
       });
       ro.observe(wrapper);
-      if (volContainer) ro.observe(volContainer);
     }
   }
 
   // ── 거래량 데이터 세팅 헬퍼 ──────────────────────────────────────────────
   function setVolumeData(candles) {
-    if (!D2T.volumeSeries || !candles) return;
+    if (!D2T.volumeSeries || !candles) {
+      console.warn('[volume] volumeSeries:', D2T.volumeSeries, 'candles:', candles && candles.length);
+      return;
+    }
     var volData = candles.map(function (c) {
       return {
         time:  c.time,
@@ -150,6 +150,7 @@
         color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
       };
     });
+    console.log('[volume] setData', volData.length, 'bars, sample:', volData[0]);
     D2T.volumeSeries.setData(volData);
   }
 
