@@ -51,7 +51,7 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         logger.info("US 검색: 디스크 캐시 %d개 로드", loaded)
         ohlcv_cache = all_us_ohlcv()
         names_cache = all_us_names()
-        smooth_window = 22  # 일봉 노이즈 제거: 22일 롤링 평균 (월봉 수준)
+        smooth_window = 0   # 0 = 윈도우 크기 비례 적응형 스무딩
         # lookback_bars 우선 (차트 표시 봉 수 자동 감지), 없으면 개월×22
         if body.lookback_bars is not None:
             effective_lookback = body.lookback_bars

@@ -1,11 +1,17 @@
 """
-Similarity service - Pearson correlation 기반 패턴 유사도 계산.
+Similarity service - 복합 가중치 패턴 유사도 계산.
+
+점수식:
+  FinalScore = 0.45 * ShapeCorr
+             + 0.20 * LevelCloseness
+             + 0.20 * DiffCorr
+             + 0.10 * ExtremumScore
+             + 0.05 * VolatilityScore
 
 처리 파이프라인:
-  사용자 그린 좌표 → 150포인트 리샘플링 → 0~1 정규화
-  종목 전체 데이터 → 슬라이딩 윈도우 → 각 구간 150pt 리샘플 + 0~1 정규화
-  → Pearson 상관계수 → score = (corr + 1) / 2  ∈ [0, 1]
-  → 종목별 최고점수 구간 반환
+  사용자 드로잉 → 150포인트 리샘플 → 0~1 정규화
+  종목 슬라이딩 윈도우 → 적응형 스무딩 → 리샘플 → 정규화
+  → 빠른 필터 → 복합 점수 계산 → 2-pass 정밀화 → Top N 반환
 """
 import heapq
 import logging
@@ -18,6 +24,7 @@ from app.services.data_service import all_names, all_ohlcv
 logger = logging.getLogger(__name__)
 
 PATTERN_LEN = 150  # 고정 리샘플 포인트 수
+_EPS = 1e-9
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -39,36 +46,82 @@ def resample(seq: Sequence[float], n: int) -> np.ndarray:
 def normalize(arr: np.ndarray) -> np.ndarray:
     """Min-max 정규화: 0~1 스케일."""
     mn, mx = arr.min(), arr.max()
-    if mx == mn:
+    if mx - mn < _EPS:
         return np.full_like(arr, 0.5)
     return (arr - mn) / (mx - mn)
 
 
-def pearson_score(a: np.ndarray, b: np.ndarray) -> float:
-    """
-    Pearson 상관계수 → 유사도 점수.
-
-    score = (corr + 1) / 2  ∈ [0, 1]
-    """
-    if a.std() == 0.0 or b.std() == 0.0:
-        return 0.5
+def _pearson_raw(a: np.ndarray, b: np.ndarray) -> float:
+    """Raw Pearson 상관계수 [-1, 1]. std == 0 이면 0.0 반환."""
+    if a.std() < _EPS or b.std() < _EPS:
+        return 0.0
     corr = float(np.corrcoef(a, b)[0, 1])
-    if np.isnan(corr):
-        return 0.5
-    return (corr + 1.0) / 2.0
+    return 0.0 if np.isnan(corr) else corr
 
 
 def similarity_score(a: np.ndarray, b: np.ndarray) -> float:
     """
-    복합 유사도 점수 (Pearson 70% + 형태 근접도 30%).
+    복합 유사도 점수 [0, 1].
 
-    - Pearson: 전체 추세/형태 상관
-    - 형태 근접도: 정규화된 두 곡선의 평균 절대 오차 기반 (1 - MAE)
+    ① ShapeCorr      (45%) : max(0, Pearson(a, b))
+    ② LevelCloseness (20%) : 1 - mean(|a - b|)
+    ③ DiffCorr       (20%) : max(0, Pearson(diff(a), diff(b)))
+    ④ ExtremumScore  (10%) : 피크·바닥 위치 유사도
+    ⑤ VolatilityScore( 5%) : 변동성 유사도
     """
-    pcc = pearson_score(a, b)
-    mae = float(np.mean(np.abs(a - b)))   # [0, 1] 범위 (둘 다 0~1 정규화)
-    shape = 1.0 - mae
-    return 0.70 * pcc + 0.30 * shape
+    # ① ShapeCorr
+    shape_corr = max(0.0, _pearson_raw(a, b))
+
+    # ② LevelCloseness
+    level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
+
+    # ③ DiffCorr
+    da, db = np.diff(a), np.diff(b)
+    diff_corr = max(0.0, _pearson_raw(da, db))
+
+    # ④ ExtremumScore
+    n = len(a)
+    peak_diff   = abs(int(np.argmax(a)) - int(np.argmax(b))) / n
+    bottom_diff = abs(int(np.argmin(a)) - int(np.argmin(b))) / n
+    extremum_score = 1.0 - (peak_diff + bottom_diff) / 2.0
+
+    # ⑤ VolatilityScore
+    va = float(np.std(da))
+    vb = float(np.std(db))
+    denom = max(va, vb, _EPS)
+    volatility_score = 1.0 - min(1.0, abs(va - vb) / denom)
+
+    return (
+        0.45 * shape_corr
+        + 0.20 * level_closeness
+        + 0.20 * diff_corr
+        + 0.10 * extremum_score
+        + 0.05 * volatility_score
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 빠른 필터
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fast_reject(tmpl_net: float, win_slice: np.ndarray) -> bool:
+    """
+    True → 이 윈도우 스킵 (full 계산 불필요).
+
+    tmpl_net : 정규화된 템플릿의 net change (tmpl[-1] - tmpl[0]) ∈ [-1, 1]
+    win_slice: 원시 종가 윈도우 (정규화 전)
+    """
+    if len(win_slice) < 2:
+        return True
+    win_range = float(win_slice.max() - win_slice.min())
+    if win_range < _EPS:
+        return True  # 완전 평탄 데이터
+    # 정규화된 net change
+    win_net = float(win_slice[-1] - win_slice[0]) / win_range
+    # 방향이 명확하게 반대면 제외 (임계값 0.3으로 보수적 적용)
+    if abs(tmpl_net) > 0.3 and abs(win_net) > 0.3 and tmpl_net * win_net < 0:
+        return True
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -89,17 +142,13 @@ def search_similar(
     """
     사용자가 그린 패턴과 유사한 종목을 검색한다.
 
+    smooth_window == 0 : 윈도우 크기에 비례한 적응형 스무딩 (US 일봉 권장)
+    smooth_window == 1 : 스무딩 없음 (KR 월봉 권장)
+    smooth_window > 1  : 고정 스무딩
+
     date_from/date_to 지정 시: 해당 구간만 비교 (고정 구간 모드).
     미지정 시: 전체 데이터에서 lookback_months 크기 윈도우를 슬라이딩하며
               종목별 최고점수 구간 반환 (슬라이딩 윈도우 모드).
-
-    Args:
-        draw_points:     사용자가 그린 정규화된 가격 시계열 (임의 길이).
-        lookback_months: 슬라이딩 윈도우 크기 (봉 개수).
-        top_n:           반환할 상위 종목 수.
-        date_from/to:    지정 시 해당 구간만 비교.
-        smooth_window:   US 일봉 노이즈 제거용 롤링 평균 윈도우 (KR=1, US=22).
-        anchor_today:    True이면 슬라이딩 없이 최근 N봉(오늘 기준)만 비교.
     """
     if not draw_points:
         return []
@@ -108,6 +157,7 @@ def search_similar(
 
     # 템플릿 준비 (150포인트 + 정규화)
     tmpl = normalize(resample(draw_points, PATTERN_LEN))
+    tmpl_net = float(tmpl[-1] - tmpl[0])  # 방향 필터용
 
     cache = ohlcv_cache if ohlcv_cache is not None else all_ohlcv()
     names = names_cache if names_cache is not None else all_names()
@@ -117,7 +167,7 @@ def search_similar(
         dates = ohlcv.get("dates", [])
         close = ohlcv.get("close", [])
 
-        # ── 날짜 범위 지정 모드: 해당 구간만 비교 ──────────────────────────
+        # ── 날짜 범위 지정 모드 ────────────────────────────────────────────
         if use_date_range:
             indices = [
                 i for i, d in enumerate(dates)
@@ -125,11 +175,10 @@ def search_similar(
             ]
             if len(indices) < 2:
                 continue
-            slice_close = [close[i] for i in indices]
-            arr = np.array(slice_close, dtype=float)
-            if smooth_window > 1 and len(arr) > smooth_window:
-                kernel = np.ones(smooth_window) / smooth_window
-                arr = np.convolve(arr, kernel, mode="valid")
+            arr = np.array([close[i] for i in indices], dtype=float)
+            sw = _resolve_smooth(smooth_window, len(arr))
+            if sw > 1 and len(arr) > sw:
+                arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
             normed = normalize(resample(arr, PATTERN_LEN))
             score = similarity_score(tmpl, normed)
             results.append({
@@ -143,67 +192,78 @@ def search_similar(
             })
             continue
 
-        # ── 오늘 기준 모드: 최근 N봉만 비교 (슬라이딩 없음) ───────────────────
+        # ── 공통 전처리 ────────────────────────────────────────────────────
         arr = np.array(close, dtype=float)
+        win = lookback_months
 
-        if smooth_window > 1 and len(arr) > smooth_window:
-            kernel = np.ones(smooth_window) / smooth_window
-            arr = np.convolve(arr, kernel, mode="valid")
-            date_shift = smooth_window - 1
+        sw = _resolve_smooth(smooth_window, win)
+        if sw > 1 and len(arr) > sw:
+            arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
+            date_shift = sw - 1
         else:
             date_shift = 0
 
-        win = lookback_months
         n = len(arr)
         if n < win:
             continue
 
+        # ── 오늘 기준 모드 ─────────────────────────────────────────────────
         if anchor_today:
-            # 최근 N봉 고정 비교 (오늘 기준)
             best_i = n - win
             best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
             best_score = similarity_score(tmpl, best_normed)
-
-            orig_start = best_i
-            orig_end   = best_i + win - 1 + date_shift
-            d_from = dates[orig_start] if orig_start < len(dates) else ""
+            orig_end = best_i + win - 1 + date_shift
+            d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
         else:
-            # ── 슬라이딩 윈도우 모드 (2-pass) ────────────────────────────────
-            # 1차: 큰 stride로 후보군 탐색 + 결과 캐시
+            # ── 슬라이딩 윈도우 2-pass ─────────────────────────────────────
+            total_windows = n - win + 1
             coarse = max(2, win // 10)
+            top_k  = min(20, max(5, int(total_windows * 0.01) + 1))
+
+            # 1차: coarse stride 스캔 + 빠른 필터
             coarse_cache: dict[int, tuple[float, np.ndarray]] = {}
-            for i in range(0, n - win + 1, coarse):
-                normed_w = normalize(resample(arr[i: i + win], PATTERN_LEN))
+            for i in range(0, total_windows, coarse):
+                win_slice = arr[i: i + win]
+                if _fast_reject(tmpl_net, win_slice):
+                    continue
+                normed_w = normalize(resample(win_slice, PATTERN_LEN))
                 s = similarity_score(tmpl, normed_w)
                 coarse_cache[i] = (s, normed_w)
 
-            # 2차: 상위 5개 후보 주변 stride=1 정밀 탐색
-            top5 = heapq.nlargest(5, coarse_cache.items(), key=lambda x: x[1][0])
+            if not coarse_cache:
+                continue
+
+            # 2차: 상위 top_k 후보 주변 stride=1 정밀 탐색
+            top_candidates = heapq.nlargest(top_k, coarse_cache.items(), key=lambda x: x[1][0])
             fine_set: set[int] = set()
-            for ci, _ in top5:
-                for j in range(max(0, ci - coarse), min(n - win + 1, ci + coarse + 1)):
+            for ci, _ in top_candidates:
+                for j in range(max(0, ci - coarse), min(total_windows, ci + coarse + 1)):
                     fine_set.add(j)
 
             best_score = -1.0
             best_i = 0
-            best_normed = tmpl  # fallback (overwritten below)
+            best_normed = tmpl  # fallback
             for i in fine_set:
-                # 코어스 패스 결과 재사용, 나머지만 계산
                 if i in coarse_cache:
                     s, normed_w = coarse_cache[i]
                 else:
-                    normed_w = normalize(resample(arr[i: i + win], PATTERN_LEN))
+                    win_slice = arr[i: i + win]
+                    if _fast_reject(tmpl_net, win_slice):
+                        continue
+                    normed_w = normalize(resample(win_slice, PATTERN_LEN))
                     s = similarity_score(tmpl, normed_w)
                 if s > best_score:
                     best_score = s
                     best_i = i
                     best_normed = normed_w
 
-            orig_start = best_i
-            orig_end   = best_i + win - 1 + date_shift
-            d_from = dates[orig_start] if orig_start < len(dates) else ""
+            if best_score < 0:
+                continue
+
+            orig_end = best_i + win - 1 + date_shift
+            d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
         results.append({
@@ -218,3 +278,13 @@ def search_similar(
 
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
     return results[:top_n]
+
+
+def _resolve_smooth(smooth_window: int, win: int) -> int:
+    """
+    smooth_window == 0 : 윈도우 크기 비례 적응형 (N * 0.08, 최소 3)
+    그 외            : 그대로 반환
+    """
+    if smooth_window == 0:
+        return max(3, round(win * 0.08))
+    return smooth_window
