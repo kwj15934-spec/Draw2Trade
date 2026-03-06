@@ -155,6 +155,10 @@
 
     var hasMatch = (matchPoints && matchPoints.length >= 2);
     var hasDraw  = (drawNormalized && drawNormalized.length >= 2);
+
+    // 비교 모드(범례 표시 중)일 때 티커 오버레이 숨기기
+    var tickerOverlay = document.getElementById('ticker-overlay');
+    if (tickerOverlay) tickerOverlay.style.display = hasMatch ? 'none' : (tickerOverlay.dataset.loaded ? 'block' : 'none');
     // 차트 좌표계 사용 가능: matchPeriodData가 준비된 경우
     var usePriceCoords = (hasMatch && hasDraw &&
                           D2T && D2T.matchPeriodData &&
@@ -804,15 +808,14 @@
         var pf = escHtml(r.period_from || '');
         var pt = escHtml(r.period_to   || '');
 
-        // 점수 세부 항목 바
+        // 유사도 특징 한 줄 요약
         var breakdownHtml = '';
         var d = r.score_detail;
         if (d) {
-          breakdownHtml = '<div class="result-breakdown">' +
-            _rbChip('형태',  d.shape,    color) +
-            _rbChip('기울기', d.diff,    '#7b9fce') +
-            _rbChip('극점',  d.extremum, '#b39ddb') +
-          '</div>';
+          var summary = _scoreSummary(d.shape, d.diff, d.extremum, d.volatility);
+          if (summary) {
+            breakdownHtml = '<div class="result-summary">' + summary + '</div>';
+          }
         }
 
         return (
@@ -835,6 +838,35 @@
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function _scoreSummary(shape, diff, extremum, volatility) {
+    var parts = [];
+
+    // 전체 추세 + 등락 패턴
+    if (shape >= 0.80 && diff >= 0.70) {
+      parts.push('추세·등락 일치');
+    } else if (shape >= 0.75) {
+      parts.push('전체 추세 유사');
+    } else if (diff >= 0.70) {
+      parts.push('등락 패턴 유사');
+    } else if (shape >= 0.60) {
+      parts.push('방향 부분 일치');
+    }
+
+    // 고저점 타이밍
+    if (extremum >= 0.85) {
+      parts.push('고저점 타이밍 일치');
+    } else if (extremum < 0.55) {
+      parts.push('고저점 시기 차이');
+    }
+
+    // 변동성
+    if (volatility !== undefined && volatility < 0.55) {
+      parts.push('변동폭 차이');
+    }
+
+    return parts.join(' · ');
   }
 
   function _rbChip(label, score, color) {

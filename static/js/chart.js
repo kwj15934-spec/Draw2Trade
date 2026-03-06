@@ -649,6 +649,7 @@
       }
     }
     if (metaEl) metaEl.textContent = metaParts.join('  ·  ');
+    overlay.dataset.loaded = '1';
     overlay.style.display = 'block';
   }
 
