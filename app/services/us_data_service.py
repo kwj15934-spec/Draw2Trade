@@ -306,7 +306,7 @@ def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
         })
         with _req.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        rows = (data.get("data") or {}).get("table", {}).get("rows") or []
+        rows = (data.get("data") or {}).get("rows") or []
         result = []
         for row in rows:
             sym = str(row.get("symbol", "") or "").strip().replace(".", "-").replace("^", "")
@@ -402,23 +402,23 @@ def _build_ticker_list() -> list[dict]:
     if _US_TICKERS_FILE.exists():
         try:
             cached = json.loads(_US_TICKERS_FILE.read_text(encoding="utf-8"))
-            # 날짜 일치 + 종목 수 1000개 이상일 때만 캐시 사용 (S&P 500만 있는 캐시 무시)
-            if cached.get("date") == today_str and len(cached.get("tickers", [])) >= 1000:
+            # 날짜 일치 + 종목 수 3000개 이상일 때만 캐시 사용 (screener 결과 기준)
+            if cached.get("date") == today_str and len(cached.get("tickers", [])) >= 3000:
                 logger.info("US 티커 목록 캐시 사용 (%d개)", len(cached["tickers"]))
                 return cached["tickers"]
         except Exception:
             pass
 
-    # 1순위: NASDAQ trader FTP (NASDAQ + NYSE/AMEX 전체, ~8000개)
-    base_stocks = _fetch_nasdaq_ftp()
+    # 1순위: NASDAQ screener API (~6000개, sector 포함)
+    base_stocks = _fetch_nasdaq_screener()
 
-    # 2순위: 번들 CSV (서버 방화벽 무관, 항상 작동)
+    # 2순위: NASDAQ trader FTP (FTP 접근 가능 환경, ~8000개)
+    if len(base_stocks) < 500:
+        base_stocks = _fetch_nasdaq_ftp()
+
+    # 3순위: 번들 CSV (서버 방화벽 무관, 항상 작동)
     if len(base_stocks) < 500:
         base_stocks = _fetch_bundled_nasdaq()
-
-    # 3순위: NASDAQ screener API
-    if len(base_stocks) < 500:
-        base_stocks = _fetch_nasdaq_screener()
 
     # 4순위: Wikipedia S&P 500
     if len(base_stocks) < 500:
