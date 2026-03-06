@@ -153,6 +153,12 @@
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
+      <!-- 종목 정보 오버레이 (차트 좌상단) -->
+      <div id="ticker-overlay" style="display:none;">
+        <div id="ticker-overlay-symbol"></div>
+        <div id="ticker-overlay-name"></div>
+        <div id="ticker-overlay-meta"></div>
+      </div>
     </div>
 
     <!-- 거래량 패널 리사이저 -->
@@ -235,6 +241,6 @@
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260306"></script>
-<script src="/static/js/draw.js?v=20260306"></script>
+<script src="/static/js/chart.js?v=20260306b"></script>
+<script src="/static/js/draw.js?v=20260306b"></script>
 {% endblock %}

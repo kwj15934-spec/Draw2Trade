@@ -194,6 +194,7 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + '  |  ' + data.candles.length + unit;
         }
+        setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         if (typeof clearDraw === 'function') clearDraw();
       })
       .catch(function (e) {
@@ -253,6 +254,7 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + periodLabel;
         }
+        setTickerOverlay(ticker, data.name, tfLabel, data.candles);
 
         // 매칭 구간으로 줌 + 마커
         if (periodFrom && periodTo) {
@@ -625,6 +627,30 @@
       });
     });
   });
+
+  function setTickerOverlay(ticker, name, tfLabel, candles) {
+    var overlay = document.getElementById('ticker-overlay');
+    if (!overlay) return;
+    var lastCandle = candles && candles.length ? candles[candles.length - 1] : null;
+    var prevCandle = candles && candles.length > 1 ? candles[candles.length - 2] : null;
+    var symEl  = document.getElementById('ticker-overlay-symbol');
+    var nameEl = document.getElementById('ticker-overlay-name');
+    var metaEl = document.getElementById('ticker-overlay-meta');
+    if (symEl)  symEl.textContent  = ticker;
+    if (nameEl) nameEl.textContent = name || '';
+    var metaParts = [tfLabel];
+    if (lastCandle) {
+      var close = lastCandle.close;
+      metaParts.push('종가 ' + (close >= 1000 ? close.toLocaleString() : close));
+      if (prevCandle && prevCandle.close) {
+        var chg = ((close - prevCandle.close) / prevCandle.close * 100).toFixed(2);
+        var sign = chg >= 0 ? '+' : '';
+        metaParts.push(sign + chg + '%');
+      }
+    }
+    if (metaEl) metaEl.textContent = metaParts.join('  ·  ');
+    overlay.style.display = 'block';
+  }
 
   // 외부에서 호출 가능하도록 노출
   window.D2T.loadChart       = loadChart;
