@@ -1,0 +1,1675 @@
+ticker,name,sector
+AAPL,Apple,Technology
+MSFT,Microsoft,Technology
+NVDA,NVIDIA,Technology
+GOOGL,Alphabet A,Communication Services
+GOOG,Alphabet C,Communication Services
+META,Meta Platforms,Communication Services
+AVGO,Broadcom,Technology
+TSLA,Tesla,Consumer Discretionary
+COST,Costco Wholesale,Consumer Staples
+NFLX,Netflix,Communication Services
+ADBE,Adobe,Technology
+AMD,Advanced Micro Devices,Technology
+CSCO,Cisco Systems,Technology
+INTC,Intel,Technology
+QCOM,Qualcomm,Technology
+TXN,Texas Instruments,Technology
+INTU,Intuit,Technology
+AMGN,Amgen,Health Care
+ISRG,Intuitive Surgical,Health Care
+BKNG,Booking Holdings,Consumer Discretionary
+AMAT,Applied Materials,Technology
+LRCX,Lam Research,Technology
+REGN,Regeneron Pharmaceuticals,Health Care
+GILD,Gilead Sciences,Health Care
+MRVL,Marvell Technology,Technology
+MU,Micron Technology,Technology
+KLAC,KLA Corporation,Technology
+SNPS,Synopsys,Technology
+CDNS,Cadence Design Systems,Technology
+MCHP,Microchip Technology,Technology
+NXPI,NXP Semiconductors,Technology
+MPWR,Monolithic Power Systems,Technology
+ON,ON Semiconductor,Technology
+ENTG,Entegris,Technology
+CRWD,CrowdStrike,Technology
+PANW,Palo Alto Networks,Technology
+FTNT,Fortinet,Technology
+DDOG,Datadog,Technology
+ZS,Zscaler,Technology
+OKTA,Okta,Technology
+NET,Cloudflare,Technology
+CYBR,CyberArk Software,Technology
+S,SentinelOne,Technology
+TENB,Tenable,Technology
+QLYS,Qualys,Technology
+VRNS,Varonis Systems,Technology
+CHKP,Check Point Software,Technology
+RDWR,Radware,Technology
+PFPT,Proofpoint,Technology
+SAIL,SailPoint,Technology
+MNDT,Mandiant,Technology
+ESTC,Elastic,Technology
+SPLK,Splunk,Technology
+SUMO,Sumo Logic,Technology
+DOMO,Domo,Technology
+APPN,Appian,Technology
+PEGA,Pegasystems,Technology
+ALTR,Altair Engineering,Technology
+AZPN,Aspen Technology,Technology
+ANSS,Ansys,Technology
+CDLX,Cardlytics,Technology
+HUBS,HubSpot,Technology
+WDAY,Workday,Technology
+CRM,Salesforce,Technology
+NOW,ServiceNow,Technology
+VEEV,Veeva Systems,Technology
+TEAM,Atlassian,Technology
+MDB,MongoDB,Technology
+SNOW,Snowflake,Technology
+DBTX,Decibel Therapeutics,Technology
+CFLT,Confluent,Technology
+GTLB,GitLab,Technology
+DOCN,DigitalOcean,Technology
+PATH,UiPath,Technology
+AI,C3.ai,Technology
+PLTR,Palantir,Technology
+BBAI,BigBear.ai,Technology
+SOUN,SoundHound AI,Technology
+RXRX,Recursion Pharmaceuticals,Technology
+GFAI,Guardforce AI,Technology
+AITX,Artificial Intelligence Technology,Technology
+BFRI,Biofrontera,Technology
+CODA,Coda Octopus,Technology
+DTSS,Datasea,Technology
+IDAI,T2 Biosystems,Technology
+ITRN,Ituran Location and Control,Technology
+LASE,Laser Photonics,Technology
+MAMA,Mama's Creations,Technology
+NRDY,Nerdy,Technology
+OPAD,Offerpad Solutions,Technology
+PAYC,Paycom Software,Technology
+PRFT,Perficient,Technology
+SPOK,Spok Holdings,Technology
+TTEC,TTEC Holdings,Technology
+TWLO,Twilio,Technology
+UDEMY,Udemy,Technology
+UPST,Upstart Holdings,Technology
+VG,Vonage Holdings,Technology
+VNET,VNET Group,Technology
+VREX,Varex Imaging,Technology
+XPEL,XPEL,Technology
+YEXT,Yext,Technology
+ZI,ZoomInfo,Technology
+ZM,Zoom Video Communications,Technology
+ABNB,Airbnb,Consumer Discretionary
+UBER,Uber Technologies,Consumer Discretionary
+LYFT,Lyft,Consumer Discretionary
+DASH,DoorDash,Consumer Discretionary
+RBLX,Roblox,Communication Services
+SPOT,Spotify Technology,Communication Services
+ROKU,Roku,Communication Services
+PINS,Pinterest,Communication Services
+SNAP,Snap,Communication Services
+TTWO,Take-Two Interactive,Communication Services
+EA,Electronic Arts,Communication Services
+ATVI,Activision Blizzard,Communication Services
+NWSA,News Corp A,Communication Services
+NWS,News Corp B,Communication Services
+WBD,Warner Bros. Discovery,Communication Services
+SIRI,Sirius XM Holdings,Communication Services
+IAC,IAC,Communication Services
+LSXMA,Liberty SiriusXM A,Communication Services
+LSXMB,Liberty SiriusXM B,Communication Services
+LSXMK,Liberty SiriusXM C,Communication Services
+FWONK,Formula One Group,Consumer Discretionary
+CHWY,Chewy,Consumer Discretionary
+ETSY,Etsy,Consumer Discretionary
+EBAY,eBay,Consumer Discretionary
+CVNA,Carvana,Consumer Discretionary
+PTON,Peloton Interactive,Consumer Discretionary
+CPRT,Copart,Consumer Discretionary
+ORLY,O'Reilly Automotive,Consumer Discretionary
+ROST,Ross Stores,Consumer Discretionary
+DLTR,Dollar Tree,Consumer Discretionary
+FIVE,Five Below,Consumer Discretionary
+BURL,Burlington Stores,Consumer Discretionary
+MNST,Monster Beverage,Consumer Staples
+KDP,Keurig Dr Pepper,Consumer Staples
+MDLZ,Mondelez International,Consumer Staples
+KHC,Kraft Heinz,Consumer Staples
+WBA,Walgreens Boots Alliance,Consumer Staples
+CASY,Casey's General Stores,Consumer Staples
+CELH,Celsius Holdings,Consumer Staples
+SMPL,Simply Good Foods,Consumer Staples
+PFGC,Performance Food Group,Consumer Staples
+PTLO,Portillo's,Consumer Discretionary
+BROS,Dutch Bros,Consumer Discretionary
+CAVA,CAVA Group,Consumer Discretionary
+WING,Wingstop,Consumer Discretionary
+SHAK,Shake Shack,Consumer Discretionary
+TXRH,Texas Roadhouse,Consumer Discretionary
+DNUT,Krispy Kreme,Consumer Discretionary
+SBUX,Starbucks,Consumer Discretionary
+PZZA,Papa John's International,Consumer Discretionary
+JACK,Jack in the Box,Consumer Discretionary
+FRSH,Freshpet,Consumer Staples
+BYND,Beyond Meat,Consumer Staples
+OATLY,Oatly Group,Consumer Staples
+GDRX,GoodRx Holdings,Health Care
+AMWL,American Well,Health Care
+HIMS,Hims & Hers Health,Health Care
+TDOC,Teladoc Health,Health Care
+ACCD,Accolade,Health Care
+PHR,Phreesia,Health Care
+NVCR,NovaCure,Health Care
+INMD,InMode,Health Care
+INSP,Inspire Medical Systems,Health Care
+SWAV,ShockWave Medical,Health Care
+AXNX,Axonics,Health Care
+IRTC,iRhythm Technologies,Health Care
+MASI,Masimo,Health Care
+MMSI,Merit Medical Systems,Health Care
+OMCL,Omnicell,Health Care
+PODD,Insulet,Health Care
+HOLX,Hologic,Health Care
+IDXX,IDEXX Laboratories,Health Care
+ALGN,Align Technology,Health Care
+DXCM,DexCom,Health Care
+EXAS,Exact Sciences,Health Care
+NTRA,Natera,Health Care
+GH,Guardant Health,Health Care
+CERS,Cerevel Therapeutics,Health Care
+PACB,Pacific Biosciences,Health Care
+ILMN,Illumina,Health Care
+TXG,10x Genomics,Health Care
+NVST,Envista Holdings,Health Care
+QDEL,QuidelOrtho,Health Care
+ATRC,AtriCure,Health Care
+AORT,Artivion,Health Care
+AHCO,AdaptHealth,Health Care
+AMED,Amedisys,Health Care
+AMSF,AMERITAS,Health Care
+ANIP,ANI Pharmaceuticals,Health Care
+ARDX,Ardelyx,Health Care
+ARQT,Arcutis Biotherapeutics,Health Care
+ARWR,Arrowhead Pharmaceuticals,Health Care
+ASMB,Assembly Biosciences,Health Care
+ASND,Ascendis Pharma,Health Care
+ATXI,Avenue Therapeutics,Health Care
+AVIR,Atea Pharmaceuticals,Health Care
+AVXL,Anavex Life Sciences,Health Care
+BCAX,Beam Therapeutics,Health Care
+BEAM,Beam Therapeutics,Health Care
+BGNE,BeiGene,Health Care
+BIIB,Biogen,Health Care
+BIOL,Biolase,Health Care
+BKSY,BlackSky Technology,Health Care
+BMRN,BioMarin Pharmaceutical,Health Care
+BNGO,Bionano Genomics,Health Care
+BNTX,BioNTech SE,Health Care
+CALC,CalciMedica,Health Care
+CBPO,China Biologic Products,Health Care
+CCCC,C4 Therapeutics,Health Care
+CDNA,CareDx,Health Care
+CERS,Cerevel Therapeutics,Health Care
+CGEM,Cullinan Oncology,Health Care
+CLDX,Celldex Therapeutics,Health Care
+CLRB,Cellectar Biosciences,Health Care
+CMRX,Chimerix,Health Care
+CNMD,CONMED,Health Care
+CPIX,Cumberland Pharmaceuticals,Health Care
+CRNX,Crinetics Pharmaceuticals,Health Care
+CRSP,CRISPR Therapeutics,Health Care
+CTLT,Catalent,Health Care
+CTOS,Custom Truck One Source,Industrials
+CURI,CuriosityStream,Communication Services
+DAWN,Day One Biopharmaceuticals,Health Care
+DBVT,DBV Technologies,Health Care
+DCTH,Delcath Systems,Health Care
+EDIT,Editas Medicine,Health Care
+EGRX,Eagle Pharmaceuticals,Health Care
+ENTA,Enanta Pharmaceuticals,Health Care
+EPRT,Essential Properties Realty,Real Estate
+ESTE,Earthstone Energy,Energy
+EXAS,Exact Sciences,Health Care
+FATE,Fate Therapeutics,Health Care
+FDMT,4D Molecular Therapeutics,Health Care
+FLGT,Fulgent Genetics,Health Care
+FOLD,Amicus Therapeutics,Health Care
+FROG,JFrog,Technology
+FUSN,Fusion Pharmaceuticals,Health Care
+GERN,Geron,Health Care
+GMAB,Genmab,Health Care
+GNPX,Genprobe,Health Care
+GRFS,Grifols,Health Care
+HALO,Halozyme Therapeutics,Health Care
+HARP,Harpoon Therapeutics,Health Care
+HIMS,Hims & Hers Health,Health Care
+HOOK,HOOKIPA Pharma,Health Care
+HRMY,Harmony Biosciences,Health Care
+IMVT,Immunovant,Health Care
+INCY,Incyte,Health Care
+IONS,Ionis Pharmaceuticals,Health Care
+IPSC,Century Therapeutics,Health Care
+IRON,Disc Medicine,Health Care
+ITCI,Intra-Cellular Therapies,Health Care
+JAZZ,Jazz Pharmaceuticals,Health Care
+KDNY,Chinook Therapeutics,Health Care
+KPTI,Karyopharm Therapeutics,Health Care
+KRTX,Karuna Therapeutics,Health Care
+KRYS,Krystal Biotech,Health Care
+KYMR,Kymera Therapeutics,Health Care
+LNTH,Lantheus Holdings,Health Care
+LXRX,Lexicon Pharmaceuticals,Health Care
+MDGL,Madrigal Pharmaceuticals,Health Care
+MIRM,Mirum Pharmaceuticals,Health Care
+MIST,Milestone Scientific,Health Care
+MKSI,MKS Instruments,Technology
+MNKD,MannKind,Health Care
+MRNA,Moderna,Health Care
+MRTX,Mirati Therapeutics,Health Care
+MRUS,Merus,Health Care
+NBIX,Neurocrine Biosciences,Health Care
+NCNO,nCino,Technology
+NKTR,Nektar Therapeutics,Health Care
+NKLA,Nikola,Industrials
+NTLA,Intellia Therapeutics,Health Care
+NUVL,Nuvalent,Health Care
+NVCR,NovaCure,Health Care
+NVEI,Nuvei,Technology
+OCGN,Ocugen,Health Care
+OFIX,Orthofix Medical,Health Care
+ONEM,1Life Healthcare,Health Care
+PACB,Pacific Biosciences,Health Care
+PCVX,Vaxcyte,Health Care
+PHVS,Pharvaris,Health Care
+PRTK,Paratek Pharmaceuticals,Health Care
+PTCT,PTC Therapeutics,Health Care
+PTGX,Protagonist Therapeutics,Health Care
+PXMD,PaxMedica,Health Care
+RCUS,Arcus Biosciences,Health Care
+RCKT,Rocket Pharmaceuticals,Health Care
+RDVT,Red Violet,Technology
+RGEN,Repligen,Health Care
+RNLX,Renalytix,Health Care
+ROIV,Roivant Sciences,Health Care
+RPAY,Repay Holdings,Technology
+RVNC,Revance Therapeutics,Health Care
+RXRX,Recursion Pharmaceuticals,Technology
+RYTM,Rhythm Pharmaceuticals,Health Care
+SAGE,Sage Therapeutics,Health Care
+SANA,Sana Biotechnology,Health Care
+SDGR,Schrodinger,Health Care
+SGEN,Seagen,Health Care
+SGMO,Sangamo Therapeutics,Health Care
+SRPT,Sarepta Therapeutics,Health Care
+STOK,Stoke Therapeutics,Health Care
+SWTX,SpringWorks Therapeutics,Health Care
+TGTX,TG Therapeutics,Health Care
+TMDX,TransMedics Group,Health Care
+TNGX,Tango Therapeutics,Health Care
+TNXP,Tonix Pharmaceuticals,Health Care
+TPST,Tempest Therapeutics,Health Care
+TRIL,Trillium Therapeutics,Health Care
+TVTX,Travere Therapeutics,Health Care
+UTHR,United Therapeutics,Health Care
+VCEL,Vericel,Health Care
+VCNX,Vaccinex,Health Care
+VCYT,Veracyte,Health Care
+VKTX,Viking Therapeutics,Health Care
+VRCA,Verrica Pharmaceuticals,Health Care
+VRTX,Vertex Pharmaceuticals,Health Care
+VSTM,Verastem,Health Care
+VTRS,Viatris,Health Care
+VYGR,Voyager Therapeutics,Health Care
+XCUR,Exicure,Health Care
+XENE,Xenon Pharmaceuticals,Health Care
+XENT,Intersect ENT,Health Care
+XLRN,Acceleron Pharma,Health Care
+XNCR,Xencor,Health Care
+ZFGN,Zafgen,Health Care
+ZGNX,Zogenix,Health Care
+ZIOP,ZIOPHARM Oncology,Health Care
+ZLAB,Zymeworks,Health Care
+LPLA,LPL Financial,Financials
+MKTX,MarketAxess Holdings,Financials
+NDAQ,Nasdaq,Financials
+SEIC,SEI Investments,Financials
+CBOE,Cboe Global Markets,Financials
+IBCP,Independent Bank,Financials
+FCNCA,First Citizens BancShares A,Financials
+FFIN,Cullen/Frost Bankers,Financials
+BOKF,BOK Financial,Financials
+WAFD,Washington Federal,Financials
+HBAN,Huntington Bancshares,Financials
+FITB,Fifth Third Bancorp,Financials
+NTRS,Northern Trust,Financials
+SIVB,SVB Financial Group,Financials
+SBCF,Seacoast Banking,Financials
+PNFP,Pinnacle Financial Partners,Financials
+TCBK,TriCo Bancshares,Financials
+EGBN,Eagle Bancorp,Financials
+IBOC,International Bancshares,Financials
+LKFN,Lakeland Financial,Financials
+NBTB,NBT Bancorp,Financials
+HFWA,Heritage Financial,Financials
+CCBG,Capital City Holding,Financials
+BSVN,Bank7 Corp,Financials
+CBTX,CommunityBank of Texas,Financials
+CFFI,C&F Financial,Financials
+FBNC,First Bancorp,Financials
+FRST,Primis Financial,Financials
+GABC,German American Bancorp,Financials
+GCBC,Greene County Bancshares,Financials
+GNTY,Guaranty Federal Bancshares,Financials
+GSBC,Great Southern Bancorp,Financials
+HTLF,Heartland Financial USA,Financials
+IBTX,Independent Bank Group,Financials
+ISBC,Investors Bancorp,Financials
+MBWM,Mercantile Bank,Financials
+MCBC,Mackinac Savings Bank,Financials
+MOFG,MidWestOne Financial,Financials
+NFBK,Northfield Bancorp,Financials
+NKSH,National Bankshares,Financials
+NNBR,NN Inc,Industrials
+NRIM,Northrim BanCorp,Financials
+OBNK,Origin Bancorp,Financials
+OCFC,OceanFirst Financial,Financials
+OFED,Oconee Federal Financial,Financials
+OPHC,OptimumBank Holdings,Financials
+OVBC,Ohio Valley Financial,Financials
+OVLY,Oak Valley Bancorp,Financials
+PBFS,Pioneer Bankshares,Financials
+PBIP,Prudential Bancorp,Financials
+PBPB,Potbelly,Consumer Discretionary
+PCSB,PCSB Financial,Financials
+PFIS,Peoples Financial Services,Financials
+PGTI,PGT Innovations,Industrials
+PHII,PHI Group,Industrials
+PLBC,Plumas Bank,Financials
+PMVP,PMV Pharmaceuticals,Health Care
+PNFP,Pinnacle Financial Partners,Financials
+PNTM,Pontem,Financials
+PPBI,Pacific Premier Bancorp,Financials
+PVBC,Provident Bancorp,Financials
+RNST,Renasant,Financials
+SBFG,SB Financial Group,Financials
+SBSI,Southside Bancshares,Financials
+SFBS,ServisFirst Bancshares,Financials
+SFNC,Simmons First National,Financials
+SMBK,SmartFinancial Bancshares,Financials
+SMBC,Southern Missouri Bancorp,Financials
+STBA,S&T Bancorp,Financials
+STLY,Stanley Furniture,Consumer Discretionary
+TCBF,Tennessee Commerce Bancorp,Financials
+THFF,First Financial,Financials
+TOWN,Towne Bank,Financials
+TRMK,Trustmark,Financials
+TRST,TrustCo Bancorp,Financials
+UBCP,United Bancorp,Financials
+UBOH,United Bankshares of Ohio,Financials
+UCBI,United Community Banks,Financials
+UFCS,United Fire Group,Financials
+UFPI,UFP Technologies,Industrials
+UWHR,Uwharrie Corp,Financials
+VBFC,Village Bank and Trust,Financials
+VBTX,Veritex Holdings,Financials
+VCNX,Vaccinex,Health Care
+VFIN,Veritiv,Industrials
+VLYPP,Valley National Bancorp,Financials
+VNDA,Vanda Pharmaceuticals,Health Care
+VRTS,Virtus Investment Partners,Financials
+WASH,Washington Trust Bancorp,Financials
+WAFD,Washington Federal,Financials
+WBKC,Wolverine Bancorp,Financials
+WERN,Werner Enterprises,Industrials
+WEYS,Weyco Group,Consumer Discretionary
+WFCF,Where Food Comes From,Consumer Staples
+WSBC,WesBanco,Financials
+WSFS,WSFS Financial,Financials
+WWBG,Westbury Bancorp,Financials
+XBKS,Xenith Bankshares,Financials
+XENE,Xenon Pharmaceuticals,Health Care
+XPEL,XPEL,Consumer Discretionary
+YBCN,Yolanda,Financials
+YUMC,Yum China,Consumer Discretionary
+ZBRA,Zebra Technologies,Technology
+ZION,Zions Bancorporation,Financials
+AFRM,Affirm Holdings,Technology
+BILL,Bill.com Holdings,Technology
+COIN,Coinbase Global,Financials
+HOOD,Robinhood Markets,Financials
+SOFI,SoFi Technologies,Financials
+OPEN,Opendoor Technologies,Real Estate
+CLST,Catalyst Biosciences,Health Care
+PAYO,Payoneer Global,Technology
+PYPL,PayPal Holdings,Technology
+GDDY,GoDaddy,Technology
+DBX,Dropbox,Technology
+BOX,Box,Technology
+DOCN,DigitalOcean Holdings,Technology
+FSLY,Fastly,Technology
+NET,Cloudflare,Technology
+AKAM,Akamai Technologies,Technology
+ASGN,ASGN,Technology
+CSGP,CoStar Group,Real Estate
+EQIX,Equinix,Real Estate
+FFIV,F5 Networks,Technology
+INFN,Infinera,Technology
+IPGP,IPG Photonics,Technology
+JNPR,Juniper Networks,Technology
+LPSN,LivePerson,Technology
+MLAB,Mesa Labs,Technology
+MITK,Mitek Systems,Technology
+MODN,Model N,Technology
+NABL,N-able,Technology
+NUAN,Nuance Communications,Technology
+NTAP,NetApp,Technology
+NTNX,Nutanix,Technology
+OKTA,Okta,Technology
+OPCH,Option Care Health,Health Care
+ORCL,Oracle,Technology
+OTEX,Open Text,Technology
+PYCR,Paycor HCM,Technology
+QTWO,Q2 Holdings,Technology
+RAMP,LiveRamp Holdings,Technology
+RPAY,Repay Holdings,Technology
+SMAR,Smartsheet,Technology
+SPSC,SPS Commerce,Technology
+TASK,TaskUs,Technology
+TRMB,Trimble,Technology
+UONE,Urban One,Communication Services
+VRSN,VeriSign,Technology
+VRNT,Verint Systems,Technology
+VSAT,Viasat,Technology
+WDAY,Workday,Technology
+WIX,Wix.com,Technology
+YELP,Yelp,Communication Services
+ZEN,Zendesk,Technology
+AVLR,Avalara,Technology
+HUBS,HubSpot,Technology
+PCTY,Paylocity Holding,Technology
+PRGS,Progress Software,Technology
+PRLB,Proto Labs,Industrials
+AMSWA,American Software A,Technology
+BRZE,Braze,Technology
+CLOV,Clover Health Investments,Health Care
+CNXC,Concentrix,Technology
+COUR,Coursera,Consumer Discretionary
+DCBO,Docebo,Technology
+DOCS,Doximity,Health Care
+DUOL,Duolingo,Consumer Discretionary
+FROG,JFrog,Technology
+GCMG,GCM Grosvenor,Financials
+IONQ,IonQ,Technology
+ASAN,Asana,Technology
+BASE,Couchbase,Technology
+CLDR,Cloudera,Technology
+AMBA,Ambarella,Technology
+CEVA,CEVA,Technology
+CMRX,Chimerix,Health Care
+COHU,Cohu,Technology
+FORM,FormFactor,Technology
+HIMX,Himax Technologies,Technology
+ICHR,Ichor Holdings,Technology
+IIIV,i3 Verticals,Technology
+IPWR,Ideal Power,Technology
+IXYS,IXYS,Technology
+LAZR,Luminar Technologies,Technology
+LITE,Lumentum Holdings,Technology
+LSCC,Lattice Semiconductor,Technology
+LUNA,Luna Innovations,Technology
+MCHP,Microchip Technology,Technology
+MCMJ,Malacca Straits Acquisition,Technology
+MFGP,Micro Focus International,Technology
+MLNX,Mellanox Technologies,Technology
+MRAM,Everspin Technologies,Technology
+MRVL,Marvell Technology,Technology
+MXIM,Maxim Integrated Products,Technology
+NOVT,Novanta,Technology
+ONTO,Onto Innovation,Technology
+PLAB,Photronics,Technology
+PLXS,Plexus,Technology
+POWI,Power Integrations,Technology
+PRGS,Progress Software,Technology
+QRVO,Qorvo,Technology
+RLAY,Relay Therapeutics,Health Care
+RMBS,Rambus,Technology
+RNST,Renasant,Financials
+RVIS,Rivus Pharmaceuticals,Health Care
+SCSC,ScanSource,Technology
+SGBX,Safe & Green Holdings,Industrials
+SIMO,Silicon Motion Technology,Technology
+SLAB,Silicon Laboratories,Technology
+SMTC,Semtech,Technology
+SOUN,SoundHound AI,Technology
+SPWR,SunPower,Energy
+SSYS,Stratasys,Technology
+STRL,Sterling Construction,Industrials
+SWKS,Skyworks Solutions,Technology
+SYNA,Synaptics,Technology
+TORC,Restorbio,Health Care
+TRMB,Trimble,Technology
+TTMI,TTM Technologies,Technology
+UCTT,Ultra Clean Holdings,Technology
+VIAV,Viavi Solutions,Technology
+VNET,VNET Group,Technology
+VREX,Varex Imaging,Technology
+WOLF,Wolfspeed,Technology
+XPEL,XPEL,Consumer Discretionary
+XLNX,Xilinx,Technology
+ZBRA,Zebra Technologies,Technology
+FANG,Diamondback Energy,Energy
+CTRA,Coterra Energy,Energy
+MTDR,Matador Resources,Energy
+PDCE,PDC Energy,Energy
+BATL,Battalion Oil,Energy
+ESTE,Earthstone Energy,Energy
+FLNG,Flex LNG,Energy
+FTAI,FTAI Aviation,Industrials
+GPOR,Gulfport Energy,Energy
+HESM,Hess Midstream,Energy
+MNRL,Brigham Minerals,Energy
+NEXT,NextDecade,Energy
+NGAS,Regency Centers,Real Estate
+NINE,Nine Energy Service,Energy
+NVST,Envista Holdings,Health Care
+PDVW,pdvWireless,Technology
+PTEN,Patterson-UTI Energy,Energy
+REPX,Riley Exploration Permian,Energy
+ROCC,Ranger Oil,Energy
+SD,SandRidge Energy,Energy
+SND,Smart Sand,Energy
+SNDE,Sundance Energy,Energy
+TPVG,TriplePoint Venture Growth,Financials
+USAC,USA Compression Partners,Energy
+VTLE,Vitesse Energy,Energy
+WWR,Westwater Resources,Energy
+XOG,Extraction Oil & Gas,Energy
+AXON,Axon Enterprise,Industrials
+CACI,CACI International,Industrials
+CPRT,Copart,Industrials
+EXPO,Exponent,Industrials
+FLIR,FLIR Systems,Technology
+GNSS,Genasys,Technology
+HUBB,Hubbell,Industrials
+ICAD,iCAD,Health Care
+ITRN,Ituran Location and Control,Technology
+JBHT,J.B. Hunt Transport,Industrials
+JBLU,JetBlue Airways,Industrials
+JBSS,John B. Sanfilippo & Son,Consumer Staples
+JCOM,Ziff Davis,Technology
+KELYA,Kelly Services A,Industrials
+KELYB,Kelly Services B,Industrials
+KFRC,Kforce,Industrials
+KNSL,Kinsale Capital Group,Financials
+KRNY,Kearny Financial,Financials
+KTCC,Key Tronic,Technology
+KTOS,Kratos Defense & Security,Industrials
+LHCG,LHC Group,Health Care
+MANH,Manhattan Associates,Technology
+MANT,ManTech International,Technology
+MATX,Matson,Industrials
+MGRC,McGrath RentCorp,Industrials
+MYRG,MYR Group,Industrials
+NCSM,NCS Multistage Holdings,Energy
+NPTN,NeoPhotonics,Technology
+NWLI,National Western Life Group,Financials
+ODFL,Old Dominion Freight Line,Industrials
+PCAR,PACCAR,Industrials
+POOL,Pool,Consumer Discretionary
+ROAD,Construction Partners,Industrials
+RUSHA,Rush Enterprises A,Consumer Discretionary
+RUSHB,Rush Enterprises B,Consumer Discretionary
+RXRX,Recursion Pharmaceuticals,Technology
+SAIA,Saia,Industrials
+SKYW,SkyWest,Industrials
+SPXC,SPX Technologies,Industrials
+SPNT,Sirius Point,Financials
+SWBI,Smith & Wesson Brands,Consumer Discretionary
+UHAL,U-Haul Holding,Industrials
+ULTA,Ulta Beauty,Consumer Discretionary
+UFPT,UFP Technologies,Industrials
+WERN,Werner Enterprises,Industrials
+XPOF,Xponential Fitness,Consumer Discretionary
+AMSF,AMERITAS Life Partners,Financials
+ANET,Arista Networks,Technology
+ANGI,Angi,Technology
+ASML,ASML Holding,Technology
+BIDU,Baidu,Communication Services
+BILI,Bilibili,Communication Services
+CANG,Cango,Consumer Discretionary
+DIDI,DiDi Global,Consumer Discretionary
+EDU,New Oriental Education & Tech,Consumer Discretionary
+FUTU,Futu Holdings,Financials
+GRAB,Grab Holdings,Consumer Discretionary
+IQ,iQIYI,Communication Services
+JD,JD.com,Consumer Discretionary
+LAIX,LAIX,Consumer Discretionary
+LI,Li Auto,Consumer Discretionary
+LOGI,Logitech International,Technology
+MOMO,Hello Group,Communication Services
+NIO,NIO,Consumer Discretionary
+PENG,Penguin International,Consumer Discretionary
+PDD,PDD Holdings,Consumer Discretionary
+QFIN,360 DigiTech,Financials
+RENN,Renren,Communication Services
+SFIX,Stitch Fix,Consumer Discretionary
+SHOP,Shopify,Technology
+TIGR,UP Fintech Holding,Financials
+TME,Tencent Music Entertainment,Communication Services
+TRIP,Ctrip.com International,Consumer Discretionary
+TUYA,Tuya Smart,Technology
+VIPS,Vipshop Holdings,Consumer Discretionary
+WB,Weibo,Communication Services
+WUBA,58.com,Consumer Discretionary
+XPEV,XPeng,Consumer Discretionary
+YMM,Full Truck Alliance,Industrials
+YY,JOYY,Communication Services
+AMZN,Amazon.com,Consumer Discretionary
+MELI,MercadoLibre,Consumer Discretionary
+SE,Sea Limited,Consumer Discretionary
+BABA,Alibaba Group,Consumer Discretionary
+AMRK,A-Mark Precious Metals,Financials
+ANIP,ANI Pharmaceuticals,Health Care
+APEI,American Public Education,Consumer Discretionary
+APOG,Apogee Enterprises,Industrials
+APPF,AppFolio,Technology
+APTS,Preferred Apartment Communities,Real Estate
+ARCO,Arcos Dorados Holdings,Consumer Discretionary
+ARGO,Argo Group International,Financials
+ARIS,Aris Water Solutions,Utilities
+ARKO,ARKO,Consumer Discretionary
+ARQT,Arcutis Biotherapeutics,Health Care
+ASPS,Altisource Portfolio Solutions,Technology
+ASTC,Astrotech,Technology
+ASTE,Astec Industries,Industrials
+ATNI,ATN International,Communication Services
+ATRM,Atrinsic,Consumer Discretionary
+ATSG,Air Transport Services Group,Industrials
+ATTO,Atento,Industrials
+ATXI,Avenue Therapeutics,Health Care
+AUDC,AudioCodes,Technology
+AXGN,Axogen,Health Care
+AXNX,Axonics Modulation Technologies,Health Care
+AYTU,Aytu BioPharma,Health Care
+AZEK,AZEK Company,Industrials
+BERY,Berry Global Group,Materials
+BEST,BEST Inc,Industrials
+BGFV,Big 5 Sporting Goods,Consumer Discretionary
+BHAT,Blue Hat Interactive Entertainment,Consumer Discretionary
+BIOS,BioSig Technologies,Health Care
+BJRI,BJ's Restaurants,Consumer Discretionary
+BLBD,Blue Bird,Consumer Discretionary
+BLNK,Blink Charging,Consumer Discretionary
+BMBL,Bumble,Technology
+BMTC,Bryn Mawr Bank,Financials
+BNIX,Bannix Acquisition,Financials
+BPMC,Blueprint Medicines,Health Care
+BRDG,Bridge Investment Group,Financials
+BRPH,BRP Group,Financials
+BRSP,BrightSpire Capital,Real Estate
+BSIG,BrightSphere Investment Group,Financials
+BSRR,Bear State Financial,Financials
+BSVN,Bank7 Corp,Financials
+BTAI,BioAtla,Health Care
+BTBT,Bit Digital,Technology
+BURL,Burlington Stores,Consumer Discretionary
+BUSE,First Busey,Financials
+CABA,Cabaletta Bio,Health Care
+CACI,CACI International A,Industrials
+CALX,Calix,Technology
+CAMP,CalAmp,Technology
+CARG,CarGurus,Consumer Discretionary
+CARE,Carter Bankshares,Financials
+CARG,CarGurus,Consumer Discretionary
+CATC,Cambridge Bancorp,Financials
+CATO,Cato,Consumer Discretionary
+CATX,Perspective Therapeutics,Health Care
+CBFV,CB Financial Services,Financials
+CBPO,China Biologic Products,Health Care
+CBRL,Cracker Barrel Old Country Store,Consumer Discretionary
+CCAP,Crescent Capital BDC,Financials
+CCLP,CSI Compressco Partners,Energy
+CCNE,CNB Financial,Financials
+CCRN,Cross Country Healthcare,Health Care
+CCSI,Consensus Cloud Solutions,Technology
+CDAQ,Codagenix,Health Care
+CDLX,Cardlytics,Technology
+CDNA,CareDx,Health Care
+CDNS,Cadence Design Systems,Technology
+CDXC,ChromaDex,Health Care
+CDXS,Codexis,Health Care
+CECE,CECO Environmental,Industrials
+CELH,Celsius Holdings,Consumer Staples
+CENT,Central Garden and Pet A,Consumer Staples
+CENTA,Central Garden and Pet A,Consumer Staples
+CERS,Cerevel Therapeutics,Health Care
+CHGG,Chegg,Consumer Discretionary
+CHKP,Check Point Software Technologies,Technology
+CHRD,Chord Energy,Energy
+CHRS,Coherus BioSciences,Health Care
+CHUY,Chuy's Holdings,Consumer Discretionary
+CIVB,Civista Bankshares,Financials
+CLBK,Columbia Financial,Financials
+CLFD,Clearfield,Technology
+CLNC,Colony Credit Real Estate,Real Estate
+CLNE,Clean Energy Fuels,Utilities
+CLPS,CLPS Technology,Technology
+CLPT,ClearPoint Neuro,Health Care
+CLSK,CleanSpark,Technology
+CLVS,Corcept Therapeutics,Health Care
+CLXT,Calyxt,Materials
+CMCO,Columbus McKinnon,Industrials
+CMCSA,Comcast A,Communication Services
+CMGE,CMC Metals,Materials
+CMLS,Cumulus Media A,Communication Services
+CMPO,CompoSecure,Technology
+CMPR,Cimpress,Consumer Discretionary
+CMRE,Costamare,Industrials
+CMRX,Chimerix,Health Care
+CMTG,Claros Mortgage Trust,Real Estate
+CNDT,Conduent,Technology
+CNET,ChinaNet Online Holdings,Communication Services
+CNOB,ConnectOne Bancorp,Financials
+CNSL,Consolidated Communications Holdings,Communication Services
+CNTA,Centessa Pharmaceuticals,Health Care
+CNTB,Connect Biopharma Holdings,Health Care
+CNTY,Century Casinos,Consumer Discretionary
+CNVS,Cineverse,Communication Services
+CNXC,Concentrix,Technology
+COEP,Coeptis Therapeutics,Health Care
+COHU,Cohu,Technology
+COLB,Columbia Banking System,Financials
+COLL,Collegium Pharmaceutical,Health Care
+COLM,Columbia Sportswear,Consumer Discretionary
+COMM,CommScope Holding,Technology
+COMT,iShares MSCI Commodity,Financials
+CONX,Conx,Technology
+COOP,Mr. Cooper Group,Financials
+COPX,Global X Copper Miners ETF,Financials
+CORT,Corcept Therapeutics,Health Care
+COST,Costco Wholesale,Consumer Staples
+CPRT,Copart,Industrials
+CPRX,Catalyst Pharmaceuticals,Health Care
+CRAW,Crowdstrike Holdings A,Technology
+CRDF,Cardiff Oncology,Health Care
+CRIS,Curis,Health Care
+CRNX,Crinetics Pharmaceuticals,Health Care
+CROX,Crocs,Consumer Discretionary
+CRSP,CRISPR Therapeutics,Health Care
+CRTX,Cortexyme,Health Care
+CRUS,Cirrus Logic,Technology
+CRVL,CorVel,Health Care
+CSGP,CoStar Group,Real Estate
+CSIOY,CSL Limited,Health Care
+CSTL,Castle Biosciences,Health Care
+CSWI,CSW Industrials,Industrials
+CTBI,Community Bankshares,Financials
+CTLP,Cantaloupe,Technology
+CTMX,CytomX Therapeutics,Health Care
+CTSH,Cognizant Technology Solutions A,Technology
+CTSO,Cytosorbents,Health Care
+CTXS,Citrix Systems,Technology
+CUEN,Cuentas Mobile,Technology
+CUTR,Cutera,Health Care
+CVBF,CVB Financial,Financials
+CVGW,Calavo Growers,Consumer Staples
+CVLG,Covenant Logistics Group A,Industrials
+CVLT,Commvault Systems,Technology
+CVLY,Codorus Valley Bancorp,Financials
+CVNA,Carvana,Consumer Discretionary
+CVRX,CVRx,Health Care
+CWBC,Community West Bancshares,Financials
+CWCO,Consolidated Water,Utilities
+CWGL,Crimson Wine Group,Consumer Staples
+CWST,Casella Waste Systems A,Industrials
+CXAI,CXApp,Technology
+CXDO,Crexendo,Technology
+CXSE,WisdomTree China ex-State-Owned,Financials
+CYCN,Cyclerion Therapeutics,Health Care
+CYRX,Cryoport,Health Care
+CYTK,Cytokinetics,Health Care
+CYTX,Cytori Therapeutics,Health Care
+CZWI,Citizens Community Bancorp,Financials
+DAIO,Data I/O,Technology
+DARE,Dare Bioscience,Health Care
+DASH,DoorDash A,Consumer Discretionary
+DATSF,Data Storage,Technology
+DAWN,Day One Biopharmaceuticals,Health Care
+DBVT,DBV Technologies,Health Care
+DCBO,Docebo,Technology
+DCPH,Deciphera Pharmaceuticals,Health Care
+DCTH,Delcath Systems,Health Care
+DDOG,Datadog A,Technology
+DENN,Denny's,Consumer Discretionary
+DFIN,Donnelley Financial Solutions,Technology
+DGII,Digi International,Technology
+DGNS,Draganfly,Technology
+DKNG,DraftKings A,Consumer Discretionary
+DLHC,DLH Holdings,Health Care
+DLNK,Digilink,Technology
+DLTR,Dollar Tree,Consumer Discretionary
+DMRC,Digimarc,Technology
+DMTK,DermTech,Health Care
+DNAB,Agenus,Health Care
+DNOW,NOW Inc,Energy
+DOMO,Domo A,Technology
+DORM,Dorman Products,Consumer Discretionary
+DPCM,DPCM Capital,Technology
+DPSI,DecisionPoint Systems,Technology
+DRNA,Dicerna Pharmaceuticals,Health Care
+DRVN,Driven Brands Holdings,Consumer Discretionary
+DSSI,Diamond S Shipping Group,Energy
+DTIL,Precision BioSciences,Health Care
+DTSS,Datasea,Technology
+DUNE,Dune Acquisition,Technology
+DUOL,Duolingo,Consumer Discretionary
+DVAX,Dynavax Technologies,Health Care
+DWSN,Dawson Geophysical,Energy
+DXCM,DexCom,Health Care
+DXLG,Destination XL Group,Consumer Discretionary
+DXPE,DXP Enterprises,Industrials
+DXYN,Dixie Group,Consumer Discretionary
+DYAI,Dyadic International,Health Care
+DYNT,Dynatronics,Health Care
+DZSI,DZS,Technology
+EARN,Ellington Residential Mortgage REIT,Real Estate
+EBET,EBET,Technology
+EBIX,Ebix,Technology
+EBMT,Eagle Bancorp Montana,Financials
+EBON,Ebang International Holdings,Technology
+ECBK,ECB Bancorp,Financials
+ECPG,Encore Capital Group,Financials
+ECVT,Ecovyst,Materials
+EDAP,EDAP TMS,Health Care
+EDBL,Edible Garden,Consumer Staples
+EDIT,Editas Medicine,Health Care
+EDNC,Enova International,Financials
+EDUC,Educational Development,Consumer Discretionary
+EGLE,Eagle Bulk Shipping,Industrials
+EGRX,Eagle Pharmaceuticals,Health Care
+EHTH,eHealth,Health Care
+EIGHT,Molecular Data,Materials
+EIXT,Sievert Larsen & Associates,Technology
+EKSO,Ekso Bionics Holdings,Health Care
+ELMD,Electromed,Health Care
+ELOX,Eledon Pharmaceuticals,Health Care
+ELSE,Electro Scientific Industries,Technology
+EMKR,EMCORE,Technology
+EMMF,EMM,Financials
+ENTG,Entegris,Technology
+ENVX,Enovix,Technology
+EPAM,EPAM Systems,Technology
+EPIO,Epizyme,Health Care
+EPIX,ESSA Pharma,Health Care
+EQBK,Equity Bancshares A,Financials
+ERAS,Erase,Health Care
+ERDE,Erdene Resource Development,Materials
+ERES,East Resources Acquisition,Financials
+ESBA,Empire State Realty Income,Real Estate
+ESCA,Escalon Medical,Health Care
+ESEA,Euroseas,Industrials
+ESGRO,Enstar Group Pref,Financials
+ESGR,Enstar Group,Financials
+ESPR,Esperion Therapeutics,Health Care
+ESRT,Empire State Realty Trust A,Real Estate
+ESSA,ESSA Bancorp,Financials
+ESTO,Establishment Labs Holdings,Health Care
+ESTR,Estre Ambiental,Industrials
+ETSY,Etsy,Consumer Discretionary
+EVAX,Enochian Biosciences,Health Care
+EVBG,Everbridge,Technology
+EVEX,Eve Holding,Industrials
+EVGN,Evogene,Health Care
+EVGO,EVgo,Consumer Discretionary
+EVLV,Evolv Technology Holdings,Technology
+EVOP,EVO Payments A,Technology
+EVTC,Evertec,Technology
+EXAS,Exact Sciences,Health Care
+EXEL,Exelixis,Health Care
+EXLS,ExlService Holdings,Technology
+EXPI,eXp World Holdings,Real Estate
+EXTR,Extreme Networks,Technology
+EZPW,EZCORP A,Consumer Finance
+FARO,FARO Technologies,Technology
+FAST,Fastenal,Industrials
+FATE,Fate Therapeutics,Health Care
+FBIO,Fortress Biotech,Health Care
+FBMS,First Bancshares,Financials
+FBND,Fidelity Total Bond ETF,Financials
+FBNC,First Bancorp,Financials
+FBRT,Franklin BSP Realty Trust,Real Estate
+FBSS,Fauquier Bankshares,Financials
+FCAP,First Capital,Financials
+FCEL,FuelCell Energy,Utilities
+FCNCA,First Citizens BancShares A,Financials
+FCNCO,First Citizens BancShares B,Financials
+FCPT,Four Corners Property Trust,Real Estate
+FDMT,4D Molecular Therapeutics,Health Care
+FEIM,Frequency Electronics,Technology
+FFBC,First Financial Bancorp,Financials
+FFBW,FFBW,Financials
+FFIN,Cullen/Frost Bankers,Financials
+FFIV,F5 Networks,Technology
+FFNW,First Financial Northwest,Financials
+FGEN,FibroGen,Health Care
+FGNA,FG New America Acquisition,Technology
+FGP,Ferrellgas Partners,Utilities
+FHTX,Frontier Medicines,Health Care
+FISI,Financial Institutions,Financials
+FITB,Fifth Third Bancorp,Financials
+FIVE,Five Below,Consumer Discretionary
+FIVN,Five9,Technology
+FKWL,Franklin Wireless,Technology
+FLGT,Fulgent Genetics,Health Care
+FLIC,First of Long Island,Financials
+FLJH,Franklin FTSE Japan Hedged ETF,Financials
+FLKR,Franklin FTSE South Korea ETF,Financials
+FLNC,Fluence Energy A,Industrials
+FLNT,Fluent,Technology
+FMAO,Farmers & Merchants Financial Group,Financials
+FMBH,First Midwest Bancorp,Financials
+FMBI,First Midwest Bancorp,Financials
+FMNB,Farmers & Merchants State Bank,Financials
+FNCB,FNCB Bancorp,Financials
+FNKO,Funko A,Consumer Discretionary
+FOLD,Amicus Therapeutics,Health Care
+FORD,Forward Industries,Technology
+FORR,Forrester Research,Technology
+FOSL,Fossil Group,Consumer Discretionary
+FOUR,Shift4 Payments A,Technology
+FOXF,Fox Factory Holding,Consumer Discretionary
+FPAY,FlexShopper,Consumer Finance
+FRAF,Franklin Financial Services,Financials
+FRBA,First Bank,Financials
+FRFHF,Fairfax Financial Holdings,Financials
+FRGE,Forge Global Holdings,Financials
+FRHC,Freedom Holding,Financials
+FRLN,Freelancer,Technology
+FRME,First Merchants,Financials
+FROG,JFrog,Technology
+FRPH,FRP Holdings,Real Estate
+FRPT,Freshpet,Consumer Staples
+FRSH,Freshworks A,Technology
+FSBW,FS Bancorp,Financials
+FSCO,FS Credit Opportunities,Financials
+FSLR,First Solar,Technology
+FSLY,Fastly A,Technology
+FSRV,Finserv Acquisition II,Technology
+FTAI,FTAI Aviation,Industrials
+FTDR,Frontdoor,Consumer Discretionary
+FTIV,Fortress Capital Acquisition,Technology
+FULT,Fulton Financial,Financials
+FURY,Fury Gold Mines,Materials
+FUTU,Futu Holdings,Financials
+FVCB,FVCBankcorp,Financials
+FWAA,Fifth Wall Acquisition III A,Technology
+FWAC,Fifth Wall Acquisition III C,Technology
+FWBI,First Wave BioPharma,Health Care
+FWRG,Four Winds Interactive,Technology
+FXNC,First National,Financials
+GABC,German American Bancorp,Financials
+GALT,Galectin Therapeutics,Health Care
+GAME,GameTech International,Consumer Discretionary
+GASS,StealthGas,Energy
+GATX,GATX,Industrials
+GBCI,Glacier Bancorp,Financials
+GBIO,Generation Bio,Health Care
+GBL,Gamco Investors,Financials
+GBLI,Global Indemnity Group A,Financials
+GBNY,Generations Bancorp New York,Financials
+GCBC,Greene County Bancshares,Financials
+GCMG,GCM Grosvenor A,Financials
+GDRX,GoodRx Holdings A,Health Care
+GDYN,Grid Dynamics Holdings,Technology
+GENC,Gencor Industries,Industrials
+GENK,GEN Restaurant Group,Consumer Discretionary
+GERN,Geron,Health Care
+GEVO,Gevo,Materials
+GFAI,Guardforce AI,Technology
+GFED,Guaranty Federal Bancshares,Financials
+GGAL,Grupo Financiero Galicia,Financials
+GKOS,Glaukos,Health Care
+GLBE,Global-E Online,Technology
+GLDD,Great Lakes Dredge & Dock,Industrials
+GLNG,Golar LNG,Energy
+GLPG,Galapagos,Health Care
+GLRE,Greenlight Capital Re,Financials
+GLSI,Greenwich LifeSciences Holdings,Health Care
+GLTO,Galecto,Health Care
+GLUU,Glu Mobile,Technology
+GMAB,Genmab,Health Care
+GMBL,Esports Entertainment Group,Consumer Discretionary
+GMGI,Golden Matrix Group,Consumer Discretionary
+GNPX,Genprobe Incorporated,Health Care
+GNSS,Genasys,Technology
+GNTY,Guaranty Federal Bancshares,Financials
+GOEV,Canoo,Consumer Discretionary
+GOSS,Gossamer Bio,Health Care
+GPAC,Global-E Online,Technology
+GPMT,Granite Point Mortgage Trust,Real Estate
+GPOR,Gulfport Energy,Energy
+GRAB,Grab Holdings A,Consumer Discretionary
+GRFS,Grifols,Health Care
+GRIN,Grindrod Shipping Holdings,Industrials
+GRND,Grindr,Technology
+GRNT,Granite Telecommunications,Communication Services
+GRPN,Groupon,Consumer Discretionary
+GRSV,Gores Holdings IX,Technology
+GRTS,Gritstone bio,Health Care
+GRWG,GrowGeneration,Consumer Discretionary
+GSBC,Great Southern Bancorp,Financials
+GSIT,GSI Technology,Technology
+GSKP,GSK,Health Care
+GSSL,Global-E Online,Technology
+GTLB,GitLab A,Technology
+GTLS,Chart Industries,Industrials
+GURE,Gulf Resources,Materials
+GWAV,Greenwave Technology Solutions,Technology
+GWPH,GW Pharmaceuticals,Health Care
+GWRS,Global Water Technologies,Utilities
+GXII,GX Acquisition II,Technology
+GXIII,GX Acquisition III,Technology
+GYRO,Gyrodyne,Real Estate
+HALO,Halozyme Therapeutics,Health Care
+HARP,Harpoon Therapeutics,Health Care
+HBAN,Huntington Bancshares,Financials
+HBCP,Home Bancorp,Financials
+HBIO,Harvard Bioscience,Health Care
+HBNC,Horizon Bancal,Financials
+HCAT,Health Catalyst,Technology
+HCHC,HC2 Holdings,Industrials
+HCKT,Hackett Group,Technology
+HCWB,HealthCare WorkPlace,Health Care
+HDNG,Hardinge,Industrials
+HDSN,Hudson Technologies,Industrials
+HELE,Helen of Troy,Consumer Discretionary
+HEPA,Hepion Pharmaceuticals,Health Care
+HFBL,Home Federal Bancorp,Financials
+HFWA,Heritage Financial,Financials
+HIBB,Hibbett Sports,Consumer Discretionary
+HIFS,Hingham Institution for Savings,Financials
+HIMX,Himax Technologies,Technology
+HIMS,Hims & Hers Health A,Health Care
+HLIO,Helios Technologies,Industrials
+HLNE,Hamilton Lane A,Financials
+HLTX,Halo Collective,Consumer Discretionary
+HMBC,Home Bancorp,Financials
+HMCF,Heritage Financial,Financials
+HMST,HomeStreet,Financials
+HMTV,Hemisphere Media Group A,Communication Services
+HNNA,Hennessy Advisors,Financials
+HNRG,Hallador Energy,Energy
+HOFT,Hooker Furnishings,Consumer Discretionary
+HOLO,MicroCloud Hologram,Technology
+HOLX,Hologic,Health Care
+HOOD,Robinhood Markets A,Financials
+HOOK,HOOKIPA Pharma,Health Care
+HOPE,Hope Bancorp,Financials
+HPNN,Hop-On,Technology
+HPPW,HPNN Warrant,Technology
+HROW,Harrow Health,Health Care
+HRMY,Harmony Biosciences Holdings,Health Care
+HSDT,Heliogen,Industrials
+HTBI,Home Trust Bancorp,Financials
+HTBK,Heritage Commerce,Financials
+HTFB,Horizon Technology Finance,Financials
+HTGC,Hercules Capital,Financials
+HTHT,H World Group,Consumer Discretionary
+HTLD,Heartland Express,Industrials
+HTLF,Heartland Financial USA,Financials
+HUMA,Humacyte,Health Care
+HWBK,Hawthorn Bancorp,Financials
+HWKN,Hawkins,Materials
+HYLN,Hyliion Holdings,Industrials
+HYMC,Hycroft Mining Holding,Materials
+HYRE,HyreCar,Consumer Discretionary
+HYXF,iShares ESG Advanced High Yield,Financials
+HYZN,Hyzon Motors,Industrials
+IAC,IAC A,Communication Services
+IACI,Inspirato,Consumer Discretionary
+IART,Integra LifeSciences Holdings,Health Care
+IBCP,Independent Bank,Financials
+IBEX,IBEX Limited,Technology
+IBOC,International Bancshares,Financials
+IBTX,Independent Bank Group,Financials
+ICAD,iCAD,Health Care
+ICBK,County Bancorp,Financials
+ICHR,Ichor Holdings,Technology
+ICLR,ICON,Health Care
+ICON,ICON,Health Care
+IDCC,InterDigital,Technology
+IDEX,Ideanomics,Industrials
+IDYA,IDEAYA Biosciences,Health Care
+IFMK,iFresh,Consumer Staples
+IGMS,IGM Biosciences,Health Care
+IGTV,Integrated Global Concepts,Technology
+IHRT,iHeartMedia A,Communication Services
+IINN,Inspira Technologies,Health Care
+IKNA,Ikena Oncology,Health Care
+ILMN,Illumina,Health Care
+IMCR,Immunocore Holdings,Health Care
+IMKTA,Ingles Markets A,Consumer Staples
+IMMP,Immutep,Health Care
+IMMR,Immersion,Technology
+IMPT,IMPT,Technology
+IMPX,Impact Acquisition,Technology
+IMRN,Immuron,Health Care
+IMUX,Immunomedics,Health Care
+IMVT,Immunovant,Health Care
+INAB,IN8bio,Health Care
+INBX,Inhibrx,Health Care
+INCY,Incyte,Health Care
+INFU,InfuSystem Holdings,Health Care
+INGN,Inogen,Health Care
+INIC,International Industries,Industrials
+INMD,InMode,Health Care
+INPX,Inpixon,Technology
+INSG,Inseego,Technology
+INSP,Inspire Medical Systems,Health Care
+INTD,iClick Interactive Asia Group,Technology
+INTT,inTEST,Technology
+INTZ,Intrusion,Technology
+INVA,Innoviva,Health Care
+INVE,Identiv,Technology
+INVH,Invitation Homes,Real Estate
+IONQ,IonQ,Technology
+IONS,Ionis Pharmaceuticals,Health Care
+IOSP,Innospec,Materials
+IOVA,Iovance Biotherapeutics,Health Care
+IPGP,IPG Photonics,Technology
+IPSC,Century Therapeutics A,Health Care
+IPWR,Ideal Power,Technology
+IQMD,iQSTEL,Technology
+IRBT,iRobot,Consumer Discretionary
+IRDM,Iridium Communications,Technology
+IRON,Disc Medicine,Health Care
+IRTC,iRhythm Technologies,Health Care
+ISSC,Innovative Solutions and Support,Technology
+ISTR,Investar Holding,Financials
+ITCI,Intra-Cellular Therapies,Health Care
+ITRI,Itron,Technology
+IULG,IU Group Holding,Financials
+IVAC,Intevac,Technology
+IVVD,Invivyd,Health Care
+IXHL,Incannex Healthcare,Health Care
+IXUS,iShares Core MSCI Total International,Financials
+IZIP,Zipcode,Technology
+JAGX,Jaguar Health,Health Care
+JANX,Janux Therapeutics,Health Care
+JAZZ,Jazz Pharmaceuticals,Health Care
+JBSS,John B. Sanfilippo & Son,Consumer Staples
+JFIN,Jiayin Group,Financials
+JMIA,Jumia Technologies,Consumer Discretionary
+JOBY,Joby Aviation,Industrials
+JOUT,Johnson Outdoors A,Consumer Discretionary
+JRVR,James River Group Holdings,Financials
+JSPR,Jasper Therapeutics,Health Care
+JYNT,The Joint,Health Care
+KALU,Kaiser Aluminum,Materials
+KBAL,Kimball International B,Consumer Discretionary
+KELYA,Kelly Services A,Industrials
+KELYB,Kelly Services B,Industrials
+KFRC,Kforce,Industrials
+KIDS,OrthoPediatrics,Health Care
+KLAC,KLA Corporation,Technology
+KNDI,Kandi Technologies Group,Consumer Discretionary
+KNSL,Kinsale Capital Group,Financials
+KODK,Eastman Kodak,Industrials
+KOPN,Kopin,Technology
+KORE,KORE Wireless Group,Technology
+KPLT,Katapult Holdings,Consumer Finance
+KROS,Keros Therapeutics,Health Care
+KRTX,Karuna Therapeutics,Health Care
+KRYS,Krystal Biotech,Health Care
+KRUS,Kura Sushi USA,Consumer Discretionary
+KYMR,Kymera Therapeutics,Health Care
+LASE,Laser Photonics,Technology
+LAZR,Luminar Technologies A,Technology
+LBRT,Liberty Oilfield Services A,Energy
+LBTYA,Liberty Global A,Communication Services
+LCNB,LCNB,Financials
+LCUT,Lifetime Brands,Consumer Discretionary
+LDAQ,Landcadia Holdings IV A,Technology
+LDTC,LeddarTech Holdings,Technology
+LEGN,Legend Biotech,Health Care
+LESL,Leslie's,Consumer Discretionary
+LKCO,Luokung Technology,Technology
+LKFN,Lakeland Financial,Financials
+LLNW,Limelight Networks,Technology
+LMNL,Liminal BioSciences,Health Care
+LMND,Lemonade,Financials
+LNTH,Lantheus Holdings,Health Care
+LOGI,Logitech International,Technology
+LOOP,Loop Industries,Materials
+LOPE,Grand Canyon Education,Consumer Discretionary
+LPCN,Lipocine,Health Care
+LPLA,LPL Financial Holdings,Financials
+LPSN,LivePerson,Technology
+LPTX,Leap Therapeutics,Health Care
+LQDA,Liquidia,Health Care
+LRCX,Lam Research,Technology
+LSCC,Lattice Semiconductor,Technology
+LSEA,Landsea Homes,Consumer Discretionary
+LSTR,Landstar System,Industrials
+LTBR,Lightbridge,Utilities
+LTRN,Lantern Pharma,Health Care
+LUNA,Luna Innovations,Technology
+LUNR,Intuitive Machines,Industrials
+LYFT,Lyft,Consumer Discretionary
+LYTS,LSI Industries,Industrials
+MANH,Manhattan Associates,Technology
+MANT,ManTech International A,Technology
+MARA,Marathon Digital Holdings,Technology
+MASI,Masimo,Health Care
+MBCN,Middlefield Banc,Financials
+MBLY,Mobileye Global A,Technology
+MBWM,Mercantile Bank,Financials
+MCBC,Mackinac Savings Bank,Financials
+MCHP,Microchip Technology,Technology
+MCRI,Monarch Casino & Resort,Consumer Discretionary
+MDB,MongoDB A,Technology
+MDGL,Madrigal Pharmaceuticals,Health Care
+MDJH,MDJM,Consumer Discretionary
+MDLZ,Mondelez International A,Consumer Staples
+MDNA,Medicenna Therapeutics,Health Care
+MDXG,MiMedx Group,Health Care
+MELI,MercadoLibre,Consumer Discretionary
+META,Meta Platforms A,Communication Services
+MGNX,MacroGenics,Health Care
+MGPI,MGP Ingredients,Consumer Staples
+MGRC,McGrath RentCorp,Industrials
+MIME,Mimecast,Technology
+MIRM,Mirum Pharmaceuticals,Health Care
+MKSI,MKS Instruments,Technology
+MKTX,MarketAxess Holdings,Financials
+MLCO,Melco Resorts & Entertainment,Consumer Discretionary
+MLNK,MeridianLink,Technology
+MLTX,MoonLake Immunotherapeutics A,Health Care
+MNDY,Monday.com,Technology
+MNKD,MannKind,Health Care
+MNRO,Monro Muffler Brake,Consumer Discretionary
+MNST,Monster Beverage,Consumer Staples
+MOFG,MidWestOne Financial Group,Financials
+MOTS,Motus GI Holdings,Health Care
+MPWR,Monolithic Power Systems,Technology
+MRAM,Everspin Technologies,Technology
+MRNA,Moderna,Health Care
+MRTX,Mirati Therapeutics,Health Care
+MRUS,Merus,Health Care
+MSBI,Midland States Bancorp,Financials
+MSTR,MicroStrategy A,Technology
+MU,Micron Technology,Technology
+MVBF,MVB Financial,Financials
+MVIS,MicroVision,Technology
+MYMD,MyMD Pharmaceuticals,Health Care
+MYPS,PLAYSTUDIOS,Consumer Discretionary
+MYRG,MYR Group,Industrials
+NABL,N-able A,Technology
+NARI,Inari Medical,Health Care
+NATH,Nathan's Famous,Consumer Discretionary
+NBTB,NBT Bancorp,Financials
+NBIX,Neurocrine Biosciences,Health Care
+NCNA,NovaBay Pharmaceuticals,Health Care
+NCNO,nCino,Technology
+NDAQ,Nasdaq,Financials
+NDLS,Noodles & Company,Consumer Discretionary
+NERV,Minerva Neurosciences,Health Care
+NET,Cloudflare A,Technology
+NFLX,Netflix,Communication Services
+NFBK,Northfield Bancorp,Financials
+NKLA,Nikola,Industrials
+NKTR,Nektar Therapeutics,Health Care
+NLOK,NortonLifeLock,Technology
+NMRK,Newmark Group A,Real Estate
+NNBR,NN Inc,Industrials
+NOVT,Novanta,Technology
+NPCE,Nuvectra,Health Care
+NRBO,NeuroBo Pharmaceuticals,Health Care
+NRDX,Neuroderm,Health Care
+NRIM,Northrim BanCorp,Financials
+NRIX,Nurix Therapeutics,Health Care
+NRXP,NRx Pharmaceuticals,Health Care
+NSTG,NanoString Technologies,Health Care
+NSTL,National Steel,Materials
+NTAP,NetApp,Technology
+NTLA,Intellia Therapeutics,Health Care
+NTNX,Nutanix A,Technology
+NTRA,Natera,Health Care
+NUVL,Nuvalent A,Health Care
+NVCR,NovaCure,Health Care
+NVEI,Nuvei,Technology
+NWBI,Northwest Bancshares,Financials
+NWFL,Norwood Financial,Financials
+NWLI,National Western Life Group,Financials
+NWSA,News Corp A,Communication Services
+NXPI,NXP Semiconductors,Technology
+NYMT,New York Mortgage Trust,Real Estate
+NYMX,Nymox Pharmaceutical,Health Care
+OBDC,Blue Owl Capital BDC,Financials
+OCFC,OceanFirst Financial,Financials
+OCGN,Ocugen,Health Care
+OCSL,Oaktree Specialty Lending,Financials
+OCUP,Ocuphire Pharma,Health Care
+ODFL,Old Dominion Freight Line,Industrials
+OFIX,Orthofix Medical,Health Care
+OKTA,Okta A,Technology
+OMAB,Grupo Aeroportuario del Centro Norte,Industrials
+OMCL,Omnicell,Health Care
+OMGA,Omega Therapeutics,Health Care
+ONCR,Oncorus,Health Care
+ONCS,OncoSec Medical,Health Care
+ONTF,ON24,Technology
+ONTO,Onto Innovation,Technology
+ONVO,Organovo Holdings,Health Care
+OPEN,Opendoor Technologies,Real Estate
+OPFI,OppFi A,Financials
+OPK,OPKO Health,Health Care
+OPTX,Syntec Optics Holdings,Technology
+ORGO,Organogenesis Holdings A,Health Care
+ORMP,Oramed Pharmaceuticals,Health Care
+ORPH,Orphazyme,Health Care
+ORTX,Orchard Therapeutics,Health Care
+OSBC,Old Second Bancorp,Financials
+OSUR,OraSure Technologies,Health Care
+PACB,Pacific Biosciences of California,Health Care
+PAGS,PagSeguro Digital A,Technology
+PAHC,Phibro Animal Health A,Health Care
+PANW,Palo Alto Networks,Technology
+PATH,UiPath A,Technology
+PAVM,PAVmed A,Health Care
+PAYO,Payoneer Global,Technology
+PAYS,Paysign,Technology
+PAYC,Paycom Software,Technology
+PAYX,Paychex,Technology
+PCAR,PACCAR,Industrials
+PCOR,Procore Technologies,Technology
+PCVX,Vaxcyte,Health Care
+PDCE,PDC Energy,Energy
+PDCO,Patterson Companies,Health Care
+PDFS,PDF Solutions,Technology
+PDSB,PDS Biotechnology,Health Care
+PEGA,Pegasystems,Technology
+PENN,Penn Entertainment,Consumer Discretionary
+PFGC,Performance Food Group,Consumer Staples
+PFIS,Peoples Financial Services,Financials
+PFSI,PennyMac Financial Services,Financials
+PGTI,PGT Innovations,Industrials
+PHIO,Phio Pharmaceuticals,Health Care
+PHUN,Phunware,Technology
+PICC,PICC,Financials
+PINS,Pinterest,Communication Services
+PIXY,ShiftPixy,Technology
+PKBK,Parke Bancorp,Financials
+PKOH,Park-Ohio Holdings,Industrials
+PLAB,Photronics,Technology
+PLAY,Dave & Buster's Entertainment,Consumer Discretionary
+PLCE,Children's Place,Consumer Discretionary
+PLFRY,Playfast,Consumer Discretionary
+PLNHF,Plena Global,Materials
+PLRX,Pliant Therapeutics,Health Care
+PLTR,Palantir Technologies A,Technology
+PLUG,Plug Power,Industrials
+PLXS,Plexus,Technology
+PMVP,PMV Pharmaceuticals,Health Care
+PNFP,Pinnacle Financial Partners,Financials
+PODD,Insulet,Health Care
+POOL,Pool,Consumer Discretionary
+POWI,Power Integrations,Technology
+PPBI,Pacific Premier Bancorp,Financials
+PRFS,Preference Inc,Technology
+PRGS,Progress Software,Technology
+PRIM,Primoris Services,Industrials
+PRLB,Proto Labs,Industrials
+PRLD,Prelude Therapeutics,Health Care
+PRME,Prime Medicine A,Health Care
+PRMW,Primo Water,Consumer Staples
+PRPH,ProPhase Labs,Health Care
+PRQR,ProQR Therapeutics,Health Care
+PRTA,Prothena,Health Care
+PRTH,Priority Technology Holdings,Technology
+PRTK,Paratek Pharmaceuticals,Health Care
+PRTO,Proteon Therapeutics,Health Care
+PRTS,CarParts.com,Consumer Discretionary
+PRVB,Provectus Biopharmaceuticals,Health Care
+PRVL,Prevail Therapeutics,Health Care
+PSFE,Paysafe A,Technology
+PTCT,PTC Therapeutics,Health Care
+PTGX,Protagonist Therapeutics,Health Care
+PTON,Peloton Interactive A,Consumer Discretionary
+PTSI,P.A.M. Transportation Services,Industrials
+PUBM,PubMatic A,Technology
+PVBC,Provident Bancorp,Financials
+PYCR,Paycor HCM A,Technology
+PYPL,PayPal Holdings,Technology
+QCOM,Qualcomm,Technology
+QDEL,QuidelOrtho,Health Care
+QNST,QuinStreet,Technology
+QRVO,Qorvo,Technology
+QUBT,Quantum Computing,Technology
+RAMP,LiveRamp Holdings,Technology
+RBLX,Roblox A,Communication Services
+RCKT,Rocket Pharmaceuticals,Health Care
+RCUS,Arcus Biosciences,Health Care
+RDDT,Reddit A,Communication Services
+RDVT,Red Violet,Technology
+REXR,Rexford Industrial Realty,Real Estate
+RFIL,RF Industries,Technology
+RGEN,Repligen,Health Care
+RIOT,Riot Platforms,Technology
+RIVN,Rivian Automotive A,Consumer Discretionary
+RLAY,Relay Therapeutics,Health Care
+RMBS,Rambus,Technology
+RNLX,Renalytix,Health Care
+RNST,Renasant,Financials
+ROIV,Roivant Sciences,Health Care
+ROKU,Roku A,Communication Services
+RPAY,Repay Holdings A,Technology
+RPRX,Royalty Pharma A,Health Care
+RRBI,Red River Bancshares,Financials
+RSSS,Research Solutions,Technology
+RUSHA,Rush Enterprises A,Consumer Discretionary
+RUSHB,Rush Enterprises B,Consumer Discretionary
+RVNC,Revance Therapeutics,Health Care
+RWLK,ReWalk Robotics,Health Care
+RXRX,Recursion Pharmaceuticals A,Technology
+RYTM,Rhythm Pharmaceuticals,Health Care
+S,SentinelOne A,Technology
+SABS,SAB Biotherapeutics,Health Care
+SAGE,Sage Therapeutics,Health Care
+SAIL,SailPoint Technologies Holdings,Technology
+SANA,Sana Biotechnology A,Health Care
+SANG,Sangoma Technologies,Technology
+SBCF,Seacoast Banking Corporation,Financials
+SBFG,SB Financial Group,Financials
+SBGI,Sinclair Broadcast Group A,Communication Services
+SBSI,Southside Bancshares,Financials
+SBUX,Starbucks,Consumer Discretionary
+SCHL,Scholastic,Consumer Discretionary
+SCSC,ScanSource,Technology
+SDGR,Schrodinger,Health Care
+SEDG,SolarEdge Technologies,Technology
+SEIC,SEI Investments,Financials
+SFIX,Stitch Fix A,Consumer Discretionary
+SGEN,Seagen,Health Care
+SGMO,Sangamo Therapeutics,Health Care
+SHAK,Shake Shack A,Consumer Discretionary
+SHLS,Shoals Technologies Group A,Technology
+SHOP,Shopify A,Technology
+SIGI,Selective Insurance Group,Financials
+SIRI,Sirius XM Holdings,Communication Services
+SKYW,SkyWest,Industrials
+SLAB,Silicon Laboratories,Technology
+SLDB,Solid Biosciences A,Health Care
+SLGN,Silgan Holdings,Materials
+SLQT,SelectQuote,Health Care
+SMAR,Smartsheet A,Technology
+SMBC,Southern Missouri Bancorp,Financials
+SMBK,SmartFinancial Bancshares,Financials
+SMCI,Super Micro Computer,Technology
+SMFL,Smart For Life,Consumer Staples
+SMPL,Simply Good Foods,Consumer Staples
+SMTC,Semtech,Technology
+SNAP,Snap A,Communication Services
+SNBR,Sleep Number,Consumer Discretionary
+SNDR,Schneider National A,Industrials
+SNEX,StoneX Group,Financials
+SNPS,Synopsys,Technology
+SNOW,Snowflake A,Technology
+SOFI,SoFi Technologies,Financials
+SOLO,Electrameccanica Vehicles,Consumer Discretionary
+SOND,Sonder Holdings A,Consumer Discretionary
+SONO,Sonos,Technology
+SONN,Sonnet BioTherapeutics Holdings,Health Care
+SOUN,SoundHound AI A,Technology
+SPCE,Virgin Galactic Holdings A,Industrials
+SPGX,Sustainable Producution and Green Energy Exchange,Materials
+SPNS,Sapiens International,Technology
+SPOK,Spok Holdings,Communication Services
+SPOT,Spotify Technology,Communication Services
+SPSC,SPS Commerce,Technology
+SPWH,Sportsman's Warehouse Holdings,Consumer Discretionary
+SPXC,SPX Technologies,Industrials
+SPXX,Nuveen S&P 500 Dynamic Overwrite Fund,Financials
+SRPT,Sarepta Therapeutics,Health Care
+SSYS,Stratasys,Technology
+STAA,STAAR Surgical,Health Care
+STBA,S&T Bancorp,Financials
+STGS,Stagwell A,Communication Services
+STLY,Stanley Furniture,Consumer Discretionary
+STOK,Stoke Therapeutics,Health Care
+STRA,Strategic Education,Consumer Discretionary
+STRL,Sterling Infrastructure,Industrials
+STRM,Streamline Health Solutions,Health Care
+SUMO,Sumo Logic,Technology
+SUPN,Supernus Pharmaceuticals,Health Care
+SVFD,Save Foods,Consumer Staples
+SWAV,ShockWave Medical,Health Care
+SWKH,SWK Holdings,Financials
+SWKS,Skyworks Solutions,Technology
+SWTX,SpringWorks Therapeutics,Health Care
+SYNA,Synaptics,Technology
+SYNH,Syneos Health A,Health Care
+SYRS,Syros Pharmaceuticals,Health Care
+TALO,Talos Energy A,Energy
+TASK,TaskUs A,Technology
+TAST,Carrols Restaurant Group,Consumer Discretionary
+TBBK,The Bancorp,Financials
+TBNK,Territorial Bancorp,Financials
+TBPH,Theravance Biopharma,Health Care
+TCBK,TriCo Bancshares,Financials
+TCMD,Tactile Systems Technology,Health Care
+TDOC,Teladoc Health,Health Care
+TDUP,ThredUp A,Consumer Discretionary
+TEAM,Atlassian A,Technology
+TENB,Tenable Holdings,Technology
+TGTX,TG Therapeutics,Health Care
+THCX,Cannabis Strategic Ventures,Consumer Staples
+THMG,Therapeutics MD,Health Care
+THMO,ThermoGenesis Holdings,Health Care
+TIGR,UP Fintech Holding A,Financials
+TMDX,TransMedics Group,Health Care
+TMUS,T-Mobile US,Communication Services
+TNXP,Tonix Pharmaceuticals Holding,Health Care
+TORC,Torchmark,Financials
+TOWN,TowneBank,Financials
+TPVG,TriplePoint Venture Growth BDC,Financials
+TRMB,Trimble,Technology
+TRMK,Trustmark,Financials
+TRNX,Tarena International,Consumer Discretionary
+TRST,TrustCo Bancorp NY,Financials
+TTAI,TechTarget,Technology
+TTCF,Tattooed Chef,Consumer Staples
+TTEC,TTEC Holdings,Technology
+TTGT,TechTarget,Technology
+TTMI,TTM Technologies,Technology
+TTWO,Take-Two Interactive Software,Communication Services
+TVTX,Travere Therapeutics,Health Care
+TWLO,Twilio A,Technology
+TXG,10x Genomics A,Health Care
+TXMD,TherapeuticsMD,Health Care
+TXRH,Texas Roadhouse,Consumer Discretionary
+TYRA,Tyra Biosciences,Health Care
+U,Unity Software A,Technology
+UBCP,United Bancorp,Financials
+UBOH,United Bankshares of Ohio,Financials
+UBER,Uber Technologies,Consumer Discretionary
+UCBI,United Community Banks,Financials
+UCTT,Ultra Clean Holdings,Technology
+UEIC,Universal Electronics,Technology
+UFCS,United Fire Group,Financials
+UFPI,UFP Technologies,Industrials
+UFPT,UFP Technologies,Industrials
+ULTA,Ulta Beauty,Consumer Discretionary
+UMBF,UMB Financial,Financials
+UPST,Upstart Holdings,Technology
+USAP,Universal Stainless & Alloy Products,Materials
+UTHR,United Therapeutics,Health Care
+VCEL,Vericel,Health Care
+VCNX,Vaccinex,Health Care
+VCYT,Veracyte,Health Care
+VEEV,Veeva Systems A,Health Care
+VECO,Veeco Instruments,Technology
+VERI,Veritone,Technology
+VERO,Venus Concept,Health Care
+VIAV,Viavi Solutions,Technology
+VKTX,Viking Therapeutics,Health Care
+VLGEA,Village Super Market A,Consumer Staples
+VLYPP,Valley National Bancorp,Financials
+VNDA,Vanda Pharmaceuticals,Health Care
+VNET,VNET Group,Technology
+VRNS,Varonis Systems,Technology
+VRNT,Verint Systems A,Technology
+VRSN,VeriSign,Technology
+VRTS,Virtus Investment Partners,Financials
+VRTX,Vertex Pharmaceuticals,Health Care
+VSTM,Verastem,Health Care
+VTRS,Viatris,Health Care
+VUZI,Vuzix,Technology
+WASH,Washington Trust Bancorp,Financials
+WAFD,Washington Federal,Financials
+WBKC,Wolverine Bancorp,Financials
+WERN,Werner Enterprises,Industrials
+WEYS,Weyco Group,Consumer Discretionary
+WIX,Wix.com,Technology
+WOLF,Wolfspeed,Technology
+WRLD,World Acceptance,Consumer Finance
+WSBC,WesBanco,Financials
+WSFS,WSFS Financial,Financials
+XBKS,Xenith Bankshares,Financials
+XENE,Xenon Pharmaceuticals,Health Care
+XPEV,XPeng A,Consumer Discretionary
+YELP,Yelp,Communication Services
+YEXT,Yext,Technology
+YMM,Full Truck Alliance A,Industrials
+YUMC,Yum China Holdings,Consumer Discretionary
+Z,Zillow Group C,Real Estate
+ZBRA,Zebra Technologies A,Technology
+ZG,Zillow Group A,Real Estate
+ZI,ZoomInfo Technologies A,Technology
+ZION,Zions Bancorporation N.A.,Financials
+ZNGA,Zynga A,Communication Services
+ZM,Zoom Video Communications A,Technology
+ZS,Zscaler,Technology
+SMCI,Super Micro Computer,Technology
+FVRR,Fiverr International,Technology
+APPS,Digital Turbine,Technology
+LULU,Lululemon Athletica,Consumer Discretionary
+NTES,NetEase,Communication Services
+JD,JD.com A,Consumer Discretionary
+BIDU,Baidu A,Communication Services
+PDD,PDD Holdings,Consumer Discretionary
+BEKE,KE Holdings A,Real Estate
+DIDI,DiDi Global A,Consumer Discretionary
+LAIX,LAIX A,Consumer Discretionary
+LOGI,Logitech International,Technology
+MELI,MercadoLibre,Consumer Discretionary
+SE,Sea Limited,Consumer Discretionary
+SHOP,Shopify A,Technology
+ETSY,Etsy,Consumer Discretionary
+AMZN,Amazon.com,Consumer Discretionary
+GOOGL,Alphabet A,Communication Services
+GOOG,Alphabet C,Communication Services

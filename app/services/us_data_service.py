@@ -322,6 +322,39 @@ def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
         return []
 
 
+def _fetch_bundled_nasdaq() -> list[tuple[str, str, str]]:
+    """
+    리포지토리에 번들된 data/nasdaq_tickers.csv 로드.
+    외부 네트워크 불필요 — 서버 방화벽 영향 없음.
+    """
+    csv_path = _BASE_DIR / "data" / "nasdaq_tickers.csv"
+    if not csv_path.exists():
+        return []
+    try:
+        result = []
+        seen: set[str] = set()
+        with open(csv_path, encoding="utf-8") as f:
+            next(f)  # 헤더 스킵
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(",", 2)
+                if len(parts) < 2:
+                    continue
+                sym = parts[0].strip().upper()
+                name = parts[1].strip()
+                sector = parts[2].strip() if len(parts) > 2 else ""
+                if sym and name and sym not in seen:
+                    seen.add(sym)
+                    result.append((sym, name, sector))
+        logger.info("번들 nasdaq_tickers.csv에서 %d개 종목 로드", len(result))
+        return result
+    except Exception as e:
+        logger.warning("번들 nasdaq_tickers.csv 로드 실패: %s", e)
+        return []
+
+
 def _fetch_sp500_from_wikipedia() -> list[tuple[str, str, str]]:
     """Wikipedia에서 S&P 500 종목 목록 로드. (symbol, name, gics_sector)"""
     try:
@@ -379,15 +412,19 @@ def _build_ticker_list() -> list[dict]:
     # 1순위: NASDAQ trader FTP (NASDAQ + NYSE/AMEX 전체, ~8000개)
     base_stocks = _fetch_nasdaq_ftp()
 
-    # 2순위: NASDAQ screener API
+    # 2순위: 번들 CSV (서버 방화벽 무관, 항상 작동)
+    if len(base_stocks) < 500:
+        base_stocks = _fetch_bundled_nasdaq()
+
+    # 3순위: NASDAQ screener API
     if len(base_stocks) < 500:
         base_stocks = _fetch_nasdaq_screener()
 
-    # 3순위: Wikipedia S&P 500
+    # 4순위: Wikipedia S&P 500
     if len(base_stocks) < 500:
         base_stocks = _fetch_sp500_from_wikipedia()
 
-    # 4순위: 하드코딩 fallback
+    # 5순위: 하드코딩 fallback
     if not base_stocks:
         base_stocks = [(s, n, "") for s, n in _FALLBACK_TICKERS]
 
