@@ -59,6 +59,36 @@ def _pearson_raw(a: np.ndarray, b: np.ndarray) -> float:
     return 0.0 if np.isnan(corr) else corr
 
 
+def _score_components(a: np.ndarray, b: np.ndarray) -> dict:
+    """5개 컴포넌트 + total 점수를 dict로 반환."""
+    shape_corr      = max(0.0, _pearson_raw(a, b))
+    level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
+    da, db          = np.diff(a), np.diff(b)
+    diff_corr       = max(0.0, _pearson_raw(da, db))
+    n               = len(a)
+    peak_diff       = abs(int(np.argmax(a)) - int(np.argmax(b))) / n
+    bottom_diff     = abs(int(np.argmin(a)) - int(np.argmin(b))) / n
+    extremum_score  = 1.0 - (peak_diff + bottom_diff) / 2.0
+    va              = float(np.std(da))
+    vb              = float(np.std(db))
+    volatility_score = 1.0 - min(1.0, abs(va - vb) / max(va, vb, _EPS))
+    total = (
+        0.45 * shape_corr
+        + 0.20 * level_closeness
+        + 0.20 * diff_corr
+        + 0.10 * extremum_score
+        + 0.05 * volatility_score
+    )
+    return {
+        "total":      total,
+        "shape":      shape_corr,
+        "level":      level_closeness,
+        "diff":       diff_corr,
+        "extremum":   extremum_score,
+        "volatility": volatility_score,
+    }
+
+
 def similarity_score(a: np.ndarray, b: np.ndarray) -> float:
     """
     복합 유사도 점수 [0, 1].
@@ -69,35 +99,7 @@ def similarity_score(a: np.ndarray, b: np.ndarray) -> float:
     ④ ExtremumScore  (10%) : 피크·바닥 위치 유사도
     ⑤ VolatilityScore( 5%) : 변동성 유사도
     """
-    # ① ShapeCorr
-    shape_corr = max(0.0, _pearson_raw(a, b))
-
-    # ② LevelCloseness
-    level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
-
-    # ③ DiffCorr
-    da, db = np.diff(a), np.diff(b)
-    diff_corr = max(0.0, _pearson_raw(da, db))
-
-    # ④ ExtremumScore
-    n = len(a)
-    peak_diff   = abs(int(np.argmax(a)) - int(np.argmax(b))) / n
-    bottom_diff = abs(int(np.argmin(a)) - int(np.argmin(b))) / n
-    extremum_score = 1.0 - (peak_diff + bottom_diff) / 2.0
-
-    # ⑤ VolatilityScore
-    va = float(np.std(da))
-    vb = float(np.std(db))
-    denom = max(va, vb, _EPS)
-    volatility_score = 1.0 - min(1.0, abs(va - vb) / denom)
-
-    return (
-        0.45 * shape_corr
-        + 0.20 * level_closeness
-        + 0.20 * diff_corr
-        + 0.10 * extremum_score
-        + 0.05 * volatility_score
-    )
+    return _score_components(a, b)["total"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,11 +182,12 @@ def search_similar(
             if sw > 1 and len(arr) > sw:
                 arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
             normed = normalize(resample(arr, PATTERN_LEN))
-            score = similarity_score(tmpl, normed)
+            comp = _score_components(tmpl, normed)
             results.append({
                 "ticker": ticker,
                 "company_name": names.get(ticker, ticker),
-                "similarity_score": round(score, 4),
+                "similarity_score": round(comp["total"], 4),
+                "score_detail": {k: round(v, 3) for k, v in comp.items() if k != "total"},
                 "period": f"{dates[indices[0]]} ~ {dates[indices[-1]]}",
                 "period_from": dates[indices[0]],
                 "period_to": dates[indices[-1]],
@@ -211,7 +214,6 @@ def search_similar(
         if anchor_today:
             best_i = n - win
             best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
-            best_score = similarity_score(tmpl, best_normed)
             orig_end = best_i + win - 1 + date_shift
             d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
@@ -266,10 +268,13 @@ def search_similar(
             d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
+        # 최종 선정된 구간의 컴포넌트 점수 계산
+        comp = _score_components(tmpl, best_normed)
         results.append({
             "ticker": ticker,
             "company_name": names.get(ticker, ticker),
-            "similarity_score": round(best_score, 4),
+            "similarity_score": round(comp["total"], 4),
+            "score_detail": {k: round(v, 3) for k, v in comp.items() if k != "total"},
             "period": f"{d_from} ~ {d_to}",
             "period_from": d_from,
             "period_to": d_to,

@@ -697,7 +697,9 @@
     matchPoints    = null; // 새 검색 시 이전 매칭 초기화
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
-    var body = { draw_points: pts, top_n: 20, market: market };
+    var topNEl = document.getElementById('top-n-select');
+    var topN = topNEl ? parseInt(topNEl.value, 10) : 20;
+    var body = { draw_points: pts, top_n: topN, market: market };
 
     if (rangeMode) {
       // 날짜 범위 모드
@@ -801,6 +803,18 @@
           : '';
         var pf = escHtml(r.period_from || '');
         var pt = escHtml(r.period_to   || '');
+
+        // 점수 세부 항목 바
+        var breakdownHtml = '';
+        var d = r.score_detail;
+        if (d) {
+          breakdownHtml = '<div class="result-breakdown">' +
+            _rbChip('형태',  d.shape,    color) +
+            _rbChip('기울기', d.diff,    '#7b9fce') +
+            _rbChip('극점',  d.extremum, '#b39ddb') +
+          '</div>';
+        }
+
         return (
           '<div class="result-card" ' +
             'onclick="loadResultMatch(' + idx + ',\'' + escHtml(r.ticker) + '\',\'' + pf + '\',\'' + pt + '\')" ' +
@@ -810,6 +824,7 @@
               '<div class="result-name">' + escHtml(r.company_name) + '</div>' +
               '<div class="result-ticker">' + escHtml(r.ticker) + '</div>' +
               periodHtml +
+              breakdownHtml +
             '</div>' +
             '<div class="result-score" style="color:' + color + '">' + pct + '%</div>' +
           '</div>'
@@ -822,6 +837,18 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  function _rbChip(label, score, color) {
+    var pct = Math.round((score || 0) * 100);
+    var fillW = Math.max(0, Math.min(100, pct));
+    return (
+      '<span class="rb-chip">' +
+        label +
+        '<div class="rb-bar"><div class="rb-fill" style="width:' + fillW + '%;background:' + color + '"></div></div>' +
+        '<span class="rb-val" style="color:' + color + '">' + pct + '</span>' +
+      '</span>'
+    );
+  }
+
   function showStatus(msg, type) {
     var el = document.getElementById('search-status');
     if (!el) return;
@@ -832,6 +859,16 @@
   // ── DOM 준비 후 실행 ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     initCanvas();
+
+    // 고급 옵션 토글
+    var btnAdv = document.getElementById('btn-advanced');
+    var advOpts = document.getElementById('advanced-options');
+    if (btnAdv && advOpts) {
+      btnAdv.addEventListener('click', function () {
+        var open = advOpts.classList.toggle('open');
+        btnAdv.classList.toggle('active', open);
+      });
+    }
 
     // 드로잉 도구 버튼
     document.querySelectorAll('.draw-tool-btn').forEach(function (btn) {

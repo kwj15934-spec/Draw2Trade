@@ -470,6 +470,59 @@
       margin-top: 2px;
     }
 
+    /* ── 점수 세부 항목 ─────────────────────────────────── */
+    .result-breakdown {
+      display: flex;
+      gap: 6px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+    .rb-chip {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
+      color: #7a8499;
+      line-height: 1;
+    }
+    .rb-bar {
+      width: 26px;
+      height: 3px;
+      background: #1e2130;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .rb-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+    .rb-val {
+      font-size: 10px;
+      font-weight: 600;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    /* ── 고급 옵션 ───────────────────────────────────────── */
+    #advanced-options {
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    #advanced-options.open { display: flex; }
+    #btn-advanced {
+      height: 28px;
+      padding: 0 8px;
+      font-size: 11px;
+      color: #888;
+      border-color: #333;
+    }
+    #btn-advanced.active {
+      color: #ff6b35;
+      border-color: #ff6b35;
+    }
+
     .result-score {
       font-size: 14px;
       font-weight: 700;

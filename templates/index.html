@@ -127,6 +127,19 @@
   <button id="btn-search" class="btn-d2t btn-d2t-primary">
     🔍 유사 종목 검색
   </button>
+
+  <!-- 고급 옵션 토글 -->
+  <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
+  <div id="advanced-options">
+    <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
+    <select id="top-n-select" title="검색 결과 최대 개수" style="height:28px;font-size:12px;padding:0 4px;background:#131722;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:4px;">
+      <option value="10">Top 10</option>
+      <option value="20" selected>Top 20</option>
+      <option value="50">Top 50</option>
+      <option value="100">Top 100</option>
+    </select>
+  </div>
+
   <span id="search-status" class="search-status"></span>
 </div>
 
