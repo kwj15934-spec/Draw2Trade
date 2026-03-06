@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.base import BaseHTTPMiddleware
 
 load_dotenv()  # draw2trade_web/.env 자동 로드
 
@@ -19,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user
 from app.routers import auth, chart, pattern, us_chart
+from app.services import activity_tracker
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
@@ -62,6 +64,27 @@ async def lifespan(app: FastAPI):
 
 # ── FastAPI 앱 ───────────────────────────────────────────────────────────────
 app = FastAPI(title="Draw2Trade", version="1.0.0", lifespan=lifespan)
+
+
+# ── 접속자 추적 미들웨어 ──────────────────────────────────────────────────────
+class ActivityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # 정적 파일 요청은 제외
+        if not request.url.path.startswith("/static"):
+            from app.services.auth_service import COOKIE_NAME, decode_session_token
+            uid = None
+            token = request.cookies.get(COOKIE_NAME)
+            if token:
+                user = decode_session_token(token)
+                if user:
+                    uid = user.get("uid")
+            ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+            ip = ip.split(",")[0].strip()
+            activity_tracker.record(uid, ip)
+        return await call_next(request)
+
+
+app.add_middleware(ActivityMiddleware)
 
 # 정적 파일
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")

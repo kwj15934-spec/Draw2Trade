@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_optional_user, require_admin
+from app.services import activity_tracker
 from app.services.auth_service import (
     COOKIE_NAME,
     approve_user,
@@ -129,3 +130,9 @@ async def admin_reject(body: UserActionBody, admin=Depends(require_admin)):
     if not reject_user(body.uid):
         raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
     return {"ok": True}
+
+
+@router.get("/api/admin/stats")
+async def admin_stats(admin=Depends(require_admin)):
+    """현재 접속자 통계 (관리자 전용)."""
+    return activity_tracker.get_stats()
