@@ -156,9 +156,9 @@
     var hasMatch = (matchPoints && matchPoints.length >= 2);
     var hasDraw  = (drawNormalized && drawNormalized.length >= 2);
 
-    // 비교 모드(범례 표시 중)일 때 티커 오버레이 숨기기
+    // 티커가 로드된 경우 항상 표시 (범례는 좌상단, 오버레이는 우상단 — 겹치지 않음)
     var tickerOverlay = document.getElementById('ticker-overlay');
-    if (tickerOverlay) tickerOverlay.style.display = hasMatch ? 'none' : (tickerOverlay.dataset.loaded ? 'block' : 'none');
+    if (tickerOverlay) tickerOverlay.style.display = tickerOverlay.dataset.loaded ? 'block' : 'none';
     // 차트 좌표계 사용 가능: matchPeriodData가 준비된 경우
     var usePriceCoords = (hasMatch && hasDraw &&
                           D2T && D2T.matchPeriodData &&
