@@ -365,34 +365,36 @@
     // ④ 레이어드 비교 범례 (내 패턴 vs 유사 종목 매칭 구간)
     var showLegend = (hasMatch && (usePriceCoords || hasDraw || drawPoints.length >= 2));
     if (showLegend) {
-      ctx.font         = '11px "Segoe UI", sans-serif';
+      ctx.font         = '12px "Segoe UI", sans-serif';
       ctx.textBaseline = 'middle';
-      var lx = 10, ly = 8, lineH = 18, boxW = 200;
-      ctx.fillStyle = 'rgba(15,17,23,0.88)';
-      ctx.strokeStyle = 'rgba(255,107,53,0.5)';
-      ctx.lineWidth = 1;
-      ctx.fillRect(lx - 4, ly - 6, boxW, lineH * 3 + 14);
-      ctx.strokeRect(lx - 4, ly - 6, boxW, lineH * 3 + 14);
-      ctx.fillStyle = '#ff6b35';
-      ctx.font = '10px "Segoe UI", sans-serif';
+      var lx = 10, ly = 10, lineH = 22, boxW = 220;
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(10,12,18,0.96)';
+      ctx.strokeStyle = '#ff6b35';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
+      ctx.strokeRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
+      ctx.fillStyle = '#ff9155';
+      ctx.font = 'bold 11px "Segoe UI", sans-serif';
       ctx.fillText('가상선 비교 — 두 선이 가까울수록 유사', lx + 2, ly + 4);
       ly += lineH;
       ctx.setLineDash([]);
       ctx.fillStyle = '#ff6b35';
-      ctx.fillRect(lx, ly + 2, 16, 3);
-      ctx.fillStyle = '#d1d4dc';
-      ctx.fillText('내가 그린 패턴 (실선)', lx + 22, ly + 4);
+      ctx.fillRect(lx, ly + 1, 18, 4);
+      ctx.fillStyle = '#e8eaed';
+      ctx.font = '12px "Segoe UI", sans-serif';
+      ctx.fillText('내가 그린 패턴 (실선)', lx + 24, ly + 4);
       ly += lineH;
       ctx.setLineDash([6, 4]);
       ctx.strokeStyle = '#26a69a';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(lx, ly + 4);
-      ctx.lineTo(lx + 16, ly + 4);
+      ctx.lineTo(lx + 18, ly + 4);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#d1d4dc';
-      ctx.fillText('유사 종목 매칭 구간 (점선)', lx + 22, ly + 4);
+      ctx.fillStyle = '#e8eaed';
+      ctx.fillText('유사 종목 매칭 구간 (점선)', lx + 24, ly + 4);
     }
   }
 
