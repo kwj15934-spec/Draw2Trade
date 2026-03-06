@@ -651,6 +651,17 @@
     if (metaEl) metaEl.textContent = metaParts.join('  ·  ');
     overlay.dataset.loaded = '1';
     overlay.style.display = 'block';
+
+    // 가격 스케일 너비 측정 후 우측 여백 동적 설정
+    var chartContainer = document.getElementById('chart-container');
+    if (chartContainer) {
+      var tds = chartContainer.querySelectorAll('tr td');
+      var priceScaleW = 80;
+      if (tds.length > 0) {
+        priceScaleW = tds[tds.length - 1].offsetWidth || priceScaleW;
+      }
+      overlay.style.right = (priceScaleW + 8) + 'px';
+    }
   }
 
   // 외부에서 호출 가능하도록 노출
