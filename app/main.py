@@ -131,3 +131,9 @@ async def admin_page(request: Request):
     if not user or not admin_uid or user.get("uid") != admin_uid:
         return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("admin.html", {"request": request})
+
+
+# ── 미정의 경로 처리 (catch-all) ─────────────────────────────────────────────
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def catch_all(request: Request, full_path: str):
+    return RedirectResponse(url="/", status_code=302)
