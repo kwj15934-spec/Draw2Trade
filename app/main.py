@@ -73,6 +73,12 @@ app.include_router(pattern.router)
 app.include_router(us_chart.router)
 
 
+# ── 헬스체크 ─────────────────────────────────────────────────────────────────
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 # ── 메인 페이지 ──────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
