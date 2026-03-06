@@ -114,7 +114,7 @@
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
     ctx.shadowColor = shadowColor;
-    ctx.shadowBlur  = 5;
+    ctx.shadowBlur  = 12;
     ctx.setLineDash(dashed ? [8, 6] : []);
     ctx.beginPath();
     var started = false;
@@ -170,25 +170,25 @@
 
       // ① 매칭 구간 배경 하이라이트 (닮은 부분 = 이 구간)
       if (x0 != null && x1 != null) {
-        ctx.fillStyle = 'rgba(38,166,154,0.12)';
+        ctx.fillStyle = 'rgba(38,166,154,0.20)';
         ctx.fillRect(Math.min(x0,x1), 0, Math.abs(x1 - x0), canvas.height);
       }
       // ② 두 곡선 사이 영역 (얇을수록 유사, 두꺼울수록 다른 부분)
-      drawCurveFill(drawNormalized, matchPoints, 'rgba(255,107,53,0.18)');
+      drawCurveFill(drawNormalized, matchPoints, 'rgba(255,107,53,0.30)');
       // ③ 유사 종목 매칭 구간 가상선 (청록 점선)
-      drawNormCurve(matchPoints,   '#26a69a', 'rgba(38,166,154,0.5)', 2.5, true);
+      drawNormCurve(matchPoints,   '#26a69a', 'rgba(38,166,154,0.85)', 3.5, true);
       // ④ 내 패턴 가상선 (주황 실선)
-      drawNormCurve(drawNormalized, '#ff6b35', 'rgba(255,107,53,0.4)',  3, false);
+      drawNormCurve(drawNormalized, '#ff6b35', 'rgba(255,107,53,0.85)',  4.5, false);
 
     } else {
       // 차트 좌표 없을 때: 정규화 캔버스 좌표 (폴백)
       if (hasMatch) {
         ctx.strokeStyle = '#26a69a';
-        ctx.lineWidth   = 2;
+        ctx.lineWidth   = 3.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
-        ctx.shadowColor = 'rgba(38,166,154,0.35)';
-        ctx.shadowBlur  = 5;
+        ctx.shadowColor = 'rgba(38,166,154,0.85)';
+        ctx.shadowBlur  = 12;
         ctx.setLineDash([]);
         ctx.beginPath();
         for (var m = 0; m < matchPoints.length; m++) {
@@ -203,11 +203,11 @@
 
       if (hasMatch && hasDraw) {
         ctx.strokeStyle = '#ff6b35';
-        ctx.lineWidth   = 2.5;
+        ctx.lineWidth   = 4.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
-        ctx.shadowColor = 'rgba(255,107,53,0.3)';
-        ctx.shadowBlur  = 4;
+        ctx.shadowColor = 'rgba(255,107,53,0.85)';
+        ctx.shadowBlur  = 12;
         ctx.beginPath();
         for (var ni = 0; ni < drawNormalized.length; ni++) {
           var nx = (ni / (drawNormalized.length - 1)) * canvas.width;
