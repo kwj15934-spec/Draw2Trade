@@ -129,7 +129,7 @@ async def admin_page(request: Request):
     user = get_optional_user(request)
     admin_uid = os.getenv("ADMIN_UID", "")
     if not user or not admin_uid or user.get("uid") != admin_uid:
-        return Response(status_code=404)
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("admin.html", {"request": request})
 
 
