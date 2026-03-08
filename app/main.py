@@ -80,7 +80,7 @@ class ActivityMiddleware(BaseHTTPMiddleware):
                     uid = user.get("uid")
             ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
             ip = ip.split(",")[0].strip()
-            is_page_view = (request.method == "GET" and request.url.path == "/")
+            is_page_view = (request.method == "GET" and request.url.path in ("/", "/app"))
             activity_tracker.record(uid, ip, is_page_view=is_page_view)
         return await call_next(request)
 
@@ -103,8 +103,14 @@ def health():
     return {"status": "ok"}
 
 
-# ── 메인 페이지 ──────────────────────────────────────────────────────────────
+# ── 랜딩 페이지 ──────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
+async def landing(request: Request):
+    return templates.TemplateResponse("landing.html", {"request": request})
+
+
+# ── 차트 앱 ───────────────────────────────────────────────────────────────────
+@app.get("/app", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
