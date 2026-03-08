@@ -5,7 +5,10 @@
 
 <!-- ── 네비게이션 바 ─────────────────────────────────────────────────────── -->
 <div class="d2t-nav">
-  <span class="d2t-brand">Draw2Trade</span>
+  <span class="d2t-brand">
+    <img src="/static/img/logo.png" alt="Draw2Trade" class="d2t-logo-img" onerror="this.style.display='none'">
+    Draw2Trade
+  </span>
   <span id="d2t-subtitle" class="d2t-subtitle">KOSPI 패턴 유사도 검색</span>
   <div class="market-selector">
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
@@ -241,6 +244,6 @@
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260306k"></script>
+<script src="/static/js/chart.js?v=20260306l"></script>
 <script src="/static/js/draw.js?v=20260306h"></script>
 {% endblock %}

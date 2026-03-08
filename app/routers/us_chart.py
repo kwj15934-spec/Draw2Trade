@@ -17,12 +17,15 @@ router = APIRouter(prefix="/api/us")
 
 
 @router.get("/list")
-async def us_list(category: str | None = Query(None)):
-    """US 종목 + ETF 목록 반환. category 지정 시 해당 섹터만."""
+async def us_list(
+    category: str | None = Query(None),
+    limit: int = Query(300, ge=1, le=10000),
+):
+    """US 종목 + ETF 목록 반환. category 지정 시 해당 섹터만. limit 기본 300."""
     tickers = us_data_service.get_us_tickers()
     if category:
         tickers = [t for t in tickers if t.get("sector", "") == category]
-    return {"tickers": tickers}
+    return {"tickers": tickers[:limit]}
 
 
 @router.get("/search")
