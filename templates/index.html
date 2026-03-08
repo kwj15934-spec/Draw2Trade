@@ -184,18 +184,50 @@
 
   <!-- 우측: 사이드바 -->
   <div class="d2t-sidebar">
-    <div class="d2t-sidebar-header">
-      <span class="d2t-sidebar-title">유사 종목</span>
-      <span id="result-count" class="d2t-badge">Top 20</span>
+    <!-- 탭 헤더 -->
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
+      <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
+      <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장된 검색</button>
     </div>
 
-    <div id="results-wrapper">
-      <div id="results-placeholder">
-        패턴을 그린 후<br>
-        <strong style="color: #ff6b35;">유사 종목 검색</strong>을 클릭하세요<br><br>
-        <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
+    <!-- 유사 종목 패널 -->
+    <div id="sidebar-panel-results">
+      <div class="d2t-sidebar-header" style="padding-top:8px;">
+        <span id="result-count" class="d2t-badge">Top 20</span>
+        <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">💾 저장</button>
       </div>
-      <div id="results-list" style="display: none;"></div>
+      <div id="results-wrapper">
+        <div id="results-placeholder">
+          패턴을 그린 후<br>
+          <strong style="color: #ff6b35;">유사 종목 검색</strong>을 클릭하세요<br><br>
+          <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
+        </div>
+        <div id="results-list" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- 즐겨찾기 패널 -->
+    <div id="sidebar-panel-favorites" style="display:none;">
+      <div id="fav-list" style="padding:8px 0;"></div>
+    </div>
+
+    <!-- 저장된 검색 패널 -->
+    <div id="sidebar-panel-drawings" style="display:none;">
+      <div id="drawings-list" style="padding:8px 0;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 저장 모달 -->
+<div id="save-drawing-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:10px;padding:28px;width:100%;max-width:360px;margin:24px;">
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:16px;">검색 결과 저장</div>
+    <label style="font-size:12px;color:#7a8499;display:block;margin-bottom:6px;">이름</label>
+    <input name="label" type="text" style="width:100%;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;margin-bottom:20px;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="confirmSaveDrawing()" style="flex:1;padding:10px;background:#26a69a;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
+      <button onclick="closeSaveModal()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:13px;cursor:pointer;">취소</button>
     </div>
   </div>
 </div>

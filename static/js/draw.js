@@ -31,6 +31,11 @@
   var drawNormalized = null; // 검색에 사용된 내 패턴의 150pt 정규화 배열 (비교 모드용)
   var _resultMatches = [];   // renderResults 결과별 {matchNormalized, periodFrom, periodTo} 저장
 
+  // ── 즐겨찾기 / 저장 상태 ───────────────────────────────────────────────────
+  var _favorites    = new Set();  // "TICKER|MARKET"
+  var _lastResults  = [];         // 마지막 검색 결과 전체
+  var _lastBody     = null;       // 마지막 검색 요청 body
+
   var canvas = null;
   var ctx    = null;
 
@@ -699,6 +704,7 @@
     // 비교 모드용으로 정규화 배열 저장
     drawNormalized = pts;
     matchPoints    = null; // 새 검색 시 이전 매칭 초기화
+    _lastResults   = [];   // 새 검색 시 초기화
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
     var topNEl = document.getElementById('top-n-select');
@@ -748,6 +754,8 @@
     showStatus('검색 중... (' + searchDesc + ')', 'info');
     document.getElementById('btn-search').disabled = true;
 
+    _lastBody = body;
+
     fetch('/api/pattern/search', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -758,8 +766,11 @@
         return r.json();
       })
       .then(function (data) {
-        renderResults(data.results || []);
+        _lastResults = data.results || [];
+        renderResults(_lastResults);
         showStatus('', '');
+        var btn = document.getElementById('btn-save-drawing');
+        if (btn) btn.style.display = _lastResults.length ? 'inline-flex' : 'none';
       })
       .catch(function (e) {
         showStatus('오류: ' + (e.message || '검색 실패'), 'error');
@@ -796,6 +807,7 @@
       };
     });
 
+    var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
     list.innerHTML = results
       .map(function (r, idx) {
         var pct   = (r.similarity_score * 100).toFixed(1);
@@ -818,18 +830,29 @@
           }
         }
 
+        var tk = escHtml(r.ticker);
+        var mk = escHtml(market);
+        var nm = escHtml(r.company_name || '');
+        var isStarred = _favorites.has(favKey(r.ticker, market));
+
         return (
           '<div class="result-card" ' +
-            'onclick="loadResultMatch(' + idx + ',\'' + escHtml(r.ticker) + '\',\'' + pf + '\',\'' + pt + '\')" ' +
+            'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\')" ' +
             'title="클릭: 차트 로드 후 내 패턴과 유사 구간이 레이어드(겹쳐서) 비교 표시됩니다">' +
             '<div class="result-rank">' + (idx + 1) + '</div>' +
             '<div class="result-info">' +
-              '<div class="result-name">' + escHtml(r.company_name) + '</div>' +
-              '<div class="result-ticker">' + escHtml(r.ticker) + '</div>' +
+              '<div class="result-name">' + nm + '</div>' +
+              '<div class="result-ticker">' + tk + '</div>' +
               periodHtml +
               breakdownHtml +
             '</div>' +
-            '<div class="result-score" style="color:' + color + '">' + pct + '%</div>' +
+            '<div style="display:flex;align-items:center;gap:6px">' +
+              '<div class="result-score" style="color:' + color + '">' + pct + '%</div>' +
+              '<button class="result-star' + (isStarred ? ' starred' : '') + '" ' +
+                'data-ticker="' + tk + '" data-market="' + mk + '" ' +
+                'onclick="event.stopPropagation();toggleFavorite(\'' + tk + '\',\'' + mk + '\',\'' + nm + '\',this)" ' +
+                'title="즐겨찾기">' + (isStarred ? '★' : '☆') + '</button>' +
+            '</div>' +
           '</div>'
         );
       })
@@ -888,6 +911,166 @@
     el.className   = 'search-status ' + (type === 'error' ? 'text-danger' : 'text-muted small');
   }
 
+  // ── 즐겨찾기 ────────────────────────────────────────────────────────────────
+  function favKey(ticker, market) { return ticker + '|' + (market || 'KR').toUpperCase(); }
+
+  function loadFavorites() {
+    fetch('/api/favorites')
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(list) {
+        _favorites.clear();
+        list.forEach(function(f) { _favorites.add(favKey(f.ticker, f.market)); });
+        renderFavList(list);
+        // 현재 결과 카드 별 아이콘 갱신
+        document.querySelectorAll('.result-star').forEach(function(btn) {
+          var k = favKey(btn.dataset.ticker, btn.dataset.market);
+          btn.textContent = _favorites.has(k) ? '★' : '☆';
+          btn.classList.toggle('starred', _favorites.has(k));
+        });
+      })
+      .catch(function() {});
+  }
+
+  function toggleFavorite(ticker, market, name, btn) {
+    var k = favKey(ticker, market);
+    if (_favorites.has(k)) {
+      fetch('/api/favorites/' + encodeURIComponent(market) + '/' + encodeURIComponent(ticker), { method: 'DELETE' })
+        .then(function(r) { if (r.ok) { _favorites.delete(k); btn.textContent = '☆'; btn.classList.remove('starred'); renderFavListFromServer(); } });
+    } else {
+      fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker, market: market, name: name }),
+      }).then(function(r) { if (r.ok) { _favorites.add(k); btn.textContent = '★'; btn.classList.add('starred'); renderFavListFromServer(); } });
+    }
+  }
+
+  function renderFavListFromServer() {
+    fetch('/api/favorites')
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(renderFavList)
+      .catch(function() {});
+  }
+
+  function renderFavList(list) {
+    var el = document.getElementById('fav-list');
+    if (!el) return;
+    if (!list || !list.length) {
+      el.innerHTML = '<div class="results-empty">즐겨찾기한 종목이 없습니다</div>';
+      return;
+    }
+    var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    el.innerHTML = list.map(function(f) {
+      return '<div class="result-card fav-card" onclick="window.loadChart(\'' + escHtml(f.ticker) + '\')">' +
+        '<div class="result-info">' +
+          '<div class="result-name">' + escHtml(f.name || f.ticker) + '</div>' +
+          '<div class="result-ticker">' + escHtml(f.ticker) + ' · ' + f.market + '</div>' +
+        '</div>' +
+        '<button class="result-star starred" data-ticker="' + escHtml(f.ticker) + '" data-market="' + escHtml(f.market) + '" ' +
+          'onclick="event.stopPropagation();toggleFavorite(\'' + escHtml(f.ticker) + '\',\'' + escHtml(f.market) + '\',\'' + escHtml(f.name||'') + '\',this)">★</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  // 전역 노출
+  window.toggleFavorite = toggleFavorite;
+
+  // ── 저장된 검색 ──────────────────────────────────────────────────────────────
+  function loadDrawingsList() {
+    fetch('/api/drawings')
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(renderDrawingsList)
+      .catch(function() {});
+  }
+
+  function renderDrawingsList(list) {
+    var el = document.getElementById('drawings-list');
+    if (!el) return;
+    if (!list || !list.length) {
+      el.innerHTML = '<div class="results-empty">저장된 검색이 없습니다</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(d) {
+      var date = new Date(d.created_at * 1000);
+      var dateStr = date.getFullYear() + '.' + String(date.getMonth()+1).padStart(2,'0') + '.' + String(date.getDate()).padStart(2,'0');
+      var sub = (d.ticker ? d.ticker + ' · ' : '') + d.market + (d.date_from ? ' · ' + d.date_from : '');
+      return '<div class="result-card drawing-card">' +
+        '<div class="result-info" onclick="loadSavedDrawing(' + d.id + ')" style="cursor:pointer;flex:1">' +
+          '<div class="result-name">' + escHtml(d.label) + '</div>' +
+          '<div class="result-ticker">' + escHtml(sub) + '</div>' +
+          '<div class="result-period">' + dateStr + '</div>' +
+        '</div>' +
+        '<button class="drawing-del-btn" onclick="deleteSavedDrawing(' + d.id + ',this)" title="삭제">✕</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.loadSavedDrawing = function(id) {
+    fetch('/api/drawings/' + id)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) {
+        if (!d) return;
+        renderResults(d.results || []);
+        _lastResults = d.results || [];
+        // 탭 전환
+        switchSidebarTab('results');
+        showStatus('저장된 검색 불러옴: ' + d.label, '');
+      });
+  };
+
+  window.deleteSavedDrawing = function(id, btn) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    fetch('/api/drawings/' + id, { method: 'DELETE' })
+      .then(function(r) { if (r.ok) loadDrawingsList(); });
+  };
+
+  function showSaveModal() {
+    var modal = document.getElementById('save-drawing-modal');
+    if (!modal) return;
+    var labelInput = modal.querySelector('input[name=label]');
+    if (labelInput) {
+      var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+      labelInput.value = (D2T.ticker ? D2T.ticker + ' ' : '') + market + ' ' + new Date().toLocaleDateString('ko');
+    }
+    modal.style.display = 'flex';
+  }
+  window.showSaveModal = showSaveModal;
+
+  window.closeSaveModal = function() {
+    var modal = document.getElementById('save-drawing-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmSaveDrawing = function() {
+    var modal = document.getElementById('save-drawing-modal');
+    if (!modal) return;
+    var label = (modal.querySelector('input[name=label]').value || '').trim();
+    if (!label) { alert('이름을 입력해주세요.'); return; }
+    if (!_lastResults.length) { alert('검색 결과가 없습니다.'); return; }
+
+    var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    var body = {
+      label: label,
+      ticker: (D2T && D2T.ticker) || null,
+      market: market,
+      date_from: (_lastBody && _lastBody.date_from) || null,
+      date_to:   (_lastBody && _lastBody.date_to)   || null,
+      draw_points: drawNormalized || [],
+      results: _lastResults,
+    };
+    fetch('/api/drawings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function(r) {
+      if (r.ok) {
+        modal.style.display = 'none';
+        loadDrawingsList();
+        showStatus('검색 결과가 저장되었습니다.', '');
+      }
+    });
+  };
+
   // ── DOM 준비 후 실행 ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     initCanvas();
@@ -924,6 +1107,23 @@
     if (window.D2T) window.D2T.loadResultMatch = loadResultMatch;
     window.loadResultMatch = loadResultMatch;
     window.redraw = redraw;
+
+    // 즐겨찾기 + 저장 목록 초기 로드
+    loadFavorites();
+    loadDrawingsList();
+
+    // 사이드바 탭 전환
+    window.switchSidebarTab = function(tab) {
+      ['results', 'favorites', 'drawings'].forEach(function(t) {
+        var panel = document.getElementById('sidebar-panel-' + t);
+        var btn   = document.getElementById('sidebar-tab-' + t);
+        if (panel) panel.style.display = t === tab ? 'block' : 'none';
+        if (btn)   btn.classList.toggle('active', t === tab);
+      });
+    };
+    document.querySelectorAll('.sidebar-tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { window.switchSidebarTab(this.dataset.tab); });
+    });
 
     // 차트 스크롤/줌 시 캔버스 오버레이 자동 재렌더
     // (priceToCoordinate/timeToCoordinate 좌표가 뷰에 따라 바뀌므로)

@@ -426,6 +426,70 @@
       line-height: 1.8;
     }
 
+    /* ── 사이드바 탭 ─────────────────────────────────────── */
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid #2a2e39;
+      flex-shrink: 0;
+    }
+    .sidebar-tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #666;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 10px 4px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .sidebar-tab-btn.active { color: #d1d4dc; border-bottom-color: #ff6b35; }
+    .sidebar-tab-btn:hover  { color: #aaa; }
+
+    #sidebar-panel-favorites, #sidebar-panel-drawings {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+    }
+    #sidebar-panel-favorites::-webkit-scrollbar,
+    #sidebar-panel-drawings::-webkit-scrollbar { width: 4px; }
+    #sidebar-panel-favorites::-webkit-scrollbar-thumb,
+    #sidebar-panel-drawings::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
+
+    .results-empty {
+      padding: 40px 16px;
+      text-align: center;
+      color: #555;
+      font-size: 12px;
+    }
+
+    /* 즐겨찾기 별 버튼 */
+    .result-star {
+      background: none; border: none; cursor: pointer;
+      font-size: 15px; color: #555; padding: 0 2px;
+      line-height: 1; flex-shrink: 0;
+      transition: color .12s;
+    }
+    .result-star:hover  { color: #ff6b35; }
+    .result-star.starred { color: #ff6b35; }
+
+    /* 저장 버튼 */
+    .d2t-save-btn {
+      background: none; border: 1px solid #2a3145;
+      border-radius: 5px; color: #888; font-size: 11px;
+      padding: 4px 10px; cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .d2t-save-btn:hover { border-color: #26a69a; color: #26a69a; }
+
+    /* 저장된 검색 삭제 버튼 */
+    .drawing-del-btn {
+      background: none; border: none; color: #444; font-size: 12px;
+      cursor: pointer; padding: 4px; flex-shrink: 0;
+      transition: color .12s;
+    }
+    .drawing-del-btn:hover { color: #ef5350; }
+
     /* ── 결과 카드 ───────────────────────────────────────── */
     .result-card {
       display: flex;
