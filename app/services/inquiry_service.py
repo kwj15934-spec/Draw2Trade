@@ -22,9 +22,15 @@ def _init_db() -> None:
                 name       TEXT,
                 email      TEXT NOT NULL,
                 message    TEXT NOT NULL,
+                replied    INTEGER NOT NULL DEFAULT 0,
                 created_at REAL NOT NULL
             )
         """)
+        # 기존 테이블에 컬럼 없으면 추가
+        try:
+            con.execute("ALTER TABLE inquiries ADD COLUMN replied INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
 
 
 try:
@@ -45,9 +51,17 @@ def save_inquiry(name: str, email: str, message: str) -> int:
 def get_inquiries() -> list[dict]:
     with _conn() as con:
         rows = con.execute(
-            "SELECT id, name, email, message, created_at FROM inquiries ORDER BY created_at DESC"
+            "SELECT id, name, email, message, replied, created_at FROM inquiries ORDER BY created_at DESC"
         ).fetchall()
     return [
-        {"id": r[0], "name": r[1], "email": r[2], "message": r[3], "created_at": r[4]}
+        {"id": r[0], "name": r[1], "email": r[2], "message": r[3], "replied": bool(r[4]), "created_at": r[5]}
         for r in rows
     ]
+
+
+def set_replied(inquiry_id: int, replied: bool) -> None:
+    with _conn() as con:
+        con.execute(
+            "UPDATE inquiries SET replied=? WHERE id=?",
+            (1 if replied else 0, inquiry_id),
+        )

@@ -166,6 +166,18 @@ async def admin_inquiries(request: Request):
     return JSONResponse(inquiry_service.get_inquiries())
 
 
+@app.post("/api/admin/inquiries/{inquiry_id}/replied")
+async def toggle_replied(inquiry_id: int, request: Request):
+    import os
+    user = get_optional_user(request)
+    admin_uid = os.getenv("ADMIN_UID", "")
+    if not user or not admin_uid or user.get("uid") != admin_uid:
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    inquiry_service.set_replied(inquiry_id, bool(body.get("replied", True)))
+    return JSONResponse({"ok": True})
+
+
 # ── 미정의 경로 처리 (catch-all) ─────────────────────────────────────────────
 @app.get("/{full_path:path}", response_class=HTMLResponse)
 async def catch_all(request: Request, full_path: str):

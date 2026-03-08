@@ -127,6 +127,12 @@
     .inquiry-email { font-size: 12px; color: #26a69a; margin-top: 2px; }
     .inquiry-date { font-size: 10px; color: #444; }
     .inquiry-msg { font-size: 13px; color: #9aa0b0; line-height: 1.6; margin-top: 8px; white-space: pre-wrap; }
+    .replied-btn {
+      font-size: 11px; padding: 3px 10px; border-radius: 10px; cursor: pointer;
+      border: 1px solid #444; background: none; color: #666;
+      transition: all .15s;
+    }
+    .replied-btn.replied { border-color: #26a69a; color: #26a69a; background: rgba(38,166,154,.1); }
     .error-bar { background: rgba(239,83,80,.12); border: 1px solid #ef5350; color: #ef5350;
                  border-radius: 6px; padding: 10px 16px; margin-bottom: 20px; font-size: 12px; display: none; }
 
@@ -182,9 +188,14 @@
         <div class="stat-sub">로그인 + 비로그인</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">누적 요청 수</div>
-        <div class="stat-value" id="stat-requests">-</div>
-        <div class="stat-sub">서버 재시작 후 누계</div>
+        <div class="stat-label">누적 고유 방문자</div>
+        <div class="stat-value highlight" id="stat-unique">-</div>
+        <div class="stat-sub">전체 (로그인 + 비로그인)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">누적 페이지뷰</div>
+        <div class="stat-value" id="stat-pageviews">-</div>
+        <div class="stat-sub">/ + /app 합계</div>
       </div>
     </div>
 
@@ -322,11 +333,12 @@
         var res = await fetch('/api/admin/stats');
         if (!res.ok) return;
         var d = await res.json();
-        document.getElementById('stat-users').textContent = d.active_users;
-        document.getElementById('stat-anon').textContent  = d.active_anon;
-        document.getElementById('stat-total').textContent = d.active_total;
-        document.getElementById('stat-requests').textContent = d.total_requests.toLocaleString();
-        document.getElementById('stat-window').textContent = '최근 ' + d.window_minutes + '분 기준';
+        document.getElementById('stat-users').textContent     = d.active_users;
+        document.getElementById('stat-anon').textContent       = d.active_anon;
+        document.getElementById('stat-total').textContent      = d.active_total;
+        document.getElementById('stat-unique').textContent     = (d.total_unique || 0).toLocaleString();
+        document.getElementById('stat-pageviews').textContent  = (d.page_views_total || 0).toLocaleString();
+        document.getElementById('stat-window').textContent     = '최근 ' + d.window_minutes + '분 기준';
       } catch (e) { /* 무시 */ }
     }
 
@@ -345,11 +357,16 @@
         el.innerHTML = list.map(function(q) {
           var d = new Date(q.created_at * 1000);
           var date = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-          return '<div class="inquiry-card">' +
+          var repliedClass = q.replied ? 'replied-btn replied' : 'replied-btn';
+          var repliedLabel = q.replied ? '✓ 답변 완료' : '답변 전';
+          return '<div class="inquiry-card" id="inq-' + q.id + '">' +
             '<div class="inquiry-header">' +
               '<div><div class="inquiry-name">' + (q.name || '(이름 없음)') + '</div>' +
               '<div class="inquiry-email">' + q.email + '</div></div>' +
-              '<div class="inquiry-date">' + date + '</div>' +
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">' +
+                '<div class="inquiry-date">' + date + '</div>' +
+                '<button class="' + repliedClass + '" onclick="toggleReplied(' + q.id + ',' + (q.replied ? 'true' : 'false') + ',this)">' + repliedLabel + '</button>' +
+              '</div>' +
             '</div>' +
             '<div class="inquiry-msg">' + q.message.replace(/</g,'&lt;') + '</div>' +
           '</div>';
@@ -357,6 +374,20 @@
       } catch(e) { /* 무시 */ }
     }
     loadInquiries();
+
+    window.toggleReplied = async function(id, current, btn) {
+      var next = !current;
+      var res = await fetch('/api/admin/inquiries/' + id + '/replied', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replied: next }),
+      });
+      if (res.ok) {
+        btn.textContent = next ? '✓ 답변 완료' : '답변 전';
+        btn.classList.toggle('replied', next);
+        btn.setAttribute('onclick', 'toggleReplied(' + id + ',' + next + ',this)');
+      }
+    };
   </script>
 </body>
 </html>
