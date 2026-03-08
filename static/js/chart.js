@@ -460,6 +460,10 @@
       subtitle.textContent = market === 'US' ? 'US 미장 패턴 유사도 검색' : 'KOSPI 패턴 유사도 검색';
     }
 
+    // US 목록 제한 안내 힌트
+    var usHint = document.getElementById('us-list-hint');
+    if (usHint) usHint.style.display = market === 'US' ? 'inline' : 'none';
+
     // 시장 버튼 active 토글
     document.querySelectorAll('.market-btn').forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.market === market);
