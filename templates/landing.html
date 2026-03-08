@@ -135,6 +135,9 @@
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 60px; align-items: center;
     }
+    /* 영상이 큰 step: 텍스트 1 : 영상 2 비율 */
+    .how-step.wide { grid-template-columns: 1fr 2fr; }
+    .how-step.wide.reverse { grid-template-columns: 2fr 1fr; }
     .how-step.reverse { direction: rtl; }
     .how-step.reverse > * { direction: ltr; }
     .step-num {
@@ -289,7 +292,7 @@
       </div>
 
       <!-- 2단계 -->
-      <div class="how-step reverse">
+      <div class="how-step reverse wide">
         <div>
           <div class="step-num">STEP 02</div>
           <div class="step-title">차트 위에 패턴을 그리세요</div>
@@ -308,7 +311,7 @@
       </div>
 
       <!-- 3단계 -->
-      <div class="how-step">
+      <div class="how-step wide">
         <div>
           <div class="step-num">STEP 03</div>
           <div class="step-title">검색하고 결과를 확인하세요</div>
