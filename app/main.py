@@ -80,7 +80,8 @@ class ActivityMiddleware(BaseHTTPMiddleware):
                     uid = user.get("uid")
             ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
             ip = ip.split(",")[0].strip()
-            activity_tracker.record(uid, ip)
+            is_page_view = (request.method == "GET" and request.url.path == "/")
+            activity_tracker.record(uid, ip, is_page_view=is_page_view)
         return await call_next(request)
 
 
