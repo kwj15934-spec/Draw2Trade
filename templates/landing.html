@@ -253,7 +253,7 @@
   </a>
   <div class="lp-nav-links">
     <a href="/app" class="btn-primary">시작하기</a>
-    <a href="mailto:contact@draw2trade.com" class="btn-outline">문의하기</a>
+    <a href="#" onclick="openContact();return false;" class="btn-outline">문의하기</a>
   </div>
 </nav>
 
@@ -271,7 +271,7 @@
     <p>머릿속에 있는 차트 모양을 직접 그리면,<br>실제 주식 데이터에서 가장 비슷한 구간을 찾아드립니다.</p>
     <div class="hero-cta">
       <a href="/app" class="btn-hero-primary">시작하기</a>
-      <a href="mailto:contact@draw2trade.com" class="btn-hero-outline">문의하기</a>
+      <a href="#" onclick="openContact();return false;" class="btn-hero-outline">문의하기</a>
     </div>
   </div>
 </section>
@@ -388,23 +388,90 @@
           <li>Top 100 결과</li>
           <li>우선 지원</li>
         </ul>
-        <a href="mailto:contact@draw2trade.com" class="btn-plan btn-plan-paid">출시 알림 받기</a>
+        <a href="#" onclick="openContact();return false;" class="btn-plan btn-plan-paid">출시 알림 받기</a>
       </div>
 
     </div>
   </div>
 </section>
 
+<!-- ── 문의 모달 ── -->
+<div id="contact-modal" style="display:none; position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.7); align-items:center; justify-content:center;">
+  <div style="background:#1a1d2e; border:1px solid #2a3145; border-radius:12px; padding:36px; width:100%; max-width:460px; margin:24px; position:relative;">
+    <button onclick="closeContact()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#7a8499; font-size:20px; cursor:pointer;">✕</button>
+    <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:6px;">문의하기</div>
+    <div style="font-size:13px; color:#7a8499; margin-bottom:24px;">회신 받을 이메일을 남겨주세요.</div>
+    <div id="contact-success" style="display:none; background:rgba(38,166,154,.12); border:1px solid #26a69a; border-radius:8px; padding:14px; color:#26a69a; font-size:14px; text-align:center; margin-bottom:16px;">
+      문의가 접수됐습니다. 빠르게 답변 드리겠습니다.
+    </div>
+    <form id="contact-form" onsubmit="submitContact(event)">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">이름 (선택)</label>
+        <input name="name" type="text" placeholder="홍길동" style="width:100%; background:#0d1117; border:1px solid #2a3145; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">이메일 <span style="color:#ff6b35;">*</span></label>
+        <input name="email" type="email" placeholder="example@email.com" required style="width:100%; background:#0d1117; border:1px solid #2a3145; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
+      </div>
+      <div style="margin-bottom:22px;">
+        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">문의 내용 <span style="color:#ff6b35;">*</span></label>
+        <textarea name="message" rows="4" placeholder="궁금한 점이나 의견을 남겨주세요." required style="width:100%; background:#0d1117; border:1px solid #2a3145; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none; resize:vertical;"></textarea>
+      </div>
+      <button type="submit" id="contact-submit" style="width:100%; padding:12px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer;">보내기</button>
+    </form>
+  </div>
+</div>
+
 <!-- ── 푸터 ── -->
 <footer>
   <p style="margin-bottom:8px;">
     &copy; 2026 Draw2Trade &nbsp;·&nbsp;
-    <a href="mailto:contact@draw2trade.com">문의하기</a>
+    <a href="#" onclick="openContact();return false;">문의하기</a>
   </p>
   <p style="font-size:12px; color:#4a5568;">
     본 서비스는 투자 권유가 아니며, 투자 결과에 대한 책임은 이용자 본인에게 있습니다.
   </p>
 </footer>
 
+<script>
+  function openContact() {
+    var m = document.getElementById('contact-modal');
+    m.style.display = 'flex';
+    document.getElementById('contact-success').style.display = 'none';
+    document.getElementById('contact-form').style.display = 'block';
+    document.getElementById('contact-submit').disabled = false;
+  }
+  function closeContact() {
+    document.getElementById('contact-modal').style.display = 'none';
+  }
+  document.getElementById('contact-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeContact();
+  });
+  async function submitContact(e) {
+    e.preventDefault();
+    var btn = document.getElementById('contact-submit');
+    btn.disabled = true;
+    btn.textContent = '전송 중...';
+    var form = e.target;
+    var body = new FormData(form);
+    try {
+      var res = await fetch('/api/contact', { method: 'POST', body: body });
+      var data = await res.json();
+      if (data.ok) {
+        form.style.display = 'none';
+        document.getElementById('contact-success').style.display = 'block';
+        form.reset();
+      } else {
+        btn.disabled = false;
+        btn.textContent = '보내기';
+        alert(data.error || '오류가 발생했습니다.');
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = '보내기';
+      alert('전송 중 오류가 발생했습니다.');
+    }
+  }
+</script>
 </body>
 </html>

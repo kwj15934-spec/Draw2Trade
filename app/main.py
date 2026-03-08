@@ -14,13 +14,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 load_dotenv()  # draw2trade_web/.env 자동 로드
 
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Form
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user
 from app.routers import auth, chart, pattern, us_chart
-from app.services import activity_tracker
+from app.services import activity_tracker, inquiry_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
@@ -138,6 +139,30 @@ async def admin_page(request: Request):
     if not user or not admin_uid or user.get("uid") != admin_uid:
         return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("admin.html", {"request": request})
+
+
+# ── 문의 저장 ────────────────────────────────────────────────────────────────
+@app.post("/api/contact")
+async def contact(
+    name: str = Form(default=""),
+    email: str = Form(...),
+    message: str = Form(...),
+):
+    if not email or not message:
+        return JSONResponse({"ok": False, "error": "필수 항목 누락"}, status_code=400)
+    inquiry_service.save_inquiry(name, email, message)
+    return JSONResponse({"ok": True})
+
+
+# ── 관리자 문의 조회 ──────────────────────────────────────────────────────────
+@app.get("/api/admin/inquiries")
+async def admin_inquiries(request: Request):
+    import os
+    user = get_optional_user(request)
+    admin_uid = os.getenv("ADMIN_UID", "")
+    if not user or not admin_uid or user.get("uid") != admin_uid:
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return JSONResponse(inquiry_service.get_inquiries())
 
 
 # ── 미정의 경로 처리 (catch-all) ─────────────────────────────────────────────
