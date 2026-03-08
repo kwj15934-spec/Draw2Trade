@@ -74,9 +74,12 @@
     }
     .hero-bg {
       position: absolute; inset: 0; z-index: 0;
-      background-image: url('/static/img/hero.gif');
-      background-size: cover; background-position: center;
       opacity: 0.18;
+      pointer-events: none;
+    }
+    .hero-bg video {
+      width: 100%; height: 100%;
+      object-fit: cover;
     }
     .hero > * { position: relative; z-index: 1; }
     .hero-badge {
@@ -254,7 +257,12 @@
 
 <!-- ── 히어로 ── -->
 <section class="hero">
-  <div class="hero-bg"></div>
+  <div class="hero-bg">
+    <video autoplay loop muted playsinline>
+      <source src="/static/img/hero.webm" type="video/webm">
+      <source src="/static/img/hero.mp4"  type="video/mp4">
+    </video>
+  </div>
   <div class="hero-badge">KR · US 주식 패턴 검색</div>
   <h1>그리면 찾아드립니다<br><span>유사한 차트 패턴의 종목을</span></h1>
   <p>머릿속에 있는 차트 모양을 직접 그리면,<br>실제 주식 데이터에서 가장 비슷한 구간을 찾아드립니다.</p>
