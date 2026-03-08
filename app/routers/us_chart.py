@@ -19,12 +19,19 @@ router = APIRouter(prefix="/api/us")
 @router.get("/list")
 async def us_list(
     category: str | None = Query(None),
-    limit: int = Query(300, ge=1, le=10000),
+    limit: int = Query(600, ge=1, le=10000),
 ):
-    """US 종목 + ETF 목록 반환. category 지정 시 해당 섹터만. limit 기본 300."""
+    """
+    US 종목 목록 반환.
+    - category 지정 시: 해당 섹터 전체
+    - category 미지정 시: S&P 500 종목만 (없으면 전체 limit개)
+    """
     tickers = us_data_service.get_us_tickers()
     if category:
         tickers = [t for t in tickers if t.get("sector", "") == category]
+    else:
+        sp500 = [t for t in tickers if t.get("is_sp500")]
+        tickers = sp500 if sp500 else tickers[:limit]
     return {"tickers": tickers[:limit]}
 
 

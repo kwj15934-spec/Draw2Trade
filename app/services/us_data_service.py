@@ -445,9 +445,21 @@ def _build_ticker_list() -> list[dict]:
             seen.add(sym)
             combined.append((sym, name, "ETF"))
 
+    # S&P 500 마킹: Wikipedia에서 심볼 목록 확보 후 is_sp500 플래그 설정
+    sp500_syms: set[str] = set()
+    try:
+        sp500_raw = _fetch_sp500_from_wikipedia()
+        sp500_syms = {sym for sym, _, _ in sp500_raw}
+        logger.info("S&P 500 마킹용 심볼 %d개 확보", len(sp500_syms))
+    except Exception as e:
+        logger.warning("S&P 500 마킹 실패 (무시): %s", e)
+
     # 티커 알파벳 순 정렬
     combined.sort(key=lambda x: x[0])
-    tickers = [{"ticker": sym, "name": name, "sector": sector} for sym, name, sector in combined]
+    tickers = [
+        {"ticker": sym, "name": name, "sector": sector, "is_sp500": sym in sp500_syms}
+        for sym, name, sector in combined
+    ]
 
     try:
         _US_TICKERS_FILE.write_text(
