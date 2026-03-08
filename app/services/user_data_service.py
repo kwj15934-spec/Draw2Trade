@@ -38,9 +38,14 @@ def _init_db() -> None:
                 date_to     TEXT,
                 draw_points TEXT NOT NULL,  -- JSON array
                 results     TEXT NOT NULL,  -- JSON array (Top 100)
+                memo        TEXT,
                 created_at  REAL NOT NULL
             )
         """)
+        try:
+            con.execute("ALTER TABLE saved_drawings ADD COLUMN memo TEXT")
+        except Exception:
+            pass
         con.execute("CREATE INDEX IF NOT EXISTS idx_fav_uid ON favorites(uid)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_draw_uid ON saved_drawings(uid)")
 
@@ -90,12 +95,13 @@ def save_drawing(
     date_to: str | None,
     draw_points: list,
     results: list,
+    memo: str | None = None,
 ) -> int:
     with _conn() as con:
         cur = con.execute(
             """INSERT INTO saved_drawings
-               (uid, label, ticker, market, date_from, date_to, draw_points, results, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               (uid, label, ticker, market, date_from, date_to, draw_points, results, memo, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (
                 uid,
                 label,
@@ -105,6 +111,7 @@ def save_drawing(
                 date_to or "",
                 json.dumps(draw_points, ensure_ascii=False),
                 json.dumps(results, ensure_ascii=False),
+                memo or "",
                 time.time(),
             ),
         )
@@ -141,7 +148,7 @@ def get_drawing_detail(uid: str, drawing_id: int) -> dict | None:
     """draw_points + results 포함 전체."""
     with _conn() as con:
         row = con.execute(
-            "SELECT id, label, ticker, market, date_from, date_to, draw_points, results, created_at FROM saved_drawings WHERE id=? AND uid=?",
+            "SELECT id, label, ticker, market, date_from, date_to, draw_points, results, memo, created_at FROM saved_drawings WHERE id=? AND uid=?",
             (drawing_id, uid),
         ).fetchone()
     if not row:
@@ -151,5 +158,6 @@ def get_drawing_detail(uid: str, drawing_id: int) -> dict | None:
         "date_from": row[4], "date_to": row[5],
         "draw_points": json.loads(row[6]),
         "results": json.loads(row[7]),
-        "created_at": row[8],
+        "memo": row[8] or "",
+        "created_at": row[9],
     }

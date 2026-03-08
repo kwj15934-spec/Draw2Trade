@@ -35,6 +35,7 @@
   var _favorites    = new Set();  // "TICKER|MARKET"
   var _lastResults  = [];         // 마지막 검색 결과 전체
   var _lastBody     = null;       // 마지막 검색 요청 body
+  var _searchMode   = 'today';    // 'today' | 'chart-period' | 'range'
 
   // 차트 로드 시 즐겨찾기 버튼 상태 갱신 (chart.js에서 호출, 타이밍 무관하게 즉시 등록)
   window._onChartLoaded = function(ticker, market) {
@@ -698,6 +699,7 @@
   window.runSearchWithMode = function(mode) {
     var modal = document.getElementById('period-select-modal');
     if (modal) modal.style.display = 'none';
+    _searchMode = mode;
     if (mode === 'range') {
       // 날짜 범위 모드 활성화 후 검색
       if (!rangeMode) toggleRangeMode();
@@ -767,14 +769,43 @@
       }
       if (dateFrom) body.date_from = dateFrom;
       if (dateTo)   body.date_to   = dateTo;
+      body.anchor_today = false;
+    } else if (_searchMode === 'chart-period') {
+      // 차트와 같은 기간: 현재 보이는 날짜 범위를 추출
+      try {
+        if (window.D2T && D2T.chart) {
+          var vr = D2T.chart.timeScale().getVisibleRange();
+          if (vr && vr.from && vr.to) {
+            var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
+            var fDate = new Date(vr.from * 1000);
+            var tDate = new Date(vr.to * 1000);
+            if (mkt === 'US') {
+              body.date_from = fDate.toISOString().slice(0, 10);
+              body.date_to   = tDate.toISOString().slice(0, 10);
+            } else {
+              body.date_from = fDate.getFullYear() + '-' + String(fDate.getMonth() + 1).padStart(2, '0');
+              body.date_to   = tDate.getFullYear() + '-' + String(tDate.getMonth() + 1).padStart(2, '0');
+            }
+          }
+        }
+      } catch (e) {}
+      // lookback_bars로 보이는 봉 수도 함께 전달
+      try {
+        if (window.D2T && D2T.chart) {
+          var lr2 = D2T.chart.timeScale().getVisibleLogicalRange();
+          if (lr2 && lr2.to > lr2.from) body.lookback_bars = Math.max(2, Math.round(lr2.to - lr2.from));
+        }
+      } catch (e) {}
+      body.anchor_today = false;
     } else if (isBlankMode) {
       // 빈 캔버스 모드: 드롭다운 수동 선택
       body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
+      body.anchor_today = true;
     } else {
-      // 차트 모드: 보이는 봉 수 자동 감지
+      // 차트 모드 + 모양만 보고 찾기: 보이는 봉 수 자동 감지 + anchor_today
       var detectedBars = null;
       try {
-        if (D2T && D2T.chart) {
+        if (window.D2T && D2T.chart) {
           var lr = D2T.chart.timeScale().getVisibleLogicalRange();
           if (lr && lr.to > lr.from) {
             detectedBars = Math.max(2, Math.round(lr.to - lr.from));
@@ -786,10 +817,6 @@
       } else {
         body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
       }
-    }
-
-    // 오늘 기준 고정 (날짜 범위 모드가 아닐 때 항상 적용)
-    if (!rangeMode) {
       body.anchor_today = true;
     }
 
@@ -1058,6 +1085,23 @@
     }).join('');
   }
 
+  // 150pt 정규화 배열 → 캔버스 픽셀 좌표로 복원 후 그리기
+  function restoreDrawPattern(normalizedPts) {
+    if (!canvas || !normalizedPts || normalizedPts.length < 2) return;
+    var w = canvas.width;
+    var h = canvas.height;
+    var margin = Math.round(Math.min(w, h) * 0.06);
+    var n = normalizedPts.length;
+    drawPoints = normalizedPts.map(function(v, i) {
+      return {
+        x: margin + (i / (n - 1)) * (w - 2 * margin),
+        y: margin + (1 - v) * (h - 2 * margin),
+      };
+    });
+    parallelChannels = [];
+    redraw();
+  }
+
   window.loadSavedDrawing = function(id) {
     fetch('/api/drawings/' + id)
       .then(function(r) { return r.ok ? r.json() : null; })
@@ -1065,6 +1109,11 @@
         if (!d) return;
         renderResults(d.results || []);
         _lastResults = d.results || [];
+        // 저장된 패턴 복원
+        if (d.draw_points && d.draw_points.length >= 2) {
+          drawNormalized = d.draw_points;
+          restoreDrawPattern(d.draw_points);
+        }
         // 탭 전환
         switchSidebarTab('results');
         showStatus('저장된 검색 불러옴: ' + d.label, '');
@@ -1080,10 +1129,46 @@
   function showSaveModal() {
     var modal = document.getElementById('save-drawing-modal');
     if (!modal) return;
+    var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    var ticker = (window.D2T && D2T.ticker) ? D2T.ticker : '';
     var labelInput = modal.querySelector('input[name=label]');
-    if (labelInput) {
-      var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
-      labelInput.value = (D2T.ticker ? D2T.ticker + ' ' : '') + market + ' ' + new Date().toLocaleDateString('ko');
+    if (labelInput && !labelInput.value) {
+      labelInput.value = (ticker ? ticker + ' ' : '') + market + ' ' + new Date().toLocaleDateString('ko');
+    }
+    var tickerInput = modal.querySelector('input[name=save-ticker]');
+    if (tickerInput && !tickerInput.value && ticker) {
+      tickerInput.value = ticker;
+    }
+    // 날짜 범위: 마지막 검색 body에서 추출, 없으면 차트 visible range
+    var fromInput = modal.querySelector('input[name=save-date-from]');
+    var toInput   = modal.querySelector('input[name=save-date-to]');
+    if (fromInput && !fromInput.value) {
+      var df = (_lastBody && _lastBody.date_from) || '';
+      if (!df) {
+        try {
+          var vr = window.D2T && D2T.chart && D2T.chart.timeScale().getVisibleRange();
+          if (vr && vr.from) {
+            var fd = new Date(vr.from * 1000);
+            df = market === 'US' ? fd.toISOString().slice(0,10)
+              : fd.getFullYear() + '-' + String(fd.getMonth()+1).padStart(2,'0');
+          }
+        } catch(e) {}
+      }
+      fromInput.value = df;
+    }
+    if (toInput && !toInput.value) {
+      var dt = (_lastBody && _lastBody.date_to) || '';
+      if (!dt) {
+        try {
+          var vr2 = window.D2T && D2T.chart && D2T.chart.timeScale().getVisibleRange();
+          if (vr2 && vr2.to) {
+            var td = new Date(vr2.to * 1000);
+            dt = market === 'US' ? td.toISOString().slice(0,10)
+              : td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0');
+          }
+        } catch(e) {}
+      }
+      toInput.value = dt;
     }
     modal.style.display = 'flex';
   }
@@ -1102,14 +1187,19 @@
     if (!drawNormalized || !drawNormalized.length) { alert('저장할 그림이 없습니다.'); return; }
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    var tickerField = (modal.querySelector('input[name=save-ticker]').value || '').trim();
+    var dateFrom = (modal.querySelector('input[name=save-date-from]').value || '').trim();
+    var dateTo   = (modal.querySelector('input[name=save-date-to]').value   || '').trim();
+    var memo     = (modal.querySelector('textarea[name=save-memo]').value   || '').trim();
     var body = {
       label: label,
-      ticker: (D2T && D2T.ticker) || null,
+      ticker: tickerField || (D2T && D2T.ticker) || null,
       market: market,
-      date_from: (_lastBody && _lastBody.date_from) || null,
-      date_to:   (_lastBody && _lastBody.date_to)   || null,
+      date_from: dateFrom || (_lastBody && _lastBody.date_from) || null,
+      date_to:   dateTo   || (_lastBody && _lastBody.date_to)   || null,
       draw_points: drawNormalized || [],
       results: _lastResults,
+      memo: memo || null,
     };
     fetch('/api/drawings', {
       method: 'POST',
@@ -1118,6 +1208,12 @@
     }).then(function(r) {
       if (r.ok) {
         modal.style.display = 'none';
+        // 다음 열기 시 초기화
+        modal.querySelector('input[name=label]').value = '';
+        modal.querySelector('input[name=save-ticker]').value = '';
+        modal.querySelector('input[name=save-date-from]').value = '';
+        modal.querySelector('input[name=save-date-to]').value = '';
+        modal.querySelector('textarea[name=save-memo]').value = '';
         loadDrawingsList();
         showStatus('검색 결과가 저장되었습니다.', '');
       }

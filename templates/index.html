@@ -223,19 +223,24 @@
 
 <!-- 기간 선택 모달 -->
 <div id="period-select-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
-  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:400px;margin:24px;">
-    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기간으로 검색할까요?</div>
-    <div style="font-size:12px;color:#7a8499;margin-bottom:20px;">그린 패턴과 비슷한 구간을 어떤 기준으로 찾을지 선택하세요.</div>
+  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;">
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기준으로 검색할까요?</div>
+    <div style="font-size:12px;color:#7a8499;margin-bottom:20px;">내가 그린 패턴을 어떤 방식으로 찾을지 선택하세요.</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+      <button onclick="runSearchWithMode('chart-period')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2a3145'">
-        <div style="font-weight:700;margin-bottom:4px;">오늘 기준 검색</div>
-        <div style="font-size:11px;color:#7a8499;">각 종목의 최근 N봉에서 내 패턴과 가장 닮은 구간을 찾습니다.<br>기간이 달라도 모양이 비슷한 종목을 찾을 때 적합합니다.</div>
+        <div style="font-weight:700;margin-bottom:4px;">① 차트와 같은 기간으로 찾기</div>
+        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의 종목을 검색합니다.<br>같은 시기에 함께 움직인 종목을 확인할 때 적합합니다.</div>
+      </button>
+      <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
+        <div style="font-weight:700;margin-bottom:4px;">② 모양만 보고 찾기 <span style="font-size:10px;color:#7a8499;font-weight:400;">(기간 무관)</span></div>
+        <div style="font-size:11px;color:#7a8499;">기간에 관계없이 내가 그린 모양과 닮은 패턴을 전 기간에서 검색합니다.<br>시기가 달라도 같은 형태의 종목을 발견할 때 적합합니다.</div>
       </button>
       <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
-        onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
-        <div style="font-weight:700;margin-bottom:4px;">날짜 범위 직접 지정</div>
-        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.<br>같은 시기에 비슷한 패턴이 있었는지 확인할 때 적합합니다.</div>
+        onmouseover="this.style.borderColor='#7a8499'" onmouseout="this.style.borderColor='#2a3145'">
+        <div style="font-weight:700;margin-bottom:4px;">③ 날짜 범위 직접 지정</div>
+        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.<br>툴바의 날짜 범위 입력창을 통해 직접 기간을 설정합니다.</div>
       </button>
     </div>
     <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
@@ -244,11 +249,31 @@
 
 <!-- 저장 모달 -->
 <div id="save-drawing-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
-  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:10px;padding:28px;width:100%;max-width:360px;margin:24px;">
-    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:16px;">검색 결과 저장</div>
-    <label style="font-size:12px;color:#7a8499;display:block;margin-bottom:6px;">이름</label>
-    <input name="label" type="text" style="width:100%;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;margin-bottom:20px;">
-    <div style="display:flex;gap:10px;">
+  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;">
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;">검색 결과 저장</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">이름 <span style="color:#ff6b35">*</span></label>
+        <input name="label" type="text" placeholder="저장 이름을 입력하세요" style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">종목명</label>
+        <input name="save-ticker" type="text" placeholder="종목명 또는 티커" style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">그림을 그린 기간</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input name="save-date-from" type="text" placeholder="시작 (예: 2023-01)" style="flex:1;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:8px 10px;color:#d4d8e2;font-size:12px;outline:none;">
+          <span style="color:#7a8499;font-size:12px;">~</span>
+          <input name="save-date-to" type="text" placeholder="종료 (예: 2024-12)" style="flex:1;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:8px 10px;color:#d4d8e2;font-size:12px;outline:none;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">메모</label>
+        <textarea name="save-memo" placeholder="메모를 입력하세요" rows="2" style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #2a3145;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;">
       <button onclick="confirmSaveDrawing()" style="flex:1;padding:10px;background:#26a69a;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
       <button onclick="closeSaveModal()" style="flex:1;padding:10px;background:transparent;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:13px;cursor:pointer;">취소</button>
     </div>
@@ -303,5 +328,5 @@
 ></script>
 <!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260306m"></script>
-<script src="/static/js/draw.js?v=20260306h"></script>
+<script src="/static/js/draw.js?v=20260309a"></script>
 {% endblock %}

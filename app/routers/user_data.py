@@ -42,6 +42,7 @@ class SaveDrawingBody(BaseModel):
     date_to: str | None = None
     draw_points: list[float]
     results: list[dict]
+    memo: str | None = None
 
 
 @router.get("/drawings")
@@ -62,6 +63,7 @@ async def save_drawing(body: SaveDrawingBody, user: dict = Depends(require_user)
         date_to=body.date_to,
         draw_points=body.draw_points,
         results=body.results,
+        memo=body.memo,
     )
     return {"id": drawing_id, "ok": True}
 
