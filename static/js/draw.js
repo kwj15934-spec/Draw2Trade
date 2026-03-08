@@ -933,15 +933,22 @@
 
   function toggleFavorite(ticker, market, name, btn) {
     var k = favKey(ticker, market);
+    function syncToolbarBtn(starred) {
+      var tb = document.getElementById('btn-fav-ticker');
+      if (tb && window.D2T && D2T.ticker === ticker) {
+        tb.textContent = starred ? '★' : '☆';
+        tb.classList.toggle('btn-fav-starred', starred);
+      }
+    }
     if (_favorites.has(k)) {
       fetch('/api/favorites/' + encodeURIComponent(market) + '/' + encodeURIComponent(ticker), { method: 'DELETE' })
-        .then(function(r) { if (r.ok) { _favorites.delete(k); btn.textContent = '☆'; btn.classList.remove('starred'); renderFavListFromServer(); } });
+        .then(function(r) { if (r.ok) { _favorites.delete(k); btn.textContent = '☆'; btn.classList.remove('starred'); syncToolbarBtn(false); renderFavListFromServer(); } });
     } else {
       fetch('/api/favorites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker: ticker, market: market, name: name }),
-      }).then(function(r) { if (r.ok) { _favorites.add(k); btn.textContent = '★'; btn.classList.add('starred'); renderFavListFromServer(); } });
+      }).then(function(r) { if (r.ok) { _favorites.add(k); btn.textContent = '★'; btn.classList.add('starred'); syncToolbarBtn(true); renderFavListFromServer(); } });
     }
   }
 
@@ -1111,6 +1118,31 @@
     // 즐겨찾기 + 저장 목록 초기 로드
     loadFavorites();
     loadDrawingsList();
+
+    // 현재 종목 즐겨찾기 버튼
+    var favTickerBtn = document.getElementById('btn-fav-ticker');
+    if (favTickerBtn) {
+      favTickerBtn.addEventListener('click', function() {
+        var ticker = window.D2T && D2T.ticker;
+        var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+        if (!ticker) return;
+        var nameEl = document.getElementById('chart-ticker-label');
+        var rawText = nameEl ? nameEl.textContent : '';
+        var name = rawText.split('(')[0].trim() || ticker;
+        toggleFavorite(ticker, market, name, this);
+      });
+    }
+
+    // 차트 로드 시 ★ 버튼 상태 갱신 (chart.js에서 호출)
+    window._onChartLoaded = function(ticker, market) {
+      var btn = document.getElementById('btn-fav-ticker');
+      if (!btn) return;
+      btn.style.display = ticker ? 'inline-flex' : 'none';
+      var k = favKey(ticker, market || 'KR');
+      var starred = _favorites.has(k);
+      btn.textContent = starred ? '★' : '☆';
+      btn.classList.toggle('btn-fav-starred', starred);
+    };
 
     // 사이드바 탭 전환
     window.switchSidebarTab = function(tab) {

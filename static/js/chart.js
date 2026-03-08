@@ -196,6 +196,7 @@
         }
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         if (typeof clearDraw === 'function') clearDraw();
+        if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR');
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);
