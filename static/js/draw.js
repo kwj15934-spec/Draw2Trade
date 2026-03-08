@@ -36,6 +36,16 @@
   var _lastResults  = [];         // 마지막 검색 결과 전체
   var _lastBody     = null;       // 마지막 검색 요청 body
 
+  // 차트 로드 시 즐겨찾기 버튼 상태 갱신 (chart.js에서 호출, 타이밍 무관하게 즉시 등록)
+  window._onChartLoaded = function(ticker, market) {
+    var btn = document.getElementById('btn-fav-ticker');
+    if (!btn) return;
+    var k = favKey(ticker, market || 'KR');
+    var starred = _favorites.has(k);
+    btn.textContent = starred ? '★' : '☆';
+    btn.classList.toggle('btn-fav-starred', starred);
+  };
+
   var canvas = null;
   var ctx    = null;
 
@@ -684,6 +694,17 @@
     return null;
   }
 
+  // 기간 선택 모달 → 선택 후 실제 검색 실행
+  window.runSearchWithMode = function(mode) {
+    var modal = document.getElementById('period-select-modal');
+    if (modal) modal.style.display = 'none';
+    if (mode === 'range') {
+      // 날짜 범위 모드 활성화 후 검색
+      if (!rangeMode) toggleRangeMode();
+    }
+    _doSearchActual();
+  };
+
   function doSearch() {
     // 작업 중인 추세선/직선이 있으면 자동 완료
     if (activeTool === 'trend' && trendPoints.length >= 2) finalizeTrend(null);
@@ -691,8 +712,33 @@
 
     var pts;
     if (drawPoints.length >= 2) {
-      // 추세선 완료 결과는 이미 150pt 폴리라인 — y 정규화만
-      // 자유곡선은 x-bin + y 정규화
+      pts = penPointsTo150(drawPoints);
+    }
+
+    if (!pts) {
+      showStatus('패턴을 먼저 그려주세요.', 'error');
+      return;
+    }
+
+    // 날짜 범위 모드이거나 빈 캔버스 모드면 바로 검색 (이미 설정됨)
+    if (rangeMode || isBlankMode) {
+      _doSearchActual();
+      return;
+    }
+
+    // 차트 모드: 기간 선택 모달 띄우기
+    var modal = document.getElementById('period-select-modal');
+    if (modal) { modal.style.display = 'flex'; return; }
+    _doSearchActual();
+  }
+
+  function _doSearchActual() {
+    // 작업 중인 추세선/직선이 있으면 자동 완료 (중복 호출 대비)
+    if (activeTool === 'trend' && trendPoints.length >= 2) finalizeTrend(null);
+    if (activeTool === 'line' && linePoints.length >= 2) finalizeLine(null);
+
+    var pts;
+    if (drawPoints.length >= 2) {
       pts = penPointsTo150(drawPoints);
     }
 
@@ -1053,7 +1099,7 @@
     if (!modal) return;
     var label = (modal.querySelector('input[name=label]').value || '').trim();
     if (!label) { alert('이름을 입력해주세요.'); return; }
-    if (!_lastResults.length) { alert('검색 결과가 없습니다.'); return; }
+    if (!drawNormalized || !drawNormalized.length) { alert('저장할 그림이 없습니다.'); return; }
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
     var body = {
@@ -1133,16 +1179,6 @@
       });
     }
 
-    // 차트 로드 시 ★ 버튼 상태 갱신 (chart.js에서 호출)
-    window._onChartLoaded = function(ticker, market) {
-      var btn = document.getElementById('btn-fav-ticker');
-      if (!btn) return;
-      btn.style.display = ticker ? 'inline-flex' : 'none';
-      var k = favKey(ticker, market || 'KR');
-      var starred = _favorites.has(k);
-      btn.textContent = starred ? '★' : '☆';
-      btn.classList.toggle('btn-fav-starred', starred);
-    };
 
     // 사이드바 탭 전환
     window.switchSidebarTab = function(tab) {

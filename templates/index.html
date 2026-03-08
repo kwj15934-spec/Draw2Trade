@@ -50,7 +50,7 @@
     </div>
   </div>
   <button id="btn-load" class="btn-d2t">차트 로드</button>
-  <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기" style="display:none;">☆</button>
+  <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
   <button id="btn-blank" class="btn-d2t" title="빈 캔버스 모드 전환">✏️ 빈 캔버스</button>
 
   <div class="vr"></div>
@@ -218,6 +218,27 @@
     <div id="sidebar-panel-drawings" style="display:none;">
       <div id="drawings-list" style="padding:8px 0;"></div>
     </div>
+  </div>
+</div>
+
+<!-- 기간 선택 모달 -->
+<div id="period-select-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:400px;margin:24px;">
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기간으로 검색할까요?</div>
+    <div style="font-size:12px;color:#7a8499;margin-bottom:20px;">그린 패턴과 비슷한 구간을 어떤 기준으로 찾을지 선택하세요.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2a3145'">
+        <div style="font-weight:700;margin-bottom:4px;">오늘 기준 검색</div>
+        <div style="font-size:11px;color:#7a8499;">각 종목의 최근 N봉에서 내 패턴과 가장 닮은 구간을 찾습니다.<br>기간이 달라도 모양이 비슷한 종목을 찾을 때 적합합니다.</div>
+      </button>
+      <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
+        <div style="font-weight:700;margin-bottom:4px;">날짜 범위 직접 지정</div>
+        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.<br>같은 시기에 비슷한 패턴이 있었는지 확인할 때 적합합니다.</div>
+      </button>
+    </div>
+    <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
   </div>
 </div>
 
