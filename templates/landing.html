@@ -157,6 +157,8 @@
       color: var(--muted); font-size: 13px;
     }
 
+    .step-img video { width: 100%; display: block; }
+
     /* ── 플랜 ── */
     .plans-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -278,8 +280,11 @@
           </p>
         </div>
         <div class="step-img">
-          <img src="/static/img/how-1.png" alt="시장 선택"
-               onerror="this.parentElement.innerHTML='<div class=\'step-img-placeholder\'>how-1.png</div>'">
+          <video autoplay loop muted playsinline>
+            <source src="/static/img/how-1.webm" type="video/webm">
+            <source src="/static/img/how-1.mp4"  type="video/mp4">
+            <img src="/static/img/how-1.png" alt="시장 선택">
+          </video>
         </div>
       </div>
 
@@ -294,8 +299,11 @@
           </p>
         </div>
         <div class="step-img">
-          <img src="/static/img/how-2.png" alt="패턴 그리기"
-               onerror="this.parentElement.innerHTML='<div class=\'step-img-placeholder\'>how-2.png</div>'">
+          <video autoplay loop muted playsinline>
+            <source src="/static/img/how-2.webm" type="video/webm">
+            <source src="/static/img/how-2.mp4"  type="video/mp4">
+            <img src="/static/img/how-2.png" alt="패턴 그리기">
+          </video>
         </div>
       </div>
 
@@ -311,8 +319,11 @@
           </p>
         </div>
         <div class="step-img">
-          <img src="/static/img/how-3.png" alt="결과 확인"
-               onerror="this.parentElement.innerHTML='<div class=\'step-img-placeholder\'>how-3.png</div>'">
+          <video autoplay loop muted playsinline>
+            <source src="/static/img/how-3.webm" type="video/webm">
+            <source src="/static/img/how-3.mp4"  type="video/mp4">
+            <img src="/static/img/how-3.png" alt="결과 확인">
+          </video>
         </div>
       </div>
 
