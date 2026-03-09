@@ -37,14 +37,7 @@
   var _lastBody     = null;       // 마지막 검색 요청 body
   var _searchMode   = 'today';    // 'today' | 'chart-period' | 'range'
 
-  // ── 그림 슬롯 (1번 / 2번 / 3번) ──────────────────────────────────────────
-  var NUM_SLOTS   = 3;
-  var SLOT_COLORS = ['#ff6b35', '#26a69a', '#9b59b6'];
-  var activeSlotIdx = 0;
-  var drawSlots = [];
-  for (var _si = 0; _si < NUM_SLOTS; _si++) {
-    drawSlots.push({ points: [], channels: [], history: [], autoMeta: null });
-  }
+  var _autoMeta = null; // 자동 분석 메타 {anchor_today, lookback_bars}
 
   // 차트 로드 시 즐겨찾기 버튼 상태 갱신 (chart.js에서 호출, 타이밍 무관하게 즉시 등록)
   window._onChartLoaded = function(ticker, market) {
@@ -177,35 +170,6 @@
   function redraw() {
     if (!ctx || !canvas) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // ── 비활성 슬롯 (배경 / 반투명) ─────────────────────────────────────────
-    ctx.save();
-    ctx.globalAlpha = 0.30;
-    for (var _sj = 0; _sj < NUM_SLOTS; _sj++) {
-      if (_sj === activeSlotIdx) continue;
-      var _slot = drawSlots[_sj];
-      if (_slot.points.length < 2) continue;
-      ctx.strokeStyle = SLOT_COLORS[_sj];
-      ctx.lineWidth   = 2;
-      ctx.lineCap     = 'round';
-      ctx.lineJoin    = 'round';
-      ctx.setLineDash([]);
-      ctx.shadowBlur  = 0;
-      ctx.beginPath();
-      ctx.moveTo(_slot.points[0].x, _slot.points[0].y);
-      for (var _pk = 1; _pk < _slot.points.length; _pk++) {
-        ctx.lineTo(_slot.points[_pk].x, _slot.points[_pk].y);
-      }
-      ctx.stroke();
-      // 슬롯 번호 레이블 (캔버스 범위 내에 표시)
-      var _lx = Math.max(4, Math.min(canvas.width - 24, _slot.points[0].x + 4));
-      var _ly = Math.max(14, Math.min(canvas.height - 4, _slot.points[0].y - 6));
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillStyle = SLOT_COLORS[_sj];
-      ctx.globalAlpha = 0.6;
-      ctx.fillText((_sj + 1) + '번', _lx, _ly);
-    }
-    ctx.restore();
 
     var hasMatch = (matchPoints && matchPoints.length >= 2);
     var hasDraw  = (drawNormalized && drawNormalized.length >= 2);
@@ -467,56 +431,10 @@
     matchPoints      = null;
     drawNormalized   = null;
     _resultMatches   = [];
-    // 활성 슬롯 초기화
-    drawSlots[activeSlotIdx].points   = [];
-    drawSlots[activeSlotIdx].channels = [];
-    drawSlots[activeSlotIdx].history  = [];
-    drawSlots[activeSlotIdx].autoMeta = null;
+    _autoMeta        = null;
     if (D2T && D2T.series) D2T.series.setMarkers([]);
     if (D2T) D2T.matchPeriodData = null;
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
-  // ── 슬롯 관리 ────────────────────────────────────────────────────────────
-  function saveCurrentToSlot(idx) {
-    drawSlots[idx].points   = drawPoints.slice();
-    drawSlots[idx].channels = parallelChannels.slice();
-    drawSlots[idx].history  = drawHistory.slice();
-  }
-
-  function loadSlotToCurrent(idx) {
-    drawPoints       = drawSlots[idx].points.slice();
-    parallelChannels = drawSlots[idx].channels.slice();
-    drawHistory      = drawSlots[idx].history.slice();
-    drawNormalized   = null;
-    trendPoints      = [];
-    linePoints       = [];
-    parallelPoints   = [];
-    matchPoints      = null;
-    _resultMatches   = [];
-  }
-
-  function updateSlotButtons() {
-    document.querySelectorAll('.slot-btn').forEach(function(btn) {
-      var si = parseInt(btn.dataset.slot, 10);
-      var isActive = (si === activeSlotIdx);
-      btn.classList.toggle('active', isActive);
-      btn.style.borderColor = isActive ? SLOT_COLORS[si] : '';
-      btn.style.color       = isActive ? SLOT_COLORS[si] : '';
-    });
-  }
-
-  window.switchDrawSlot = function(idx) {
-    if (idx === activeSlotIdx) return;
-    saveCurrentToSlot(activeSlotIdx);
-    activeSlotIdx = idx;
-    loadSlotToCurrent(idx);
-    setTool(null);
-    if (D2T && D2T.series) D2T.series.setMarkers([]);
-    if (D2T) D2T.matchPeriodData = null;
-    updateSlotButtons();
-    redraw();
-    showStatus((idx + 1) + '번 그림으로 전환', '');
   };
 
   // ── 폴리라인 → 150포인트 변환 (추세선용) ─────────────────────────────────
@@ -808,8 +726,7 @@
     }
 
     // 자동 분석 메타가 있으면 바로 검색 (모달 건너뜀)
-    var slotMeta = drawSlots[activeSlotIdx] && drawSlots[activeSlotIdx].autoMeta;
-    if (rangeMode || isBlankMode || slotMeta) {
+    if (rangeMode || isBlankMode || _autoMeta) {
       _doSearchActual();
       return;
     }
@@ -847,11 +764,10 @@
     var body = { draw_points: pts, top_n: topN, market: market, timeframe: timeframe };
 
     // 자동 분석 메타 적용
-    var _slotMeta = drawSlots[activeSlotIdx] && drawSlots[activeSlotIdx].autoMeta;
-    if (_slotMeta) {
+    if (_autoMeta) {
       body.anchor_today  = true;
-      body.lookback_bars = _slotMeta.lookback_bars;
-      drawSlots[activeSlotIdx].autoMeta = null; // 한 번만 사용
+      body.lookback_bars = _autoMeta.lookback_bars;
+      _autoMeta = null; // 한 번만 사용
     } else if (rangeMode) {
       // 날짜 범위 모드
       var dateFrom = (document.getElementById('date-from').value || '').trim();
@@ -1341,7 +1257,6 @@
   // ── DOM 준비 후 실행 ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     initCanvas();
-    updateSlotButtons();
 
     // 고급 옵션 토글
     var btnAdv = document.getElementById('btn-advanced');
@@ -1400,7 +1315,7 @@
       ['results', 'favorites', 'drawings'].forEach(function(t) {
         var panel = document.getElementById('sidebar-panel-' + t);
         var btn   = document.getElementById('sidebar-tab-' + t);
-        if (panel) panel.style.display = t === tab ? 'block' : 'none';
+        if (panel) panel.style.display = t === tab ? (t === 'results' ? 'flex' : 'block') : 'none';
         if (btn)   btn.classList.toggle('active', t === tab);
       });
     };
@@ -1642,7 +1557,6 @@
       }
     }
 
-    // 현재 슬롯에 반영
     drawPoints       = canvasPoints;
     parallelChannels = [];
     trendPoints      = [];
@@ -1651,18 +1565,14 @@
     drawNormalized   = pts;   // 저장/검색에 바로 사용 가능
     matchPoints      = null;
     _resultMatches   = [];
-
-    drawSlots[activeSlotIdx].points   = canvasPoints.slice();
-    drawSlots[activeSlotIdx].channels = [];
-    drawSlots[activeSlotIdx].history  = [];
-    drawSlots[activeSlotIdx].autoMeta = { anchor_today: true, lookback_bars: filtered.length };
+    _autoMeta        = { anchor_today: true, lookback_bars: filtered.length };
 
     if (D2T && D2T.series) D2T.series.setMarkers([]);
     if (D2T) D2T.matchPeriodData = null;
 
     exitAutoMode();
     redraw();
-    showStatus((activeSlotIdx + 1) + '번 그림 완성 (' + filtered.length + '봉) · 검색 버튼을 누르세요', '');
+    showStatus('그림 완성 (' + filtered.length + '봉) · 검색 버튼을 누르세요', '');
   }
 
   function pricesToDrawPoints(prices) {
