@@ -197,11 +197,13 @@
         ctx.lineTo(_slot.points[_pk].x, _slot.points[_pk].y);
       }
       ctx.stroke();
-      // 슬롯 번호 레이블
+      // 슬롯 번호 레이블 (캔버스 범위 내에 표시)
+      var _lx = Math.max(4, Math.min(canvas.width - 24, _slot.points[0].x + 4));
+      var _ly = Math.max(14, Math.min(canvas.height - 4, _slot.points[0].y - 6));
       ctx.font = 'bold 11px sans-serif';
       ctx.fillStyle = SLOT_COLORS[_sj];
       ctx.globalAlpha = 0.6;
-      ctx.fillText((_sj + 1) + '번', _slot.points[0].x + 4, _slot.points[0].y - 6);
+      ctx.fillText((_sj + 1) + '번', _lx, _ly);
     }
     ctx.restore();
 
@@ -1617,15 +1619,27 @@
     var pts    = pricesToDrawPoints(closes);
     if (!pts) { exitAutoMode(); showStatus('패턴 추출 실패.', 'error'); return; }
 
-    // 정규화 패턴 → 캔버스 좌표 변환 → 현재 슬롯에 그리기
-    var w = canvas ? canvas.width  : 600;
-    var h = canvas ? canvas.height : 400;
+    // 차트 좌표계로 캔버스 포인트 생성 (실제 가격선 위에 자연스럽게 그려짐)
     var canvasPoints = [];
-    for (var _ai = 0; _ai < pts.length; _ai++) {
-      canvasPoints.push({
-        x: (_ai / (pts.length - 1)) * w,
-        y: (1 - pts[_ai]) * h,
-      });
+    if (D2T && D2T.chart && D2T.series) {
+      var ts = D2T.chart.timeScale();
+      for (var _ai = 0; _ai < filtered.length; _ai++) {
+        var _c = filtered[_ai];
+        var _x = ts.timeToCoordinate(_c.time);
+        var _y = D2T.series.priceToCoordinate(_c.close);
+        if (_x != null && _y != null) {
+          canvasPoints.push({ x: _x, y: _y });
+        }
+      }
+    }
+    // 차트 좌표 사용 불가 시 폴백 (정규화 캔버스 좌표)
+    if (canvasPoints.length < 3) {
+      var w = canvas ? canvas.width  : 600;
+      var h = canvas ? canvas.height : 400;
+      canvasPoints = [];
+      for (var _bi = 0; _bi < pts.length; _bi++) {
+        canvasPoints.push({ x: (_bi / (pts.length - 1)) * w, y: (1 - pts[_bi]) * h });
+      }
     }
 
     // 현재 슬롯에 반영
