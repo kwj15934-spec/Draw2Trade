@@ -20,7 +20,7 @@ class PatternSearchRequest(BaseModel):
     lookback_months: int = Field(default=36, ge=6, le=120, description="비교 월봉/기간 개수 (날짜 범위 미지정 시)")
     lookback_bars: int | None = Field(default=None, ge=2, le=10000, description="차트 표시 봉 수 (자동 감지 시 우선 적용)")
     anchor_today: bool = Field(default=False, description="True: 최근 N봉만 비교 (오늘 기준), False: 전체 기간 슬라이딩")
-    top_n: int = Field(default=20, ge=1, le=100, description="반환할 상위 종목 수")
+    top_n: int = Field(default=20, ge=1, le=50, description="반환할 상위 종목 수")
     date_from: str | None = Field(default=None, description="비교 시작일 (KR: YYYY-MM, US: YYYY-MM-DD)")
     date_to: str | None = Field(default=None, description="비교 종료일 (KR: YYYY-MM, US: YYYY-MM-DD)")
     market: str = Field(default="KR", description="시장 구분: 'KR' | 'US'")
