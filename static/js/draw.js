@@ -1323,6 +1323,10 @@
       });
     }
 
+    // 자동 패턴 분석 버튼
+    var btnAuto = document.getElementById('btn-auto-pattern');
+    if (btnAuto) btnAuto.addEventListener('click', toggleAutoMode);
+
     // 검색
     document.getElementById('btn-search').addEventListener('click', doSearch);
 
@@ -1336,6 +1340,12 @@
     document.addEventListener('keydown', function (e) {
       // 입력 필드에서는 무시
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+      // ESC: 자동 모드 취소 우선
+      if (e.key === 'Escape' && autoMode) {
+        exitAutoMode();
+        return;
+      }
 
       // ESC: 작업 취소 → 도구 없을 때 도구 해제
       if (e.key === 'Escape') {
@@ -1398,5 +1408,189 @@
       e.preventDefault();
       onMouseUp();
     }, { passive: false });
-  });
+
+  }); // DOMContentLoaded end
+
+  // ── 자동 패턴 분석 모드 ─────────────────────────────────────────────────────
+  var autoMode = false;
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function toggleAutoMode() {
+    if (autoMode) { exitAutoMode(); return; }
+    if (!window.D2T || !D2T.candles || D2T.candles.length === 0) {
+      showStatus('차트를 먼저 로드해주세요.', 'error'); return;
+    }
+    autoMode = true;
+    setTool(null); // 드로잉 도구 비활성화
+
+    var btn     = document.getElementById('btn-auto-pattern');
+    var overlay = document.getElementById('auto-ruler-overlay');
+    if (btn) { btn.classList.add('active'); btn.style.color = '#26a69a'; btn.style.borderColor = '#26a69a'; }
+    if (overlay) overlay.style.display = '';
+
+    // 앵커 초기화
+    document.getElementById('auto-anchor-line').style.display = 'none';
+    document.getElementById('auto-anchor-date').style.display = 'none';
+    document.getElementById('auto-range-fill').style.display  = 'none';
+
+    overlay.addEventListener('mousemove', onRulerMove);
+    overlay.addEventListener('click',     onRulerClick);
+    showStatus('시작 날짜를 클릭하세요 · ESC: 취소', '');
+  }
+
+  function exitAutoMode() {
+    autoMode = false;
+    var btn     = document.getElementById('btn-auto-pattern');
+    var overlay = document.getElementById('auto-ruler-overlay');
+    if (btn) { btn.classList.remove('active'); btn.style.color = ''; btn.style.borderColor = ''; }
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.removeEventListener('mousemove', onRulerMove);
+      overlay.removeEventListener('click',     onRulerClick);
+    }
+    showStatus('', '');
+  }
+
+  function getRulerDate(e) {
+    if (!window.D2T || !D2T.chart) return null;
+    var rect = document.getElementById('auto-ruler-overlay').getBoundingClientRect();
+    var x    = e.clientX - rect.left;
+    try {
+      var t = D2T.chart.timeScale().coordinateToTime(x);
+      if (!t) return null;
+      var s = typeof t === 'object'
+        ? (t.year + '-' + pad2(t.month) + '-' + pad2(t.day))
+        : String(t);
+      return { x: x, date: s };
+    } catch(e) { return null; }
+  }
+
+  function onRulerMove(e) {
+    var r = getRulerDate(e);
+    if (!r) return;
+    var line = document.getElementById('auto-ruler-line');
+    var lbl  = document.getElementById('auto-ruler-date');
+    line.style.left = r.x + 'px';
+    lbl.style.left  = r.x + 'px';
+    lbl.textContent = r.date.slice(0, 7);
+  }
+
+  function onRulerClick(e) {
+    var r = getRulerDate(e);
+    if (!r) return;
+
+    // 앵커 표시
+    var aLine = document.getElementById('auto-anchor-line');
+    var aDate = document.getElementById('auto-anchor-date');
+    var fill  = document.getElementById('auto-range-fill');
+    var overlayRect = document.getElementById('auto-ruler-overlay').getBoundingClientRect();
+
+    aLine.style.display = '';
+    aLine.style.left    = r.x + 'px';
+    aDate.style.display = '';
+    aDate.style.left    = r.x + 'px';
+    aDate.textContent   = r.date.slice(0, 7);
+
+    fill.style.display = '';
+    fill.style.left    = r.x + 'px';
+    fill.style.right   = '0';
+
+    // 힌트 업데이트
+    var hint = document.getElementById('auto-ruler-hint');
+    if (hint) hint.textContent = r.date.slice(0, 7) + ' ~ 오늘 구간으로 분석 중...';
+
+    runAutoSearch(r.date);
+  }
+
+  function runAutoSearch(startDate) {
+    var candles   = window.D2T && D2T.candles;
+    if (!candles || !candles.length) { exitAutoMode(); showStatus('차트 데이터가 없습니다.', 'error'); return; }
+
+    var startYM = startDate.slice(0, 7); // "YYYY-MM"
+    var filtered = candles.filter(function(c) {
+      var t = typeof c.time === 'object'
+        ? (c.time.year + '-' + pad2(c.time.month))
+        : String(c.time);
+      return t >= startYM;
+    });
+
+    if (filtered.length < 3) {
+      exitAutoMode();
+      showStatus('선택 구간의 봉 수가 부족합니다 (최소 3봉).', 'error');
+      return;
+    }
+
+    // close 가격 → 정규화 → PATTERN_LEN 리샘플
+    var closes = filtered.map(function(c) { return c.close; });
+    var pts    = pricesToDrawPoints(closes);
+    if (!pts) { exitAutoMode(); showStatus('패턴 추출 실패.', 'error'); return; }
+
+    drawNormalized = pts;
+    matchPoints    = null;
+    _lastResults   = [];
+
+    var market    = (window.D2T && D2T.market)    || 'KR';
+    var timeframe = (window.D2T && D2T.timeframe) || 'monthly';
+    var topNEl    = document.getElementById('top-n-select');
+    var topN      = topNEl ? parseInt(topNEl.value, 10) : 20;
+
+    var body = {
+      draw_points:   pts,
+      top_n:         topN,
+      market:        market,
+      timeframe:     timeframe,
+      anchor_today:  true,
+      lookback_bars: filtered.length,
+    };
+    _lastBody = body;
+
+    // 로딩 표시
+    if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+    var placeholder = document.getElementById('results-placeholder');
+    var list        = document.getElementById('results-list');
+    if (list) list.style.display = 'none';
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+      placeholder.innerHTML = '<div class="d2t-search-loading"><div class="d2t-spinner"></div><div>자동 패턴 분석 중...</div></div>';
+    }
+    showStatus('자동 패턴 분석 중 (' + filtered.length + '봉)...', '');
+
+    fetch('/api/pattern/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function(data) {
+      exitAutoMode();
+      renderResults(data.results || []);
+      showStatus('자동 분석 완료: ' + (data.results || []).length + '건', '');
+    }).catch(function(err) {
+      exitAutoMode();
+      showStatus('분석 실패: ' + err.message, 'error');
+      if (placeholder) placeholder.innerHTML = '패턴을 그린 후<br><strong style="color:#ff6b35;">유사 종목 검색</strong>을 클릭하세요';
+    });
+  }
+
+  function pricesToDrawPoints(prices) {
+    var mn = Math.min.apply(null, prices);
+    var mx = Math.max.apply(null, prices);
+    var norm = mn === mx
+      ? prices.map(function() { return 0.5; })
+      : prices.map(function(p) { return (p - mn) / (mx - mn); });
+
+    // PATTERN_LEN(150)으로 선형 보간 리샘플
+    var N   = PATTERN_LEN;
+    var out = new Array(N);
+    for (var i = 0; i < N; i++) {
+      var idx = i / (N - 1) * (norm.length - 1);
+      var lo  = Math.floor(idx);
+      var hi  = Math.min(norm.length - 1, lo + 1);
+      out[i]  = norm[lo] * (1 - (idx - lo)) + norm[hi] * (idx - lo);
+    }
+    return out;
+  }
+
 })();

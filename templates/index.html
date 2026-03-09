@@ -141,6 +141,11 @@
     🔍 유사 종목 검색
   </button>
 
+  <!-- 자동 패턴 분석 버튼 -->
+  <button id="btn-auto-pattern" class="btn-d2t" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">
+    📐 자동 분석
+  </button>
+
   <!-- 고급 옵션 토글 -->
   <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
   <div id="advanced-options">
@@ -170,6 +175,23 @@
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
+
+      <!-- 자동 패턴 분석 줄자 오버레이 -->
+      <div id="auto-ruler-overlay" style="display:none; position:absolute; inset:0; z-index:15; cursor:col-resize;">
+        <!-- 이동 중 수직 점선 -->
+        <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #26a69a; pointer-events:none; transition:left .03s;"></div>
+        <div id="auto-ruler-date" style="position:absolute; top:8px; background:#26a69a; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
+        <!-- 클릭 후 고정된 앵커 -->
+        <div id="auto-anchor-line" style="display:none; position:absolute; top:0; bottom:0; width:0; border-left:2px solid #ff6b35; pointer-events:none;"></div>
+        <div id="auto-anchor-date" style="display:none; position:absolute; top:8px; background:#ff6b35; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
+        <!-- 앵커~오른쪽 끝 구간 하이라이트 -->
+        <div id="auto-range-fill" style="display:none; position:absolute; top:0; bottom:0; background:rgba(255,107,53,0.07); pointer-events:none;"></div>
+        <!-- 하단 힌트 -->
+        <div id="auto-ruler-hint" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(13,17,23,0.85); color:#d4d8e2; font-size:12px; padding:5px 14px; border-radius:6px; white-space:nowrap; pointer-events:none; border:1px solid #2a3145;">
+          시작 날짜를 클릭하세요 &nbsp;·&nbsp; <span style="color:#7a8499;">ESC 취소</span>
+        </div>
+      </div>
+
       <!-- 종목 정보 오버레이 (차트 좌상단) -->
       <div id="ticker-overlay" style="display:none;">
         <div id="ticker-overlay-symbol"></div>
