@@ -772,19 +772,22 @@
       body.anchor_today = false;
     } else if (_searchMode === 'chart-period') {
       // 차트와 같은 기간: 현재 보이는 날짜 범위를 추출
+      // getVisibleRange()는 문자열 "YYYY-MM-DD" 반환 (차트 time 포맷과 동일)
       try {
         if (window.D2T && D2T.chart) {
           var vr = D2T.chart.timeScale().getVisibleRange();
           if (vr && vr.from && vr.to) {
             var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
-            var fDate = new Date(vr.from * 1000);
-            var tDate = new Date(vr.to * 1000);
+            var fromStr = String(vr.from);  // "YYYY-MM-DD"
+            var toStr   = String(vr.to);
             if (mkt === 'US') {
-              body.date_from = fDate.toISOString().slice(0, 10);
-              body.date_to   = tDate.toISOString().slice(0, 10);
+              // US 일봉: YYYY-MM-DD 그대로 사용
+              body.date_from = fromStr.slice(0, 10);
+              body.date_to   = toStr.slice(0, 10);
             } else {
-              body.date_from = fDate.getFullYear() + '-' + String(fDate.getMonth() + 1).padStart(2, '0');
-              body.date_to   = tDate.getFullYear() + '-' + String(tDate.getMonth() + 1).padStart(2, '0');
+              // KR 월봉: "YYYY-MM-01" → "YYYY-MM" 으로 변환
+              body.date_from = fromStr.slice(0, 7);
+              body.date_to   = toStr.slice(0, 7);
             }
           }
         }
