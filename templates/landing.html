@@ -222,6 +222,34 @@
     }
     .btn-plan-paid:hover { background: var(--teal2); }
 
+    /* billing toggle */
+    .billing-toggle {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 40px;
+    }
+    .billing-label { font-size: 14px; color: var(--muted); font-weight: 600; }
+    .billing-label.active { color: var(--text); }
+    .billing-switch {
+      position: relative; width: 44px; height: 24px;
+      background: var(--border); border: none; border-radius: 12px;
+      cursor: pointer; transition: background .2s; padding: 0; flex-shrink: 0;
+    }
+    .billing-switch.on { background: var(--teal); }
+    .billing-knob {
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; transition: transform .2s; display: block;
+    }
+    .billing-switch.on .billing-knob { transform: translateX(20px); }
+    .billing-save {
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(38,166,154,.15); color: var(--teal);
+      border: 1px solid rgba(38,166,154,.3);
+    }
+    .pro-price-wrap { margin-bottom: 4px; }
+    .pro-annual-note { font-size: 13px; color: var(--teal); margin-bottom: 4px; }
+
     /* ── 구분선 ── */
     .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 
@@ -343,20 +371,30 @@
   <div class="section-inner">
     <div class="section-label">요금제</div>
     <h2 class="section-title">합리적인 가격으로</h2>
-    <p class="section-desc">지금은 베타 기간으로 무료로 이용하실 수 있습니다.</p>
+    <p class="section-desc">패턴을 그리고 유사 종목을 찾는 도구, 지금 시작해보세요.</p>
+
+    <div class="billing-toggle">
+      <span class="billing-label active" id="lbl-monthly">월간</span>
+      <button class="billing-switch" id="billing-switch" onclick="toggleBilling()" aria-label="연간/월간 전환">
+        <span class="billing-knob"></span>
+      </button>
+      <span class="billing-label" id="lbl-annual">연간</span>
+      <span class="billing-save">20% 할인</span>
+    </div>
 
     <div class="plans-grid">
 
       <div class="plan-card">
         <div class="plan-name">Free</div>
         <div class="plan-price">₩0 <span>/ 월</span></div>
-        <div class="plan-desc">가볍게 시작해보세요</div>
+        <div class="plan-desc">패턴 검색을 가볍게 시작해보세요</div>
         <ul class="plan-features">
           <li>KR · US 시장 패턴 검색</li>
-          <li>하루 30회 검색</li>
-          <li>Top 20 결과</li>
-          <li class="disabled">실시간 데이터 탐색</li>
-          <li class="disabled">무제한 검색</li>
+          <li>실시간 데이터 탐색</li>
+          <li>무제한 검색</li>
+          <li>유사 종목 Top 11~50 결과</li>
+          <li class="disabled">자동 패턴 검색</li>
+          <li>즐겨찾기 · 차트 저장 최대 5개</li>
         </ul>
         <a href="/app" class="btn-plan btn-plan-free">시작하기</a>
       </div>
@@ -364,14 +402,22 @@
       <div class="plan-card featured">
         <div class="plan-badge">Coming Soon</div>
         <div class="plan-name">Pro</div>
-        <div class="plan-price">미정 <span>/ 월</span></div>
+        <div id="pro-price-monthly" class="pro-price-wrap">
+          <div class="plan-price">₩30,000 <span>/ 월</span></div>
+        </div>
+        <div id="pro-price-annual" class="pro-price-wrap" style="display:none;">
+          <div class="plan-price">₩300,000 <span>/ 년</span></div>
+          <div class="pro-annual-note">월 ₩25,000 · 2개월 무료</div>
+        </div>
         <div class="plan-desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
         <ul class="plan-features">
           <li>KR · US 시장 패턴 검색</li>
           <li>실시간 데이터 탐색</li>
           <li>무제한 검색</li>
-          <li>Top 50 결과</li>
-          <li>우선 지원</li>
+          <li>Top 1~50 전체 결과</li>
+          <li>자동 패턴 검색 (기간 지정 후 자동 분석)</li>
+          <li>즐겨찾기 · 차트 저장 무제한</li>
+          <li>속도 우선 지원</li>
         </ul>
         <a href="#" onclick="openContact();return false;" class="btn-plan btn-plan-paid">출시 알림 받기</a>
       </div>
@@ -417,6 +463,16 @@
 </footer>
 
 <script>
+  var billingAnnual = false;
+  function toggleBilling() {
+    billingAnnual = !billingAnnual;
+    document.getElementById('billing-switch').classList.toggle('on', billingAnnual);
+    document.getElementById('lbl-monthly').classList.toggle('active', !billingAnnual);
+    document.getElementById('lbl-annual').classList.toggle('active', billingAnnual);
+    document.getElementById('pro-price-monthly').style.display = billingAnnual ? 'none' : '';
+    document.getElementById('pro-price-annual').style.display = billingAnnual ? '' : 'none';
+  }
+
   function openContact() {
     var m = document.getElementById('contact-modal');
     m.style.display = 'flex';
