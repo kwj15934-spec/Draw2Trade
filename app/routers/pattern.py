@@ -67,6 +67,13 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         else:
             effective_lookback = body.lookback_months
 
+    # 슬라이딩 모드(모양만 보고 찾기)에서 탐색 범위 제한: KR=120개월(10년), US=1260일(5년)
+    sliding_mode = not body.anchor_today and not (body.date_from or body.date_to)
+    if sliding_mode:
+        max_search_bars = 1260 if market == "US" else 120
+    else:
+        max_search_bars = None
+
     results = search_similar(
         draw_points=body.draw_points,
         lookback_months=effective_lookback,
@@ -77,5 +84,6 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         names_cache=names_cache,
         smooth_window=smooth_window,
         anchor_today=body.anchor_today,
+        max_search_bars=max_search_bars,
     )
     return {"results": results}

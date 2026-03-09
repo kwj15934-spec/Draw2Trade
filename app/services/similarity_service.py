@@ -140,6 +140,7 @@ def search_similar(
     names_cache: dict | None = None,
     smooth_window: int = 1,
     anchor_today: bool = False,
+    max_search_bars: int | None = None,
 ) -> list[dict]:
     """
     사용자가 그린 패턴과 유사한 종목을 검색한다.
@@ -151,6 +152,7 @@ def search_similar(
     date_from/date_to 지정 시: 해당 구간만 비교 (고정 구간 모드).
     미지정 시: 전체 데이터에서 lookback_months 크기 윈도우를 슬라이딩하며
               종목별 최고점수 구간 반환 (슬라이딩 윈도우 모드).
+    max_search_bars: 슬라이딩 모드에서 탐색할 최대 최근 봉 수 (속도 제한용).
     """
     if not draw_points:
         return []
@@ -210,6 +212,15 @@ def search_similar(
         if n < win:
             continue
 
+        # ── 슬라이딩 모드: 탐색 범위 제한 (속도 최적화) ───────────────────
+        if not anchor_today and not use_date_range and max_search_bars is not None:
+            limit = max(win + 1, max_search_bars)
+            if n > limit:
+                trim = n - limit
+                arr = arr[trim:]
+                dates = dates[trim:] if len(dates) > trim else dates
+                n = len(arr)
+
         # ── 오늘 기준 모드 ─────────────────────────────────────────────────
         if anchor_today:
             best_i = n - win
@@ -219,23 +230,58 @@ def search_similar(
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
         else:
-            # ── 슬라이딩 윈도우 2-pass ─────────────────────────────────────
+            # ── 슬라이딩 윈도우 2-pass (벡터 연산) ────────────────────────
             total_windows = n - win + 1
             coarse = max(2, win // 10)
             top_k  = min(20, max(5, int(total_windows * 0.01) + 1))
 
-            # 1차: coarse stride 스캔 + 빠른 필터
-            coarse_cache: dict[int, tuple[float, np.ndarray]] = {}
-            for i in range(0, total_windows, coarse):
-                win_slice = arr[i: i + win]
-                if _fast_reject(tmpl_net, win_slice):
-                    continue
-                normed_w = normalize(resample(win_slice, PATTERN_LEN))
-                s = similarity_score(tmpl, normed_w)
-                coarse_cache[i] = (s, normed_w)
+            # 1차: numpy 벡터 연산으로 coarse stride 스캔 (Python 루프 제거)
+            all_wins = np.lib.stride_tricks.sliding_window_view(arr, win)  # (total_windows, win)
+            coarse_wins = all_wins[::coarse]                               # (n_coarse, win)
+            coarse_indices = np.arange(0, total_windows, coarse)
 
-            if not coarse_cache:
+            # 벡터 fast-reject: 방향 필터
+            win_ranges = coarse_wins.max(axis=1) - coarse_wins.min(axis=1)
+            vmask = win_ranges > _EPS
+            if abs(tmpl_net) > 0.3:
+                net_ch = np.where(
+                    vmask,
+                    (coarse_wins[:, -1] - coarse_wins[:, 0]) / np.where(vmask, win_ranges, 1.0),
+                    0.0,
+                )
+                vmask &= ~((np.abs(net_ch) > 0.3) & (net_ch * tmpl_net < 0))
+
+            valid_idx  = coarse_indices[vmask]
+            valid_wins = coarse_wins[vmask]
+            if len(valid_wins) == 0:
                 continue
+
+            # 배치 리샘플 → 배치 정규화 → 배치 Pearson (shape score)
+            x_old = np.linspace(0.0, 1.0, win)
+            x_new = np.linspace(0.0, 1.0, PATTERN_LEN)
+            resampled = np.array([np.interp(x_new, x_old, row) for row in valid_wins])
+
+            mn = resampled.min(axis=1, keepdims=True)
+            mx = resampled.max(axis=1, keepdims=True)
+            rng = mx - mn
+            rng[rng < _EPS] = 1.0
+            normed_batch = (resampled - mn) / rng  # (n_valid, PATTERN_LEN)
+
+            tmpl_c = tmpl - tmpl.mean()
+            tmpl_s = float(tmpl.std())
+            wins_c = normed_batch - normed_batch.mean(axis=1, keepdims=True)
+            wins_s = normed_batch.std(axis=1)
+            good   = wins_s > _EPS
+
+            coarse_scores = np.zeros(len(normed_batch))
+            if tmpl_s > _EPS and np.any(good):
+                dots = np.einsum("ij,j->i", wins_c[good], tmpl_c)
+                coarse_scores[good] = np.maximum(0.0, dots / (wins_s[good] * tmpl_s * PATTERN_LEN))
+
+            coarse_cache: dict[int, tuple[float, np.ndarray]] = {
+                int(ci): (float(sc), nm)
+                for ci, sc, nm in zip(valid_idx, coarse_scores, normed_batch)
+            }
 
             # 2차: 상위 top_k 후보 주변 stride=1 정밀 탐색
             top_candidates = heapq.nlargest(top_k, coarse_cache.items(), key=lambda x: x[1][0])
