@@ -242,8 +242,8 @@
       </button>
       <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
-        <div style="font-weight:700;margin-bottom:4px;">② 모양만 보고 찾기 <span style="font-size:10px;color:#7a8499;font-weight:400;">(기간 무관)</span></div>
-        <div style="font-size:11px;color:#7a8499;">기간에 관계없이 내가 그린 모양과 닮은 패턴을 전 기간에서 검색합니다.<br>시기가 달라도 같은 형태의 종목을 발견할 때 적합합니다.</div>
+        <div style="font-weight:700;margin-bottom:4px;">② 지금 이 모양과 비슷한 종목 찾기 <span style="font-size:10px;color:#ff6b35;font-weight:400;">(끝=오늘 고정)</span></div>
+        <div style="font-size:11px;color:#7a8499;">각 종목의 <strong style="color:#d4d8e2;">끝 시점을 오늘로 고정</strong>하고, 시작 날짜를 조정하며<br>현재 내가 그린 차트 모양과 가장 닮은 구간을 찾습니다.<br>지금 이 순간 비슷한 흐름에 있는 종목을 발견할 때 적합합니다.</div>
       </button>
       <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#7a8499'" onmouseout="this.style.borderColor='#2a3145'">
@@ -402,5 +402,5 @@
 ></script>
 <!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260306m"></script>
-<script src="/static/js/draw.js?v=20260309b"></script>
+<script src="/static/js/draw.js?v=20260309c"></script>
 {% endblock %}

@@ -802,8 +802,8 @@
       body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
       body.anchor_today = true;
     } else {
-      // 차트 모드 + 모양만 보고 찾기: 보이는 봉 수로 윈도우 크기만 결정,
-      // 날짜 고정 없이 전체 기간 슬라이딩 (anchor_today=false)
+      // 차트 모드 + 지금 이 모양과 비슷한 종목 찾기:
+      // 끝=오늘 고정, 시작 날짜를 조정하며 최적 구간 탐색 (anchor_today=true)
       var detectedBars = null;
       try {
         if (window.D2T && D2T.chart) {
@@ -818,13 +818,13 @@
       } else {
         body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
       }
-      body.anchor_today = false;  // 전체 기간에서 모양 슬라이딩 검색
+      body.anchor_today = true;   // 끝=오늘 고정, 시작 가변으로 최적 모양 탐색
     }
 
-    var anchorDesc = body.date_from ? ' · 날짜 고정' : (body.anchor_today ? ' · 오늘 기준' : ' · 전체 기간 슬라이딩');
+    var anchorDesc = body.date_from ? ' · 날짜 고정' : (body.anchor_today ? ' · 끝=오늘, 시작 가변' : ' · 날짜 고정 구간');
     var searchDesc = body.lookback_bars
-      ? ('윈도우 ' + body.lookback_bars + '봉' + anchorDesc)
-      : (body.lookback_months ? (body.lookback_months + '개월 윈도우' + anchorDesc) : '날짜 범위 고정');
+      ? ('기준 ' + body.lookback_bars + '봉' + anchorDesc)
+      : (body.lookback_months ? (body.lookback_months + '개월' + anchorDesc) : '날짜 범위 고정');
     showStatus('검색 중... (' + searchDesc + ')', 'info');
     document.getElementById('btn-search').disabled = true;
 

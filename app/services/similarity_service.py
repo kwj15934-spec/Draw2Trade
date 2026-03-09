@@ -212,20 +212,41 @@ def search_similar(
         if n < win:
             continue
 
-        # ── 슬라이딩 모드: 탐색 범위 제한 (속도 최적화) ───────────────────
-        if not anchor_today and not use_date_range and max_search_bars is not None:
-            limit = max(win + 1, max_search_bars)
-            if n > limit:
-                trim = n - limit
-                arr = arr[trim:]
-                dates = dates[trim:] if len(dates) > trim else dates
-                n = len(arr)
-
-        # ── 오늘 기준 모드 ─────────────────────────────────────────────────
+        # ── 끝=오늘 고정, 시작 가변 모드 ─────────────────────────────────
         if anchor_today:
-            best_i = n - win
-            best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
-            orig_end = best_i + win - 1 + date_shift
+            # max_search_bars가 있으면: 다양한 시작점 시도 (끝=오늘 고정)
+            # 없으면: 고정 win 크기 (기존 동작)
+            orig_end = n - 1 + date_shift
+            if max_search_bars is not None:
+                min_win = max(2, win // 2)
+                max_win = min(n - 1, max_search_bars)
+                n_tries = min(30, max_win - min_win + 1)
+                x_new   = np.linspace(0.0, 1.0, PATTERN_LEN)
+
+                best_score  = -1.0
+                best_i      = max(0, n - win)
+                best_normed = normalize(resample(arr[best_i:n], PATTERN_LEN))
+
+                if n_tries > 0 and min_win <= max_win:
+                    test_wins = np.unique(
+                        np.linspace(min_win, max_win, n_tries).astype(int)
+                    )
+                    for tw in test_wins:
+                        start = n - int(tw)
+                        if start < 0:
+                            continue
+                        sl   = arr[start:n]
+                        x_old = np.linspace(0.0, 1.0, len(sl))
+                        nm   = normalize(np.interp(x_new, x_old, sl))
+                        s    = similarity_score(tmpl, nm)
+                        if s > best_score:
+                            best_score  = s
+                            best_i      = start
+                            best_normed = nm
+            else:
+                best_i      = max(0, n - win)
+                best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
+
             d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
