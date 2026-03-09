@@ -1136,8 +1136,16 @@
       labelInput.value = (ticker ? ticker + ' ' : '') + market + ' ' + new Date().toLocaleDateString('ko');
     }
     var tickerInput = modal.querySelector('input[name=save-ticker]');
-    if (tickerInput && !tickerInput.value && ticker) {
-      tickerInput.value = ticker;
+    if (tickerInput && !tickerInput.value) {
+      // 차트 레이블에서 회사명 추출 ("삼성전자 (005930)" 형식)
+      var nameEl = document.getElementById('chart-ticker-label');
+      var rawLabel = nameEl ? nameEl.textContent.trim() : '';
+      var companyName = rawLabel ? rawLabel.split('(')[0].trim() : '';
+      if (companyName && ticker) {
+        tickerInput.value = companyName + ' (' + ticker + ')';
+      } else if (ticker) {
+        tickerInput.value = ticker;
+      }
     }
     // 날짜 범위: 마지막 검색 body에서 추출, 없으면 차트 visible range
     var fromInput = modal.querySelector('input[name=save-date-from]');

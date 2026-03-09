@@ -27,6 +27,10 @@
 
   <!-- 비로그인: 로그인 버튼 -->
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
+
+  <!-- 홈 버튼 -->
+  <a href="/" title="메인 페이지로" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
+    onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#ff6b35'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">← 메인</a>
 </div>
 
 <!-- ── 툴바 ─────────────────────────────────────────────────────────────── -->
@@ -230,7 +234,7 @@
       <button onclick="runSearchWithMode('chart-period')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2a3145'">
         <div style="font-weight:700;margin-bottom:4px;">① 차트와 같은 기간으로 찾기</div>
-        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의 종목을 검색합니다.<br>같은 시기에 함께 움직인 종목을 확인할 때 적합합니다.</div>
+        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의<br>종목을 검색합니다.<br>같은 시기에 함께 움직인 종목을 확인할 때 적합합니다.</div>
       </button>
       <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
