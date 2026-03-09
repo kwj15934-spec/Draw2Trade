@@ -755,9 +755,10 @@
     _lastResults   = [];   // 새 검색 시 초기화
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    var timeframe = (window.D2T && D2T.timeframe) ? D2T.timeframe : 'monthly';
     var topNEl = document.getElementById('top-n-select');
     var topN = topNEl ? parseInt(topNEl.value, 10) : 20;
-    var body = { draw_points: pts, top_n: topN, market: market };
+    var body = { draw_points: pts, top_n: topN, market: market, timeframe: timeframe };
 
     if (rangeMode) {
       // 날짜 범위 모드

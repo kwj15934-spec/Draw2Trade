@@ -24,6 +24,7 @@ class PatternSearchRequest(BaseModel):
     date_from: str | None = Field(default=None, description="비교 시작일 (KR: YYYY-MM, US: YYYY-MM-DD)")
     date_to: str | None = Field(default=None, description="비교 종료일 (KR: YYYY-MM, US: YYYY-MM-DD)")
     market: str = Field(default="KR", description="시장 구분: 'KR' | 'US'")
+    timeframe: str = Field(default="monthly", description="차트 타임프레임: monthly | weekly | daily")
 
 
 @router.post("/pattern/search")
@@ -40,6 +41,7 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         raise HTTPException(status_code=400, detail="draw_points 는 최소 2개 이상이어야 합니다.")
 
     market = body.market.upper()
+    tf = body.timeframe.lower()  # 'monthly' | 'weekly' | 'daily'
 
     if market == "US":
         from app.services.us_data_service import (
@@ -52,20 +54,24 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         ohlcv_cache = all_us_ohlcv()
         names_cache = all_us_names()
         smooth_window = 0   # 0 = 윈도우 크기 비례 적응형 스무딩
-        # lookback_bars 우선 (차트 표시 봉 수 자동 감지), 없으면 개월×22
+        # US 데이터는 일봉 기준. 타임프레임에 따라 일봉 수로 환산
         if body.lookback_bars is not None:
-            effective_lookback = body.lookback_bars
+            tf_to_days = {"monthly": 22, "weekly": 5, "daily": 1}
+            effective_lookback = body.lookback_bars * tf_to_days.get(tf, 1)
         else:
             effective_lookback = body.lookback_months * 22
     else:
         ohlcv_cache = None   # search_similar 내부에서 all_ohlcv() 사용
         names_cache = None
         smooth_window = 1
-        # lookback_bars 우선 (차트 표시 봉 수 자동 감지), 없으면 개월 수 그대로
+        # KR 데이터는 월봉 기준. 타임프레임에 따라 월 수로 환산
         if body.lookback_bars is not None:
-            effective_lookback = body.lookback_bars
+            tf_to_months = {"monthly": 1.0, "weekly": 1 / 4.33, "daily": 1 / 22.0}
+            effective_lookback = max(2, round(body.lookback_bars * tf_to_months.get(tf, 1.0)))
         else:
             effective_lookback = body.lookback_months
+        logger.info("KR 검색: tf=%s, lookback_bars=%s → effective_months=%d",
+                    tf, body.lookback_bars, effective_lookback)
 
     # 끝=오늘 고정 + 시작 가변 모드: anchor_today=True, 날짜 미지정
     # KR 최대 240개월(20년), US 최대 1260일(5년) 범위에서 최적 시작점 탐색
