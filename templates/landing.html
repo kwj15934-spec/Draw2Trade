@@ -222,33 +222,8 @@
     }
     .btn-plan-paid:hover { background: var(--teal2); }
 
-    /* billing toggle */
-    .billing-toggle {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 40px;
-    }
-    .billing-label { font-size: 14px; color: var(--muted); font-weight: 600; }
-    .billing-label.active { color: var(--text); }
-    .billing-switch {
-      position: relative; width: 44px; height: 24px;
-      background: var(--border); border: none; border-radius: 12px;
-      cursor: pointer; transition: background .2s; padding: 0; flex-shrink: 0;
-    }
-    .billing-switch.on { background: var(--teal); }
-    .billing-knob {
-      position: absolute; top: 3px; left: 3px;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #fff; transition: transform .2s; display: block;
-    }
-    .billing-switch.on .billing-knob { transform: translateX(20px); }
-    .billing-save {
-      padding: 2px 8px; border-radius: 4px;
-      font-size: 11px; font-weight: 700;
-      background: rgba(38,166,154,.15); color: var(--teal);
-      border: 1px solid rgba(38,166,154,.3);
-    }
     .pro-price-wrap { margin-bottom: 4px; }
-    .pro-annual-note { font-size: 13px; color: var(--teal); margin-bottom: 4px; }
+    .pro-annual-note { font-size: 13px; color: var(--teal); margin-top: 4px; margin-bottom: 4px; }
 
     /* ── 구분선 ── */
     .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
@@ -374,15 +349,6 @@
     <h2 class="section-title">합리적인 가격으로</h2>
     <p class="section-desc">패턴을 그리고 유사 종목을 찾는 도구, 지금 시작해보세요.</p>
 
-    <div class="billing-toggle">
-      <span class="billing-label active" id="lbl-monthly">월간</span>
-      <button class="billing-switch" id="billing-switch" onclick="toggleBilling()" aria-label="연간/월간 전환">
-        <span class="billing-knob"></span>
-      </button>
-      <span class="billing-label" id="lbl-annual">연간</span>
-      <span class="billing-save">20% 할인</span>
-    </div>
-
     <div class="plans-grid">
 
       <div class="plan-card">
@@ -403,12 +369,10 @@
       <div class="plan-card featured">
         <div class="plan-badge">Coming Soon</div>
         <div class="plan-name">Pro</div>
-        <div id="pro-price-monthly" class="pro-price-wrap">
-          <div class="plan-price">₩30,000 <span>/ 월</span></div>
-        </div>
-        <div id="pro-price-annual" class="pro-price-wrap" style="display:none;">
-          <div class="plan-price">₩300,000 <span>/ 년</span></div>
-          <div class="pro-annual-note">월 ₩25,000 · 2개월 무료</div>
+        <div class="pro-price-wrap">
+          <div class="plan-price" style="text-decoration:line-through;color:var(--muted);font-size:24px;">₩30,000 <span style="font-size:14px;">/ 월</span></div>
+          <div class="plan-price">₩20,000 <span>/ 월</span></div>
+          <div class="pro-annual-note">🎉 출시 이벤트 할인 적용 중</div>
         </div>
         <div class="plan-desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
         <ul class="plan-features">
@@ -464,16 +428,6 @@
 </footer>
 
 <script>
-  var billingAnnual = false;
-  function toggleBilling() {
-    billingAnnual = !billingAnnual;
-    document.getElementById('billing-switch').classList.toggle('on', billingAnnual);
-    document.getElementById('lbl-monthly').classList.toggle('active', !billingAnnual);
-    document.getElementById('lbl-annual').classList.toggle('active', billingAnnual);
-    document.getElementById('pro-price-monthly').style.display = billingAnnual ? 'none' : '';
-    document.getElementById('pro-price-annual').style.display = billingAnnual ? '' : 'none';
-  }
-
   function openContact() {
     var m = document.getElementById('contact-modal');
     m.style.display = 'flex';
