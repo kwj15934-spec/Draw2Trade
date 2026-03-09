@@ -829,8 +829,21 @@
     var searchDesc = body.lookback_bars
       ? ('기준 ' + body.lookback_bars + '봉' + anchorDesc)
       : (body.lookback_months ? (body.lookback_months + '개월' + anchorDesc) : '날짜 범위 고정');
-    showStatus('검색 중... (' + searchDesc + ')', 'info');
+    showStatus('검색 중...', 'info');
     document.getElementById('btn-search').disabled = true;
+
+    // 결과 패널에 로딩 스피너 표시 (유사 종목 탭으로 전환 후)
+    if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+    var placeholder = document.getElementById('results-placeholder');
+    var list = document.getElementById('results-list');
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = '<div class="d2t-search-loading">'
+        + '<div class="d2t-spinner"></div>'
+        + '<p><strong>검색 중...</strong><br>' + escHtml(searchDesc) + '</p>'
+        + '</div>';
+    }
+    if (list) list.style.display = 'none';
 
     _lastBody = body;
 
