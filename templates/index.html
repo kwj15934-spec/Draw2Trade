@@ -104,6 +104,14 @@
 
   <div class="vr"></div>
 
+  <!-- 그림 슬롯 선택 (1번 / 2번 / 3번) -->
+  <label>그림</label>
+  <button class="btn-d2t slot-btn" data-slot="0" onclick="window.switchDrawSlot&&window.switchDrawSlot(0)" title="1번 그림 슬롯">1번</button>
+  <button class="btn-d2t slot-btn" data-slot="1" onclick="window.switchDrawSlot&&window.switchDrawSlot(1)" title="2번 그림 슬롯">2번</button>
+  <button class="btn-d2t slot-btn" data-slot="2" onclick="window.switchDrawSlot&&window.switchDrawSlot(2)" title="3번 그림 슬롯">3번</button>
+
+  <div class="vr"></div>
+
   <!-- 기간 설정 (재설계) -->
   <div class="period-group">
     <label>기간</label>
@@ -142,7 +150,7 @@
   </button>
 
   <!-- 자동 패턴 분석 버튼 -->
-  <button id="btn-auto-pattern" class="btn-d2t" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">
+  <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">
     📐 자동 분석
   </button>
 
@@ -209,6 +217,7 @@
     <!-- 차트 하단 정보 바 -->
     <div class="d2t-chart-footer">
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
+      <button id="btn-back-to-origin" class="btn-d2t" style="display:none; margin-left:8px; color:#26a69a; border-color:#26a69a;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
       <span class="ticker-label" style="margin-left: auto;">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
@@ -424,6 +433,6 @@
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260306m"></script>
-<script src="/static/js/draw.js?v=20260309f"></script>
+<script src="/static/js/chart.js?v=20260309i"></script>
+<script src="/static/js/draw.js?v=20260309h"></script>
 {% endblock %}

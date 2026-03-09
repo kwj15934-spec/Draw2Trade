@@ -196,6 +196,10 @@
         }
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         if (typeof clearDraw === 'function') clearDraw();
+        // 새 종목 로드 시 원본 상태/버튼 초기화
+        D2T.originState = null;
+        var backBtn = document.getElementById('btn-back-to-origin');
+        if (backBtn) backBtn.style.display = 'none';
         if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR');
       })
       .catch(function (e) {
@@ -214,6 +218,17 @@
     if (!ticker) return;
     if (D2T.loading) return;
     D2T.loading = true;
+
+    // 원본 상태 저장 (처음 결과 로드 시에만)
+    if (!D2T.originState && D2T.ticker && D2T.candles) {
+      var origLabel = document.getElementById('chart-ticker-label');
+      D2T.originState = {
+        ticker:    D2T.ticker,
+        candles:   D2T.candles.slice(),
+        timeframe: D2T.timeframe,
+        labelText: origLabel ? origLabel.textContent : D2T.ticker,
+      };
+    }
 
     // 결과 차트는 시장 기본 타임프레임으로 로드
     var resultTf = MARKET_DEFAULT_TF[D2T.market] || 'monthly';
@@ -309,6 +324,9 @@
         } else {
           D2T.chart.timeScale().fitContent();
         }
+        // 원본으로 돌아가기 버튼 표시
+        var backBtn = document.getElementById('btn-back-to-origin');
+        if (backBtn && D2T.originState) backBtn.style.display = '';
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);
@@ -317,6 +335,27 @@
         D2T.loading = false;
       });
   }
+
+  // ── 원본 차트로 복귀 ──────────────────────────────────────────────────────
+  D2T.backToOrigin = function() {
+    var o = D2T.originState;
+    if (!o || !o.candles) return;
+    D2T.series.setData(o.candles);
+    D2T.candles   = o.candles;
+    D2T.ticker    = o.ticker;
+    D2T.timeframe = o.timeframe;
+    setVolumeData(o.candles);
+    D2T.chart.timeScale().fitContent();
+    D2T.matchPeriodData = null;
+    if (D2T.series) D2T.series.setMarkers([]);
+    setTickerOverlay(o.ticker, '', TF_LABELS[o.timeframe] || o.timeframe, o.candles);
+    var label = document.getElementById('chart-ticker-label');
+    if (label) label.textContent = o.labelText;
+    D2T.originState = null;
+    var backBtn = document.getElementById('btn-back-to-origin');
+    if (backBtn) backBtn.style.display = 'none';
+    if (typeof window.redraw === 'function') window.redraw();
+  };
 
   // ── 종목 드롭다운 로딩 ────────────────────────────────────────────────────
   function loadTickerList(category) {
