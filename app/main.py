@@ -21,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user
 from app.routers import auth, chart, pattern, us_chart, user_data
-from app.services import activity_tracker, inquiry_service
+from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
@@ -122,6 +122,11 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
+@app.get("/notices", response_class=HTMLResponse)
+async def notices_page(request: Request):
+    return templates.TemplateResponse("notices.html", {"request": request})
+
+
 @app.get("/blank", response_class=HTMLResponse)
 async def blank(request: Request):
     return templates.TemplateResponse("blank.html", {"request": request})
@@ -153,6 +158,57 @@ async def contact(
         return JSONResponse({"ok": False, "error": "필수 항목 누락"}, status_code=400)
     inquiry_service.save_inquiry(name, email, message)
     return JSONResponse({"ok": True})
+
+
+# ── 공지 조회 (public) ────────────────────────────────────────────────────────
+@app.get("/api/notices")
+async def get_notices():
+    return JSONResponse(notice_service.get_notices())
+
+
+# ── 공지 관리 (admin) ─────────────────────────────────────────────────────────
+def _is_admin(request: Request) -> bool:
+    import os
+    user = get_optional_user(request)
+    admin_uid = os.getenv("ADMIN_UID", "")
+    return bool(user and admin_uid and user.get("uid") == admin_uid)
+
+
+@app.post("/api/admin/notices")
+async def admin_create_notice(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    nid = notice_service.create_notice(
+        type_=body.get("type", "notice"),
+        title=body.get("title", ""),
+        content=body.get("content", ""),
+        pinned=bool(body.get("pinned", False)),
+    )
+    return JSONResponse({"ok": True, "id": nid})
+
+
+@app.patch("/api/admin/notices/{notice_id}")
+async def admin_update_notice(notice_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    ok = notice_service.update_notice(
+        notice_id=notice_id,
+        type_=body.get("type", "notice"),
+        title=body.get("title", ""),
+        content=body.get("content", ""),
+        pinned=bool(body.get("pinned", False)),
+    )
+    return JSONResponse({"ok": ok})
+
+
+@app.delete("/api/admin/notices/{notice_id}")
+async def admin_delete_notice(notice_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    ok = notice_service.delete_notice(notice_id)
+    return JSONResponse({"ok": ok})
 
 
 # ── 관리자 문의 조회 ──────────────────────────────────────────────────────────

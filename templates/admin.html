@@ -217,6 +217,43 @@
     <div class="inquiry-list" id="inquiry-list">
       <div class="empty">로딩 중...</div>
     </div>
+
+    <h1 style="margin-top:48px;">공지사항 관리</h1>
+    <div class="sub">업데이트, 이벤트, 공지를 작성하고 관리합니다.</div>
+
+    <div style="background:#1a1d2e;border:1px solid #2a2e39;border-radius:8px;padding:20px;margin-bottom:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;color:#666;display:block;margin-bottom:5px;">유형</label>
+          <select id="notice-type" style="width:100%;background:#0f1117;border:1px solid #2a2e39;border-radius:5px;padding:8px 10px;color:#d1d4dc;font-size:13px;outline:none;">
+            <option value="update">업데이트</option>
+            <option value="event">이벤트</option>
+            <option value="notice">공지</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <label style="font-size:11px;color:#666;display:block;margin-bottom:5px;white-space:nowrap;">
+            <input type="checkbox" id="notice-pinned" style="margin-right:4px;">고정 공지
+          </label>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;color:#666;display:block;margin-bottom:5px;">제목</label>
+        <input id="notice-title" type="text" placeholder="공지 제목" style="width:100%;background:#0f1117;border:1px solid #2a2e39;border-radius:5px;padding:8px 10px;color:#d1d4dc;font-size:13px;outline:none;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px;color:#666;display:block;margin-bottom:5px;">내용</label>
+        <textarea id="notice-content" rows="5" placeholder="공지 내용을 입력하세요." style="width:100%;background:#0f1117;border:1px solid #2a2e39;border-radius:5px;padding:8px 10px;color:#d1d4dc;font-size:13px;outline:none;resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="submitNotice()" style="background:#26a69a;border:none;border-radius:5px;color:#fff;font-size:13px;font-weight:600;padding:8px 20px;cursor:pointer;" id="notice-submit-btn">작성하기</button>
+        <button onclick="cancelNoticeEdit()" id="notice-cancel-btn" style="display:none;background:none;border:1px solid #2a2e39;border-radius:5px;color:#888;font-size:13px;padding:8px 16px;cursor:pointer;">취소</button>
+      </div>
+    </div>
+
+    <div class="inquiry-list" id="notice-admin-list">
+      <div class="empty">로딩 중...</div>
+    </div>
   </main>
 
   <script>
@@ -388,6 +425,88 @@
         btn.setAttribute('onclick', 'toggleReplied(' + id + ',' + next + ',this)');
       }
     };
+
+    var allAdminNotices = [];
+    var editingNoticeId = null;
+
+    async function loadAdminNotices() {
+      try {
+        var res = await fetch('/api/notices');
+        allAdminNotices = await res.json();
+        renderAdminNotices();
+      } catch(e) {}
+    }
+
+    function renderAdminNotices() {
+      var el = document.getElementById('notice-admin-list');
+      if (!allAdminNotices.length) { el.innerHTML = '<div class="empty">공지가 없습니다.</div>'; return; }
+      var BADGE_COLOR = { update: '#26a69a', event: '#ff6b35', notice: '#7a8499' };
+      var TYPE_KO = { update: '업데이트', event: '이벤트', notice: '공지' };
+      el.innerHTML = allAdminNotices.map(function(n) {
+        return '<div class="inquiry-card" id="nadm-' + n.id + '">' +
+          '<div class="inquiry-header">' +
+            '<div>' +
+              '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:' + BADGE_COLOR[n.type] + '22;color:' + BADGE_COLOR[n.type] + ';margin-right:6px;">' + (TYPE_KO[n.type]||'공지') + '</span>' +
+              (n.pinned ? '<span style="font-size:11px;color:#26a69a;">📌 고정</span>' : '') +
+              '<div class="inquiry-name" style="margin-top:6px;">' + n.title.replace(/</g,'&lt;') + '</div>' +
+              '<div class="inquiry-date">' + n.date + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+              '<button onclick="startEditNotice(' + n.id + ')" style="font-size:11px;padding:4px 12px;border-radius:5px;border:1px solid #2a2e39;background:none;color:#888;cursor:pointer;">수정</button>' +
+              '<button onclick="deleteNotice(' + n.id + ')" style="font-size:11px;padding:4px 12px;border-radius:5px;border:none;background:#ef5350;color:#fff;cursor:pointer;">삭제</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="inquiry-msg">' + n.content.replace(/</g,'&lt;') + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    window.startEditNotice = function(id) {
+      var n = allAdminNotices.find(function(x){ return x.id === id; });
+      if (!n) return;
+      editingNoticeId = id;
+      document.getElementById('notice-type').value = n.type;
+      document.getElementById('notice-title').value = n.title;
+      document.getElementById('notice-content').value = n.content;
+      document.getElementById('notice-pinned').checked = n.pinned;
+      document.getElementById('notice-submit-btn').textContent = '수정 저장';
+      document.getElementById('notice-cancel-btn').style.display = '';
+      document.getElementById('notice-title').focus();
+    };
+
+    window.cancelNoticeEdit = function() {
+      editingNoticeId = null;
+      document.getElementById('notice-type').value = 'update';
+      document.getElementById('notice-title').value = '';
+      document.getElementById('notice-content').value = '';
+      document.getElementById('notice-pinned').checked = false;
+      document.getElementById('notice-submit-btn').textContent = '작성하기';
+      document.getElementById('notice-cancel-btn').style.display = 'none';
+    };
+
+    window.submitNotice = async function() {
+      var title = document.getElementById('notice-title').value.trim();
+      var content = document.getElementById('notice-content').value.trim();
+      if (!title || !content) { alert('제목과 내용을 입력해주세요.'); return; }
+      var body = {
+        type: document.getElementById('notice-type').value,
+        title: title, content: content,
+        pinned: document.getElementById('notice-pinned').checked,
+      };
+      var url = editingNoticeId ? '/api/admin/notices/' + editingNoticeId : '/api/admin/notices';
+      var method = editingNoticeId ? 'PATCH' : 'POST';
+      var res = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (res.ok) { cancelNoticeEdit(); loadAdminNotices(); }
+      else { alert('저장에 실패했습니다.'); }
+    };
+
+    window.deleteNotice = async function(id) {
+      if (!confirm('공지를 삭제할까요?')) return;
+      var res = await fetch('/api/admin/notices/' + id, { method: 'DELETE' });
+      if (res.ok) loadAdminNotices();
+    };
+
+    loadAdminNotices();
   </script>
 </body>
 </html>
