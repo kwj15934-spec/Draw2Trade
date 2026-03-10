@@ -23,8 +23,10 @@ from app.services.auth_service import (
     approve_user,
     create_session_token,
     get_all_users,
+    get_user_plan,
     get_user_status,
     register_user,
+    set_user_plan,
     reject_user,
     verify_firebase_token,
 )
@@ -72,7 +74,8 @@ async def login(body: LoginBody, response: Response):
         if status == "rejected":
             return {"status": "rejected"}
 
-    # approved
+    # approved — plan 포함해서 세션 발급
+    user["plan"] = get_user_plan(uid)
     token = create_session_token(user)
     response.set_cookie(
         key=COOKIE_NAME,
@@ -129,6 +132,18 @@ async def admin_approve(body: UserActionBody, admin=Depends(require_admin)):
 async def admin_reject(body: UserActionBody, admin=Depends(require_admin)):
     if not reject_user(body.uid):
         raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+    return {"ok": True}
+
+
+class SetPlanBody(BaseModel):
+    uid: str
+    plan: str  # 'free' | 'pro'
+
+
+@router.post("/api/admin/set-plan")
+async def admin_set_plan(body: SetPlanBody, admin=Depends(require_admin)):
+    if not set_user_plan(body.uid, body.plan):
+        raise HTTPException(status_code=400, detail="플랜 변경 실패 (uid 없음 또는 잘못된 플랜)")
     return {"ok": True}
 
 

@@ -21,8 +21,15 @@ async def list_favorites(user: dict = Depends(require_user)):
     return svc.get_favorites(user["uid"])
 
 
+FREE_LIMIT = 5  # 무료 계정 즐겨찾기·저장 최대 개수
+
+
 @router.post("/favorites")
 async def add_favorite(body: FavoriteBody, user: dict = Depends(require_user)):
+    if user.get("plan") != "pro":
+        existing = svc.get_favorites(user["uid"])
+        if len(existing) >= FREE_LIMIT:
+            raise HTTPException(status_code=403, detail=f"무료 계정은 즐겨찾기를 최대 {FREE_LIMIT}개까지 저장할 수 있습니다.")
     return svc.add_favorite(user["uid"], body.ticker, body.market, body.name)
 
 
@@ -52,6 +59,10 @@ async def list_drawings(user: dict = Depends(require_user)):
 
 @router.post("/drawings")
 async def save_drawing(body: SaveDrawingBody, user: dict = Depends(require_user)):
+    if user.get("plan") != "pro":
+        existing = svc.get_drawings(user["uid"])
+        if len(existing) >= FREE_LIMIT:
+            raise HTTPException(status_code=403, detail=f"무료 계정은 검색 결과를 최대 {FREE_LIMIT}개까지 저장할 수 있습니다.")
     if len(body.results) > 100:
         body.results = body.results[:100]
     drawing_id = svc.save_drawing(

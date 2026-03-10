@@ -122,6 +122,7 @@ def register_user(user_info: dict) -> str:
         entry = {
             **user_info,
             "status": "pending",
+            "plan": "free",
             "created_at": now,
         }
         users[uid] = entry
@@ -151,6 +152,26 @@ def reject_user(uid: str) -> bool:
     _save_users(users)
     _firestore_upsert_user(uid, {"status": "rejected"})
     logger.info("유저 거절: %s", uid)
+    return True
+
+
+def get_user_plan(uid: str) -> str:
+    """'free' | 'pro'"""
+    users = _load_users()
+    return users.get(uid, {}).get("plan", "free")
+
+
+def set_user_plan(uid: str, plan: str) -> bool:
+    """유저 플랜 변경. plan: 'free' | 'pro'"""
+    if plan not in ("free", "pro"):
+        return False
+    users = _load_users()
+    if uid not in users:
+        return False
+    users[uid]["plan"] = plan
+    _save_users(users)
+    _firestore_upsert_user(uid, {"plan": plan})
+    logger.info("유저 플랜 변경: %s → %s", uid, plan)
     return True
 
 

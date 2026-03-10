@@ -28,7 +28,7 @@ class PatternSearchRequest(BaseModel):
 
 
 @router.post("/pattern/search")
-async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_user)):
+async def pattern_search(body: PatternSearchRequest, user: dict = Depends(require_user)):
     """
     사용자가 그린 패턴과 유사한 종목 Top N 반환.
 
@@ -81,10 +81,14 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
     else:
         max_search_bars = None
 
+    # 무료 플랜: Top 1~10 숨김 (11위부터 표시)
+    is_pro = user.get("plan") == "pro"
+    search_top_n = body.top_n if is_pro else max(body.top_n, 50)
+
     results = search_similar(
         draw_points=body.draw_points,
         lookback_months=effective_lookback,
-        top_n=body.top_n,
+        top_n=search_top_n,
         date_from=body.date_from,
         date_to=body.date_to,
         ohlcv_cache=ohlcv_cache,
@@ -93,4 +97,8 @@ async def pattern_search(body: PatternSearchRequest, _: dict = Depends(require_u
         anchor_today=body.anchor_today,
         max_search_bars=max_search_bars,
     )
-    return {"results": results}
+
+    if not is_pro:
+        results = results[10:]  # Top 1~10 제외
+
+    return {"results": results, "plan": "free" if not is_pro else "pro"}

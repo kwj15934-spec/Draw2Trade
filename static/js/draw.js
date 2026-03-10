@@ -1413,6 +1413,25 @@
     loadFavorites();
     loadDrawingsList();
 
+    // 플랜 확인 → 무료 계정 기능 잠금
+    fetch('/api/auth/me')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data || !data.authenticated) return;
+        var plan = (data.user && data.user.plan) || 'free';
+        window._userPlan = plan;
+        if (plan !== 'pro') {
+          var autoBtn = document.getElementById('btn-auto-pattern');
+          if (autoBtn) {
+            autoBtn.disabled = true;
+            autoBtn.title = '자동 분석은 Pro 계정 전용 기능입니다';
+            autoBtn.style.opacity = '0.4';
+            autoBtn.style.cursor = 'not-allowed';
+          }
+        }
+      })
+      .catch(function() {});
+
     // 현재 종목 즐겨찾기 버튼
     var favTickerBtn = document.getElementById('btn-fav-ticker');
     if (favTickerBtn) {

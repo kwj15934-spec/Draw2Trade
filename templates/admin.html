@@ -100,7 +100,7 @@
 
     .actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-    .btn-approve, .btn-reject {
+    .btn-approve, .btn-reject, .btn-plan {
       border: none;
       border-radius: 5px;
       font-size: 12px;
@@ -111,8 +111,16 @@
     }
     .btn-approve { background: #26a65b; color: #fff; }
     .btn-reject  { background: #ef5350; color: #fff; }
-    .btn-approve:hover, .btn-reject:hover { opacity: 0.82; }
+    .btn-plan    { background: #2a3145; color: #d1d4dc; border: 1px solid #3a4155; }
+    .btn-approve:hover, .btn-reject:hover, .btn-plan:hover { opacity: 0.82; }
     .btn-approve:disabled, .btn-reject:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .plan-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px;
+      border-radius: 4px; flex-shrink: 0; letter-spacing: .5px;
+    }
+    .plan-pro  { background: rgba(255,152,0,.15); color: #ff9800; border: 1px solid rgba(255,152,0,.3); }
+    .plan-free { background: rgba(90,100,130,.15); color: #7a8499; border: 1px solid rgba(90,100,130,.3); }
 
     .empty { text-align: center; color: #444; font-size: 13px; padding: 48px 0; }
 
@@ -575,6 +583,7 @@
 
       list.innerHTML = filtered.map(function(u) {
         var isPending = u.status === 'pending';
+        var isPro = u.plan === 'pro';
         return '<div class="user-card" data-uid="' + u.uid + '">' +
           (u.picture ? '<img class="avatar" src="' + u.picture + '" onerror="this.style.display=\'none\'">' : '<div class="avatar"></div>') +
           '<div class="user-info">' +
@@ -583,9 +592,11 @@
             '<div class="user-date">' + formatDate(u.created_at) + ' 가입 신청</div>' +
           '</div>' +
           '<span class="status-badge status-' + u.status + '">' + statusLabel(u.status) + '</span>' +
+          '<span class="plan-badge ' + (isPro ? 'plan-pro' : 'plan-free') + '">' + (isPro ? 'PRO' : 'FREE') + '</span>' +
           '<div class="actions">' +
             '<button class="btn-approve" ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'approve\')">승인</button>' +
             '<button class="btn-reject"  ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'reject\')">거절</button>' +
+            '<button class="btn-plan" onclick="handleSetPlan(\'' + u.uid + '\', \'' + (isPro ? 'free' : 'pro') + '\')">' + (isPro ? '→ Free' : '→ Pro') + '</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -608,7 +619,6 @@
           var d = await res.json().catch(function() { return {}; });
           throw new Error(d.detail || '처리 실패');
         }
-        // 로컬 데이터 업데이트
         var user = allUsers.find(function(u) { return u.uid === uid; });
         if (user) user.status = action === 'approve' ? 'approved' : 'rejected';
         renderUsers();
@@ -617,6 +627,26 @@
         if (card) {
           card.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
         }
+      }
+    }
+
+    async function handleSetPlan(uid, plan) {
+      showError('');
+      try {
+        var res = await fetch('/api/admin/set-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: uid, plan: plan }),
+        });
+        if (!res.ok) {
+          var d = await res.json().catch(function() { return {}; });
+          throw new Error(d.detail || '플랜 변경 실패');
+        }
+        var user = allUsers.find(function(u) { return u.uid === uid; });
+        if (user) user.plan = plan;
+        renderUsers();
+      } catch (e) {
+        showError(e.message);
       }
     }
 
