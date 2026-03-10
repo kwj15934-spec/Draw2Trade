@@ -4,6 +4,7 @@ Draw2Trade - FastAPI entry point.
 서버 시작 시 KOSPI 전 종목 월봉 데이터를 메모리에 캐싱한다.
 DB / 스케줄러 / 알림 기능 없음.
 """
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,11 +21,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user
-from app.routers import auth, chart, pattern, us_chart, user_data
+from app.routers import auth, chart, pattern, realtime, us_chart, user_data
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
 from app.services.kis_client import start_token_refresh_loop
+from app.services import kis_stream
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
 
 # ── 경로 설정 ────────────────────────────────────────────────────────────────
@@ -53,6 +55,8 @@ async def lifespan(app: FastAPI):
         start_token_refresh_loop()   # KIS 토큰 자동 갱신 루프 (API 키 미설정 시 무시)
     except Exception as e:
         logger.error("KIS 토큰 루프 시작 실패: %s", e)
+    # KIS 실시간 WebSocket 스트림 (KIS 미설정 시 connect_loop가 즉시 반환)
+    asyncio.create_task(kis_stream.connect_loop())
     try:
         build_cache()
         logger.info("KR 캐시 완료.")
@@ -65,6 +69,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("US 캐시 빌드 실패: %s", e)
     yield
+    await kis_stream.stop()
     logger.info("Draw2Trade 종료.")
 
 
@@ -102,6 +107,7 @@ app.include_router(chart.router)
 app.include_router(pattern.router)
 app.include_router(us_chart.router)
 app.include_router(user_data.router)
+app.include_router(realtime.router)
 
 
 # ── 헬스체크 ─────────────────────────────────────────────────────────────────

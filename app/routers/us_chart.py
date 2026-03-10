@@ -19,17 +19,21 @@ router = APIRouter(prefix="/api/us")
 @router.get("/list")
 async def us_list(
     category: str | None = Query(None),
+    exchange: str | None = Query(None),  # NAS / NYS / AMS
     limit: int = Query(600, ge=1, le=10000),
 ):
     """
     US 종목 목록 반환.
-    - category 지정 시: 해당 섹터 전체
-    - category 미지정 시: S&P 500 종목만 (없으면 전체 limit개)
+    - exchange 지정 시: 해당 거래소 전체 (NAS/NYS/AMS)
+    - category 지정 시: 해당 섹터로 추가 필터
+    - exchange·category 모두 미지정: S&P 500 종목만 (없으면 전체 limit개)
     """
     tickers = us_data_service.get_us_tickers()
+    if exchange:
+        tickers = [t for t in tickers if t.get("excd", "") == exchange]
     if category:
         tickers = [t for t in tickers if t.get("sector", "") == category]
-    else:
+    elif not exchange:
         sp500 = [t for t in tickers if t.get("is_sp500")]
         tickers = sp500 if sp500 else tickers[:limit]
     return {"tickers": tickers[:limit]}

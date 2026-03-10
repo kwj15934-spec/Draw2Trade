@@ -25,6 +25,7 @@
     loading:         false,
     timeframe:       'monthly',   // 'monthly' | 'weekly' | 'daily'
     market:          'KR',        // 'KR' | 'US'
+    exchange:        '',          // '' | 'NAS' | 'NYS' | 'AMS'  (US only)
     matchPeriodData: null,
   };
 
@@ -369,7 +370,12 @@
 
     var endpoint = D2T.market === 'US' ? '/api/us/list' : '/api/kospi/list';
     var defaultTicker = D2T.market === 'US' ? 'AAPL' : '005930';
-    if (category) {
+    if (D2T.market === 'US') {
+      var params = [];
+      if (D2T.exchange) params.push('exchange=' + encodeURIComponent(D2T.exchange));
+      if (category)    params.push('category=' + encodeURIComponent(category));
+      if (params.length) endpoint += '?' + params.join('&');
+    } else if (category) {
       endpoint += '?category=' + encodeURIComponent(category);
     }
 
@@ -516,13 +522,20 @@
 
     // 카테고리/검색 UI: KR·US 모두 표시
     var catGroup = document.getElementById('category-group');
+    var exchGroup = document.getElementById('exchange-group');
     var searchInp = document.getElementById('ticker-search');
     var searchWrap = document.getElementById('ticker-search-wrap');
     if (catGroup) catGroup.style.display = 'flex';
+    if (exchGroup) exchGroup.style.display = market === 'US' ? 'flex' : 'none';
     if (searchInp) searchInp.style.display = 'block';
     if (searchWrap) searchWrap.classList.add('kr-mode');
     // 카테고리/검색 placeholder 텍스트 변경
     if (searchInp) searchInp.placeholder = market === 'US' ? '종목명/티커 검색 (US)' : '종목명/티커 검색 (KR)';
+    // 거래소 필터 초기화
+    D2T.exchange = '';
+    document.querySelectorAll('.exchange-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.excd === '');
+    });
     // 카테고리 초기화 후 재로드
     var catSel = document.getElementById('category-select');
     if (catSel) catSel.innerHTML = '<option value="">전체</option>';
@@ -671,6 +684,18 @@
     document.querySelectorAll('.market-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         switchMarket(this.dataset.market);
+      });
+    });
+
+    // 거래소 필터 버튼 (US 전용)
+    document.querySelectorAll('.exchange-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        D2T.exchange = this.dataset.excd || '';
+        document.querySelectorAll('.exchange-btn').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.excd === D2T.exchange);
+        });
+        var catSel = document.getElementById('category-select');
+        loadTickerList(catSel ? catSel.value : '');
       });
     });
   });

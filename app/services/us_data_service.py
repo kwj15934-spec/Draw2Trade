@@ -639,6 +639,11 @@ def _get_excd(symbol: str) -> str:
     return "NAS"
 
 
+def get_excd(symbol: str) -> str:
+    """Public: 티커의 KIS 거래소 코드 반환 (NAS / NYS / AMS)."""
+    return _get_excd(symbol)
+
+
 def _fetch_from_kis(symbol: str, years: int = 10, gubn: str = "0") -> Optional[dict]:
     """
     KIS API로 US OHLCV 조회.

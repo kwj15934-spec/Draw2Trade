@@ -46,6 +46,16 @@
       <option value="">전체</option>
     </select>
   </div>
+  <!-- 거래소 필터 (US 시장만) -->
+  <div id="exchange-group" class="ticker-control-group" style="display:none;">
+    <label>거래소</label>
+    <div class="timeframe-group">
+      <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
+      <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
+      <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
+      <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
+    </div>
+  </div>
   <!-- 종목 선택 -->
   <div class="ticker-control-group">
     <label for="ticker-select">종목</label>
@@ -150,7 +160,7 @@
   <span id="search-status" class="search-status"></span>
 </div>
 <div id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; padding:3px 8px;">
-  카테고리 미선택 시 S&amp;P 500 종목만 표시 · 다른 종목은 검색창을 이용하세요
+  거래소·카테고리 미선택 시 S&amp;P 500 종목만 표시 · 다른 종목은 검색창을 이용하세요
 </div>
 
 <!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
@@ -185,6 +195,10 @@
         <div id="ticker-overlay-symbol"></div>
         <div id="ticker-overlay-name"></div>
         <div id="ticker-overlay-meta"></div>
+        <!-- 실시간 LIVE 배지 -->
+        <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;margin-top:3px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+        </span>
       </div>
     </div>
 
@@ -407,12 +421,19 @@
   }
 </script>
 
+<style>
+@keyframes rt-blink {
+  0%,100% { opacity:1; }
+  50%      { opacity:.2; }
+}
+</style>
 <!-- TradingView Lightweight Charts -->
 <script
   src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260309i"></script>
+<script src="/static/js/chart.js?v=20260310a"></script>
 <script src="/static/js/draw.js?v=20260309k"></script>
+<script src="/static/js/realtime.js?v=20260310a"></script>
 {% endblock %}
