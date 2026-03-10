@@ -14,6 +14,8 @@
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
     <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button>
   </div>
+  <!-- 장 시간 표시 -->
+  <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
 
   <!-- 로그인 상태: 유저 박스 -->
   <div id="nav-user-box" class="nav-user-box" style="display:none;">
@@ -317,6 +319,68 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- 장 시간 표시 -->
+<script>
+(function () {
+  var HOURS = {
+    KR: { label: '09:00~15:30 KST', tz: 'Asia/Seoul',    open: [9,  0], close: [15, 30] },
+    US: { label: '09:30~16:00 ET',  tz: 'America/New_York', open: [9, 30], close: [16,  0] },
+  };
+
+  function isWeekday(date) {
+    var d = date.getDay();
+    return d >= 1 && d <= 5;
+  }
+
+  function isOpen(market) {
+    var h = HOURS[market];
+    try {
+      var now = new Date();
+      // 해당 타임존의 현재 시각 파싱
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: h.tz,
+        hour: 'numeric', minute: 'numeric', weekday: 'short',
+        hour12: false,
+      }).formatToParts(now);
+      var get = function (t) { return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10); };
+      var weekday = (parts.find(function (p) { return p.type === 'weekday'; }) || {}).value || '';
+      var isWd = ['Mon','Tue','Wed','Thu','Fri'].indexOf(weekday) >= 0;
+      if (!isWd) return false;
+      var hh = get('hour'), mm = get('minute');
+      var cur  = hh * 60 + mm;
+      var open = h.open[0]  * 60 + h.open[1];
+      var cls  = h.close[0] * 60 + h.close[1];
+      return cur >= open && cur < cls;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  window.updateMarketHoursChip = function (market) {
+    var chip = document.getElementById('market-hours-chip');
+    if (!chip) return;
+    var h   = HOURS[market];
+    if (!h) { chip.innerHTML = ''; return; }
+    var on  = isOpen(market);
+    var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
+            + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
+    var status = on
+      ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
+      : '<span style="color:#555;">마감</span>';
+    chip.innerHTML = dot + '&nbsp;' + h.label + '&nbsp;·&nbsp;' + status;
+  };
+
+  // 초기 렌더 + 1분마다 갱신
+  document.addEventListener('DOMContentLoaded', function () {
+    window.updateMarketHoursChip('KR');
+    setInterval(function () {
+      var m = (window.D2T && D2T.market) ? D2T.market : 'KR';
+      window.updateMarketHoursChip(m);
+    }, 60000);
+  });
+})();
+</script>
+
 <!-- 네브 유저 박스 초기화 -->
 <script>
 (function () {
@@ -433,7 +497,7 @@
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260310a"></script>
+<script src="/static/js/chart.js?v=20260310b"></script>
 <script src="/static/js/draw.js?v=20260309k"></script>
 <script src="/static/js/realtime.js?v=20260310a"></script>
 {% endblock %}

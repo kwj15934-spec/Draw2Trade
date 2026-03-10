@@ -559,6 +559,9 @@
       }
     }
 
+    // 장 시간 chip 갱신
+    if (typeof window.updateMarketHoursChip === 'function') window.updateMarketHoursChip(market);
+
     // 드로잉 초기화
     if (typeof clearDraw === 'function') clearDraw();
   }
