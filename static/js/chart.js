@@ -126,7 +126,7 @@
       });
     }
 
-    // 스크롤/줌 시 드로잉 캔버스 재렌더 (draw.js 연동)
+    // 시간축 스크롤/줌 시 드로잉 캔버스 재렌더 (draw.js 연동)
     D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
       if (typeof window.redraw === 'function') window.redraw();
     });

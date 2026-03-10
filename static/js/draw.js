@@ -691,8 +691,9 @@
 
     if (activeTool === 'pen') {
       pushHistory();
-      isPenDown  = true;
-      drawPoints = [p];
+      isPenDown        = true;
+      drawPoints       = [p];
+      _drawChartCoords = null; // 새 스트로크 시작: 이전 차트 좌표 초기화
       redraw();
 
     } else if (activeTool === 'trend') {
