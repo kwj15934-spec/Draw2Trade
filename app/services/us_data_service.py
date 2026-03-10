@@ -1,22 +1,29 @@
 """
-US 주식 데이터 서비스 (yfinance 기반)
+US 주식 데이터 서비스
+
+데이터 소스 우선순위:
+  1. KIS (한국투자증권 Open API) — KIS_APP_KEY / KIS_APP_SECRET 설정 시
+  2. yfinance — KIS 미설정 또는 실패 시 fallback
 
 캐시 구조:
-  cache/us/tickers.json        — S&P 500 + NDX100 + ETF 목록 (일 1회 갱신)
+  cache/us/tickers.json        — 전체 US 종목 목록 (일 1회 갱신, excd 포함)
   cache/us/ohlcv/{symbol}.json — 일봉 OHLCV (당일 last_date 기준 캐시)
 
 티커 수집:
-  1. Wikipedia에서 S&P 500 목록 로드 (503개)
-  2. NASDAQ 100 supplement (하드코딩)
-  3. 인기 ETF 하드코딩
-  실패 시 하드코딩 fallback 100개 사용.
+  1. NASDAQ screener API (전체 미국 상장 ~6000개)
+  2. NASDAQ trader FTP (nasdaqlisted.txt + otherlisted.txt, 거래소 코드 포함)
+  3. 번들 CSV fallback
+  4. Wikipedia S&P 500 fallback
+  실패 시 하드코딩 fallback 사용.
 """
 import json
 import logging
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
+
+from app.services import kis_client
 
 import pandas as pd
 
@@ -242,10 +249,14 @@ def _fetch_nasdaq_ftp() -> list[tuple[str, str, str]]:
     NASDAQ trader FTP에서 NASDAQ + NYSE/AMEX 전체 상장 종목 로드.
     인증 없이 접근 가능한 공식 공개 파일 사용.
 
-    nasdaqlisted.txt  — NASDAQ 상장 (~4000개)
-    otherlisted.txt   — NYSE / AMEX 등 (~8000개)
+    nasdaqlisted.txt  — NASDAQ 상장 (~4000개) → excd=NAS
+    otherlisted.txt   — NYSE / AMEX 등 (~8000개) → Exchange 컬럼으로 구분
+      N=NYSE(NYS), A=AMEX(AMS), P=NYSE ARCA(NYS), Z=BATS(NAS), V=IEX(NYS)
     """
     import urllib.request as _req
+
+    # otherlisted Exchange 컬럼 → KIS excd
+    _exch_map = {"N": "NYS", "A": "AMS", "P": "NYS", "Z": "NAS", "V": "NYS"}
 
     urls = [
         "https://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt",
@@ -255,12 +266,20 @@ def _fetch_nasdaq_ftp() -> list[tuple[str, str, str]]:
     result: list[tuple[str, str, str]] = []
 
     for url in urls:
+        is_nasdaq = "nasdaqlisted" in url
         try:
             req = _req.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with _req.urlopen(req, timeout=15) as resp:
                 text = resp.read().decode("utf-8", errors="replace")
             lines = text.strip().split("\n")
-            # 첫 줄은 헤더, 마지막 줄은 "File Creation Time=..." 메타라인
+            # 첫 줄 헤더 스킵
+            header = lines[0].split("|") if lines else []
+            exch_col = None
+            if not is_nasdaq:
+                try:
+                    exch_col = header.index("Exchange")
+                except ValueError:
+                    exch_col = 2  # 기본 위치
             for line in lines[1:]:
                 parts = line.strip().split("|")
                 if len(parts) < 2:
@@ -270,15 +289,21 @@ def _fetch_nasdaq_ftp() -> list[tuple[str, str, str]]:
                 if not sym or not name:
                     continue
                 # 테스트 이슈 제외 (nasdaqlisted: col3, otherlisted: col6)
-                test_col = 3 if "nasdaqlisted" in url else 6
+                test_col = 3 if is_nasdaq else 6
                 if len(parts) > test_col and parts[test_col].strip().upper() == "Y":
                     continue
                 # 메타라인 / 특수 심볼 제외
                 if sym.startswith("File") or "/" in sym or "^" in sym or len(sym) > 6:
                     continue
+                # 거래소 코드 매핑
+                if is_nasdaq:
+                    excd = "NAS"
+                else:
+                    raw_exch = (parts[exch_col].strip() if exch_col and len(parts) > exch_col else "N")
+                    excd = _exch_map.get(raw_exch, "NYS")
                 if sym not in seen:
                     seen.add(sym)
-                    result.append((sym, name, ""))
+                    result.append((sym, name, "", excd))   # (sym, name, sector, excd)
         except Exception as e:
             logger.warning("NASDAQ FTP 로드 실패 (%s): %s", url, e)
 
@@ -306,15 +331,24 @@ def _fetch_nasdaq_screener() -> list[tuple[str, str, str]]:
         })
         with _req.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
+        # screener exchange → KIS excd 매핑
+        _exch_map = {
+            "NASDAQ": "NAS", "Nasdaq": "NAS",
+            "NYSE": "NYS", "New York Stock Exchange": "NYS",
+            "AMEX": "AMS", "NYSE American": "AMS", "NYSE MKT": "AMS",
+            "NYSE ARCA": "NYS", "Bats": "NAS", "BATS": "NAS",
+        }
         rows = (data.get("data") or {}).get("rows") or []
         result = []
         for row in rows:
             sym = str(row.get("symbol", "") or "").strip().replace(".", "-").replace("^", "")
             name = str(row.get("name", "") or "").strip()
             sector = str(row.get("sector", "") or "").strip()
+            exchange = str(row.get("exchange", "") or "").strip()
+            excd = _exch_map.get(exchange, "NAS")  # 기본 NAS (screener는 주로 NASDAQ)
             if not sym or not name or sym == "Symbol" or "/" in sym or len(sym) > 8:
                 continue
-            result.append((sym, name, sector))
+            result.append((sym, name, sector, excd))
         logger.info("NASDAQ screener에서 %d개 종목 로드 완료", len(result))
         return result
     except Exception as e:
@@ -347,7 +381,7 @@ def _fetch_bundled_nasdaq() -> list[tuple[str, str, str]]:
                 sector = parts[2].strip() if len(parts) > 2 else ""
                 if sym and name and sym not in seen:
                     seen.add(sym)
-                    result.append((sym, name, sector))
+                    result.append((sym, name, sector, ""))   # excd 미상
         logger.info("번들 nasdaq_tickers.csv에서 %d개 종목 로드", len(result))
         return result
     except Exception as e:
@@ -379,7 +413,7 @@ def _fetch_sp500_from_wikipedia() -> list[tuple[str, str, str]]:
             name   = str(row[name_col]).strip()
             sector = str(row[sector_col]).strip()
             if sym and name:
-                result.append((sym, name, sector))
+                result.append((sym, name, sector, ""))   # excd 미상 → 나중에 FTP에서 보강
         logger.info("Wikipedia에서 S&P 500 %d개 종목 로드 완료 (섹터 포함)", len(result))
         return result
     except Exception as e:
@@ -409,10 +443,10 @@ def _build_ticker_list() -> list[dict]:
         except Exception:
             pass
 
-    # 1순위: NASDAQ screener API (~6000개, sector 포함)
+    # 1순위: NASDAQ screener API (~6000개, sector + excd 포함)
     base_stocks = _fetch_nasdaq_screener()
 
-    # 2순위: NASDAQ trader FTP (FTP 접근 가능 환경, ~8000개)
+    # 2순위: NASDAQ trader FTP (FTP 접근 가능 환경, ~8000개, excd 포함)
     if len(base_stocks) < 500:
         base_stocks = _fetch_nasdaq_ftp()
 
@@ -426,30 +460,50 @@ def _build_ticker_list() -> list[dict]:
 
     # 5순위: 하드코딩 fallback
     if not base_stocks:
-        base_stocks = [(s, n, "") for s, n in _FALLBACK_TICKERS]
+        base_stocks = [(s, n, "", "NAS") for s, n in _FALLBACK_TICKERS]
 
     # 중복 없이 합치기 (base 우선, NDX supplement/ETF는 없는 경우만 추가)
     seen: set[str] = set()
-    combined: list[tuple[str, str, str]] = []
-    for sym, name, sector in base_stocks:
+    combined: list[tuple[str, str, str, str]] = []   # (sym, name, sector, excd)
+    for item in base_stocks:
+        sym = item[0]; name = item[1]
+        sector = item[2] if len(item) > 2 else ""
+        excd   = item[3] if len(item) > 3 else ""
         if sym not in seen:
             seen.add(sym)
-            combined.append((sym, name, sector))
+            combined.append((sym, name, sector, excd))
+
     # NDX supplement은 항상 추가 (FTP 실패 시에도 주요 NASDAQ 종목 보장)
     for sym, name in _NDX_SUPPLEMENT:
         if sym not in seen:
             seen.add(sym)
-            combined.append((sym, name, "Technology"))
+            combined.append((sym, name, "Technology", "NAS"))
     for sym, name in _ETFS:
         if sym not in seen:
             seen.add(sym)
-            combined.append((sym, name, "ETF"))
+            combined.append((sym, name, "ETF", "NYS"))
+
+    # FTP excd 보강: screener/wikipedia 결과에 excd가 비어있으면 FTP로 보완
+    ftp_excd_map: dict[str, str] = {}
+    needs_fill = any(not excd for _, _, _, excd in combined[:20])
+    if needs_fill:
+        try:
+            ftp_data = _fetch_nasdaq_ftp()
+            ftp_excd_map = {sym: excd for sym, _, _, excd in ftp_data if excd}
+        except Exception:
+            pass
+
+    if ftp_excd_map:
+        combined = [
+            (sym, name, sector, excd or ftp_excd_map.get(sym, "NAS"))
+            for sym, name, sector, excd in combined
+        ]
 
     # S&P 500 마킹: Wikipedia에서 심볼 목록 확보 후 is_sp500 플래그 설정
     sp500_syms: set[str] = set()
     try:
         sp500_raw = _fetch_sp500_from_wikipedia()
-        sp500_syms = {sym for sym, _, _ in sp500_raw}
+        sp500_syms = {item[0] for item in sp500_raw}
         logger.info("S&P 500 마킹용 심볼 %d개 확보", len(sp500_syms))
     except Exception as e:
         logger.warning("S&P 500 마킹 실패 (무시): %s", e)
@@ -457,8 +511,14 @@ def _build_ticker_list() -> list[dict]:
     # 티커 알파벳 순 정렬
     combined.sort(key=lambda x: x[0])
     tickers = [
-        {"ticker": sym, "name": name, "sector": sector, "is_sp500": sym in sp500_syms}
-        for sym, name, sector in combined
+        {
+            "ticker": sym,
+            "name": name,
+            "sector": sector,
+            "excd": excd or "NAS",   # KIS 거래소 코드 (NAS/NYS/AMS)
+            "is_sp500": sym in sp500_syms,
+        }
+        for sym, name, sector, excd in combined
     ]
 
     try:
@@ -571,9 +631,77 @@ def _fetch_from_yfinance(symbol: str, period: str = "10y", interval: str = "1d")
         return None
 
 
+def _get_excd(symbol: str) -> str:
+    """티커 캐시에서 KIS 거래소 코드 조회. 없으면 'NAS' 반환."""
+    for item in _ticker_list_cache:
+        if item.get("ticker") == symbol:
+            return item.get("excd") or "NAS"
+    return "NAS"
+
+
+def _fetch_from_kis(symbol: str, years: int = 10, gubn: str = "0") -> Optional[dict]:
+    """
+    KIS API로 US OHLCV 조회.
+    gubn: '0'=일봉, '1'=주봉, '2'=월봉
+    """
+    excd = _get_excd(symbol)
+    records = kis_client.fetch_us_ohlcv_paginated(symbol, excd, years, gubn)
+    if not records:
+        return None
+
+    # 오름차순 정렬 (오래된→최신)
+    records.sort(key=lambda r: r.get("bass_dt", ""))
+
+    freq_map = {"0": "d", "1": "w", "2": "m"}
+    freq = freq_map.get(gubn, "d")
+
+    dates, opens, highs, lows, closes, volumes = [], [], [], [], [], []
+    for r in records:
+        raw_date = r.get("bass_dt", "")
+        if not raw_date or len(raw_date) != 8:
+            continue
+        try:
+            if gubn == "2":
+                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m")
+            else:
+                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        try:
+            o  = round(float(r.get("open") or 0), 4)
+            h  = round(float(r.get("high") or 0), 4)
+            lo = round(float(r.get("low") or 0), 4)
+            c  = round(float(r.get("clos") or 0), 4)
+            v  = int(r.get("tvol") or 0)
+        except (ValueError, TypeError):
+            continue
+        if c == 0:
+            continue
+        dates.append(d)
+        opens.append(o)
+        highs.append(h)
+        lows.append(lo)
+        closes.append(c)
+        volumes.append(v)
+
+    if not dates:
+        return None
+
+    return {
+        "dates":     dates,
+        "open":      opens,
+        "high":      highs,
+        "low":       lows,
+        "close":     closes,
+        "volume":    volumes,
+        "freq":      freq,
+        "last_date": dates[-1],
+    }
+
+
 def get_us_ohlcv(symbol: str, years: int = 10) -> Optional[dict]:
     """
-    3-tier cache: 메모리 → 디스크 → yfinance (일봉).
+    3-tier cache: 메모리 → 디스크 → KIS/yfinance (일봉).
     당일 last_date면 캐시 유효.
     """
     symbol = symbol.upper()
@@ -599,9 +727,17 @@ def get_us_ohlcv(symbol: str, years: int = 10) -> Optional[dict]:
         except Exception:
             pass
 
-    # 3) yfinance
-    period = f"{years}y"
-    data = _fetch_from_yfinance(symbol, period=period, interval="1d")
+    # 3) KIS API (설정된 경우)
+    data = None
+    if kis_client.is_configured():
+        data = _fetch_from_kis(symbol, years=years, gubn="0")
+        if data is None:
+            logger.debug("KIS US OHLCV 실패, yfinance fallback (%s)", symbol)
+
+    # 4) yfinance fallback
+    if data is None:
+        period = f"{years}y"
+        data = _fetch_from_yfinance(symbol, period=period, interval="1d")
     if data is None:
         return None
 
@@ -622,11 +758,22 @@ def get_us_ohlcv_by_timeframe(symbol: str, timeframe: str = "daily") -> Optional
     """
     timeframe: 'daily' | 'weekly' | 'monthly'
     daily → get_us_ohlcv() (캐시 활용)
-    weekly/monthly → yfinance 직접 (no disk cache, 간단하게)
+    weekly/monthly → KIS 또는 yfinance 직접 (no disk cache)
     """
     symbol = symbol.upper()
     if timeframe == "daily":
         return get_us_ohlcv(symbol)
+
+    # KIS
+    if kis_client.is_configured():
+        gubn_map = {"weekly": "1", "monthly": "2"}
+        gubn = gubn_map.get(timeframe, "1")
+        data = _fetch_from_kis(symbol, years=10, gubn=gubn)
+        if data:
+            return data
+        logger.debug("KIS US OHLCV timeframe 실패, yfinance fallback (%s, %s)", symbol, timeframe)
+
+    # yfinance fallback
     interval_map = {"weekly": "1wk", "monthly": "1mo"}
     interval = interval_map.get(timeframe, "1wk")
     return _fetch_from_yfinance(symbol, period="10y", interval=interval)

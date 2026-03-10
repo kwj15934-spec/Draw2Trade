@@ -13,6 +13,7 @@ cache/ohlcv/
 cache/us/ohlcv/
 cache/tickers.json
 cache/us/tickers.json
+cache/kis_token.json
 
 # 로그
 logs/

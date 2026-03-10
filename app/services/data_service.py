@@ -1,5 +1,9 @@
 """
-Data service - pykrx 기반 KOSPI 데이터 로더.
+Data service - KR(KOSPI) 주식 데이터 로더.
+
+데이터 소스 우선순위:
+  1. KIS (한국투자증권 Open API) — KIS_APP_KEY / KIS_APP_SECRET 설정 시
+  2. pykrx (KRX 스크래핑) — KIS 미설정 또는 실패 시 fallback
 
 캐시 전략:
   1. 메모리 캐시 (_mem_ohlcv, _mem_names)  — 프로세스 재시작 전까지 유지
@@ -8,9 +12,7 @@ Data service - pykrx 기반 KOSPI 데이터 로더.
 build_cache() 는 서버 시작 시 호출하여 전 종목을 미리 로드한다.
 
 [티커 수집 전략]
-  pykrx의 get_market_ticker_list() 는 KRX의 특정 엔드포인트에 의존하여
-  간헐적으로 빈 응답을 반환한다.
-  대신 KRX finder_stkisu 엔드포인트 (종목 검색 UI가 사용하는 API)로
+  KRX finder_stkisu 엔드포인트 (종목 검색 UI가 사용하는 API)로
   KOSPI 전 종목 + 회사명을 한 번에 안정적으로 수집한다.
 """
 import json
@@ -23,6 +25,8 @@ import pandas as pd
 from pandas import DataFrame
 from pykrx import stock
 from pykrx.website.krx.krxio import KrxWebIo
+
+from app.services import kis_client
 
 logger = logging.getLogger(__name__)
 
@@ -144,9 +148,11 @@ def _save_ticker_cache(tickers: list[str], date_str: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_company_name(ticker: str) -> str:
-    """pykrx로 회사명 조회 (메모리 캐시 우선)."""
+    """회사명 조회 (메모리 캐시 우선 → pykrx fallback)."""
     if ticker in _mem_names and _mem_names[ticker]:
         return _mem_names[ticker]
+    # KIS 설정 시에도 회사명은 KRX finder 캐시에서 가져옴
+    # (ticker list 수집 시 이미 이름이 저장됨)
     try:
         name = stock.get_market_ticker_name(ticker)
         _mem_names[ticker] = name or ticker
@@ -166,11 +172,88 @@ def _get_ohlcv(
 ) -> dict[str, Any] | None:
     """
     OHLCV 반환. freq: 'm'=월봉, 'w'=주봉, 'd'=일봉.
+    KIS API 우선, 실패 시 pykrx fallback.
 
     Returns:
         dict with keys: dates, open, high, low, close, volume
         dates: 월봉='YYYY-MM', 주봉/일봉='YYYY-MM-DD'
     """
+    # 1) KIS API
+    if kis_client.is_configured():
+        result = _get_ohlcv_from_kis(ticker, freq, years)
+        if result:
+            return result
+        logger.debug("KIS OHLCV 실패, pykrx fallback (%s, %s)", ticker, freq)
+
+    # 2) pykrx fallback
+    return _get_ohlcv_from_pykrx(ticker, freq, years)
+
+
+def _get_ohlcv_from_kis(
+    ticker: str,
+    freq: str,
+    years: int = 10,
+) -> dict[str, Any] | None:
+    """KIS API로 OHLCV 조회 (페이지네이션 포함)."""
+    period_map = {"m": "M", "w": "W", "d": "D"}
+    period_div = period_map.get(freq, "D")
+
+    records = kis_client.fetch_kr_ohlcv_paginated(ticker, years, period_div)
+    if not records:
+        return None
+
+    # 오름차순 정렬 (오래된→최신)
+    records.sort(key=lambda r: r.get("stck_bsop_date", ""))
+
+    dates, opens, highs, lows, closes, volumes = [], [], [], [], [], []
+    for r in records:
+        raw_date = r.get("stck_bsop_date", "")
+        if not raw_date or len(raw_date) != 8:
+            continue
+        try:
+            if freq == "m":
+                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m")
+            else:
+                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        try:
+            o = float(r.get("stck_oprc") or 0)
+            h = float(r.get("stck_hgpr") or 0)
+            lo = float(r.get("stck_lwpr") or 0)
+            c = float(r.get("stck_clpr") or 0)
+            v = int(r.get("acml_vol") or 0)
+        except (ValueError, TypeError):
+            continue
+        if c == 0:
+            continue
+        dates.append(d)
+        opens.append(o)
+        highs.append(h)
+        lows.append(lo)
+        closes.append(c)
+        volumes.append(v)
+
+    if not dates:
+        return None
+
+    return {
+        "dates": dates,
+        "open": opens,
+        "high": highs,
+        "low": lows,
+        "close": closes,
+        "volume": volumes,
+        "freq": freq,
+    }
+
+
+def _get_ohlcv_from_pykrx(
+    ticker: str,
+    freq: str,
+    years: int = 10,
+) -> dict[str, Any] | None:
+    """pykrx로 OHLCV 조회 (fallback)."""
     now = datetime.now()
     end_dt = now
     start_dt = end_dt.replace(year=end_dt.year - years)
@@ -208,7 +291,7 @@ def _get_ohlcv(
             "freq": freq,
         }
     except Exception as e:
-        logger.warning("_get_ohlcv(%s, %s): %s", ticker, freq, e)
+        logger.warning("_get_ohlcv_from_pykrx(%s, %s): %s", ticker, freq, e)
         return None
 
 
