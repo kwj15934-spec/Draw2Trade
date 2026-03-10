@@ -259,8 +259,8 @@ def _fetch_nasdaq_ftp() -> list[tuple[str, str, str]]:
     _exch_map = {"N": "NYS", "A": "AMS", "P": "NYS", "Z": "NAS", "V": "NYS"}
 
     urls = [
-        "https://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt",
-        "https://ftp.nasdaqtrader.com/symboldirectory/otherlisted.txt",
+        "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+        "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
     ]
     seen: set[str] = set()
     result: list[tuple[str, str, str]] = []
