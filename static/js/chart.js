@@ -126,6 +126,11 @@
       });
     }
 
+    // 스크롤/줌 시 드로잉 캔버스 재렌더 (draw.js 연동)
+    D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
+      if (typeof window.redraw === 'function') window.redraw();
+    });
+
     // 리사이즈 대응
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.ResizeObserver) {

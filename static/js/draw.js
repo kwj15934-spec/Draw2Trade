@@ -18,12 +18,14 @@
   var PATTERN_LEN = 150;
 
   // ── 상태 ──────────────────────────────────────────────────────────────────
-  var drawPoints      = [];   // 완성된 [{x,y}] — 패턴 검색에 사용
+  var drawPoints      = [];   // 완성된 [{x,y}] — 패턴 검색에 사용 (픽셀 좌표)
   var trendPoints     = [];   // 추세선 작업 중 누적 점들
   var linePoints      = [];   // 직선 작업 중 [시작점, 끝점?]
   var parallelPoints  = [];   // 평행선: [p1, p2] = 1번선
   var parallelChannels = [];  // 완성된 평행선 채널 [{p1,p2,p3,p4}]
-  var drawHistory     = [];   // 실행취소 스택 [{drawPoints, parallelChannels}]
+  var _drawChartCoords    = null; // drawPoints의 차트 좌표 버전 [{time,price}|null]
+  var _parallelChartCoords = [];  // parallelChannels의 차트 좌표 버전 [{p1..p4:{time,price}}]
+  var drawHistory     = [];   // 실행취소 스택
   var lastMousePos = null;    // 직선/추세선/평행선 프리뷰용
   var activeTool   = null;    // 'pen' | 'trend' | 'line' | 'parallel' | null
   var isPenDown    = false;
@@ -75,6 +77,55 @@
     }
     redraw();
   };
+
+  // ── 차트 좌표 ↔ 픽셀 변환 헬퍼 ───────────────────────────────────────────
+  /** 픽셀 좌표 → 차트 시간/가격 좌표. 차트 없거나 범위 밖이면 null */
+  function pixelToChart(x, y) {
+    if (!D2T || !D2T.chart || !D2T.series) return null;
+    try {
+      var time  = D2T.chart.timeScale().coordinateToTime(x);
+      var price = D2T.series.coordinateToPrice(y);
+      if (time == null || price == null) return null;
+      return { time: time, price: price };
+    } catch (e) { return null; }
+  }
+
+  /** 차트 시간/가격 좌표 → 픽셀 좌표. 변환 불가 시 null */
+  function chartToPixel(time, price) {
+    if (!D2T || !D2T.chart || !D2T.series) return null;
+    try {
+      var x = D2T.chart.timeScale().timeToCoordinate(time);
+      var y = D2T.series.priceToCoordinate(price);
+      if (x == null || y == null) return null;
+      return { x: x, y: y };
+    } catch (e) { return null; }
+  }
+
+  /** 픽셀 좌표 배열 → 차트 좌표 배열 (일부 null 허용). 차트 없으면 null 반환 */
+  function ptsToChartCoords(pts) {
+    if (!D2T || !D2T.chart || !D2T.series || !pts || !pts.length) return null;
+    var result = [];
+    var hasValid = false;
+    for (var i = 0; i < pts.length; i++) {
+      var cc = pixelToChart(pts[i].x, pts[i].y);
+      result.push(cc);
+      if (cc) hasValid = true;
+    }
+    return hasValid ? result : null;
+  }
+
+  /** 차트 좌표 배열 → 픽셀 배열 (null 항목 스킵) */
+  function chartCoordsToPixels(chartCoords) {
+    if (!chartCoords) return null;
+    var result = [];
+    for (var i = 0; i < chartCoords.length; i++) {
+      var cc = chartCoords[i];
+      if (!cc) continue;
+      var px = chartToPixel(cc.time, cc.price);
+      if (px) result.push(px);
+    }
+    return result.length >= 2 ? result : null;
+  }
 
   // ── 드로잉 도구 활성화 ────────────────────────────────────────────────────
   function setTool(tool) {
@@ -240,6 +291,9 @@
         ctx.stroke();
         ctx.shadowBlur = 0;
       } else if (drawPoints.length >= 2) {
+        // 차트 좌표 기반 렌더링 (스크롤/줌에 따라 자동 추적)
+        var chartPts = chartCoordsToPixels(_drawChartCoords);
+        var ptsToRender = (chartPts && chartPts.length >= 2) ? chartPts : drawPoints;
         ctx.strokeStyle = '#ff6b35';
         ctx.lineWidth   = 2.5;
         ctx.lineCap     = 'round';
@@ -247,13 +301,13 @@
         ctx.shadowColor = 'rgba(255,107,53,0.3)';
         ctx.shadowBlur  = 4;
         ctx.beginPath();
-        ctx.moveTo(drawPoints[0].x, drawPoints[0].y);
-        for (var ri = 1; ri < drawPoints.length; ri++) {
-          ctx.lineTo(drawPoints[ri].x, drawPoints[ri].y);
+        ctx.moveTo(ptsToRender[0].x, ptsToRender[0].y);
+        for (var ri = 1; ri < ptsToRender.length; ri++) {
+          ctx.lineTo(ptsToRender[ri].x, ptsToRender[ri].y);
         }
         ctx.stroke();
         ctx.shadowBlur = 0;
-        [drawPoints[0], drawPoints[drawPoints.length - 1]].forEach(function (p) {
+        [ptsToRender[0], ptsToRender[ptsToRender.length - 1]].forEach(function (p) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
           ctx.fillStyle = '#ff6b35';
@@ -263,7 +317,18 @@
     }
 
     // ── 완성된 평행선 채널 ──────────────────────────────────────────────────
-    parallelChannels.forEach(function (ch) {
+    parallelChannels.forEach(function (ch, chi) {
+      // 차트 좌표 기반 렌더링 (스크롤/줌에 따라 자동 추적)
+      var pcc = _parallelChartCoords[chi];
+      var ep1, ep2, ep3, ep4;
+      if (pcc && pcc.p1 && pcc.p2 && pcc.p3 && pcc.p4) {
+        ep1 = chartToPixel(pcc.p1.time, pcc.p1.price) || ch.p1;
+        ep2 = chartToPixel(pcc.p2.time, pcc.p2.price) || ch.p2;
+        ep3 = chartToPixel(pcc.p3.time, pcc.p3.price) || ch.p3;
+        ep4 = chartToPixel(pcc.p4.time, pcc.p4.price) || ch.p4;
+      } else {
+        ep1 = ch.p1; ep2 = ch.p2; ep3 = ch.p3; ep4 = ch.p4;
+      }
       ctx.strokeStyle = '#4fc3f7';
       ctx.lineWidth   = 2;
       ctx.lineCap     = 'round';
@@ -272,22 +337,22 @@
       ctx.shadowBlur  = 4;
 
       ctx.beginPath();
-      ctx.moveTo(ch.p1.x, ch.p1.y);
-      ctx.lineTo(ch.p2.x, ch.p2.y);
+      ctx.moveTo(ep1.x, ep1.y);
+      ctx.lineTo(ep2.x, ep2.y);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(ch.p3.x, ch.p3.y);
-      ctx.lineTo(ch.p4.x, ch.p4.y);
+      ctx.moveTo(ep3.x, ep3.y);
+      ctx.lineTo(ep4.x, ep4.y);
       ctx.stroke();
 
       ctx.shadowBlur = 0;
       ctx.fillStyle  = 'rgba(79,195,247,0.07)';
       ctx.beginPath();
-      ctx.moveTo(ch.p1.x, ch.p1.y);
-      ctx.lineTo(ch.p2.x, ch.p2.y);
-      ctx.lineTo(ch.p4.x, ch.p4.y);
-      ctx.lineTo(ch.p3.x, ch.p3.y);
+      ctx.moveTo(ep1.x, ep1.y);
+      ctx.lineTo(ep2.x, ep2.y);
+      ctx.lineTo(ep4.x, ep4.y);
+      ctx.lineTo(ep3.x, ep3.y);
       ctx.closePath();
       ctx.fill();
     });
@@ -422,16 +487,18 @@
 
   // ── 지우기 ────────────────────────────────────────────────────────────────
   window.clearDraw = function () {
-    drawPoints       = [];
-    trendPoints      = [];
-    linePoints       = [];
-    parallelPoints   = [];
-    parallelChannels = [];
-    drawHistory      = [];
-    matchPoints      = null;
-    drawNormalized   = null;
-    _resultMatches   = [];
-    _autoMeta        = null;
+    drawPoints           = [];
+    trendPoints          = [];
+    linePoints           = [];
+    parallelPoints       = [];
+    parallelChannels     = [];
+    _drawChartCoords     = null;
+    _parallelChartCoords = [];
+    drawHistory          = [];
+    matchPoints          = null;
+    drawNormalized       = null;
+    _resultMatches       = [];
+    _autoMeta            = null;
     if (D2T && D2T.series) D2T.series.setMarkers([]);
     if (D2T) D2T.matchPeriodData = null;
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -513,8 +580,10 @@
   // ── 실행취소 히스토리 ─────────────────────────────────────────────────────
   function pushHistory() {
     drawHistory.push({
-      drawPoints:       drawPoints.slice(),
-      parallelChannels: parallelChannels.slice(),
+      drawPoints:          drawPoints.slice(),
+      parallelChannels:    parallelChannels.slice(),
+      drawChartCoords:     _drawChartCoords ? _drawChartCoords.slice() : null,
+      parallelChartCoords: _parallelChartCoords.slice(),
     });
     if (drawHistory.length > 30) drawHistory.shift();
   }
@@ -522,8 +591,10 @@
   function doUndo() {
     if (drawHistory.length === 0) return;
     var prev = drawHistory.pop();
-    drawPoints       = prev.drawPoints;
-    parallelChannels = prev.parallelChannels;
+    drawPoints           = prev.drawPoints;
+    parallelChannels     = prev.parallelChannels;
+    _drawChartCoords     = prev.drawChartCoords || null;
+    _parallelChartCoords = prev.parallelChartCoords || [];
     trendPoints = []; linePoints = []; parallelPoints = [];
     redraw();
     showStatus('실행 취소', '');
@@ -542,12 +613,22 @@
 
     pushHistory();
     parallelChannels.push({ p1: p1, p2: p2, p3: p3, p4: p4 });
+    // 차트 좌표 버전 저장
+    _parallelChartCoords.push({
+      p1: pixelToChart(p1.x, p1.y),
+      p2: pixelToChart(p2.x, p2.y),
+      p3: pixelToChart(p3.x, p3.y),
+      p4: pixelToChart(p4.x, p4.y),
+    });
 
     // 중간선을 drawPoints로 (패턴 검색에 사용)
     var mid1 = { x: (p1.x + p3.x) / 2, y: (p1.y + p3.y) / 2 };
     var mid2 = { x: (p2.x + p4.x) / 2, y: (p2.y + p4.y) / 2 };
     var pts = polylineToPoints([mid1, mid2]);
-    if (pts) drawPoints = pts;
+    if (pts) {
+      drawPoints = pts;
+      _drawChartCoords = ptsToChartCoords(pts);
+    }
 
     parallelPoints = [];
     redraw();
@@ -565,7 +646,10 @@
     }
     pushHistory();
     var pts = polylineToPoints(linePoints);
-    if (pts) drawPoints = pts;
+    if (pts) {
+      drawPoints = pts;
+      _drawChartCoords = ptsToChartCoords(pts);
+    }
     linePoints = [];
     redraw();
     showStatus('직선 완료. 검색 버튼을 누르세요.', '');
@@ -581,7 +665,10 @@
     }
     pushHistory();
     var pts = polylineToPoints(trendPoints);
-    if (pts) drawPoints = pts;
+    if (pts) {
+      drawPoints = pts;
+      _drawChartCoords = ptsToChartCoords(pts);
+    }
     trendPoints = [];
     redraw();
     showStatus('추세선 완료. 검색 버튼을 누르세요.', '');
@@ -648,6 +735,10 @@
   }
 
   function onMouseUp() {
+    if (isPenDown && activeTool === 'pen' && drawPoints.length >= 2) {
+      // 펜 스트로크 완료: 차트 좌표로 변환 저장
+      _drawChartCoords = ptsToChartCoords(drawPoints);
+    }
     isPenDown = false;
   }
 
@@ -885,6 +976,12 @@
     var placeholder = document.getElementById('results-placeholder');
     var countBadge  = document.getElementById('result-count');
 
+    // 현재 차트 종목은 유사 종목 결과에서 제외
+    var currentTicker = (window.D2T && D2T.ticker) ? D2T.ticker : null;
+    if (currentTicker) {
+      results = results.filter(function(r) { return r.ticker !== currentTicker; });
+    }
+
     if (!results.length) {
       placeholder.style.display = 'block';
       placeholder.innerHTML     = '유사한 종목이 없습니다.<br><small>패턴이 너무 단순하거나 lookback이 부족할 수 있습니다.</small>';
@@ -1065,18 +1162,37 @@
       el.innerHTML = '<div class="results-empty">즐겨찾기한 종목이 없습니다</div>';
       return;
     }
-    var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
     el.innerHTML = list.map(function(f) {
-      return '<div class="result-card fav-card" onclick="window.loadChart(\'' + escHtml(f.ticker) + '\')">' +
+      var tk = escHtml(f.ticker);
+      var mk = escHtml(f.market || 'KR');
+      var nm = escHtml(f.name || f.ticker);
+      return '<div class="result-card fav-card" onclick="loadFavChart(\'' + tk + '\',\'' + mk + '\')" title="클릭하면 차트를 로드합니다">' +
         '<div class="result-info">' +
-          '<div class="result-name">' + escHtml(f.name || f.ticker) + '</div>' +
-          '<div class="result-ticker">' + escHtml(f.ticker) + ' · ' + f.market + '</div>' +
+          '<div class="result-name">' + nm + '</div>' +
+          '<div class="result-ticker">' + tk + ' · ' + mk + '</div>' +
         '</div>' +
-        '<button class="result-star starred" data-ticker="' + escHtml(f.ticker) + '" data-market="' + escHtml(f.market) + '" ' +
-          'onclick="event.stopPropagation();toggleFavorite(\'' + escHtml(f.ticker) + '\',\'' + escHtml(f.market) + '\',\'' + escHtml(f.name||'') + '\',this)">★</button>' +
+        '<button class="result-star starred" data-ticker="' + tk + '" data-market="' + mk + '" ' +
+          'onclick="event.stopPropagation();toggleFavorite(\'' + tk + '\',\'' + mk + '\',\'' + nm + '\',this)">★</button>' +
       '</div>';
     }).join('');
   }
+
+  // 즐겨찾기 종목 차트 로드 (시장 전환 포함)
+  window.loadFavChart = function(ticker, market) {
+    if (!ticker) return;
+    var currentMarket = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    if (market && market !== currentMarket && typeof D2T.switchMarket === 'function') {
+      D2T.switchMarket(market);
+      // switchMarket이 loadTickerList를 호출하므로 잠시 후 차트 로드
+      setTimeout(function() {
+        if (typeof D2T.loadChart === 'function') D2T.loadChart(ticker);
+      }, 100);
+    } else {
+      if (typeof D2T.loadChart === 'function') D2T.loadChart(ticker);
+    }
+    // 유사 종목 탭으로 전환
+    if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+  };
 
   // 전역 노출
   window.toggleFavorite = toggleFavorite;
@@ -1322,16 +1438,6 @@
     document.querySelectorAll('.sidebar-tab-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { window.switchSidebarTab(this.dataset.tab); });
     });
-
-    // 차트 스크롤/줌 시 캔버스 오버레이 자동 재렌더
-    // (priceToCoordinate/timeToCoordinate 좌표가 뷰에 따라 바뀌므로)
-    try {
-      if (D2T && D2T.chart) {
-        D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
-          redraw();
-        });
-      }
-    } catch (e) { /* 차트 미초기화 시 무시 */ }
 
     // 검색
     document.getElementById('btn-search').addEventListener('click', doSearch);

@@ -73,34 +73,22 @@
 
   <div class="vr"></div>
 
-  <!-- 드로잉 도구 -->
+  <!-- 드로잉 도구 (2열 그리드) -->
   <label>드로잉</label>
-  <button
-    id="tool-pen"
-    class="btn-d2t draw-tool-btn"
-    data-tool="pen"
-    title="자유곡선: 마우스 드래그"
-  >✎ 자유곡선</button>
-  <button
-    id="tool-trend"
-    class="btn-d2t draw-tool-btn"
-    data-tool="trend"
-    title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료"
-  >↗ 추세선</button>
-  <button
-    id="tool-line"
-    class="btn-d2t draw-tool-btn"
-    data-tool="line"
-    title="직선 (L): 시작점 클릭 → 끝점 클릭"
-  >− 직선</button>
-  <button
-    id="tool-parallel"
-    class="btn-d2t draw-tool-btn"
-    data-tool="parallel"
-    title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭"
-  >⟺ 평행선</button>
-  <button id="btn-clear" class="btn-d2t btn-d2t-danger" title="드로잉 지우기 (Delete)">지우기</button>
-  <button id="btn-save-draw" class="btn-d2t" title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
+  <div class="draw-tool-grid">
+    <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
+      title="자유곡선: 마우스 드래그">✎ 자유곡선</button>
+    <button id="tool-trend"    class="btn-d2t draw-tool-btn" data-tool="trend"
+      title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료">↗ 추세선</button>
+    <button id="tool-line"     class="btn-d2t draw-tool-btn" data-tool="line"
+      title="직선 (L): 시작점 클릭 → 끝점 클릭">− 직선</button>
+    <button id="tool-parallel" class="btn-d2t draw-tool-btn" data-tool="parallel"
+      title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">⟺ 평행선</button>
+    <button id="btn-clear"     class="btn-d2t btn-d2t-danger"
+      title="드로잉 지우기 (Delete)">🗑 지우기</button>
+    <button id="btn-save-draw" class="btn-d2t"
+      title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
+  </div>
 
   <div class="vr"></div>
 
