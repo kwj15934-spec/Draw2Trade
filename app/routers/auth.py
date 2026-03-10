@@ -143,3 +143,32 @@ async def admin_kis_usage(admin=Depends(require_admin)):
     """KIS API 사용량 통계 (관리자 전용)."""
     from app.services import kis_client
     return kis_client.get_api_usage()
+
+
+@router.post("/api/admin/rebuild-us-tickers")
+async def admin_rebuild_us_tickers(admin=Depends(require_admin)):
+    """US 티커 목록 강제 재빌드 (캐시 초기화 후 재로드)."""
+    import asyncio
+    from pathlib import Path
+    from app.services import us_data_service
+
+    # 캐시 파일 삭제
+    cache_file = Path("cache/us/tickers.json")
+    if cache_file.exists():
+        cache_file.unlink()
+
+    # 인메모리 캐시 초기화
+    us_data_service._ticker_list_cache = []
+
+    # 백그라운드로 재빌드 (느릴 수 있으므로)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, us_data_service.build_us_name_cache)
+
+    tickers = us_data_service.get_us_tickers()
+    from collections import Counter
+    excd_count = Counter(t.get("excd", "") for t in tickers)
+    return {
+        "ok": True,
+        "total": len(tickers),
+        "excd": dict(excd_count),
+    }

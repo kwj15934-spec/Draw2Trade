@@ -436,10 +436,14 @@ def _build_ticker_list() -> list[dict]:
     if _US_TICKERS_FILE.exists():
         try:
             cached = json.loads(_US_TICKERS_FILE.read_text(encoding="utf-8"))
-            # 날짜 일치 + 종목 수 3000개 이상일 때만 캐시 사용 (screener 결과 기준)
-            if cached.get("date") == today_str and len(cached.get("tickers", [])) >= 3000:
-                logger.info("US 티커 목록 캐시 사용 (%d개)", len(cached["tickers"]))
-                return cached["tickers"]
+            cached_tickers = cached.get("tickers", [])
+            # 날짜 일치 + 종목 수 3000개 이상 + excd가 제대로 채워진 경우만 캐시 사용
+            has_excd = sum(1 for t in cached_tickers if t.get("excd") in ("NAS","NYS","AMS"))
+            if (cached.get("date") == today_str
+                    and len(cached_tickers) >= 3000
+                    and has_excd >= 2000):
+                logger.info("US 티커 목록 캐시 사용 (%d개, excd %d개)", len(cached_tickers), has_excd)
+                return cached_tickers
         except Exception:
             pass
 

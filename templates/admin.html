@@ -395,6 +395,17 @@
       <div class="empty">로딩 중...</div>
     </div>
 
+    <!-- US 티커 관리 -->
+    <h1 style="margin-top:48px;">US 티커 관리</h1>
+    <div class="sub">거래소 필터(NASDAQ/NYSE/AMEX)가 비어 있으면 재빌드하세요.</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap;">
+      <div id="us-ticker-info" style="font-size:13px;color:#555;">-</div>
+      <button id="btn-rebuild-us" class="filter-btn" style="background:#1a1d2e;border:1px solid #2a2e39;padding:6px 18px;border-radius:6px;cursor:pointer;font-size:13px;">
+        🔄 US 티커 재빌드
+      </button>
+      <span id="rebuild-status" style="font-size:12px;color:#26a69a;display:none;"></span>
+    </div>
+
     <h1 style="margin-top:48px;">공지사항 관리</h1>
     <div class="sub">업데이트, 이벤트, 공지를 작성하고 관리합니다. <kbd style="font-size:10px;background:#2a2e39;border-radius:3px;padding:1px 5px;">Ctrl+Enter</kbd> 로 빠르게 저장</div>
 
@@ -629,6 +640,58 @@
 
     loadKisUsage();
     setInterval(loadKisUsage, 30000);
+
+    // US 티커 현황 표시
+    async function loadUsTickers() {
+      try {
+        var res = await fetch('/api/us/list?limit=10000');
+        if (!res.ok) return;
+        var d = await res.json();
+        var tickers = d.tickers || [];
+        var cnt = { NAS:0, NYS:0, AMS:0, empty:0 };
+        tickers.forEach(function(t) {
+          if (t.excd === 'NAS') cnt.NAS++;
+          else if (t.excd === 'NYS') cnt.NYS++;
+          else if (t.excd === 'AMS') cnt.AMS++;
+          else cnt.empty++;
+        });
+        document.getElementById('us-ticker-info').innerHTML =
+          '총 <b>' + tickers.length.toLocaleString() + '</b>개 &nbsp;|&nbsp; ' +
+          'NASDAQ <b style="color:#2196f3">' + cnt.NAS + '</b> &nbsp;' +
+          'NYSE <b style="color:#26a69a">' + cnt.NYS + '</b> &nbsp;' +
+          'AMEX <b style="color:#ff9a00">' + cnt.AMS + '</b> &nbsp;' +
+          (cnt.empty ? '<span style="color:#ef5350">excd 없음 ' + cnt.empty + '</span>' : '');
+      } catch(e) {}
+    }
+    loadUsTickers();
+
+    document.getElementById('btn-rebuild-us').addEventListener('click', async function() {
+      var btn = this;
+      var statusEl = document.getElementById('rebuild-status');
+      btn.disabled = true;
+      btn.textContent = '재빌드 중...';
+      statusEl.style.display = 'inline';
+      statusEl.style.color = '#ff9a00';
+      statusEl.textContent = '서버에서 티커 목록을 새로 빌드합니다 (10~30초 소요)...';
+      try {
+        var res = await fetch('/api/admin/rebuild-us-tickers', { method: 'POST' });
+        var d = await res.json();
+        if (d.ok) {
+          statusEl.style.color = '#26a69a';
+          statusEl.textContent = '완료! 총 ' + d.total.toLocaleString() + '개 ' +
+            'NAS:' + (d.excd.NAS||0) + ' NYS:' + (d.excd.NYS||0) + ' AMS:' + (d.excd.AMS||0);
+          loadUsTickers();
+        } else {
+          statusEl.style.color = '#ef5350';
+          statusEl.textContent = '실패: ' + JSON.stringify(d);
+        }
+      } catch(e) {
+        statusEl.style.color = '#ef5350';
+        statusEl.textContent = '오류: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = '🔄 US 티커 재빌드';
+    });
 
     loadUsers();
 
