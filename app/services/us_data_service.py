@@ -798,6 +798,11 @@ def get_us_company_name(symbol: str) -> str:
 # US 분봉 / 시간봉
 # ─────────────────────────────────────────────────────────────────────────────
 
+# TTL 캐시: (symbol, interval_min) → (candles, expire_ts)
+_us_intraday_cache: dict[tuple, tuple] = {}
+_US_INTRADAY_TTL = {1: 60, 5: 300, 15: 600, 30: 900, 60: 1800, 240: 3600}
+
+
 def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
     """
     US 분봉/시간봉 캔들 반환.
@@ -805,12 +810,22 @@ def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
 
     KIS HHDFS76200200 — NMIN: 1, 2, 5, 10, 15, 30 (60/240은 30m 집계).
     time 값은 "display ET as UTC" 방식 Unix timestamp.
+    사용자 수에 관계없이 TTL 캐시로 API 호출 횟수 제한.
     """
+    import time as _time
     from datetime import timezone
     from app.services.kis_client import fetch_us_minute_paginated, is_configured
 
     if not is_configured():
         return None
+
+    # TTL 캐시 확인
+    cache_key = (symbol.upper(), interval_min)
+    cached = _us_intraday_cache.get(cache_key)
+    if cached:
+        candles_c, expire_ts = cached
+        if _time.time() < expire_ts:
+            return candles_c
 
     excd = get_excd(symbol)
     if not excd:
@@ -856,8 +871,15 @@ def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
 
     if interval_min in (60, 240):
         from app.services.data_service import _aggregate_intraday
-        return _aggregate_intraday(candles, interval_min * 60)
-    return candles
+        result = _aggregate_intraday(candles, interval_min * 60)
+    else:
+        result = candles
+
+    # TTL 캐시 저장
+    import time as _time
+    ttl = _US_INTRADAY_TTL.get(interval_min, 300)
+    _us_intraday_cache[cache_key] = (result, _time.time() + ttl)
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -795,6 +795,7 @@
     var modal = document.getElementById('period-select-modal');
     if (modal) modal.style.display = 'none';
     _searchMode = mode;
+    _autoMeta = null;  // 모달에서 직접 선택 시 자동 분석 메타 무시
     if (mode === 'range') {
       // 날짜 범위 모드 활성화 후 검색
       if (!rangeMode) toggleRangeMode();
@@ -817,13 +818,13 @@
       return;
     }
 
-    // 자동 분석 메타가 있으면 바로 검색 (모달 건너뜀)
-    if (rangeMode || isBlankMode || _autoMeta) {
+    // 날짜 범위 모드 or 빈 캔버스: 바로 검색
+    if (rangeMode || isBlankMode) {
       _doSearchActual();
       return;
     }
 
-    // 차트 모드: 기간 선택 모달 띄우기
+    // 차트 모드 (자동 분석 포함): 기간 선택 모달 띄우기
     var modal = document.getElementById('period-select-modal');
     if (modal) { modal.style.display = 'flex'; return; }
     _doSearchActual();
