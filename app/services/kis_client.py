@@ -14,6 +14,7 @@
 import json
 import logging
 import os
+import threading
 import time
 import urllib.parse as _parse
 import urllib.request as _req
@@ -328,3 +329,75 @@ def get_us_stock_excd(symbol: str) -> Optional[str]:
         return None
     output = result.get("output") or {}
     return output.get("ovrs_excg_cd") or None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 자동 토큰 갱신 루프
+# ─────────────────────────────────────────────────────────────────────────────
+
+def start_token_refresh_loop() -> None:
+    """
+    서버 시작 시 호출.
+    백그라운드 스레드에서 토큰을 자동으로 갱신한다.
+
+    동작:
+      1. 즉시 토큰 발급/확인
+      2. 만료 30분 전에 자동 갱신
+      3. 갱신 실패 시 5분 후 재시도, 최대 3회
+    """
+    if not is_configured():
+        logger.info("KIS API 키 미설정 — 토큰 자동 갱신 루프 건너뜀")
+        return
+
+    def _loop() -> None:
+        global _cached_token
+
+        # 즉시 첫 번째 토큰 발급
+        try:
+            token = get_token()
+            if token:
+                logger.info("KIS 초기 토큰 발급 완료 (만료: %s)", _token_expires.strftime("%Y-%m-%d %H:%M"))
+            else:
+                logger.warning("KIS 초기 토큰 발급 실패")
+        except Exception as e:
+            logger.error("KIS 초기 토큰 발급 오류: %s", e)
+
+        while True:
+            try:
+                now = datetime.now()
+                # 만료 30분 전까지 대기
+                if _token_expires > now:
+                    wait_until = _token_expires - timedelta(minutes=30)
+                    sleep_secs = (wait_until - now).total_seconds()
+                    if sleep_secs > 0:
+                        # 최대 1시간씩 잠깐 자면서 체크 (서버 종료 대응)
+                        while sleep_secs > 0:
+                            time.sleep(min(sleep_secs, 3600))
+                            sleep_secs -= 3600
+                            if _token_expires - datetime.now() <= timedelta(minutes=30):
+                                break
+
+                # 갱신: 캐시 무효화 후 재발급
+                _cached_token = ""
+                for attempt in range(1, 4):
+                    try:
+                        token = get_token()
+                        if token:
+                            logger.info(
+                                "KIS 토큰 자동 갱신 완료 (만료: %s)",
+                                _token_expires.strftime("%Y-%m-%d %H:%M"),
+                            )
+                            break
+                        logger.warning("KIS 토큰 갱신 실패 (%d/3회)", attempt)
+                    except Exception as e:
+                        logger.error("KIS 토큰 갱신 오류 (%d/3회): %s", attempt, e)
+                    if attempt < 3:
+                        time.sleep(300)  # 5분 후 재시도
+
+            except Exception as e:
+                logger.error("KIS 토큰 갱신 루프 예외: %s", e)
+                time.sleep(300)
+
+    t = threading.Thread(target=_loop, daemon=True, name="kis-token-refresh")
+    t.start()
+    logger.info("KIS 토큰 자동 갱신 루프 시작")

@@ -24,6 +24,7 @@ from app.routers import auth, chart, pattern, us_chart, user_data
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
+from app.services.kis_client import start_token_refresh_loop
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
 
 # ── 경로 설정 ────────────────────────────────────────────────────────────────
@@ -48,6 +49,10 @@ async def lifespan(app: FastAPI):
         init_firebase()
     except Exception as e:
         logger.error("Firebase 초기화 실패: %s", e)
+    try:
+        start_token_refresh_loop()   # KIS 토큰 자동 갱신 루프 (API 키 미설정 시 무시)
+    except Exception as e:
+        logger.error("KIS 토큰 루프 시작 실패: %s", e)
     try:
         build_cache()
         logger.info("KR 캐시 완료.")
