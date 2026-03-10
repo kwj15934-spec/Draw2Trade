@@ -487,20 +487,21 @@ def _build_ticker_list() -> list[dict]:
             seen.add(sym)
             combined.append((sym, name, "ETF", "NYS"))
 
-    # FTP excd 보강: NYSE/AMEX 커버리지가 부족하면 FTP로 보완
+    # FTP excd 보강: 항상 FTP에서 심볼별 거래소 코드를 가져와 덮어씀.
+    # screener download=true 는 exchange 필드가 없어 전부 NAS로 기본 세팅되므로
+    # FTP(nasdaqlisted + otherlisted)의 정확한 excd로 반드시 override 해야 함.
     ftp_excd_map: dict[str, str] = {}
-    nyse_ams_count = sum(1 for _, _, _, excd in combined if excd in ("NYS", "AMS"))
-    needs_fill = nyse_ams_count < 200   # NYSE/AMEX 200개 미만이면 FTP 강제 보강
-    if needs_fill:
-        try:
-            ftp_data = _fetch_nasdaq_ftp()
-            ftp_excd_map = {sym: excd for sym, _, _, excd in ftp_data if excd}
-        except Exception:
-            pass
+    try:
+        ftp_data = _fetch_nasdaq_ftp()
+        ftp_excd_map = {sym: excd for sym, _, _, excd in ftp_data if excd}
+        logger.info("FTP excd 맵 %d개 로드", len(ftp_excd_map))
+    except Exception as e:
+        logger.warning("FTP excd 맵 로드 실패: %s", e)
 
     if ftp_excd_map:
+        # FTP excd 우선 적용 (screener 기본값 NAS를 올바른 거래소 코드로 교체)
         combined = [
-            (sym, name, sector, excd or ftp_excd_map.get(sym, "NAS"))
+            (sym, name, sector, ftp_excd_map.get(sym) or excd or "NAS")
             for sym, name, sector, excd in combined
         ]
 
