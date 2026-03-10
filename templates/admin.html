@@ -157,22 +157,48 @@
     .stat-sub { font-size: 10px; color: #444; margin-top: 3px; }
 
     /* KIS API 사용량 */
-    .kis-usage-section { margin-bottom: 36px; }
-    .kis-usage-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 10px;
+    .kis-top-row {
+      display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start;
       margin-bottom: 20px;
     }
-    .kis-metric {
-      background: #1a1d2e;
-      border: 1px solid #2a2e39;
-      border-radius: 8px;
-      padding: 12px 16px;
+    /* 도넛 차트 카드 */
+    .kis-donut-card {
+      background: #1a1d2e; border: 1px solid #2a2e39; border-radius: 10px;
+      padding: 20px 24px; display: flex; align-items: center; gap: 20px;
+      min-width: 240px;
     }
-    .kis-metric-label { font-size: 11px; color: #555; margin-bottom: 4px; }
-    .kis-metric-value { font-size: 20px; font-weight: 700; color: #d1d4dc; }
+    .kis-donut-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+    .kis-donut-wrap svg { transform: rotate(-90deg); }
+    .kis-donut-center {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+    }
+    .kis-donut-pct  { font-size: 22px; font-weight: 700; color: #d1d4dc; }
+    .kis-donut-used { font-size: 10px; color: #555; margin-top: 2px; }
+    .kis-donut-info { flex: 1; }
+    .kis-donut-title { font-size: 13px; font-weight: 600; color: #d1d4dc; margin-bottom: 8px; }
+    .kis-donut-row   { font-size: 11px; color: #777; margin-bottom: 3px; }
+    .kis-donut-row b { color: #b0b4c1; }
+    /* 메타 카드들 */
+    .kis-meta-col {
+      display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 160px;
+    }
+    .kis-metric {
+      background: #1a1d2e; border: 1px solid #2a2e39; border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .kis-metric-label { font-size: 11px; color: #555; margin-bottom: 3px; }
+    .kis-metric-value { font-size: 18px; font-weight: 700; color: #d1d4dc; }
     .kis-metric-value.accent { color: #2196f3; }
+    /* 히스토그램 */
+    .kis-histogram-card {
+      background: #1a1d2e; border: 1px solid #2a2e39; border-radius: 10px;
+      padding: 16px 20px; margin-bottom: 20px;
+    }
+    .kis-histogram-title { font-size: 12px; color: #555; margin-bottom: 10px; }
+    .kis-histogram-bars  { display: flex; align-items: flex-end; height: 48px; gap: 2px; }
+    .kis-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height .3s; }
+    /* TR 테이블 */
     .kis-tr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .kis-tr-table th { text-align:left; padding: 6px 10px; border-bottom: 1px solid #2a2e39; color:#555; font-weight:500; }
     .kis-tr-table td { padding: 5px 10px; border-bottom: 1px solid #1e2130; color:#b0b4c1; }
@@ -336,11 +362,63 @@
 
     <!-- KIS API 사용량 -->
     <h1 style="margin-top:40px;">KIS API 사용량</h1>
-    <div class="sub">서버 시작 이후 누적 호출 수입니다. 30초마다 자동 갱신.</div>
-    <div class="kis-usage-section">
-      <div class="kis-usage-grid">
+    <div class="sub">30초마다 자동 갱신. 한도는 KIS 실전 기준 (분당 1,000건 / 일 100,000건).</div>
+
+    <!-- 도넛 차트 + 메타 정보 -->
+    <div class="kis-top-row">
+
+      <!-- 도넛 1: 분당 사용량 -->
+      <div class="kis-donut-card">
+        <div class="kis-donut-wrap">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="44" fill="none" stroke="#1e2130" stroke-width="12"/>
+            <circle id="donut-min-track" cx="55" cy="55" r="44" fill="none"
+                    stroke="#2196f3" stroke-width="12"
+                    stroke-dasharray="276.46" stroke-dashoffset="276.46"
+                    stroke-linecap="round"/>
+          </svg>
+          <div class="kis-donut-center">
+            <div class="kis-donut-pct" id="donut-min-pct">0%</div>
+            <div class="kis-donut-used" id="donut-min-used">0/1000</div>
+          </div>
+        </div>
+        <div class="kis-donut-info">
+          <div class="kis-donut-title">분당 사용률</div>
+          <div class="kis-donut-row">최근 1분 호출: <b id="kis-last-min">-</b></div>
+          <div class="kis-donut-row">한도: <b>1,000건/분</b></div>
+          <div class="kis-donut-row" style="margin-top:6px;font-size:10px;color:#444;">
+            KIS 초당 20건 기준
+          </div>
+        </div>
+      </div>
+
+      <!-- 도넛 2: 일일 사용량 -->
+      <div class="kis-donut-card">
+        <div class="kis-donut-wrap">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="44" fill="none" stroke="#1e2130" stroke-width="12"/>
+            <circle id="donut-day-track" cx="55" cy="55" r="44" fill="none"
+                    stroke="#26a69a" stroke-width="12"
+                    stroke-dasharray="276.46" stroke-dashoffset="276.46"
+                    stroke-linecap="round"/>
+          </svg>
+          <div class="kis-donut-center">
+            <div class="kis-donut-pct" id="donut-day-pct">0%</div>
+            <div class="kis-donut-used" id="donut-day-used">0/100K</div>
+          </div>
+        </div>
+        <div class="kis-donut-info">
+          <div class="kis-donut-title">일일 사용률</div>
+          <div class="kis-donut-row">오늘 호출: <b id="kis-today">-</b></div>
+          <div class="kis-donut-row">한도: <b>100,000건/일</b></div>
+          <div class="kis-donut-row">남은 건수: <b id="kis-remaining">-</b></div>
+        </div>
+      </div>
+
+      <!-- 메타 정보 -->
+      <div class="kis-meta-col">
         <div class="kis-metric">
-          <div class="kis-metric-label">총 호출 수</div>
+          <div class="kis-metric-label">누적 총 호출</div>
           <div class="kis-metric-value accent" id="kis-total">-</div>
         </div>
         <div class="kis-metric">
@@ -348,33 +426,43 @@
           <div class="kis-metric-value" id="kis-per-hour">-</div>
         </div>
         <div class="kis-metric">
-          <div class="kis-metric-label">서버 가동 시간</div>
+          <div class="kis-metric-label">서버 가동</div>
           <div class="kis-metric-value" id="kis-uptime">-</div>
+        </div>
+      </div>
+      <div class="kis-meta-col">
+        <div class="kis-metric">
+          <div class="kis-metric-label">모드</div>
+          <div class="kis-metric-value" style="font-size:15px;" id="kis-mode">-</div>
         </div>
         <div class="kis-metric">
           <div class="kis-metric-label">토큰 만료</div>
-          <div class="kis-metric-value" style="font-size:13px;line-height:1.5;" id="kis-token-exp">-</div>
-        </div>
-        <div class="kis-metric">
-          <div class="kis-metric-label">모드</div>
-          <div class="kis-metric-value" style="font-size:16px;" id="kis-mode">-</div>
+          <div class="kis-metric-value" style="font-size:13px;line-height:1.6;" id="kis-token-exp">-</div>
         </div>
       </div>
 
-      <table class="kis-tr-table">
-        <thead>
-          <tr>
-            <th>TR ID</th>
-            <th>기능</th>
-            <th style="text-align:right;">호출 수</th>
-            <th style="text-align:right;">비율</th>
-          </tr>
-        </thead>
-        <tbody id="kis-tr-tbody">
-          <tr><td colspan="4" style="color:#444;padding:12px 10px;">데이터 없음</td></tr>
-        </tbody>
-      </table>
     </div>
+
+    <!-- 60분 히스토그램 -->
+    <div class="kis-histogram-card">
+      <div class="kis-histogram-title">최근 60분 호출 히스토그램 (왼쪽=60분 전, 오른쪽=현재)</div>
+      <div class="kis-histogram-bars" id="kis-histogram"></div>
+    </div>
+
+    <!-- TR ID 테이블 -->
+    <table class="kis-tr-table" style="margin-bottom:32px;">
+      <thead>
+        <tr>
+          <th>TR ID</th>
+          <th>기능</th>
+          <th style="text-align:right;">호출 수</th>
+          <th style="text-align:right;">비율</th>
+        </tr>
+      </thead>
+      <tbody id="kis-tr-tbody">
+        <tr><td colspan="4" style="color:#444;padding:12px 10px;">데이터 없음</td></tr>
+      </tbody>
+    </table>
 
     <div class="error-bar" id="error-bar"></div>
 
@@ -593,12 +681,63 @@
       'H0STCNT0':      '국내 실시간 체결',
     };
 
+    /** SVG 도넛 원호 offset 계산 (circumference = 2πr = 276.46 for r=44) */
+    var CIRC = 2 * Math.PI * 44; // ≈ 276.46
+    function setDonut(trackId, pct) {
+      var el = document.getElementById(trackId);
+      if (!el) return;
+      var clamp = Math.min(Math.max(pct, 0), 1);
+      var offset = CIRC * (1 - clamp);
+      el.setAttribute('stroke-dashoffset', offset.toFixed(2));
+      // 색상: 70%↑ 주황, 90%↑ 빨강
+      var color = clamp >= 0.9 ? '#ef5350' : clamp >= 0.7 ? '#ff9a00' : (trackId.includes('min') ? '#2196f3' : '#26a69a');
+      el.setAttribute('stroke', color);
+    }
+
+    /** 60분 히스토그램 그리기 */
+    function drawHistogram(history, limitPerMin) {
+      var container = document.getElementById('kis-histogram');
+      if (!container) return;
+      var maxVal = Math.max.apply(null, history.concat([limitPerMin * 0.1, 1]));
+      container.innerHTML = history.map(function(v, i) {
+        var heightPct = (v / maxVal) * 100;
+        var isNow = (i === history.length - 1);
+        var ratio = limitPerMin > 0 ? v / limitPerMin : 0;
+        var color = ratio >= 0.9 ? '#ef5350' : ratio >= 0.7 ? '#ff9a00' : (isNow ? '#2196f3' : '#26a69a55');
+        return '<div class="kis-bar" title="' + v + '건" style="height:' + Math.max(heightPct,2).toFixed(1) + '%;background:' + color + ';"></div>';
+      }).join('');
+    }
+
     async function loadKisUsage() {
       try {
         var res = await fetch('/api/admin/kis-usage');
         if (!res.ok) return;
         var d = await res.json();
 
+        var limitMin  = d.limit_per_minute || 1000;
+        var limitDay  = d.limit_per_day    || 100000;
+        var lastMin   = d.calls_last_minute || 0;
+        var today     = d.calls_today       || 0;
+        var remaining = Math.max(limitDay - today, 0);
+
+        // ── 도넛 차트 ─────────────────────────────────────────────
+        var minRatio = lastMin / limitMin;
+        var dayRatio = today   / limitDay;
+        setDonut('donut-min-track', minRatio);
+        setDonut('donut-day-track', dayRatio);
+
+        document.getElementById('donut-min-pct').textContent  = (minRatio * 100).toFixed(1) + '%';
+        document.getElementById('donut-min-used').textContent = lastMin.toLocaleString() + '/' + limitMin.toLocaleString();
+        document.getElementById('donut-day-pct').textContent  = (dayRatio * 100).toFixed(1) + '%';
+        document.getElementById('donut-day-used').textContent = today.toLocaleString() + '/100K';
+        document.getElementById('kis-last-min').textContent   = lastMin.toLocaleString() + '건';
+        document.getElementById('kis-today').textContent      = today.toLocaleString() + '건';
+        document.getElementById('kis-remaining').textContent  = remaining.toLocaleString() + '건';
+
+        // ── 히스토그램 ─────────────────────────────────────────────
+        if (d.history_60m) drawHistogram(d.history_60m, limitMin);
+
+        // ── 메타 정보 ──────────────────────────────────────────────
         document.getElementById('kis-total').textContent    = (d.total_calls || 0).toLocaleString();
         document.getElementById('kis-per-hour').textContent = (d.calls_per_hour || 0).toLocaleString() + ' /h';
         document.getElementById('kis-uptime').textContent   = d.uptime_hours + 'h';
@@ -610,12 +749,11 @@
         } else {
           expEl.textContent = '없음 (미설정)';
         }
-
-        var modeEl = document.getElementById('kis-mode');
-        modeEl.innerHTML = d.mode === 'real'
+        document.getElementById('kis-mode').innerHTML = d.mode === 'real'
           ? '실전투자 <span class="kis-badge real">real</span>'
           : '모의투자 <span class="kis-badge mock">mock</span>';
 
+        // ── TR 테이블 ──────────────────────────────────────────────
         var byTr = d.by_tr || {};
         var total = d.total_calls || 1;
         var tbody = document.getElementById('kis-tr-tbody');
@@ -627,10 +765,9 @@
         tbody.innerHTML = entries.map(function(kv) {
           var tr = kv[0], cnt = kv[1];
           var pct = ((cnt / total) * 100).toFixed(1);
-          var desc = TR_DESC[tr] || '-';
           return '<tr>' +
             '<td style="font-family:monospace;color:#7c8caa;">' + tr + '</td>' +
-            '<td>' + desc + '</td>' +
+            '<td>' + (TR_DESC[tr] || '-') + '</td>' +
             '<td class="kis-tr-count">' + cnt.toLocaleString() + '</td>' +
             '<td style="text-align:right;color:#555;">' + pct + '%</td>' +
             '</tr>';

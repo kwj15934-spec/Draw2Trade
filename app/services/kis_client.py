@@ -41,22 +41,66 @@ _last_call: float = 0.0
 _MIN_INTERVAL: float = 0.06  # 60ms
 
 # ── API 사용량 카운터 ─────────────────────────────────────────────────────────
-_api_call_count: int = 0          # 전체 호출 수 (서버 시작 이후 누적)
+_api_call_count: int = 0               # 전체 호출 수 (서버 시작 이후 누적)
 _api_call_by_tr: dict[str, int] = {}   # TR ID별 호출 수
 _api_server_start: float = time.time() # 서버 시작 시각
+
+# 분 단위 슬라이딩 윈도우 (최근 60분, 인덱스 = Unix epoch // 60)
+_api_minute_buckets: dict[int, int] = {}
+
+# KIS 실전 계정 한도 (초당 20건 = 분당 1200건, 일일 한도는 KIS 기준 ~100,000건)
+LIMIT_PER_MINUTE: int = 1000   # 60ms 인터벌 기준 최대 ~1000/min (여유 있게 설정)
+LIMIT_PER_DAY:    int = 100_000
+
+
+def _record_call() -> None:
+    """현재 분 버킷에 호출 1건 기록. 1시간 이상 지난 버킷은 정리."""
+    global _api_call_count, _api_minute_buckets
+    _api_call_count += 1
+    bucket = int(time.time()) // 60
+    _api_minute_buckets[bucket] = _api_minute_buckets.get(bucket, 0) + 1
+    # 오래된 버킷 정리 (2시간 이상)
+    cutoff = bucket - 120
+    for k in [k for k in _api_minute_buckets if k < cutoff]:
+        del _api_minute_buckets[k]
 
 
 def get_api_usage() -> dict:
     """현재 API 사용량 통계 반환."""
     elapsed = time.time() - _api_server_start
     hours   = elapsed / 3600
+    now_bucket = int(time.time()) // 60
+
+    # 오늘 자정 이후 호출 수 (UTC 기준)
+    from datetime import timezone as _tz
+    today_start_ts = datetime.now(_tz.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).timestamp()
+    today_start_bucket = int(today_start_ts) // 60
+    calls_today = sum(v for k, v in _api_minute_buckets.items() if k >= today_start_bucket)
+    # 서버 시작이 오늘이면 전체 카운트가 더 정확
+    if elapsed < 86400:
+        calls_today = max(calls_today, _api_call_count)
+
+    # 최근 1분 호출 수
+    calls_last_minute = _api_minute_buckets.get(now_bucket, 0) + \
+                        _api_minute_buckets.get(now_bucket - 1, 0)
+
+    # 최근 60분 히스토그램 (분 단위)
+    history = [_api_minute_buckets.get(now_bucket - i, 0) for i in range(59, -1, -1)]
+
     return {
-        "total_calls":    _api_call_count,
-        "calls_per_hour": round(_api_call_count / hours, 1) if hours > 0.01 else 0,
-        "uptime_hours":   round(hours, 1),
-        "by_tr":          dict(sorted(_api_call_by_tr.items(), key=lambda x: -x[1])),
-        "token_expires":  _token_expires.isoformat() if _token_expires > datetime.min else None,
-        "mode":           os.environ.get("KIS_MODE", "real"),
+        "total_calls":       _api_call_count,
+        "calls_per_hour":    round(_api_call_count / hours, 1) if hours > 0.01 else 0,
+        "calls_today":       calls_today,
+        "calls_last_minute": calls_last_minute,
+        "uptime_hours":      round(hours, 1),
+        "limit_per_minute":  LIMIT_PER_MINUTE,
+        "limit_per_day":     LIMIT_PER_DAY,
+        "by_tr":             dict(sorted(_api_call_by_tr.items(), key=lambda x: -x[1])),
+        "token_expires":     _token_expires.isoformat() if _token_expires > datetime.min else None,
+        "mode":              os.environ.get("KIS_MODE", "real"),
+        "history_60m":       history,
     }
 
 
@@ -190,7 +234,7 @@ def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, An
         return None
 
     _rate_limit()
-    _api_call_count += 1
+    _record_call()
     _api_call_by_tr[tr_id] = _api_call_by_tr.get(tr_id, 0) + 1
     try:
         qs = _parse.urlencode(params)
