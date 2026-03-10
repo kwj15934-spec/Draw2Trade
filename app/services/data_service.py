@@ -363,16 +363,54 @@ def get_ohlcv_by_timeframe(
 # 캐시 빌드 (서버 시작 시 호출)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _load_disk_cache_only(ticker: str) -> dict[str, Any] | None:
+    """
+    디스크 캐시에서만 OHLCV 로드 (API 호출 없음).
+    장 중 build_cache 시 사용.
+    """
+    if ticker in _mem_ohlcv:
+        return _mem_ohlcv[ticker]
+    cp = _OHLCV_DIR / f"{ticker}.json"
+    if not cp.exists():
+        return None
+    try:
+        data = json.loads(cp.read_text(encoding="utf-8"))
+        if "dates" in data and data["dates"]:
+            _mem_ohlcv[ticker] = data
+            return data
+    except Exception:
+        pass
+    return None
+
+
 def build_cache() -> None:
-    """KOSPI 전 종목 월봉 데이터를 메모리에 선로드."""
+    """
+    KOSPI 전 종목 월봉 데이터를 메모리에 선로드.
+
+    장 중 서버 시작 시:
+      - 디스크 캐시만 로드, KIS/pykrx API 호출 건너뜀
+      - 미캐시 종목은 사용자 첫 요청 시 온디맨드 로드
+    장 마감 후:
+      - 디스크 캐시 확인 후 누락 종목 API로 보완
+    """
     tickers = get_kospi_tickers()
     total = len(tickers)
-    logger.info("캐시 빌드 시작: KOSPI %d 종목", total)
+
+    in_market = kis_client.is_market_hours()
+    if in_market:
+        logger.info(
+            "장 중 서버 시작 — 디스크 캐시만 로드 (KIS/pykrx 대량 호출 건너뜀). KOSPI %d 종목", total
+        )
+    else:
+        logger.info("캐시 빌드 시작: KOSPI %d 종목", total)
 
     loaded = 0
     for i, ticker in enumerate(tickers):
         get_company_name(ticker)
-        ohlcv = get_monthly_ohlcv(ticker)
+        if in_market:
+            ohlcv = _load_disk_cache_only(ticker)
+        else:
+            ohlcv = get_monthly_ohlcv(ticker)
         if ohlcv:
             loaded += 1
         if (i + 1) % 50 == 0:
@@ -380,7 +418,10 @@ def build_cache() -> None:
 
     # 이름 정보 디스크에도 저장
     _save_ticker_cache(tickers, datetime.now().strftime("%Y-%m-%d"))
-    logger.info("캐시 완료: %d / %d 종목 OHLCV 로드됨.", loaded, total)
+    if in_market:
+        logger.info("캐시 완료(장 중): 디스크 %d / %d 종목 로드됨. 나머지는 온디맨드.", loaded, total)
+    else:
+        logger.info("캐시 완료: %d / %d 종목 OHLCV 로드됨.", loaded, total)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

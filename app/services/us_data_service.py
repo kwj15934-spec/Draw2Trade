@@ -807,9 +807,9 @@ _PRIORITY_SYMBOLS: set[str] = (
 def prefetch_us_ohlcv_background() -> None:
     """
     서버 시작 시 백그라운드 스레드에서 US OHLCV 프리페치.
-    - 디스크 캐시가 유효하면 메모리 로드 (모든 종목)
-    - 캐시 없거나 만료 → _PRIORITY_SYMBOLS 에 포함된 종목만 yfinance 다운로드
-      (나머지는 사용자가 조회할 때 온디맨드로 다운로드)
+    - 디스크 캐시가 유효하면 메모리 로드 (모든 종목, 장 중/외 공통)
+    - 캐시 없거나 만료 → 장 마감 후에만 우선순위 종목 KIS/yfinance 다운로드
+      (장 중에는 API 과부하 방지를 위해 대기 후 다운로드)
     """
     import threading
     import time
@@ -817,14 +817,20 @@ def prefetch_us_ohlcv_background() -> None:
     def _worker() -> None:
         tickers = get_us_tickers()
         today_str = date.today().isoformat()
+        in_market = kis_client.is_market_hours()
+
         logger.info(
-            "US OHLCV 백그라운드 프리페치 시작: 전체 %d개 (우선순위 자동다운: %d개)",
+            "US OHLCV 백그라운드 프리페치 시작: 전체 %d개 (우선순위 자동다운: %d개)%s",
             len(tickers), len(_PRIORITY_SYMBOLS),
+            " [장 중 — 디스크 캐시만 로드]" if in_market else "",
         )
-        success = 0
+
+        disk_loaded = 0
+        need_download: list[str] = []
+
+        # 1단계: 디스크 캐시 로드 (장 중/외 공통)
         for item in tickers:
             symbol = item["ticker"]
-            # 유효한 디스크 캐시 → 메모리에 로드 (모든 종목)
             cache_path = _US_CACHE_DIR / f"{symbol}.json"
             if cache_path.exists():
                 try:
@@ -834,18 +840,45 @@ def prefetch_us_ohlcv_background() -> None:
                             _mem_us_ohlcv[symbol] = data
                             if symbol not in _mem_us_names and data.get("name"):
                                 _mem_us_names[symbol] = data["name"]
-                        success += 1
+                        disk_loaded += 1
                         continue
                 except Exception:
                     pass
-            # 캐시 없거나 만료 → 우선순위 종목만 yfinance 다운로드
-            if symbol not in _PRIORITY_SYMBOLS:
-                continue
+            # 캐시 없거나 만료 → 다운로드 대상 (우선순위 종목만)
+            if symbol in _PRIORITY_SYMBOLS:
+                need_download.append(symbol)
+
+        logger.info("US OHLCV 디스크 캐시 로드: %d 종목", disk_loaded)
+
+        if not need_download:
+            logger.info("US OHLCV 백그라운드 프리페치 완료 (다운로드 대상 없음)")
+            return
+
+        # 2단계: 장 중이면 마감까지 대기
+        if in_market:
+            logger.info(
+                "장 중 — US OHLCV 다운로드 %d 종목 대기 중 (장 마감 후 자동 시작)",
+                len(need_download),
+            )
+            # 최대 8시간 대기하며 장 마감 확인 (10분 간격)
+            for _ in range(48):
+                time.sleep(600)
+                if not kis_client.is_market_hours():
+                    break
+            else:
+                logger.info("US OHLCV 대기 시간 초과 — 다운로드 건너뜀 (다음 서버 시작 시 재시도)")
+                return
+            logger.info("장 마감 확인 — US OHLCV 다운로드 시작 (%d 종목)", len(need_download))
+
+        # 3단계: 다운로드
+        downloaded = 0
+        for symbol in need_download:
             data = get_us_ohlcv(symbol)
             if data:
-                success += 1
-            time.sleep(0.15)  # yfinance rate limit 방지
-        logger.info("US OHLCV 백그라운드 프리페치 완료: %d 종목 메모리 로드", success)
+                downloaded += 1
+            time.sleep(0.15)  # rate limit 방지
+
+        logger.info("US OHLCV 백그라운드 프리페치 완료: 디스크 %d + 신규 %d 종목", disk_loaded, downloaded)
 
     t = threading.Thread(target=_worker, daemon=True, name="us-ohlcv-prefetch")
     t.start()

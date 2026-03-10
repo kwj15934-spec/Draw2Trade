@@ -60,6 +60,26 @@ def is_configured() -> bool:
     return bool(app_key and app_secret)
 
 
+def is_market_hours() -> bool:
+    """
+    현재 국내 또는 미국 주식 시장 개장 시간이면 True.
+
+    UTC 기준 (DST 미반영 — 약 30분 오차 허용):
+      국장: 00:00 ~ 06:30 UTC  (KST 09:00 ~ 15:30, 평일)
+      미장: 14:30 ~ 21:00 UTC  (EST 09:30 ~ 16:00, 평일)
+
+    개장 시간에는 KIS 대량 조회를 자제해 API 부하를 줄인다.
+    """
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    if now.weekday() >= 5:          # 토(5) · 일(6) → 항상 False
+        return False
+    t = now.hour * 60 + now.minute  # 자정 기준 분
+    kr_open, kr_close = 0 * 60,      6 * 60 + 30   # 00:00 ~ 06:30 UTC
+    us_open, us_close = 14 * 60 + 30, 21 * 60       # 14:30 ~ 21:00 UTC
+    return (kr_open <= t < kr_close) or (us_open <= t < us_close)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 토큰
 # ─────────────────────────────────────────────────────────────────────────────
