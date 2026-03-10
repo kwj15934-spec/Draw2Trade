@@ -790,6 +790,72 @@ def get_us_company_name(symbol: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# US 분봉 / 시간봉
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
+    """
+    US 분봉/시간봉 캔들 반환.
+    interval_min: 1 | 5 | 15 | 30 | 60 | 240
+
+    KIS HHDFS76200200 — NMIN: 1, 2, 5, 10, 15, 30 (60/240은 30m 집계).
+    time 값은 "display ET as UTC" 방식 Unix timestamp.
+    """
+    from datetime import timezone
+    from app.services.kis_client import fetch_us_minute_paginated, is_configured
+
+    if not is_configured():
+        return None
+
+    excd = get_excd(symbol)
+    if not excd:
+        return None
+
+    # NMIN 매핑: 60/240은 30분봉 데이터를 집계
+    native_nmin = interval_min if interval_min <= 30 else 30
+    pages_map   = {1: 2, 5: 2, 15: 2, 30: 3, 60: 5, 240: 8}
+    pages       = pages_map.get(interval_min, 3)
+
+    raw = fetch_us_minute_paginated(symbol, excd, nmin=native_nmin, pages=pages)
+    if not raw:
+        return None
+
+    candles: list[dict] = []
+    seen: set[str] = set()
+    for r in reversed(raw):
+        d = r.get("kymd", "")
+        t = r.get("khms", "")
+        if not d or not t or len(d) != 8 or len(t) != 6:
+            continue
+        key = d + t
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
+                          int(t[:2]), int(t[2:4]), int(t[4:]),
+                          tzinfo=timezone.utc)
+            candles.append({
+                "time":   int(dt.timestamp()),
+                "open":   float(r.get("open")  or 0),
+                "high":   float(r.get("high")  or 0),
+                "low":    float(r.get("low")   or 0),
+                "close":  float(r.get("close") or r.get("last") or 0),
+                "volume": int(r.get("tvol")    or 0),
+            })
+        except (ValueError, TypeError):
+            continue
+
+    if not candles:
+        return None
+
+    if interval_min in (60, 240):
+        from app.services.data_service import _aggregate_intraday
+        return _aggregate_intraday(candles, interval_min * 60)
+    return candles
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 검색용 캐시 접근자
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -29,8 +29,16 @@
     matchPeriodData: null,
   };
 
-  var TF_LABELS = { monthly: '월봉', weekly: '주봉', daily: '일봉' };
-  var TF_UNITS  = { monthly: '개월', weekly: '주', daily: '일' };
+  var TF_LABELS = {
+    monthly: '월봉', weekly: '주봉', daily: '일봉',
+    '1m': '1분봉', '5m': '5분봉', '15m': '15분봉',
+    '30m': '30분봉', '60m': '1시간봉', '240m': '4시간봉',
+  };
+  var TF_UNITS  = {
+    monthly: '개월', weekly: '주', daily: '일',
+    '1m': '건', '5m': '건', '15m': '건', '30m': '건', '60m': '건', '240m': '건',
+  };
+  var INTRADAY_TF = { '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 };
 
   // 시장별 기본 타임프레임
   var MARKET_DEFAULT_TF = { KR: 'monthly', US: 'daily' };
@@ -190,6 +198,11 @@
         if (!data.candles || data.candles.length === 0) {
           throw new Error('캔들 데이터 없음');
         }
+        // intraday ↔ daily 전환 시 timeScale 설정 변경
+        var isIntraday = !!INTRADAY_TF[data.timeframe || tf];
+        D2T.chart.applyOptions({
+          timeScale: { timeVisible: isIntraday, secondsVisible: false },
+        });
         D2T.series.setData(data.candles);
         D2T.candles = data.candles;
         setVolumeData(data.candles);

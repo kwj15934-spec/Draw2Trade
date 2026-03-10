@@ -329,6 +329,155 @@ def fetch_us_ohlcv_paginated(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 국내 주식 분봉
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_kr_minute(
+    ticker: str,
+    input_time: str = "153000",   # HHMMSS, 이 시각 포함 이전 30분봉
+    pw_data_yn: str = "Y",        # Y=이전일 포함
+) -> Optional[list[dict]]:
+    """
+    FHKST03010200 — 주식 분봉 조회.
+    최대 30건/호출. 반환: 최신→과거 순.
+    필드: stck_bsop_date, stck_cntg_hour, stck_prpr, stck_oprc, stck_hgpr, stck_lwpr, cntg_vol
+    """
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
+        {
+            "FID_ETC_CLS_CODE":    "",
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD":      ticker,
+            "FID_INPUT_HOUR_1":    input_time,
+            "FID_PW_DATA_INCU_YN": pw_data_yn,
+        },
+        "FHKST03010200",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug("KIS KR minute error (%s %s): %s",
+                     ticker, input_time, result.get("msg1") if result else "no resp")
+        return None
+    return result.get("output2") or []
+
+
+def fetch_kr_minute_paginated(
+    ticker: str,
+    days: int = 3,
+) -> list[dict]:
+    """
+    days 영업일치 1분봉 데이터 반환 (최신→과거 순 → 호출 후 뒤집기 필요).
+    KR 거래 시간: 09:00~15:30 = 390분/일, 30건/호출.
+    """
+    now = datetime.now()
+    start_time = "153000"
+    all_records: list[dict] = []
+    seen: set[str] = set()
+    cutoff_days = days + 1   # 영업일 여유
+
+    for _ in range(days * 14 + 2):   # 최대 페이지 수
+        recs = fetch_kr_minute(ticker, start_time, pw_data_yn="Y")
+        if not recs:
+            break
+
+        new_added = 0
+        for r in recs:
+            d = r.get("stck_bsop_date", "")
+            t = r.get("stck_cntg_hour", "")
+            key = d + t
+            if key in seen or not d or not t:
+                continue
+            seen.add(key)
+            all_records.append(r)
+            new_added += 1
+
+        if new_added == 0:
+            break
+
+        last_rec = recs[-1]
+        oldest_date = last_rec.get("stck_bsop_date", "")
+        oldest_time = last_rec.get("stck_cntg_hour", "")
+        if not oldest_date or not oldest_time:
+            break
+
+        try:
+            dt = datetime.strptime(oldest_date + oldest_time, "%Y%m%d%H%M%S")
+        except ValueError:
+            break
+
+        if (now.date() - dt.date()).days >= cutoff_days:
+            break
+
+        dt -= timedelta(minutes=1)
+        # 시간이 09:00 미만이면 전날 15:30으로 전환 (FID_PW_DATA_INCU_YN=Y가 처리)
+        if dt.hour < 9:
+            start_time = "153000"
+        else:
+            start_time = dt.strftime("%H%M%S")
+
+    return all_records
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 해외 주식 분봉
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_us_minute(
+    symbol: str,
+    excd: str,
+    nmin: int = 5,      # 1, 2, 5, 10, 15, 30
+    nrec: int = 120,
+    pinc: int = 1,      # 1=이전일 포함
+    next_key: str = "",
+) -> Optional[dict]:
+    """
+    HHDFS76200200 — 해외주식 분봉 조회.
+    최대 120건/호출. 반환: 최신→과거.
+    필드: kymd (YYYYMMDD), khms (HHMMSS), open, high, low, close, tvol
+    """
+    result = _get(
+        "/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice",
+        {
+            "AUTH": "",
+            "EXCD": excd,
+            "SYMB": symbol,
+            "NMIN": str(nmin),
+            "PINC": str(pinc),
+            "NEXT": next_key,
+            "NREC": str(nrec),
+            "FILL": "",
+            "KEYB": "",
+        },
+        "HHDFS76200200",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug("KIS US minute error (%s/%s nmin=%d): %s",
+                     excd, symbol, nmin, result.get("msg1") if result else "no resp")
+        return None
+    return result
+
+
+def fetch_us_minute_paginated(
+    symbol: str,
+    excd: str,
+    nmin: int = 5,
+    pages: int = 3,
+) -> list[dict]:
+    """pages 페이지치 해외주식 분봉 반환 (NEXT 키 페이지네이션)."""
+    all_records: list[dict] = []
+    next_key = ""
+    for _ in range(pages):
+        resp = fetch_us_minute(symbol, excd, nmin=nmin, nrec=120, next_key=next_key)
+        if not resp:
+            break
+        recs = resp.get("output2") or []
+        all_records.extend(recs)
+        next_key = (resp.get("output1") or {}).get("next", "")
+        if not next_key or next_key == "0":
+            break
+    return all_records
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 해외 종목 정보 조회 (거래소 코드 확인)
 # ─────────────────────────────────────────────────────────────────────────────
 

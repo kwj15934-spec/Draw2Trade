@@ -77,12 +77,28 @@ async def chart_data(
         {"ticker": "...", "name": "...", "candles": [...], "timeframe": "..."}
     """
     tf = timeframe.lower()
+
+    # ── 분봉 / 시간봉 ─────────────────────────────────────────────────────────
+    _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
+    if tf in _INTRADAY:
+        interval_min = int(tf.rstrip("m"))
+        candles = data_service.get_kr_intraday(ticker, interval_min)
+        if not candles:
+            raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {ticker}")
+        return {
+            "ticker":    ticker,
+            "name":      data_service.get_company_name(ticker),
+            "candles":   candles,
+            "timeframe": tf,
+        }
+
+    # ── 일봉 / 주봉 / 월봉 ───────────────────────────────────────────────────
     if tf not in ("monthly", "weekly", "daily"):
         tf = "monthly"
 
     years = max(1, (months // 12) + 1)
     if tf == "daily":
-        years = min(years, 3)  # 일봉은 최대 3년 (데이터량 제한)
+        years = min(years, 3)
     elif tf == "weekly":
         years = min(years, 10)
 
@@ -92,10 +108,7 @@ async def chart_data(
         raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
 
     dates = ohlcv["dates"]
-    if tf == "monthly":
-        time_fmt = lambda d: d + "-01"
-    else:
-        time_fmt = lambda d: d
+    time_fmt = (lambda d: d + "-01") if tf == "monthly" else (lambda d: d)
 
     volumes = ohlcv.get("volume", [])
     candles = [

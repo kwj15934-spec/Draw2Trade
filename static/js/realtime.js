@@ -43,9 +43,28 @@
     return d.slice(0, 4) + '-' + d.slice(4, 6) + '-01';
   }
 
-  function _candleTime(dateStr) {
+  var _INTRADAY_SEC = { '1m':60,'5m':300,'15m':900,'30m':1800,'60m':3600,'240m':14400 };
+
+  /**
+   * tick.date (YYYYMMDD) + tick.time (HHMMSS) → 캔들 time 값.
+   * 분봉: "display local time as UTC" Unix timestamp (interval 버킷으로 정렬).
+   * 일/주/월봉: date string.
+   */
+  function _candleTime(dateStr, timeStr) {
     if (!window.D2T) return _toDaily(dateStr);
-    switch (D2T.timeframe) {
+    var tf = D2T.timeframe;
+    var sec = _INTRADAY_SEC[tf];
+    if (sec) {
+      // "fake UTC": local market time → UTC timestamp
+      var d = dateStr;
+      var t = timeStr || '000000';
+      var ts = Date.UTC(
+        +d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8),
+        +t.slice(0,2), +t.slice(2,4),   +t.slice(4,6)
+      ) / 1000;
+      return Math.floor(ts / sec) * sec;
+    }
+    switch (tf) {
       case 'weekly':  return _toWeekly(dateStr);
       case 'monthly': return _toMonthly(dateStr);
       default:        return _toDaily(dateStr);
@@ -102,7 +121,7 @@
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
 
-    var timeStr = _candleTime(tick.date);
+    var timeStr = _candleTime(tick.date, tick.time);
     var price   = tick.price;
 
     if (!_rtCandle || _rtCandle.time !== timeStr) {

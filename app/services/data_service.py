@@ -360,6 +360,88 @@ def get_ohlcv_by_timeframe(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# KR 분봉 / 시간봉
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _aggregate_intraday(candles: list[dict], interval_sec: int) -> list[dict]:
+    """1분봉 리스트를 interval_sec 단위로 집계."""
+    result: list[dict] = []
+    bucket: dict | None = None
+    for c in candles:
+        bts = (c["time"] // interval_sec) * interval_sec
+        if bucket is None or bucket["time"] != bts:
+            if bucket:
+                result.append(bucket)
+            bucket = {"time": bts, "open": c["open"], "high": c["high"],
+                      "low": c["low"], "close": c["close"], "volume": c["volume"]}
+        else:
+            bucket["high"]   = max(bucket["high"],  c["high"])
+            bucket["low"]    = min(bucket["low"],   c["low"])
+            bucket["close"]  = c["close"]
+            bucket["volume"] += c["volume"]
+    if bucket:
+        result.append(bucket)
+    return result
+
+
+def get_kr_intraday(ticker: str, interval_min: int = 1) -> list[dict] | None:
+    """
+    KR 분봉/시간봉 캔들 반환.
+    interval_min: 1 | 5 | 15 | 30 | 60 | 240
+
+    time 값은 "display KST as UTC" 방식 Unix timestamp.
+    (차트 시간축에 09:30 KST 가 09:30으로 표시됨)
+    """
+    from datetime import timezone
+    from app.services.kis_client import fetch_kr_minute_paginated, is_configured
+
+    if not is_configured():
+        return None
+
+    # interval별 취득 일수
+    _days_map = {1: 3, 5: 5, 15: 10, 30: 20, 60: 60, 240: 120}
+    days = _days_map.get(interval_min, 5)
+
+    raw = fetch_kr_minute_paginated(ticker, days=days)
+    if not raw:
+        return None
+
+    # 최신→과거 순 → 과거→최신 순으로 뒤집기
+    candles_1m: list[dict] = []
+    seen: set[str] = set()
+    for r in reversed(raw):
+        d = r.get("stck_bsop_date", "")
+        t = r.get("stck_cntg_hour", "")
+        if not d or not t or len(d) != 8 or len(t) != 6:
+            continue
+        key = d + t
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
+                          int(t[:2]), int(t[2:4]), int(t[4:]),
+                          tzinfo=timezone.utc)
+            candles_1m.append({
+                "time":   int(dt.timestamp()),
+                "open":   float(r.get("stck_oprc") or r.get("stck_prpr") or 0),
+                "high":   float(r.get("stck_hgpr") or r.get("stck_prpr") or 0),
+                "low":    float(r.get("stck_lwpr") or r.get("stck_prpr") or 0),
+                "close":  float(r.get("stck_prpr") or 0),
+                "volume": int(r.get("cntg_vol") or 0),
+            })
+        except (ValueError, TypeError):
+            continue
+
+    if not candles_1m:
+        return None
+
+    if interval_min == 1:
+        return candles_1m
+    return _aggregate_intraday(candles_1m, interval_min * 60)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 캐시 빌드 (서버 시작 시 호출)
 # ─────────────────────────────────────────────────────────────────────────────
 

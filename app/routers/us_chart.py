@@ -62,34 +62,45 @@ async def us_chart_data(symbol: str, timeframe: str = "daily"):
     응답: {"ticker", "name", "candles": [{time, open, high, low, close}], "timeframe"}
     """
     symbol = symbol.upper()
-    ohlcv = us_data_service.get_us_ohlcv_by_timeframe(symbol, timeframe)
+    tf = timeframe.lower()
+
+    # ── 분봉 / 시간봉 ─────────────────────────────────────────────────────────
+    _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
+    if tf in _INTRADAY:
+        interval_min = int(tf.rstrip("m"))
+        candles = us_data_service.get_us_intraday(symbol, interval_min)
+        if not candles:
+            raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {symbol}")
+        return {
+            "ticker":    symbol,
+            "name":      us_data_service.get_us_company_name(symbol),
+            "candles":   candles,
+            "timeframe": tf,
+        }
+
+    # ── 일봉 / 주봉 / 월봉 ───────────────────────────────────────────────────
+    ohlcv = us_data_service.get_us_ohlcv_by_timeframe(symbol, tf)
     if ohlcv is None or not ohlcv.get("dates"):
         raise HTTPException(status_code=404, detail=f"데이터 없음: {symbol}")
 
-    dates = ohlcv["dates"]
-    opens = ohlcv["open"]
-    highs = ohlcv["high"]
-    lows = ohlcv["low"]
-    closes = ohlcv["close"]
+    dates   = ohlcv["dates"]
     volumes = ohlcv.get("volume", [])
-
-    candles = []
-    for i, d in enumerate(dates):
-        candles.append(
-            {
-                "time":   d,
-                "open":   opens[i],
-                "high":   highs[i],
-                "low":    lows[i],
-                "close":  closes[i],
-                "volume": int(volumes[i]) if i < len(volumes) else 0,
-            }
-        )
+    candles = [
+        {
+            "time":   d,
+            "open":   ohlcv["open"][i],
+            "high":   ohlcv["high"][i],
+            "low":    ohlcv["low"][i],
+            "close":  ohlcv["close"][i],
+            "volume": int(volumes[i]) if i < len(volumes) else 0,
+        }
+        for i, d in enumerate(dates)
+    ]
 
     name = us_data_service.get_us_company_name(symbol)
     return {
         "ticker":    symbol,
         "name":      name,
         "candles":   candles,
-        "timeframe": timeframe,
+        "timeframe": tf,
     }
