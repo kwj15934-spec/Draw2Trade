@@ -1666,6 +1666,8 @@
     }
 
     drawPoints       = canvasPoints;
+    // 줌/팬 추적: 차트 시간/가격 좌표 저장 → redraw() 시 재투영
+    _drawChartCoords = filtered.map(function(_c) { return { time: _c.time, price: _c.close }; });
     parallelChannels = [];
     trendPoints      = [];
     linePoints       = [];
