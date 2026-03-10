@@ -156,6 +156,32 @@
     .stat-value.highlight { color: #ff6b35; }
     .stat-sub { font-size: 10px; color: #444; margin-top: 3px; }
 
+    /* KIS API 사용량 */
+    .kis-usage-section { margin-bottom: 36px; }
+    .kis-usage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .kis-metric {
+      background: #1a1d2e;
+      border: 1px solid #2a2e39;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .kis-metric-label { font-size: 11px; color: #555; margin-bottom: 4px; }
+    .kis-metric-value { font-size: 20px; font-weight: 700; color: #d1d4dc; }
+    .kis-metric-value.accent { color: #2196f3; }
+    .kis-tr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .kis-tr-table th { text-align:left; padding: 6px 10px; border-bottom: 1px solid #2a2e39; color:#555; font-weight:500; }
+    .kis-tr-table td { padding: 5px 10px; border-bottom: 1px solid #1e2130; color:#b0b4c1; }
+    .kis-tr-table tr:hover td { background: #1e2130; }
+    .kis-tr-count { text-align:right; font-weight:600; color:#26a69a; }
+    .kis-badge { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; margin-left:6px; }
+    .kis-badge.real { background:#26a69a22; color:#26a69a; }
+    .kis-badge.mock { background:#ff9a0022; color:#ff9a00; }
+
     /* 공지 에디터 */
     .notice-editor {
       display: grid; grid-template-columns: 1fr 1fr;
@@ -306,6 +332,48 @@
         <div class="stat-value" id="stat-pageviews">-</div>
         <div class="stat-sub">/ + /app 합계</div>
       </div>
+    </div>
+
+    <!-- KIS API 사용량 -->
+    <h1 style="margin-top:40px;">KIS API 사용량</h1>
+    <div class="sub">서버 시작 이후 누적 호출 수입니다. 30초마다 자동 갱신.</div>
+    <div class="kis-usage-section">
+      <div class="kis-usage-grid">
+        <div class="kis-metric">
+          <div class="kis-metric-label">총 호출 수</div>
+          <div class="kis-metric-value accent" id="kis-total">-</div>
+        </div>
+        <div class="kis-metric">
+          <div class="kis-metric-label">시간당 평균</div>
+          <div class="kis-metric-value" id="kis-per-hour">-</div>
+        </div>
+        <div class="kis-metric">
+          <div class="kis-metric-label">서버 가동 시간</div>
+          <div class="kis-metric-value" id="kis-uptime">-</div>
+        </div>
+        <div class="kis-metric">
+          <div class="kis-metric-label">토큰 만료</div>
+          <div class="kis-metric-value" style="font-size:13px;line-height:1.5;" id="kis-token-exp">-</div>
+        </div>
+        <div class="kis-metric">
+          <div class="kis-metric-label">모드</div>
+          <div class="kis-metric-value" style="font-size:16px;" id="kis-mode">-</div>
+        </div>
+      </div>
+
+      <table class="kis-tr-table">
+        <thead>
+          <tr>
+            <th>TR ID</th>
+            <th>기능</th>
+            <th style="text-align:right;">호출 수</th>
+            <th style="text-align:right;">비율</th>
+          </tr>
+        </thead>
+        <tbody id="kis-tr-tbody">
+          <tr><td colspan="4" style="color:#444;padding:12px 10px;">데이터 없음</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="error-bar" id="error-bar"></div>
@@ -502,6 +570,65 @@
 
     loadStats();
     setInterval(loadStats, 30000);  // 30초마다 갱신
+
+    // KIS API 사용량
+    var TR_DESC = {
+      'FHKST03010100': '국내 일/주/월봉',
+      'FHKST03010200': '국내 분봉',
+      'HHDFS76240000': '해외 일/주/월봉',
+      'HHDFS76200200': '해외 분봉',
+      'CTPF1702R':     '해외 종목 정보',
+      'HDFSCNT0':      '해외 실시간 체결',
+      'H0STCNT0':      '국내 실시간 체결',
+    };
+
+    async function loadKisUsage() {
+      try {
+        var res = await fetch('/api/admin/kis-usage');
+        if (!res.ok) return;
+        var d = await res.json();
+
+        document.getElementById('kis-total').textContent    = (d.total_calls || 0).toLocaleString();
+        document.getElementById('kis-per-hour').textContent = (d.calls_per_hour || 0).toLocaleString() + ' /h';
+        document.getElementById('kis-uptime').textContent   = d.uptime_hours + 'h';
+
+        var expEl = document.getElementById('kis-token-exp');
+        if (d.token_expires) {
+          var exp = new Date(d.token_expires);
+          expEl.textContent = exp.toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        } else {
+          expEl.textContent = '없음 (미설정)';
+        }
+
+        var modeEl = document.getElementById('kis-mode');
+        modeEl.innerHTML = d.mode === 'real'
+          ? '실전투자 <span class="kis-badge real">real</span>'
+          : '모의투자 <span class="kis-badge mock">mock</span>';
+
+        var byTr = d.by_tr || {};
+        var total = d.total_calls || 1;
+        var tbody = document.getElementById('kis-tr-tbody');
+        var entries = Object.entries(byTr);
+        if (!entries.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="color:#444;padding:12px 10px;">호출 없음</td></tr>';
+          return;
+        }
+        tbody.innerHTML = entries.map(function(kv) {
+          var tr = kv[0], cnt = kv[1];
+          var pct = ((cnt / total) * 100).toFixed(1);
+          var desc = TR_DESC[tr] || '-';
+          return '<tr>' +
+            '<td style="font-family:monospace;color:#7c8caa;">' + tr + '</td>' +
+            '<td>' + desc + '</td>' +
+            '<td class="kis-tr-count">' + cnt.toLocaleString() + '</td>' +
+            '<td style="text-align:right;color:#555;">' + pct + '%</td>' +
+            '</tr>';
+        }).join('');
+      } catch(e) { /* 무시 */ }
+    }
+
+    loadKisUsage();
+    setInterval(loadKisUsage, 30000);
 
     loadUsers();
 

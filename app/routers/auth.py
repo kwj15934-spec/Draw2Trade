@@ -136,3 +136,10 @@ async def admin_reject(body: UserActionBody, admin=Depends(require_admin)):
 async def admin_stats(admin=Depends(require_admin)):
     """현재 접속자 통계 (관리자 전용)."""
     return activity_tracker.get_stats()
+
+
+@router.get("/api/admin/kis-usage")
+async def admin_kis_usage(admin=Depends(require_admin)):
+    """KIS API 사용량 통계 (관리자 전용)."""
+    from app.services import kis_client
+    return kis_client.get_api_usage()

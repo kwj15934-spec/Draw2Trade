@@ -40,6 +40,25 @@ _token_expires: datetime = datetime.min
 _last_call: float = 0.0
 _MIN_INTERVAL: float = 0.06  # 60ms
 
+# ── API 사용량 카운터 ─────────────────────────────────────────────────────────
+_api_call_count: int = 0          # 전체 호출 수 (서버 시작 이후 누적)
+_api_call_by_tr: dict[str, int] = {}   # TR ID별 호출 수
+_api_server_start: float = time.time() # 서버 시작 시각
+
+
+def get_api_usage() -> dict:
+    """현재 API 사용량 통계 반환."""
+    elapsed = time.time() - _api_server_start
+    hours   = elapsed / 3600
+    return {
+        "total_calls":    _api_call_count,
+        "calls_per_hour": round(_api_call_count / hours, 1) if hours > 0.01 else 0,
+        "uptime_hours":   round(hours, 1),
+        "by_tr":          dict(sorted(_api_call_by_tr.items(), key=lambda x: -x[1])),
+        "token_expires":  _token_expires.isoformat() if _token_expires > datetime.min else None,
+        "mode":           os.environ.get("KIS_MODE", "real"),
+    }
+
 
 def _base_url() -> str:
     mode = os.environ.get("KIS_MODE", "real").lower()
@@ -164,12 +183,15 @@ def _rate_limit() -> None:
 
 def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, Any]]:
     """KIS REST GET 요청. 실패 시 None 반환."""
+    global _api_call_count, _api_call_by_tr
     app_key, app_secret = get_credentials()
     token = get_token()
     if not token:
         return None
 
     _rate_limit()
+    _api_call_count += 1
+    _api_call_by_tr[tr_id] = _api_call_by_tr.get(tr_id, 0) + 1
     try:
         qs = _parse.urlencode(params)
         url = f"{_base_url()}{path}?{qs}"
