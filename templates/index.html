@@ -233,6 +233,9 @@
       <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장된 검색</button>
     </div>
 
+    <!-- 공지 배너 -->
+    <div id="notice-banner" style="display:none;"></div>
+
     <!-- 유사 종목 패널 -->
     <div id="sidebar-panel-results">
       <div class="d2t-sidebar-header" style="padding-top:8px;">
@@ -504,4 +507,56 @@
 <script src="/static/js/chart.js?v=20260310b"></script>
 <script src="/static/js/draw.js?v=20260309k"></script>
 <script src="/static/js/realtime.js?v=20260310a"></script>
+
+<!-- 공지 배너 -->
+<script>
+(function () {
+  var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
+  var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
+
+  function dismissKey(id) { return 'notice_dismissed_' + id; }
+
+  function renderBanner(notice) {
+    var banner = document.getElementById('notice-banner');
+    if (!banner) return;
+    if (sessionStorage.getItem(dismissKey(notice.id))) return;
+
+    var color = TYPE_COLOR[notice.type] || TYPE_COLOR.notice;
+    var label = TYPE_LABEL[notice.type] || '공지';
+    var content = notice.content || '';
+    var preview = content.length > 60 ? content.slice(0, 60) + '…' : content;
+
+    banner.innerHTML =
+      '<div class="notice-banner-inner">' +
+        '<span class="notice-banner-type" style="background:' + color + '20;color:' + color + ';border-color:' + color + '40;">' + label + '</span>' +
+        '<div class="notice-banner-body">' +
+          '<div class="notice-banner-title">' + escHtml(notice.title) + '</div>' +
+          (preview ? '<div class="notice-banner-preview">' + escHtml(preview) + '</div>' : '') +
+        '</div>' +
+        '<button class="notice-banner-close" onclick="dismissNotice(' + notice.id + ')" title="닫기">✕</button>' +
+      '</div>';
+    banner.style.display = '';
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  window.dismissNotice = function (id) {
+    sessionStorage.setItem(dismissKey(id), '1');
+    var banner = document.getElementById('notice-banner');
+    if (banner) banner.style.display = 'none';
+  };
+
+  fetch('/api/notices')
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (list) {
+      if (!list || !list.length) return;
+      // pinned 우선, 그 다음 최신순 (서버가 이미 정렬해 반환)
+      var n = list[0];
+      if (!sessionStorage.getItem(dismissKey(n.id))) renderBanner(n);
+    })
+    .catch(function () {});
+})();
+</script>
 {% endblock %}

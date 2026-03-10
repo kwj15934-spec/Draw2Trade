@@ -508,6 +508,58 @@
     .sidebar-tab-btn.active { color: #d1d4dc; border-bottom-color: #ff6b35; }
     .sidebar-tab-btn:hover  { color: #aaa; }
 
+    /* ── 공지 배너 ───────────────────────────────────────── */
+    #notice-banner {
+      border-bottom: 1px solid #2a2e39;
+      flex-shrink: 0;
+    }
+    .notice-banner-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      background: #0f1320;
+    }
+    .notice-banner-type {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .notice-banner-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .notice-banner-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #d4d8e2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .notice-banner-preview {
+      font-size: 11px;
+      color: #7a8499;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .notice-banner-close {
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .notice-banner-close:hover { color: #aaa; }
+
     #sidebar-panel-results {
       flex: 1;
       display: flex;
