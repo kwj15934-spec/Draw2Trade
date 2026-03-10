@@ -483,9 +483,10 @@ def _build_ticker_list() -> list[dict]:
             seen.add(sym)
             combined.append((sym, name, "ETF", "NYS"))
 
-    # FTP excd 보강: screener/wikipedia 결과에 excd가 비어있으면 FTP로 보완
+    # FTP excd 보강: NYSE/AMEX 커버리지가 부족하면 FTP로 보완
     ftp_excd_map: dict[str, str] = {}
-    needs_fill = any(not excd for _, _, _, excd in combined[:20])
+    nyse_ams_count = sum(1 for _, _, _, excd in combined if excd in ("NYS", "AMS"))
+    needs_fill = nyse_ams_count < 200   # NYSE/AMEX 200개 미만이면 FTP 강제 보강
     if needs_fill:
         try:
             ftp_data = _fetch_nasdaq_ftp()

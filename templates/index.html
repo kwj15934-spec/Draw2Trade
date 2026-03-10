@@ -41,128 +41,126 @@
 
 <!-- ── 툴바 ─────────────────────────────────────────────────────────────── -->
 <div class="d2t-toolbar">
-  <!-- 카테고리 (KR 시장만) -->
-  <div id="category-group" class="ticker-control-group" style="display:none;">
-    <label for="category-select">카테고리</label>
-    <select id="category-select" title="섹터/업종 필터">
-      <option value="">전체</option>
-    </select>
-  </div>
-  <!-- 거래소 필터 (US 시장만) -->
-  <div id="exchange-group" class="ticker-control-group" style="display:none;">
-    <label>거래소</label>
-    <div class="timeframe-group">
-      <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
-      <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
-      <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
-      <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
-    </div>
-  </div>
-  <!-- 종목 선택 -->
-  <div class="ticker-control-group">
-    <label for="ticker-select">종목</label>
-    <div class="ticker-search-wrap" id="ticker-search-wrap">
-      <input type="text" id="ticker-search" placeholder="종목명/티커 검색 (KR)" title="검색 후 클릭하여 선택" autocomplete="off" style="display:none;">
-      <div id="ticker-search-dropdown" style="display:none;"></div>
-      <select id="ticker-select" title="종목 선택">
-        <option value="">로딩 중...</option>
+
+  <!-- ── Row 1: 종목 선택 + 봉 타입 ──────────────────────────────────────── -->
+  <div class="toolbar-row">
+
+    <!-- 카테고리 (KR) -->
+    <div id="category-group" class="ticker-control-group" style="display:none;">
+      <label for="category-select">카테고리</label>
+      <select id="category-select" title="섹터/업종 필터">
+        <option value="">전체</option>
       </select>
     </div>
-  </div>
-  <button id="btn-load" class="btn-d2t">차트 로드</button>
-  <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
-  <button id="btn-blank" class="btn-d2t" title="빈 캔버스 모드 전환">✏️ 빈 캔버스</button>
 
-  <div class="vr"></div>
-
-  <!-- 차트 타임프레임 -->
-  <label>봉</label>
-  <div class="timeframe-group">
-    <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월봉</button>
-    <button id="tf-weekly" class="btn-d2t timeframe-btn" data-tf="weekly" title="주봉">주봉</button>
-    <button id="tf-daily" class="btn-d2t timeframe-btn" data-tf="daily" title="일봉">일봉</button>
-  </div>
-
-  <div class="vr"></div>
-
-  <!-- 드로잉 도구 (2열 그리드) -->
-  <label>드로잉</label>
-  <div class="draw-tool-grid">
-    <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
-      title="자유곡선: 마우스 드래그">✎ 자유곡선</button>
-    <button id="tool-trend"    class="btn-d2t draw-tool-btn" data-tool="trend"
-      title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료">↗ 추세선</button>
-    <button id="tool-line"     class="btn-d2t draw-tool-btn" data-tool="line"
-      title="직선 (L): 시작점 클릭 → 끝점 클릭">− 직선</button>
-    <button id="tool-parallel" class="btn-d2t draw-tool-btn" data-tool="parallel"
-      title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">⟺ 평행선</button>
-    <button id="btn-clear"     class="btn-d2t btn-d2t-danger"
-      title="드로잉 지우기 (Delete)">🗑 지우기</button>
-    <button id="btn-save-draw" class="btn-d2t"
-      title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
-  </div>
-
-  <div class="vr"></div>
-
-  <!-- 기간 설정 (재설계) -->
-  <div class="period-group">
-    <label>기간</label>
-
-    <!-- 차트 모드: 자동 감지 칩 -->
-    <span id="period-chart-chip" class="period-chip" title="차트에 표시 중인 봉 수를 자동으로 감지합니다">차트 자동</span>
-
-    <!-- 빈 캔버스 모드: 수동 드롭다운 (기본 숨김) -->
-    <select id="lookback-months" style="display:none;" title="비교할 기간">
-      <option value="3"  data-kr="3개월"  data-us="3개월">3개월</option>
-      <option value="6"  data-kr="6개월"  data-us="6개월">6개월</option>
-      <option value="12" data-kr="12개월" data-us="1년">12개월</option>
-      <option value="24" data-kr="24개월" data-us="2년">24개월</option>
-      <option value="36" data-kr="36개월" data-us="3년" selected>36개월</option>
-      <option value="48" data-kr="48개월" data-us="4년">48개월</option>
-      <option value="60" data-kr="60개월" data-us="5년">60개월</option>
-    </select>
-
-    <!-- 오늘 기준 (고정) -->
-    <span class="period-chip" title="각 종목의 최근 N봉(오늘 종료)만 비교">오늘 기준</span>
-
-    <!-- 날짜 범위 토글 -->
-    <button id="btn-mode-range" class="btn-d2t period-mode-btn" title="날짜 범위 직접 지정">날짜 범위</button>
-
-    <!-- 날짜 범위 입력 (토글 시 표시) -->
-    <div id="period-range-controls" style="display:none;">
-      <input type="month" id="date-from" title="시작 월" placeholder="시작">
-      <span class="period-sep">~</span>
-      <input type="month" id="date-to" title="종료 월" placeholder="종료">
+    <!-- 거래소 필터 (US) -->
+    <div id="exchange-group" class="ticker-control-group" style="display:none;">
+      <label>거래소</label>
+      <div class="timeframe-group">
+        <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
+        <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
+        <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
+        <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
+      </div>
     </div>
+
+    <div class="vr"></div>
+
+    <!-- 종목 검색 + 드롭다운 -->
+    <div class="ticker-control-group">
+      <label for="ticker-select">종목</label>
+      <div class="ticker-search-wrap" id="ticker-search-wrap">
+        <input type="text" id="ticker-search" placeholder="종목명/티커 검색 (KR)" title="검색 후 클릭하여 선택" autocomplete="off" style="display:none;">
+        <div id="ticker-search-dropdown" style="display:none;"></div>
+        <select id="ticker-select" title="종목 선택">
+          <option value="">로딩 중...</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btn-load" class="btn-d2t">차트 로드</button>
+    <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
+    <button id="btn-blank" class="btn-d2t" title="빈 캔버스 모드 전환">✏️ 빈 캔버스</button>
+
+    <div class="vr"></div>
+
+    <!-- 봉 타입 -->
+    <label>봉</label>
+    <div class="timeframe-group">
+      <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월봉</button>
+      <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주봉</button>
+      <button id="tf-daily"   class="btn-d2t timeframe-btn"        data-tf="daily"   title="일봉">일봉</button>
+    </div>
+
+    <!-- US 안내 힌트 (인라인) -->
+    <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; margin-left:4px;">
+      거래소·카테고리 미선택 시 S&amp;P 500만 표시
+    </span>
   </div>
 
-  <!-- 검색 버튼 -->
-  <button id="btn-search" class="btn-d2t btn-d2t-primary">
-    🔍 유사 종목 검색
-  </button>
+  <!-- ── Row 2: 드로잉 + 기간 + 검색 ─────────────────────────────────────── -->
+  <div class="toolbar-row">
 
-  <!-- 자동 패턴 분석 버튼 -->
-  <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">
-    📐 자동 분석
-  </button>
+    <!-- 드로잉 도구 -->
+    <label>드로잉</label>
+    <div class="draw-tool-grid">
+      <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
+        title="자유곡선: 마우스 드래그">✎ 자유곡선</button>
+      <button id="tool-trend"    class="btn-d2t draw-tool-btn" data-tool="trend"
+        title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료">↗ 추세선</button>
+      <button id="tool-line"     class="btn-d2t draw-tool-btn" data-tool="line"
+        title="직선 (L): 시작점 클릭 → 끝점 클릭">− 직선</button>
+      <button id="tool-parallel" class="btn-d2t draw-tool-btn" data-tool="parallel"
+        title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">⟺ 평행선</button>
+      <button id="btn-clear"     class="btn-d2t btn-d2t-danger"
+        title="드로잉 지우기 (Delete)">🗑 지우기</button>
+      <button id="btn-save-draw" class="btn-d2t"
+        title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
+    </div>
 
-  <!-- 고급 옵션 토글 -->
-  <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
-  <div id="advanced-options">
-    <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
-    <select id="top-n-select" title="검색 결과 최대 개수" style="height:28px;font-size:12px;padding:0 4px;background:#131722;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:4px;">
-      <option value="10">Top 10</option>
-      <option value="20" selected>Top 20</option>
-      <option value="30">Top 30</option>
-      <option value="40">Top 40</option>
-      <option value="50">Top 50</option>
-    </select>
+    <div class="vr"></div>
+
+    <!-- 기간 설정 -->
+    <div class="period-group">
+      <label>기간</label>
+      <span id="period-chart-chip" class="period-chip" title="차트에 표시 중인 봉 수를 자동으로 감지합니다">차트 자동</span>
+      <select id="lookback-months" style="display:none;" title="비교할 기간">
+        <option value="3"  data-kr="3개월"  data-us="3개월">3개월</option>
+        <option value="6"  data-kr="6개월"  data-us="6개월">6개월</option>
+        <option value="12" data-kr="12개월" data-us="1년">12개월</option>
+        <option value="24" data-kr="24개월" data-us="2년">24개월</option>
+        <option value="36" data-kr="36개월" data-us="3년" selected>36개월</option>
+        <option value="48" data-kr="48개월" data-us="4년">48개월</option>
+        <option value="60" data-kr="60개월" data-us="5년">60개월</option>
+      </select>
+      <span class="period-chip" title="각 종목의 최근 N봉(오늘 종료)만 비교">오늘 기준</span>
+      <button id="btn-mode-range" class="btn-d2t period-mode-btn" title="날짜 범위 직접 지정">날짜 범위</button>
+      <div id="period-range-controls" style="display:none;">
+        <input type="month" id="date-from" title="시작 월" placeholder="시작">
+        <span class="period-sep">~</span>
+        <input type="month" id="date-to" title="종료 월" placeholder="종료">
+      </div>
+    </div>
+
+    <div class="vr"></div>
+
+    <!-- 패턴 검색 -->
+    <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
+    <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">📐 자동 분석</button>
+    <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
+    <div id="advanced-options">
+      <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
+      <select id="top-n-select" title="검색 결과 최대 개수" style="height:28px;font-size:12px;padding:0 4px;background:#131722;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:4px;min-width:auto;">
+        <option value="10">Top 10</option>
+        <option value="20" selected>Top 20</option>
+        <option value="30">Top 30</option>
+        <option value="40">Top 40</option>
+        <option value="50">Top 50</option>
+      </select>
+    </div>
+    <span id="search-status" class="search-status"></span>
   </div>
 
-  <span id="search-status" class="search-status"></span>
-</div>
-<div id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; padding:3px 8px;">
-  거래소·카테고리 미선택 시 S&amp;P 500 종목만 표시 · 다른 종목은 검색창을 이용하세요
 </div>
 
 <!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->

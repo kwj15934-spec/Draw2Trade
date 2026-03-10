@@ -141,30 +141,39 @@
 
     /* ── 툴바 ─────────────────────────────────────────────── */
     .d2t-toolbar {
-      min-height: 44px;
       background: #161925;
       border-bottom: 1px solid #2a2e39;
       display: flex;
-      align-items: center;
-      align-content: center;
-      padding: 6px 12px;
-      gap: 6px 8px;
+      flex-direction: column;
       flex-shrink: 0;
-      flex-wrap: wrap;
       overflow: visible;
+    }
+
+    /* 툴바 행 */
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px 8px;
+      padding: 5px 12px;
+      min-height: 42px;
+    }
+    .toolbar-row + .toolbar-row {
+      border-top: 1px solid #1e2130;
     }
 
     .d2t-toolbar .vr {
       border-color: #2a2e39;
       opacity: 1;
-      height: 24px;
-      margin: 0 4px;
+      height: 22px;
+      margin: 0 2px;
     }
 
     .d2t-toolbar label {
       color: #888;
       margin: 0;
       white-space: nowrap;
+      font-size: 12px;
     }
 
     .d2t-toolbar select {
@@ -174,13 +183,24 @@
       border-radius: 4px;
       padding: 3px 8px;
       height: 30px;
-      min-width: 200px;
-      max-width: 250px;
+      min-width: 180px;
+      max-width: 240px;
     }
 
     .d2t-toolbar select:focus {
       outline: none;
       border-color: #ff6b35;
+    }
+
+    /* 드로잉 도구 가로 배열 */
+    .draw-tool-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .draw-tool-row .btn-d2t {
+      padding: 0 10px;
+      font-size: 12px;
     }
 
     /* 종목 검색 + 카테고리 */
@@ -298,10 +318,10 @@
     }
     .btn-d2t-danger:hover { background: #ff6b35; color: #fff; }
 
-    /* ── 드로잉 도구 2열 그리드 ──────────────────────────── */
+    /* ── 드로잉 도구 (기존 그리드 스타일 — 하위 호환) ────── */
     .draw-tool-grid {
-      display: grid;
-      grid-template-columns: repeat(2, auto);
+      display: flex;
+      flex-wrap: wrap;
       gap: 4px;
       align-items: center;
     }
