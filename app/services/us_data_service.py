@@ -803,21 +803,83 @@ _us_intraday_cache: dict[tuple, tuple] = {}
 _US_INTRADAY_TTL = {1: 60, 5: 300, 15: 600, 30: 900, 60: 1800, 240: 3600}
 
 
+def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None:
+    """yfinance로 US 분봉/시간봉 캔들 반환. KIS 실패 시 fallback."""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timezone
+
+        interval_map = {1: "1m", 5: "5m", 15: "15m", 30: "30m", 60: "1h", 240: "1h"}
+        period_map   = {1: "7d", 5: "60d", 15: "60d", 30: "60d", 60: "730d", 240: "730d"}
+
+        yf_interval = interval_map.get(interval_min, "5m")
+        yf_period   = period_map.get(interval_min, "60d")
+
+        t = yf.Ticker(symbol)
+        df = t.history(period=yf_period, interval=yf_interval, auto_adjust=True)
+        if df is None or df.empty:
+            return None
+
+        # multi-level columns 처리
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+
+        try:
+            from zoneinfo import ZoneInfo
+            et = ZoneInfo("America/New_York")
+        except ImportError:
+            import pytz
+            et = pytz.timezone("America/New_York")
+
+        candles = []
+        for dt_idx, row in df.iterrows():
+            # yfinance intraday: UTC-aware datetime → ET (America/New_York)
+            if hasattr(dt_idx, "tzinfo") and dt_idx.tzinfo is not None:
+                dt_et = dt_idx.astimezone(et)
+            else:
+                dt_et = dt_idx
+
+            # Fake-UTC: ET 시각을 UTC로 인코딩해 차트 시간축에 올바르게 표시
+            fake_utc = datetime(
+                dt_et.year, dt_et.month, dt_et.day,
+                dt_et.hour, dt_et.minute, getattr(dt_et, "second", 0),
+                tzinfo=timezone.utc,
+            )
+            candles.append({
+                "time":   int(fake_utc.timestamp()),
+                "open":   float(row.get("Open",   0) or 0),
+                "high":   float(row.get("High",   0) or 0),
+                "low":    float(row.get("Low",    0) or 0),
+                "close":  float(row.get("Close",  0) or 0),
+                "volume": int(row.get("Volume",   0) or 0),
+            })
+
+        if not candles:
+            return None
+
+        if interval_min == 240:
+            from app.services.data_service import _aggregate_intraday
+            candles = _aggregate_intraday(candles, 240 * 60)
+
+        return candles
+    except Exception as e:
+        logger.warning("yfinance US intraday 실패 (%s, %dm): %s", symbol, interval_min, e)
+        return None
+
+
 def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
     """
     US 분봉/시간봉 캔들 반환.
     interval_min: 1 | 5 | 15 | 30 | 60 | 240
 
-    KIS HHDFS76200200 — NMIN: 1, 2, 5, 10, 15, 30 (60/240은 30m 집계).
+    1순위: KIS HHDFS76200200 — NMIN: 1, 2, 5, 10, 15, 30 (60/240은 30m 집계).
+    2순위: yfinance fallback (KIS 미설정 또는 실패 시).
     time 값은 "display ET as UTC" 방식 Unix timestamp.
     사용자 수에 관계없이 TTL 캐시로 API 호출 횟수 제한.
     """
     import time as _time
     from datetime import timezone
     from app.services.kis_client import fetch_us_minute_paginated, is_configured
-
-    if not is_configured():
-        return None
 
     # TTL 캐시 확인
     cache_key = (symbol.upper(), interval_min)
@@ -827,56 +889,62 @@ def get_us_intraday(symbol: str, interval_min: int = 5) -> list[dict] | None:
         if _time.time() < expire_ts:
             return candles_c
 
-    excd = get_excd(symbol)
-    if not excd:
+    result: list[dict] | None = None
+
+    # 1순위: KIS API
+    if is_configured():
+        excd = get_excd(symbol)
+        if excd:
+            # NMIN 매핑: 60/240은 30분봉 데이터를 집계
+            native_nmin = interval_min if interval_min <= 30 else 30
+            pages_map   = {1: 2, 5: 2, 15: 2, 30: 3, 60: 5, 240: 8}
+            pages       = pages_map.get(interval_min, 3)
+
+            raw = fetch_us_minute_paginated(symbol, excd, nmin=native_nmin, pages=pages)
+            if raw:
+                candles: list[dict] = []
+                seen: set[str] = set()
+                for r in reversed(raw):
+                    d = r.get("kymd", "")
+                    t = r.get("khms", "")
+                    if not d or not t or len(d) != 8 or len(t) != 6:
+                        continue
+                    key = d + t
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    try:
+                        dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
+                                      int(t[:2]), int(t[2:4]), int(t[4:]),
+                                      tzinfo=timezone.utc)
+                        candles.append({
+                            "time":   int(dt.timestamp()),
+                            "open":   float(r.get("open")  or 0),
+                            "high":   float(r.get("high")  or 0),
+                            "low":    float(r.get("low")   or 0),
+                            "close":  float(r.get("close") or r.get("last") or 0),
+                            "volume": int(r.get("tvol")    or 0),
+                        })
+                    except (ValueError, TypeError):
+                        continue
+
+                if candles:
+                    if interval_min in (60, 240):
+                        from app.services.data_service import _aggregate_intraday
+                        result = _aggregate_intraday(candles, interval_min * 60)
+                    else:
+                        result = candles
+            if not result:
+                logger.debug("KIS US minute 실패, yfinance fallback (%s, %dm)", symbol, interval_min)
+
+    # 2순위: yfinance fallback
+    if not result:
+        result = _intraday_from_yfinance(symbol, interval_min)
+
+    if not result:
         return None
-
-    # NMIN 매핑: 60/240은 30분봉 데이터를 집계
-    native_nmin = interval_min if interval_min <= 30 else 30
-    pages_map   = {1: 2, 5: 2, 15: 2, 30: 3, 60: 5, 240: 8}
-    pages       = pages_map.get(interval_min, 3)
-
-    raw = fetch_us_minute_paginated(symbol, excd, nmin=native_nmin, pages=pages)
-    if not raw:
-        return None
-
-    candles: list[dict] = []
-    seen: set[str] = set()
-    for r in reversed(raw):
-        d = r.get("kymd", "")
-        t = r.get("khms", "")
-        if not d or not t or len(d) != 8 or len(t) != 6:
-            continue
-        key = d + t
-        if key in seen:
-            continue
-        seen.add(key)
-        try:
-            dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
-                          int(t[:2]), int(t[2:4]), int(t[4:]),
-                          tzinfo=timezone.utc)
-            candles.append({
-                "time":   int(dt.timestamp()),
-                "open":   float(r.get("open")  or 0),
-                "high":   float(r.get("high")  or 0),
-                "low":    float(r.get("low")   or 0),
-                "close":  float(r.get("close") or r.get("last") or 0),
-                "volume": int(r.get("tvol")    or 0),
-            })
-        except (ValueError, TypeError):
-            continue
-
-    if not candles:
-        return None
-
-    if interval_min in (60, 240):
-        from app.services.data_service import _aggregate_intraday
-        result = _aggregate_intraday(candles, interval_min * 60)
-    else:
-        result = candles
 
     # TTL 캐시 저장
-    import time as _time
     ttl = _US_INTRADAY_TTL.get(interval_min, 300)
     _us_intraday_cache[cache_key] = (result, _time.time() + ttl)
     return result

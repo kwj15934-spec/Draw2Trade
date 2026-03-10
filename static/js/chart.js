@@ -191,7 +191,13 @@
 
     fetch(chartUrl(ticker, tf))
       .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) {
+          return r.json().then(function(e) {
+            throw new Error(e.detail || ('HTTP ' + r.status));
+          }).catch(function() {
+            throw new Error('HTTP ' + r.status);
+          });
+        }
         return r.json();
       })
       .then(function (data) {

@@ -70,7 +70,7 @@ async def us_chart_data(symbol: str, timeframe: str = "daily"):
         interval_min = int(tf.rstrip("m"))
         candles = us_data_service.get_us_intraday(symbol, interval_min)
         if not candles:
-            raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {symbol}")
+            raise HTTPException(status_code=503, detail=f"분봉 데이터 없음: {symbol} (장 마감 후 또는 API 미응답)")
         return {
             "ticker":    symbol,
             "name":      us_data_service.get_us_company_name(symbol),
