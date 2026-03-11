@@ -333,19 +333,50 @@
 (function () {
   var HOURS = {
     KR: { label: '09:00~15:30 KST', tz: 'Asia/Seoul',    open: [9,  0], close: [15, 30] },
-    US: { label: '09:30~16:00 ET',  tz: 'America/New_York', open: [9, 30], close: [16,  0] },
+    US: { tz: 'America/New_York', open: [9, 30], close: [16, 0] },
   };
 
-  function isWeekday(date) {
-    var d = date.getDay();
-    return d >= 1 && d <= 5;
+  /** ET 시각(HH, MM)을 KST 'HH:MM' 문자열로 변환 (서머타임 자동 반영). */
+  function _etToKst(h, m) {
+    var now = new Date();
+    // ET UTC 오프셋 계산: New York 현재 오프셋
+    var etParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric', minute: 'numeric', hour12: false,
+    }).formatToParts(now);
+    var krParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      hour: 'numeric', minute: 'numeric', hour12: false,
+    }).formatToParts(now);
+    var getV = function (parts, t) {
+      return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10);
+    };
+    var etH = getV(etParts, 'hour'), etM = getV(etParts, 'minute');
+    var krH = getV(krParts, 'hour'), krM = getV(krParts, 'minute');
+    // 현재 KST - 현재 ET = offset(분)
+    var offsetMin = (krH * 60 + krM) - (etH * 60 + etM);
+    // 날짜 넘어가는 경우 보정 (하루 = 1440분)
+    if (offsetMin < 0) offsetMin += 1440;
+    var totalMin = (h * 60 + m + offsetMin) % 1440;
+    var rh = Math.floor(totalMin / 60), rm = totalMin % 60;
+    return (rh < 10 ? '0' + rh : rh) + ':' + (rm < 10 ? '0' + rm : rm);
+  }
+
+  /** US 장 시간 레이블 (KST 기준, 서머타임 자동) */
+  function _usLabel() {
+    try {
+      var openKst  = _etToKst(9, 30);
+      var closeKst = _etToKst(16, 0);
+      return openKst + '~' + closeKst + ' KST';
+    } catch (e) {
+      return '22:30~05:00 KST';
+    }
   }
 
   function isOpen(market) {
     var h = HOURS[market];
     try {
       var now = new Date();
-      // 해당 타임존의 현재 시각 파싱
       var parts = new Intl.DateTimeFormat('en-US', {
         timeZone: h.tz,
         hour: 'numeric', minute: 'numeric', weekday: 'short',
@@ -370,13 +401,14 @@
     if (!chip) return;
     var h   = HOURS[market];
     if (!h) { chip.innerHTML = ''; return; }
+    var label = market === 'US' ? _usLabel() : h.label;
     var on  = isOpen(market);
     var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
             + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
     var status = on
       ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
       : '<span style="color:#555;">마감</span>';
-    chip.innerHTML = dot + '&nbsp;' + h.label + '&nbsp;·&nbsp;' + status;
+    chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
   };
 
   // 초기 렌더 + 1분마다 갱신
