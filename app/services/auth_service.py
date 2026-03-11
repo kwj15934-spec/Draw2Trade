@@ -9,6 +9,7 @@ Firebase Admin SDK 기반 인증 서비스.
 import json
 import logging
 import os
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -85,12 +86,14 @@ def decode_session_token(token: str) -> dict | None:
 # ── Firestore 동기화 ──────────────────────────────────────────────────────────
 
 def _firestore_upsert_user(uid: str, data: dict) -> None:
-    """Firestore users/{uid} 문서를 upsert (merge=True). 실패해도 로컬 파일엔 영향 없음."""
-    try:
-        db = fb_firestore.client()
-        db.collection("users").document(uid).set(data, merge=True)
-    except Exception as e:
-        logger.warning("Firestore upsert 실패 (uid=%s): %s", uid, e)
+    """Firestore users/{uid} 문서를 백그라운드 스레드로 upsert. 로그인 응답을 블로킹하지 않음."""
+    def _do():
+        try:
+            db = fb_firestore.client()
+            db.collection("users").document(uid).set(data, merge=True)
+        except Exception as e:
+            logger.warning("Firestore upsert 실패 (uid=%s): %s", uid, e)
+    threading.Thread(target=_do, daemon=True).start()
 
 
 # ── 유저 승인 관리 ────────────────────────────────────────────────────────────

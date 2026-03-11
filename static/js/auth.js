@@ -22,39 +22,40 @@
     if (btn) btn.disabled = loading;
   }
 
-  // ── 1. Firebase 공개 설정 로드 ──────────────────────────────────────────
+  // ── 1 & 2. Firebase config fetch + SDK 로드 병렬 처리 ──────────────────
+  function waitForFirebase() {
+    // defer 스크립트가 이미 로드되었으면 즉시 resolve
+    return new Promise(function(resolve, reject) {
+      var tries = 0;
+      function check() {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+          resolve();
+        } else if (tries++ < 100) {
+          setTimeout(check, 30);
+        } else {
+          reject(new Error('Firebase SDK 로드 시간 초과'));
+        }
+      }
+      check();
+    });
+  }
+
   var cfg = null;
   try {
-    cfg = await fetch('/api/auth/config').then(function(r) { return r.json(); });
+    var results = await Promise.all([
+      fetch('/api/auth/config').then(function(r) { return r.json(); }),
+      waitForFirebase(),
+    ]);
+    cfg = results[0];
   } catch (e) {
-    showError('서버 연결 실패. 잠시 후 다시 시도하세요.');
+    showError(e.message && e.message.indexOf('Firebase') !== -1
+      ? 'Firebase SDK 로드 실패. 인터넷 연결을 확인하세요.'
+      : '서버 연결 실패. 잠시 후 다시 시도하세요.');
     return;
   }
 
   if (!cfg || !cfg.apiKey) {
     showError('Firebase 설정이 없습니다. 서버 .env를 확인하세요.');
-    return;
-  }
-
-  // ── 2. Firebase SDK 동적 로드 ────────────────────────────────────────────
-  var SDK_VER = '10.12.0';
-  var SDK_BASE = 'https://www.gstatic.com/firebasejs/' + SDK_VER;
-
-  function loadScript(src) {
-    return new Promise(function(resolve, reject) {
-      var s = document.createElement('script');
-      s.src = src;
-      s.onload = resolve;
-      s.onerror = function() { reject(new Error('스크립트 로드 실패: ' + src)); };
-      document.head.appendChild(s);
-    });
-  }
-
-  try {
-    await loadScript(SDK_BASE + '/firebase-app-compat.js');
-    await loadScript(SDK_BASE + '/firebase-auth-compat.js');
-  } catch (e) {
-    showError('Firebase SDK 로드 실패. 인터넷 연결을 확인하세요.');
     return;
   }
 
