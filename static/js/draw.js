@@ -959,7 +959,8 @@
       })
       .then(function (data) {
         _lastResults = data.results || [];
-        renderResults(_lastResults);
+        var rankOffset = (data.plan === 'free') ? 10 : 0;
+        renderResults(_lastResults, rankOffset);
         showStatus('', '');
         var btn = document.getElementById('btn-save-drawing');
         if (btn) btn.style.display = _lastResults.length ? 'inline-flex' : 'none';
@@ -973,10 +974,11 @@
   }
 
   // ── 결과 렌더링 ───────────────────────────────────────────────────────────
-  function renderResults(results) {
+  function renderResults(results, rankOffset) {
     var list        = document.getElementById('results-list');
     var placeholder = document.getElementById('results-placeholder');
     var countBadge  = document.getElementById('result-count');
+    rankOffset = rankOffset || 0;
 
     // 현재 차트 종목은 유사 종목 결과에서 제외
     var currentTicker = (window.D2T && D2T.ticker) ? D2T.ticker : null;
@@ -994,7 +996,10 @@
 
     placeholder.style.display = 'none';
     list.style.display        = 'block';
-    if (countBadge) countBadge.textContent = 'Top ' + results.length;
+    var lastRank = rankOffset + results.length;
+    if (countBadge) countBadge.textContent = rankOffset > 0
+      ? (rankOffset + 1) + '~' + lastRank + '위'
+      : 'Top ' + results.length;
 
     // 결과별 매칭 데이터 저장 (onclick에서 인덱스로 참조)
     _resultMatches = results.map(function (r) {
@@ -1037,7 +1042,7 @@
           '<div class="result-card" ' +
             'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\')" ' +
             'title="클릭: 차트 로드 후 내 패턴과 유사 구간이 레이어드(겹쳐서) 비교 표시됩니다">' +
-            '<div class="result-rank">' + (idx + 1) + '</div>' +
+            '<div class="result-rank">' + (idx + 1 + rankOffset) + '</div>' +
             '<div class="result-info">' +
               '<div class="result-name">' + nm + '</div>' +
               '<div class="result-ticker">' + tk + '</div>' +
@@ -1251,7 +1256,8 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(d) {
         if (!d) return;
-        renderResults(d.results || []);
+        var rankOffset = (window._userPlan && window._userPlan !== 'pro') ? 10 : 0;
+        renderResults(d.results || [], rankOffset);
         _lastResults = d.results || [];
         // 저장된 패턴 복원
         if (d.draw_points && d.draw_points.length >= 2) {
