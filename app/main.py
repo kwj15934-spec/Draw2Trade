@@ -177,6 +177,16 @@ async def get_notices():
     return JSONResponse(notice_service.get_notices())
 
 
+@app.get("/api/notices/{notice_id}")
+async def get_notice(notice_id: int):
+    notice = notice_service.get_notice(notice_id)
+    if not notice:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    views = notice_service.increment_views(notice_id)
+    notice["views"] = views
+    return JSONResponse(notice)
+
+
 # ── 공지 관리 (admin) ─────────────────────────────────────────────────────────
 def _is_admin(request: Request) -> bool:
     import os

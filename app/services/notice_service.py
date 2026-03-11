@@ -25,9 +25,15 @@ def _init_db() -> None:
                 title      TEXT NOT NULL,
                 content    TEXT NOT NULL,
                 pinned     INTEGER NOT NULL DEFAULT 0,
-                created_at REAL NOT NULL
+                created_at REAL NOT NULL,
+                views      INTEGER NOT NULL DEFAULT 0
             )
         """)
+        # 기존 DB에 views 컬럼 없으면 추가
+        try:
+            con.execute("ALTER TABLE notices ADD COLUMN views INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
 
 
 try:
@@ -43,6 +49,7 @@ def _row_to_dict(r) -> dict:
         "id": r[0], "type": r[1], "title": r[2],
         "content": r[3], "pinned": bool(r[4]),
         "created_at": r[5], "date": dt,
+        "views": r[6] if len(r) > 6 else 0,
     }
 
 
@@ -59,10 +66,28 @@ def create_notice(type_: str, title: str, content: str, pinned: bool = False) ->
 def get_notices() -> list[dict]:
     with _conn() as con:
         rows = con.execute(
-            "SELECT id, type, title, content, pinned, created_at "
+            "SELECT id, type, title, content, pinned, created_at, views "
             "FROM notices ORDER BY pinned DESC, created_at DESC"
         ).fetchall()
     return [_row_to_dict(r) for r in rows]
+
+
+def get_notice(notice_id: int) -> dict | None:
+    with _conn() as con:
+        row = con.execute(
+            "SELECT id, type, title, content, pinned, created_at, views "
+            "FROM notices WHERE id=?",
+            (notice_id,),
+        ).fetchone()
+    return _row_to_dict(row) if row else None
+
+
+def increment_views(notice_id: int) -> int:
+    """조회수 +1 후 최신 조회수 반환."""
+    with _conn() as con:
+        con.execute("UPDATE notices SET views = views + 1 WHERE id=?", (notice_id,))
+        row = con.execute("SELECT views FROM notices WHERE id=?", (notice_id,)).fetchone()
+    return row[0] if row else 0
 
 
 def update_notice(notice_id: int, type_: str, title: str, content: str, pinned: bool) -> bool:
