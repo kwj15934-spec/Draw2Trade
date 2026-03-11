@@ -19,14 +19,19 @@
     /* ── 기본 레이아웃 ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; }
 
+    /* Bootstrap 폰트 오버라이드 방지: !important로 고정 */
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
       background: #0f1117;
       color: #d1d4dc;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      font-size: 14px;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+      font-size: 14px !important;
+    }
+    /* Bootstrap이 덮어쓰는 요소들도 강제 통일 */
+    button, input, select, textarea, .btn {
+      font-family: inherit !important;
     }
 
     /* ── 네비게이션 바 ─────────────────────────────────────── */
@@ -985,7 +990,7 @@
       #btn-nav-logout { display: none; }
 
       /* 툴바 row1: 핵심만 */
-      .toolbar-row:first-child .vr { display: none; }
+      .d2t-toolbar .toolbar-row:first-of-type .vr { display: none; }
       #category-group label,
       #exchange-group label { display: none; }
       #btn-blank { display: none; }
@@ -993,18 +998,27 @@
       #toolbar-notice-banner { display: none !important; }
 
       /* 툴바 row2: 드로잉 레이블 숨김, 고급옵션 숨김 */
-      .toolbar-row:nth-child(2) > label { display: none; }
-      .toolbar-row:nth-child(2) .vr { display: none; }
+      .d2t-toolbar .toolbar-row:last-of-type > label { display: none; }
+      .d2t-toolbar .toolbar-row:last-of-type .vr { display: none; }
       #btn-advanced { display: none; }
       #advanced-options { display: none !important; }
       #search-status { display: none; }
       .period-chip { display: none; }
       #btn-mode-range { font-size: 10px; padding: 0 6px; }
 
+      /* body 높이: 모바일에서 고정 해제 */
+      #d2t-body { height: auto !important; min-height: 100dvh; }
+
       /* 메인 영역: 차트가 전체 차지 */
-      .d2t-main { flex-direction: column; overflow: visible; height: auto; flex: 1; }
-      .d2t-chart-panel { flex: 1; border-right: none; min-height: 0; }
-      #chart-wrapper { min-height: 55vh; }
+      .d2t-main {
+        flex-direction: column !important;
+        overflow: visible !important;
+        height: auto !important;
+        flex: 1 !important;
+        min-height: 0;
+      }
+      .d2t-chart-panel { flex: 1 !important; border-right: none; min-height: 0; }
+      #chart-wrapper { min-height: 55vh; min-height: 55dvh; }
 
       /* 사이드바: 하단 슬라이드업 패널 */
       .d2t-sidebar {
@@ -1095,7 +1109,7 @@
     #mobile-results-btn { display: none; }
   </style>
 </head>
-<body style="display: flex; flex-direction: column; height: 100vh; height: 100dvh;">
+<body id="d2t-body" style="display: flex; flex-direction: column; height: 100vh; height: 100dvh;">
 
   {% block content %}{% endblock %}
 
