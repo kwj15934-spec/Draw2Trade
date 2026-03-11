@@ -795,7 +795,12 @@
     var modal = document.getElementById('period-select-modal');
     if (modal) modal.style.display = 'none';
     _searchMode = mode;
-    _autoMeta = null;  // 모달에서 직접 선택 시 자동 분석 메타 무시
+    if (mode === 'chart-period' && _autoMeta && _autoMeta.date_from) {
+      // 자동분석 후 "같은 기간으로 찾기": 자동분석 날짜 범위를 date_from/date_to로 사용
+      // _autoMeta 유지 (날짜 정보를 _doSearchActual에서 읽어야 하므로)
+    } else {
+      _autoMeta = null;  // 그 외 모드: 자동 분석 메타 무시
+    }
     if (mode === 'range') {
       // 날짜 범위 모드 활성화 후 검색
       if (!rangeMode) toggleRangeMode();
@@ -857,7 +862,8 @@
     var body = { draw_points: pts, top_n: topN, market: market, timeframe: timeframe };
 
     // 자동 분석 메타 적용
-    if (_autoMeta) {
+    if (_autoMeta && _searchMode !== 'chart-period') {
+      // "같은 기간으로 찾기" 이외 모드: anchor_today + lookback_bars
       body.anchor_today  = true;
       body.lookback_bars = _autoMeta.lookback_bars;
       _autoMeta = null; // 한 번만 사용
@@ -873,44 +879,51 @@
       if (dateTo)   body.date_to   = dateTo;
       body.anchor_today = false;
     } else if (_searchMode === 'chart-period') {
-      // 차트와 같은 기간: 현재 보이는 날짜 범위를 추출
-      // getVisibleRange()는 "YYYY-MM-DD" 문자열 또는 unix timestamp(숫자) 반환 가능
-      try {
-        if (window.D2T && D2T.chart) {
-          var vr = D2T.chart.timeScale().getVisibleRange();
-          if (vr && vr.from && vr.to) {
-            var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
-            // 숫자(unix timestamp)이면 Date로 변환, 문자열이면 그대로
-            function _vrToDateStr(v) {
-              if (typeof v === 'number') {
-                var d = new Date(v * 1000);
-                return d.getUTCFullYear() + '-'
-                  + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
-                  + String(d.getUTCDate()).padStart(2, '0');
+      // 차트와 같은 기간: 자동분석 메타 우선, 없으면 차트 화면 범위 사용
+      if (_autoMeta && _autoMeta.date_from) {
+        // 자동분석 구간의 실제 날짜 범위 사용
+        body.date_from = _autoMeta.date_from;
+        if (_autoMeta.date_to) body.date_to = _autoMeta.date_to;
+        body.lookback_bars = _autoMeta.lookback_bars;
+        _autoMeta = null;
+      } else {
+        // getVisibleRange()는 "YYYY-MM-DD" 문자열 또는 unix timestamp(숫자) 반환 가능
+        try {
+          if (window.D2T && D2T.chart) {
+            var vr = D2T.chart.timeScale().getVisibleRange();
+            if (vr && vr.from && vr.to) {
+              var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
+              // 숫자(unix timestamp)이면 Date로 변환, 문자열이면 그대로
+              function _vrToDateStr(v) {
+                if (typeof v === 'number') {
+                  var d = new Date(v * 1000);
+                  return d.getUTCFullYear() + '-'
+                    + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
+                    + String(d.getUTCDate()).padStart(2, '0');
+                }
+                return String(v).slice(0, 10);
               }
-              return String(v).slice(0, 10);
-            }
-            var fromStr = _vrToDateStr(vr.from);  // "YYYY-MM-DD"
-            var toStr   = _vrToDateStr(vr.to);
-            if (mkt === 'US') {
-              // US 일봉: YYYY-MM-DD 그대로 사용
-              body.date_from = fromStr;
-              body.date_to   = toStr;
-            } else {
-              // KR 월봉: "YYYY-MM-DD" → "YYYY-MM" 으로 변환
-              body.date_from = fromStr.slice(0, 7);
-              body.date_to   = toStr.slice(0, 7);
+              var fromStr = _vrToDateStr(vr.from);  // "YYYY-MM-DD"
+              var toStr   = _vrToDateStr(vr.to);
+              if (mkt === 'US') {
+                body.date_from = fromStr;
+                body.date_to   = toStr;
+              } else {
+                // KR 월봉: "YYYY-MM-DD" → "YYYY-MM" 으로 변환
+                body.date_from = fromStr.slice(0, 7);
+                body.date_to   = toStr.slice(0, 7);
+              }
             }
           }
-        }
-      } catch (e) {}
-      // lookback_bars로 보이는 봉 수도 함께 전달
-      try {
-        if (window.D2T && D2T.chart) {
-          var lr2 = D2T.chart.timeScale().getVisibleLogicalRange();
-          if (lr2 && lr2.to > lr2.from) body.lookback_bars = Math.max(2, Math.round(lr2.to - lr2.from));
-        }
-      } catch (e) {}
+        } catch (e) {}
+        // lookback_bars로 보이는 봉 수도 함께 전달
+        try {
+          if (window.D2T && D2T.chart) {
+            var lr2 = D2T.chart.timeScale().getVisibleLogicalRange();
+            if (lr2 && lr2.to > lr2.from) body.lookback_bars = Math.max(2, Math.round(lr2.to - lr2.from));
+          }
+        } catch (e) {}
+      }
       body.anchor_today = false;
     } else if (isBlankMode) {
       // 빈 캔버스 모드: 드롭다운 수동 선택
@@ -1710,7 +1723,21 @@
     drawNormalized   = pts;   // 저장/검색에 바로 사용 가능
     matchPoints      = null;
     _resultMatches   = [];
-    _autoMeta        = { anchor_today: true, lookback_bars: filtered.length };
+    // 자동분석 날짜 범위 저장: 유사종목 검색 시 "같은 기간으로 찾기"에 전달
+    var _autoLastCandle = filtered[filtered.length - 1];
+    var _autoLastTime   = _autoLastCandle ? _autoLastCandle.time : null;
+    var _autoDateTo = null;
+    if (_autoLastTime) {
+      _autoDateTo = typeof _autoLastTime === 'object'
+        ? (_autoLastTime.year + '-' + pad2(_autoLastTime.month))
+        : String(_autoLastTime).slice(0, 7);
+    }
+    _autoMeta = {
+      anchor_today:  true,
+      lookback_bars: filtered.length,
+      date_from:     startYM,
+      date_to:       _autoDateTo,
+    };
 
     if (D2T && D2T.series) D2T.series.setMarkers([]);
     if (D2T) D2T.matchPeriodData = null;
