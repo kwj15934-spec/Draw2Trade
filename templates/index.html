@@ -571,7 +571,7 @@
 ></script>
 <!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260312a"></script>
-<script src="/static/js/draw.js?v=20260312c"></script>
+<script src="/static/js/draw.js?v=20260312d"></script>
 <script src="/static/js/realtime.js?v=20260311b"></script>
 
 <!-- 모바일 사이드바 토글 -->
@@ -606,21 +606,13 @@
   };
 
   // 검색 완료 시 모바일에서 자동으로 사이드바 열기
-  // results-list DOM 변화 감지
-  document.addEventListener('DOMContentLoaded', function() {
-    var resultsList = document.getElementById('results-list');
-    if (resultsList && window.MutationObserver) {
-      var obs = new MutationObserver(function() {
-        if (isMobile() && resultsList.children.length > 0) {
-          var sb = document.querySelector('.d2t-sidebar');
-          if (sb && !sb.classList.contains('mobile-open')) {
-            window.toggleMobileSidebar();
-          }
-        }
-      });
-      obs.observe(resultsList, { childList: true });
+  window._onSearchComplete = function(count) {
+    if (!isMobile() || count === 0) return;
+    var sb = document.querySelector('.d2t-sidebar');
+    if (sb && !sb.classList.contains('mobile-open')) {
+      window.toggleMobileSidebar();
     }
-  });
+  };
 
   // 화면 크기 변경 시 데스크탑으로 전환되면 사이드바 상태 초기화
   window.addEventListener('resize', function() {

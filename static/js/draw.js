@@ -1083,6 +1083,11 @@
         );
       })
       .join('');
+
+    // 검색 완료 훅 — 모바일 사이드바 자동 열기 등에 사용
+    if (typeof window._onSearchComplete === 'function') {
+      window._onSearchComplete(results.length);
+    }
   }
 
   function escHtml(s) {
