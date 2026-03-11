@@ -748,6 +748,85 @@
 
   }
 
+  // ── 분봉 자동 폴링 (실시간 캔들 갱신) ────────────────────────────────────
+  var _pollTimer = null;
+  // interval_min → 폴링 주기(ms)
+  var _POLL_INTERVAL = { '1m': 15000, '5m': 30000, '15m': 60000, '30m': 60000, '60m': 120000, '240m': 300000 };
+
+  function _startIntraydayPoll(ticker, tf) {
+    _stopIntradayPoll();
+    var interval = _POLL_INTERVAL[tf];
+    if (!interval) return;  // 분봉이 아니면 폴링 안 함
+
+    _pollTimer = setInterval(function () {
+      if (!D2T.ticker || D2T.timeframe !== tf || D2T.loading) return;
+      fetch(chartUrl(ticker, tf))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !data.candles || !data.candles.length) return;
+          if (D2T.ticker !== ticker || D2T.timeframe !== tf) return;
+          // 새 캔들만 업데이트 (마지막 캔들 이후 것만 반영)
+          var lastTime = D2T.candles && D2T.candles.length
+            ? D2T.candles[D2T.candles.length - 1].time : 0;
+          var newCandles = data.candles.filter(function (c) { return c.time > lastTime; });
+          if (newCandles.length > 0) {
+            // 새 캔들 추가
+            newCandles.forEach(function (c) {
+              D2T.series.update(c);
+              if (D2T.volumeSeries) {
+                D2T.volumeSeries.update({
+                  time:  c.time,
+                  value: c.volume || 0,
+                  color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
+                });
+              }
+            });
+            D2T.candles = data.candles;
+          } else {
+            // 마지막 캔들 업데이트 (진행 중인 캔들 갱신)
+            var latest = data.candles[data.candles.length - 1];
+            var existing = D2T.candles[D2T.candles.length - 1];
+            if (existing && latest.time === existing.time &&
+                (latest.close !== existing.close || latest.high !== existing.high || latest.low !== existing.low)) {
+              D2T.series.update(latest);
+              if (D2T.volumeSeries) {
+                D2T.volumeSeries.update({
+                  time:  latest.time,
+                  value: latest.volume || 0,
+                  color: (latest.close >= latest.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
+                });
+              }
+              D2T.candles[D2T.candles.length - 1] = latest;
+            }
+          }
+        })
+        .catch(function () {});
+    }, interval);
+  }
+
+  function _stopIntradayPoll() {
+    if (_pollTimer) {
+      clearInterval(_pollTimer);
+      _pollTimer = null;
+    }
+  }
+
+  // loadChart 호출 시 분봉 폴링 시작/중지
+  var _origLoadChart = loadChart;
+  loadChart = function (ticker, timeframe) {
+    _stopIntradayPoll();
+    _origLoadChart(ticker, timeframe);
+    var tf = timeframe || D2T.timeframe;
+    if (INTRADAY_TF[tf]) {
+      // 로드 완료 후 폴링 시작 (로딩 딜레이 고려)
+      setTimeout(function () {
+        if (D2T.ticker === ticker && D2T.timeframe === tf) {
+          _startIntraydayPoll(ticker, tf);
+        }
+      }, 2000);
+    }
+  };
+
   // 외부에서 호출 가능하도록 노출
   window.D2T.loadChart       = loadChart;
   window.D2T.loadResultChart = loadResultChart;

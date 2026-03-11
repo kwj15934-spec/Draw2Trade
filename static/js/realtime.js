@@ -164,7 +164,12 @@
     var metaEl = document.getElementById('ticker-overlay-meta');
     if (!metaEl || !window.D2T) return;
 
-    var tfLabel = ({ monthly: '월봉', weekly: '주봉', daily: '일봉' })[D2T.timeframe] || D2T.timeframe;
+    var _TF_LABELS = {
+      monthly: '월봉', weekly: '주봉', daily: '일봉',
+      '1m': '1분봉', '5m': '5분봉', '15m': '15분봉',
+      '30m': '30분봉', '60m': '1시간봉', '240m': '4시간봉',
+    };
+    var tfLabel = _TF_LABELS[D2T.timeframe] || D2T.timeframe;
     var dispPrice = price >= 1000 ? price.toLocaleString() : price;
     var parts = [tfLabel, '현재 ' + dispPrice];
 

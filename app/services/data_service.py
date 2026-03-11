@@ -414,9 +414,9 @@ def get_kr_intraday(ticker: str, interval_min: int = 1) -> list[dict] | None:
         if time.time() < expire_ts:
             return candles
 
-    # interval별 취득 일수
-    _days_map = {1: 3, 5: 5, 15: 10, 30: 20, 60: 60, 240: 120}
-    days = _days_map.get(interval_min, 5)
+    # interval별 취득 일수 (KIS API 호출 횟수 최소화)
+    _days_map = {1: 2, 5: 3, 15: 5, 30: 10, 60: 20, 240: 30}
+    days = _days_map.get(interval_min, 3)
 
     raw = fetch_kr_minute_paginated(ticker, days=days)
     if not raw:
