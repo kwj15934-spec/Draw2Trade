@@ -21,6 +21,7 @@
   <div id="nav-user-box" class="nav-user-box" style="display:none;">
     <div class="nav-user-avatar" id="nav-user-avatar">?</div>
     <span class="nav-user-name" id="nav-user-name"></span>
+    <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.3px;"></span>
     <button class="btn-d2t" id="btn-nav-logout"
       style="height:26px;font-size:11px;padding:0 8px;border-color:#ef5350;color:#ef5350;">
       로그아웃
@@ -440,6 +441,16 @@
           avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
         }
         document.getElementById('nav-user-name').textContent = u.name || u.email;
+        // 플랜 배지
+        var planBadge = document.getElementById('nav-plan-badge');
+        if (planBadge) {
+          var isPro = (u.plan === 'pro');
+          planBadge.textContent = isPro ? 'PRO' : 'FREE';
+          planBadge.style.display = 'inline';
+          planBadge.style.background = isPro ? 'rgba(255,107,53,0.2)' : 'rgba(122,132,153,0.15)';
+          planBadge.style.color = isPro ? '#ff6b35' : '#7a8499';
+          planBadge.style.border = isPro ? '1px solid rgba(255,107,53,0.5)' : '1px solid rgba(122,132,153,0.3)';
+        }
         if (loginBtn) loginBtn.style.display = 'none';
         if (userBox)  userBox.style.display  = 'flex';
       } else {

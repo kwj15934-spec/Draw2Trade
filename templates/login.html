@@ -291,6 +291,10 @@
     <!-- 회원가입 탭 -->
     <div class="tab-pane" id="tab-signup">
       <div class="form-group">
+        <label>이름</label>
+        <input type="text" id="signup-name" placeholder="홍길동" autocomplete="name">
+      </div>
+      <div class="form-group">
         <label>이메일</label>
         <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
       </div>
@@ -350,6 +354,9 @@
     });
     document.getElementById('signup-password2').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') document.getElementById('btn-signup').click();
+    });
+    document.getElementById('signup-name').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('signup-email').focus();
     });
 
     // 모달 닫기

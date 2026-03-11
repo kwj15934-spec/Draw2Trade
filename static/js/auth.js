@@ -158,11 +158,12 @@
   var btnSignup = document.getElementById('btn-signup');
   if (btnSignup) {
     btnSignup.addEventListener('click', async function() {
+      var name   = ((document.getElementById('signup-name')     || {}).value || '').trim();
       var email  = (document.getElementById('signup-email')     || {}).value || '';
       var pw1    = (document.getElementById('signup-password')  || {}).value || '';
       var pw2    = (document.getElementById('signup-password2') || {}).value || '';
 
-      if (!email || !pw1 || !pw2) {
+      if (!name || !email || !pw1 || !pw2) {
         showError('모든 항목을 입력하세요.');
         return;
       }
@@ -179,7 +180,9 @@
       showError('');
       try {
         var result = await auth.createUserWithEmailAndPassword(email, pw1);
-        var idToken = await result.user.getIdToken();
+        // Firebase 프로필에 이름 저장
+        await result.user.updateProfile({ displayName: name });
+        var idToken = await result.user.getIdToken(true);
         await loginWithToken(idToken);
       } catch (e) {
         var msg = '회원가입 중 오류가 발생했습니다.';

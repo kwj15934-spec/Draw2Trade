@@ -114,22 +114,22 @@ def get_user_status(uid: str) -> str | None:
 
 
 def register_user(user_info: dict) -> str:
-    """신규 유저를 pending 상태로 등록. 이미 존재하면 기존 상태 반환."""
+    """신규 유저를 approved 상태로 자동 등록. 이미 존재하면 기존 상태 반환."""
     users = _load_users()
     uid = user_info["uid"]
     if uid not in users:
         now = datetime.now(timezone.utc).isoformat()
         entry = {
             **user_info,
-            "status": "pending",
+            "status": "approved",
             "plan": "free",
             "created_at": now,
         }
         users[uid] = entry
         _save_users(users)
         _firestore_upsert_user(uid, entry)
-        logger.info("신규 유저 등록 (pending): %s", user_info.get("email"))
-        return "pending"
+        logger.info("신규 유저 자동 승인 등록: %s", user_info.get("email"))
+        return "approved"
     return users[uid]["status"]
 
 
