@@ -136,21 +136,31 @@
     }
 
     // 시간축 스크롤/줌 시 드로잉 캔버스 재렌더 (draw.js 연동)
+    // requestAnimationFrame으로 쓰로틀 — 초당 최대 60회(모니터 주사율)로 제한
+    var _redrawRafId = null;
     D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function () {
-      if (typeof window.redraw === 'function') window.redraw();
+      if (_redrawRafId !== null) return;
+      _redrawRafId = requestAnimationFrame(function () {
+        _redrawRafId = null;
+        if (typeof window.redraw === 'function') window.redraw();
+      });
     });
 
-    // 리사이즈 대응
+    // 리사이즈 대응 (디바운스 100ms — 리사이즈 중 과도한 호출 방지)
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.ResizeObserver) {
+      var _resizeTimer = null;
       var ro = new ResizeObserver(function () {
-        if (D2T.chart) {
-          D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
-        }
-        if (D2T.volumeChart && volContainer) {
-          D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight || 100);
-        }
-        if (typeof syncCanvas === 'function') syncCanvas();
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(function () {
+          if (D2T.chart) {
+            D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
+          }
+          if (D2T.volumeChart && volContainer) {
+            D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight || 100);
+          }
+          if (typeof syncCanvas === 'function') syncCanvas();
+        }, 100);
       });
       ro.observe(wrapper);
       if (volContainer) ro.observe(volContainer);
@@ -466,33 +476,37 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var results = data.results || [];
-          dd.innerHTML = '';
           if (results.length === 0) {
             dd.innerHTML = '<div class="search-item" style="color:#666;">검색 결과 없음</div>';
           } else {
-            results.forEach(function (r) {
-              var div = document.createElement('div');
-              div.className = 'search-item';
-              div.innerHTML = '<span>' + (r.name || r.ticker) + '</span> <span class="search-ticker">' + r.ticker + '</span>';
-              div.dataset.ticker = r.ticker;
-              div.addEventListener('click', function () {
-                var t = this.dataset.ticker;
-                var sel = document.getElementById('ticker-select');
-                var hasOpt = Array.prototype.find.call(sel.options, function (o) { return o.value === t; });
-                if (!hasOpt) {
-                  var opt = document.createElement('option');
-                  opt.value = t;
-                  opt.textContent = t + '  ' + (r.name || '');
-                  sel.appendChild(opt);
-                }
-                sel.value = t;
-                inp.value = '';
-                dd.style.display = 'none';
-                dd.innerHTML = '';
-                loadChart(t);
-              });
-              dd.appendChild(div);
-            });
+            // 이벤트 위임 방식: innerHTML 한 번만 대입 후 부모에 클릭 핸들러 1개
+            dd.innerHTML = results.map(function (r) {
+              var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+              return '<div class="search-item" data-ticker="' + esc(r.ticker) + '" data-name="' + esc(r.name || '') + '">'
+                + '<span>' + esc(r.name || r.ticker) + '</span>'
+                + ' <span class="search-ticker">' + esc(r.ticker) + '</span>'
+                + '</div>';
+            }).join('');
+            // 클릭 이벤트는 부모 1개에 위임 (매번 새로 등록 방지)
+            dd.onclick = function (e) {
+              var item = e.target.closest('.search-item');
+              if (!item) return;
+              var t = item.dataset.ticker;
+              var name = item.dataset.name;
+              var sel = document.getElementById('ticker-select');
+              var hasOpt = Array.prototype.find.call(sel.options, function (o) { return o.value === t; });
+              if (!hasOpt) {
+                var opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t + '  ' + name;
+                sel.appendChild(opt);
+              }
+              sel.value = t;
+              inp.value = '';
+              dd.style.display = 'none';
+              dd.innerHTML = '';
+              loadChart(t);
+            };
           }
           dd.style.display = 'block';
         })

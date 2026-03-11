@@ -3,7 +3,9 @@ Pattern router
 
 POST /api/pattern/search — 사용자 그린 패턴과 유사한 종목 검색
 """
+import asyncio
 import logging
+from functools import partial
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -86,17 +88,23 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
     is_pro = user.get("plan") == "pro"
     search_top_n = body.top_n if is_pro else max(body.top_n, 50)
 
-    results = search_similar(
-        draw_points=body.draw_points,
-        lookback_months=effective_lookback,
-        top_n=search_top_n,
-        date_from=body.date_from,
-        date_to=body.date_to,
-        ohlcv_cache=ohlcv_cache,
-        names_cache=names_cache,
-        smooth_window=smooth_window,
-        anchor_today=body.anchor_today,
-        max_search_bars=max_search_bars,
+    # CPU 집약적 작업을 스레드풀에서 실행 → FastAPI 이벤트루프 비차단
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(
+        None,
+        partial(
+            search_similar,
+            draw_points=body.draw_points,
+            lookback_months=effective_lookback,
+            top_n=search_top_n,
+            date_from=body.date_from,
+            date_to=body.date_to,
+            ohlcv_cache=ohlcv_cache,
+            names_cache=names_cache,
+            smooth_window=smooth_window,
+            anchor_today=body.anchor_today,
+            max_search_bars=max_search_bars,
+        ),
     )
 
     if not is_pro:
