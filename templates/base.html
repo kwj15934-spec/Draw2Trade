@@ -943,9 +943,159 @@
     }
 
     {% block extra_styles %}{% endblock %}
+
+    /* ══════════════════════════════════════════════════════
+       모바일 반응형 — 768px 이하
+    ══════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      /* 네브바 */
+      .d2t-nav { padding: 0 10px; gap: 6px; height: 44px; }
+      .d2t-brand { font-size: 15px; gap: 6px; }
+      .d2t-logo-img { height: 20px; width: 20px; }
+      .d2t-subtitle { display: none; }
+      .market-btn { height: 30px; padding: 0 12px; font-size: 13px; }
+      #market-hours-chip { display: none; }
+      .nav-user-name { display: none; }
+      #nav-plan-badge { display: none !important; }
+      #btn-nav-logout { font-size: 10px; padding: 0 6px; height: 24px; }
+
+      /* 툴바 */
+      .toolbar-row { padding: 4px 8px; min-height: 38px; gap: 4px 6px; }
+      .d2t-toolbar select { min-width: 120px; max-width: 160px; font-size: 12px; height: 28px; }
+      .ticker-search-wrap input,
+      .ticker-search-wrap.kr-mode #ticker-search { min-width: 130px; max-width: 160px; height: 28px; font-size: 12px; }
+      .btn-d2t { height: 28px; padding: 0 8px; font-size: 12px; }
+      .timeframe-btn { padding: 0 6px; font-size: 11px; height: 26px; }
+      .market-selector { gap: 3px; }
+      #period-range-controls input[type="month"],
+      #period-range-controls input[type="date"] { width: 110px; font-size: 11px; }
+      .auto-date-input { width: 90px; font-size: 10px; }
+      .auto-group { padding: 3px 8px; height: 34px; }
+      #ticker-overlay { right: 8px; }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       모바일 반응형 — 640px 이하 (핸드폰)
+       사이드바를 하단 슬라이드업 패널로 전환
+    ══════════════════════════════════════════════════════ */
+    @media (max-width: 640px) {
+      /* 네브바 더 간소화 */
+      .d2t-nav { height: 42px; gap: 4px; }
+      .d2t-brand { font-size: 14px; }
+      #btn-nav-logout { display: none; }
+
+      /* 툴바 row1: 핵심만 */
+      .toolbar-row:first-child .vr { display: none; }
+      #category-group label,
+      #exchange-group label { display: none; }
+      #btn-blank { display: none; }
+      #us-list-hint { display: none !important; }
+      #toolbar-notice-banner { display: none !important; }
+
+      /* 툴바 row2: 드로잉 레이블 숨김, 고급옵션 숨김 */
+      .toolbar-row:nth-child(2) > label { display: none; }
+      .toolbar-row:nth-child(2) .vr { display: none; }
+      #btn-advanced { display: none; }
+      #advanced-options { display: none !important; }
+      #search-status { display: none; }
+      .period-chip { display: none; }
+      #btn-mode-range { font-size: 10px; padding: 0 6px; }
+
+      /* 메인 영역: 차트가 전체 차지 */
+      .d2t-main { flex-direction: column; overflow: visible; height: auto; flex: 1; }
+      .d2t-chart-panel { flex: 1; border-right: none; min-height: 0; }
+      #chart-wrapper { min-height: 55vh; }
+
+      /* 사이드바: 하단 슬라이드업 패널 */
+      .d2t-sidebar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        width: 100%;
+        min-width: unset;
+        max-width: unset;
+        height: 50vh;
+        z-index: 200;
+        border-top: 2px solid #ff6b35;
+        border-radius: 14px 14px 0 0;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+      }
+      .d2t-sidebar.mobile-open {
+        transform: translateY(0);
+      }
+
+      /* 사이드바 열림 시 차트 위 딤 오버레이 */
+      #mobile-sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 199;
+      }
+      #mobile-sidebar-overlay.active { display: block; }
+
+      /* 모바일 결과 보기 버튼 (차트 위 고정) */
+      #mobile-results-btn {
+        display: flex !important;
+      }
+
+      /* 티커 오버레이 위치 조정 */
+      #ticker-overlay { right: 6px; top: 6px; }
+      #ticker-overlay-symbol { font-size: 14px; }
+      #ticker-overlay-name { font-size: 10px; max-width: 140px; }
+
+      /* 차트 하단바 간소화 */
+      .d2t-chart-footer { height: 24px; padding: 0 8px; gap: 8px; }
+      .d2t-chart-footer .ticker-label:last-child { display: none; }
+      .d2t-chart-footer #chart-ticker-label { font-size: 11px; }
+
+      /* 검색 버튼 강조 */
+      #btn-search { flex: 1; min-width: 0; font-size: 12px; }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       모바일 반응형 — 480px 이하 (소형 폰)
+    ══════════════════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      .d2t-brand { font-size: 13px; }
+      .market-btn { padding: 0 10px; font-size: 12px; height: 28px; }
+
+      /* 툴바 row1: 카테고리/거래소 숨김, 세로 2줄로 */
+      #category-group,
+      #exchange-group { display: none !important; }
+      .ticker-search-wrap input,
+      .ticker-search-wrap.kr-mode #ticker-search { min-width: 110px; max-width: 140px; }
+      .d2t-toolbar select { min-width: 100px; max-width: 130px; }
+
+      /* 분봉 버튼 일부 숨김 */
+      .timeframe-btn[data-tf="30m"],
+      .timeframe-btn[data-tf="15m"] { display: none; }
+      .tf-sep { display: none; }
+
+      /* row2: 드로잉 버튼 아이콘만 */
+      .draw-tool-btn { padding: 0 6px; font-size: 11px; }
+      #btn-save-draw { display: none; }
+
+      /* 날짜 범위 입력 축소 */
+      #period-range-controls input[type="month"],
+      #period-range-controls input[type="date"] { width: 90px; font-size: 10px; }
+
+      /* 사이드바 높이 더 크게 */
+      .d2t-sidebar { height: 60vh; }
+      #chart-wrapper { min-height: 45vh; }
+
+      /* nav 버튼 줄이기 */
+      .btn-nav-login, [title="요금제 · Pro 신청"], [title="문의하기"], [title="메인 페이지로"] {
+        font-size: 10px; padding: 0 6px; height: 22px;
+      }
+    }
+
+    /* 모바일 결과 버튼 — 데스크탑에서는 숨김 */
+    #mobile-results-btn { display: none; }
   </style>
 </head>
-<body style="display: flex; flex-direction: column; height: 100vh;">
+<body style="display: flex; flex-direction: column; height: 100vh; height: 100dvh;">
 
   {% block content %}{% endblock %}
 

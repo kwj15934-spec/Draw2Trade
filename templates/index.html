@@ -179,6 +179,9 @@
 
 </div>
 
+<!-- ── 모바일: 딤 오버레이 (사이드바 열릴 때) ────────────────────────────── -->
+<div id="mobile-sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
 <!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
 <div class="d2t-main">
 
@@ -228,6 +231,11 @@
     <div class="d2t-chart-footer">
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
       <button id="btn-back-to-origin" class="btn-d2t" style="display:none; margin-left:8px; color:#26a69a; border-color:#26a69a;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
+      <!-- 모바일 전용: 결과 패널 토글 버튼 -->
+      <button id="mobile-results-btn" onclick="toggleMobileSidebar()"
+        style="margin-left:auto; height:22px; padding:0 10px; font-size:11px; background:#ff6b35; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
+        결과 보기 ▲
+      </button>
       <span class="ticker-label" style="margin-left: auto;">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
@@ -562,9 +570,66 @@
   crossorigin="anonymous"
 ></script>
 <!-- Draw2Trade JS -->
-<script src="/static/js/chart.js?v=20260311a"></script>
-<script src="/static/js/draw.js?v=20260309k"></script>
+<script src="/static/js/chart.js?v=20260312a"></script>
+<script src="/static/js/draw.js?v=20260312a"></script>
 <script src="/static/js/realtime.js?v=20260311b"></script>
+
+<!-- 모바일 사이드바 토글 -->
+<script>
+(function() {
+  function isMobile() { return window.innerWidth <= 640; }
+
+  window.toggleMobileSidebar = function() {
+    var sb = document.querySelector('.d2t-sidebar');
+    var ov = document.getElementById('mobile-sidebar-overlay');
+    var btn = document.getElementById('mobile-results-btn');
+    if (!sb || !ov) return;
+    var isOpen = sb.classList.contains('mobile-open');
+    if (isOpen) {
+      sb.classList.remove('mobile-open');
+      ov.classList.remove('active');
+      if (btn) btn.textContent = '결과 보기 ▲';
+    } else {
+      sb.classList.add('mobile-open');
+      ov.classList.add('active');
+      if (btn) btn.textContent = '닫기 ▼';
+    }
+  };
+
+  window.closeMobileSidebar = function() {
+    var sb = document.querySelector('.d2t-sidebar');
+    var ov = document.getElementById('mobile-sidebar-overlay');
+    var btn = document.getElementById('mobile-results-btn');
+    if (sb) sb.classList.remove('mobile-open');
+    if (ov) ov.classList.remove('active');
+    if (btn) btn.textContent = '결과 보기 ▲';
+  };
+
+  // 검색 완료 시 모바일에서 자동으로 사이드바 열기
+  // results-list DOM 변화 감지
+  document.addEventListener('DOMContentLoaded', function() {
+    var resultsList = document.getElementById('results-list');
+    if (resultsList && window.MutationObserver) {
+      var obs = new MutationObserver(function() {
+        if (isMobile() && resultsList.children.length > 0) {
+          var sb = document.querySelector('.d2t-sidebar');
+          if (sb && !sb.classList.contains('mobile-open')) {
+            window.toggleMobileSidebar();
+          }
+        }
+      });
+      obs.observe(resultsList, { childList: true });
+    }
+  });
+
+  // 화면 크기 변경 시 데스크탑으로 전환되면 사이드바 상태 초기화
+  window.addEventListener('resize', function() {
+    if (!isMobile()) {
+      closeMobileSidebar();
+    }
+  });
+})();
+</script>
 
 <!-- 공지 상세 모달 -->
 <div id="notice-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding-top:60px;">
