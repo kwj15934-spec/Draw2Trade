@@ -102,6 +102,11 @@
     <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; margin-left:4px;">
       거래소·카테고리 미선택 시 S&amp;P 500만 표시
     </span>
+
+    <!-- 공지 배너 (툴바 오른쪽 끝) -->
+    <div id="toolbar-notice-banner" style="display:none; margin-left:auto; flex-shrink:0; max-width:320px;">
+      <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+    </div>
   </div>
 
   <!-- ── Row 2: 드로잉 + 기간 + 검색 ─────────────────────────────────────── -->
@@ -232,9 +237,6 @@
       <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
       <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장된 검색</button>
     </div>
-
-    <!-- 공지 배너 -->
-    <div id="notice-banner" style="display:none;"></div>
 
     <!-- 유사 종목 패널 -->
     <div id="sidebar-panel-results">
@@ -508,7 +510,7 @@
 <script src="/static/js/draw.js?v=20260309k"></script>
 <script src="/static/js/realtime.js?v=20260310a"></script>
 
-<!-- 공지 배너 -->
+<!-- 공지 배너 (툴바 Row 1 오른쪽 끝) -->
 <script>
 (function () {
   var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
@@ -516,45 +518,46 @@
 
   function dismissKey(id) { return 'notice_dismissed_' + id; }
 
-  function renderBanner(notice) {
-    var banner = document.getElementById('notice-banner');
-    if (!banner) return;
-    if (sessionStorage.getItem(dismissKey(notice.id))) return;
-
-    var color = TYPE_COLOR[notice.type] || TYPE_COLOR.notice;
-    var label = TYPE_LABEL[notice.type] || '공지';
-    var content = notice.content || '';
-    var preview = content.length > 60 ? content.slice(0, 60) + '…' : content;
-
-    banner.innerHTML =
-      '<div class="notice-banner-inner">' +
-        '<span class="notice-banner-type" style="background:' + color + '20;color:' + color + ';border-color:' + color + '40;">' + label + '</span>' +
-        '<div class="notice-banner-body">' +
-          '<div class="notice-banner-title">' + escHtml(notice.title) + '</div>' +
-          (preview ? '<div class="notice-banner-preview">' + escHtml(preview) + '</div>' : '') +
-        '</div>' +
-        '<button class="notice-banner-close" onclick="dismissNotice(' + notice.id + ')" title="닫기">✕</button>' +
-      '</div>';
-    banner.style.display = '';
-  }
-
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  window.dismissNotice = function (id) {
-    sessionStorage.setItem(dismissKey(id), '1');
-    var banner = document.getElementById('notice-banner');
-    if (banner) banner.style.display = 'none';
-  };
+  function renderToolbarNotices(list) {
+    var wrap = document.getElementById('toolbar-notice-banner');
+    var listEl = document.getElementById('toolbar-notice-list');
+    if (!wrap || !listEl) return;
+
+    var visible = list.filter(function (n) {
+      return !sessionStorage.getItem(dismissKey(n.id));
+    });
+    if (!visible.length) return;
+
+    listEl.innerHTML = '';
+    visible.forEach(function (n) {
+      var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
+      var label = TYPE_LABEL[n.type] || '공지';
+      var item = document.createElement('div');
+      item.style.cssText = 'display:flex; align-items:center; gap:5px; background:#0f1320; border:1px solid #1e2535; border-radius:4px; padding:3px 7px 3px 6px; white-space:nowrap; max-width:320px;';
+      item.innerHTML =
+        '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid ' + color + '40;background:' + color + '20;color:' + color + ';flex-shrink:0;">' + label + '</span>' +
+        '<span style="font-size:11px;color:#c8ccd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + escHtml(n.title) + '</span>' +
+        '<button style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 1px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
+      item.querySelector('button').addEventListener('click', function () {
+        var id = parseInt(this.getAttribute('data-nid'), 10);
+        sessionStorage.setItem(dismissKey(id), '1');
+        item.remove();
+        if (!listEl.children.length) wrap.style.display = 'none';
+      });
+      listEl.appendChild(item);
+    });
+    wrap.style.display = 'flex';
+  }
 
   fetch('/api/notices')
     .then(function (r) { return r.ok ? r.json() : []; })
     .then(function (list) {
       if (!list || !list.length) return;
-      // pinned 우선, 그 다음 최신순 (서버가 이미 정렬해 반환)
-      var n = list[0];
-      if (!sessionStorage.getItem(dismissKey(n.id))) renderBanner(n);
+      renderToolbarNotices(list);
     })
     .catch(function () {});
 })();
