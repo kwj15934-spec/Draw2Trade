@@ -148,6 +148,23 @@ async def pending_page(request: Request):
     return templates.TemplateResponse("pending.html", {"request": request})
 
 
+@app.get("/robots.txt", response_class=Response)
+async def robots_txt():
+    content = (
+        "User-agent: *\n"
+        "Allow: /$\n"
+        "Disallow: /app\n"
+        "Disallow: /login\n"
+        "Disallow: /pending\n"
+        "Disallow: /admin\n"
+        "Disallow: /notices\n"
+        "Disallow: /blank\n"
+        "Disallow: /api/\n"
+        "Disallow: /static/\n"
+    )
+    return Response(content=content, media_type="text/plain")
+
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
     import os
