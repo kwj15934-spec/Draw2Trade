@@ -70,11 +70,13 @@
       },
       rightPriceScale: {
         borderColor: '#2a2e39',
+        fontSize: window.innerWidth <= 640 ? 9 : 12,
       },
       timeScale: {
         borderColor: '#2a2e39',
         timeVisible: true,
         secondsVisible: false,
+        fontSize: window.innerWidth <= 640 ? 9 : 12,
       },
       handleScroll: true,
       handleScale: true,
@@ -105,6 +107,7 @@
         rightPriceScale: {
           borderColor: '#2a2e39',
           scaleMargins: { top: 0.1, bottom: 0.05 },
+          fontSize: window.innerWidth <= 640 ? 9 : 12,
         },
         timeScale: {
           borderColor: '#2a2e39',

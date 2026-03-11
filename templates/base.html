@@ -1051,7 +1051,10 @@
         min-height: 0;
       }
       .d2t-chart-panel { flex: 1 !important; border-right: none; min-height: 0; }
-      #chart-wrapper { min-height: 52vh; min-height: 52dvh; }
+      #chart-wrapper { min-height: 58vh; min-height: 58dvh; }
+      /* 모바일: 볼륨 패널 숨겨서 차트 공간 확보 */
+      #vol-resizer { display: none !important; }
+      #volume-container { display: none !important; }
 
       /* ── 사이드바: 하단 슬라이드업 패널 ── */
       .d2t-sidebar {
@@ -1118,7 +1121,7 @@
       #tool-line { display: none !important; }
       /* 사이드바 높이 확대 */
       .d2t-sidebar { height: 60vh; }
-      #chart-wrapper { min-height: 44vh; min-height: 44dvh; }
+      #chart-wrapper { min-height: 50vh; min-height: 50dvh; }
     }
 
     /* 모바일 결과 버튼 — 데스크탑에서는 숨김 */
