@@ -52,17 +52,91 @@ _api_minute_buckets: dict[int, int] = {}
 LIMIT_PER_MINUTE: int = 1000   # 60ms 인터벌 기준 최대 ~1000/min (여유 있게 설정)
 LIMIT_PER_DAY:    int = 100_000
 
+# 분 버킷 DB 경로 (activity.db 재사용)
+_BUCKET_DB = _BASE_DIR / "cache" / "activity.db"
+_BUCKET_LOCK = threading.Lock()
+
+
+def _bucket_conn():
+    import sqlite3
+    _BUCKET_DB.parent.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(str(_BUCKET_DB), timeout=5)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")
+    return con
+
+
+def _init_bucket_db() -> None:
+    with _bucket_conn() as con:
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS kis_minute_buckets (
+                bucket INTEGER PRIMARY KEY,
+                calls  INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+
+def _load_buckets_from_db() -> None:
+    """서버 시작 시 오늘 이후 버킷을 메모리로 로드."""
+    global _api_minute_buckets, _api_call_count
+    from datetime import timezone as _tz
+    today_start_ts = datetime.now(_tz.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).timestamp()
+    today_start_bucket = int(today_start_ts) // 60
+    try:
+        with _bucket_conn() as con:
+            rows = con.execute(
+                "SELECT bucket, calls FROM kis_minute_buckets WHERE bucket >= ?",
+                (today_start_bucket,),
+            ).fetchall()
+        for bucket, calls in rows:
+            _api_minute_buckets[bucket] = calls
+        _api_call_count = sum(_api_minute_buckets.values())
+        logger.info("KIS 분 버킷 로드: %d개 버킷, 오늘 %d건", len(rows), _api_call_count)
+    except Exception as e:
+        logger.warning("KIS 버킷 DB 로드 실패: %s", e)
+
+
+def _persist_bucket(bucket: int, count: int) -> None:
+    """분 버킷 1개를 DB에 upsert (백그라운드 스레드에서 호출)."""
+    try:
+        with _bucket_conn() as con:
+            con.execute(
+                "INSERT INTO kis_minute_buckets (bucket, calls) VALUES (?, ?) "
+                "ON CONFLICT(bucket) DO UPDATE SET calls=excluded.calls",
+                (bucket, count),
+            )
+        # 오래된 버킷 정리 (3일 이상)
+        cutoff = bucket - 60 * 24 * 3
+        with _bucket_conn() as con:
+            con.execute("DELETE FROM kis_minute_buckets WHERE bucket < ?", (cutoff,))
+    except Exception:
+        pass
+
+
+# DB 초기화 + 오늘 버킷 로드
+try:
+    _init_bucket_db()
+    _load_buckets_from_db()
+except Exception as e:
+    logger.warning("KIS 버킷 DB 초기화 실패: %s", e)
+
 
 def _record_call() -> None:
     """현재 분 버킷에 호출 1건 기록. 1시간 이상 지난 버킷은 정리."""
     global _api_call_count, _api_minute_buckets
     _api_call_count += 1
     bucket = int(time.time()) // 60
-    _api_minute_buckets[bucket] = _api_minute_buckets.get(bucket, 0) + 1
-    # 오래된 버킷 정리 (2시간 이상)
-    cutoff = bucket - 120
-    for k in [k for k in _api_minute_buckets if k < cutoff]:
-        del _api_minute_buckets[k]
+    with _BUCKET_LOCK:
+        _api_minute_buckets[bucket] = _api_minute_buckets.get(bucket, 0) + 1
+        count = _api_minute_buckets[bucket]
+        # 오래된 버킷 정리 (2시간 이상, 메모리만)
+        cutoff = bucket - 120
+        for k in [k for k in _api_minute_buckets if k < cutoff]:
+            del _api_minute_buckets[k]
+    # DB 영속화 (별도 스레드 — 느린 I/O 비차단)
+    threading.Thread(target=_persist_bucket, args=(bucket, count), daemon=True).start()
 
 
 def get_api_usage() -> dict:
