@@ -129,6 +129,26 @@
 
   // ── 드로잉 도구 활성화 ────────────────────────────────────────────────────
   function setTool(tool) {
+    // 비로그인 시 드로잉 차단
+    if (tool && window._isLoggedIn === false) {
+      var placeholder = document.getElementById('results-placeholder');
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = '<div style="padding:40px 16px;text-align:center;">'
+          + '<div style="font-size:32px;margin-bottom:14px;">🔒</div>'
+          + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">로그인 후 이용해주세요</div>'
+          + '<div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:18px;">드로잉 기능은 로그인이 필요합니다.</div>'
+          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#ff6b35;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
+          + '</div>';
+      }
+      if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+      if (typeof window.toggleMobileSidebar === 'function') {
+        var sb = document.querySelector('.d2t-sidebar');
+        if (sb && !sb.classList.contains('mobile-open')) window.toggleMobileSidebar();
+      }
+      return;
+    }
+
     activeTool      = tool;
     trendPoints     = [];
     linePoints      = [];
