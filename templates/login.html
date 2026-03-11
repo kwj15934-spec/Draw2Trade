@@ -9,19 +9,25 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     html, body {
-      height: 100%;
+      min-height: 100%;
       margin: 0;
       background: #0f1117;
       color: #d1d4dc;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       font-size: 14px;
+    }
+
+    body {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 40px 16px;
     }
 
     .login-card {
-      width: 380px;
+      width: 100%;
+      max-width: 400px;
       background: #1a1d2e;
       border: 1px solid #2a2e39;
       border-radius: 12px;
@@ -252,16 +258,28 @@
     }
     .modal-btn:hover { background: #e55c27; }
 
+    .login-footer {
+      width: 100%;
+      max-width: 400px;
+      padding: 24px 0 8px;
+      text-align: center;
+      color: #4a5568;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    .login-footer a { color: #4a5568; text-decoration: none; }
+    .login-footer a:hover { color: #90a4ae; }
+
     @media (max-width: 480px) {
-      html, body { align-items: flex-start; padding-top: 40px; }
+      body { padding: 24px 0; justify-content: flex-start; }
       .login-card {
-        width: 100%;
         max-width: 100%;
         border-radius: 0;
         border-left: none;
         border-right: none;
-        padding: 32px 24px 28px;
+        padding: 32px 20px 28px;
       }
+      .login-footer { max-width: 100%; padding: 20px 16px 16px; }
       .modal-box {
         width: calc(100% - 32px);
         padding: 32px 24px 24px;
@@ -389,15 +407,13 @@
     };
   </script>
   <script src="/static/js/auth.js"></script>
-  <footer style="padding:32px 24px;text-align:center;color:#4a5568;font-size:13px;border-top:1px solid #1e2130;margin-top:40px;">
-    <p style="margin-bottom:8px;">
-      &copy; 2026 Draw2Trade &nbsp;·&nbsp;
-      <a href="/terms" style="color:#4a5568;text-decoration:none;">이용약관</a> &nbsp;·&nbsp;
-      <a href="/privacy" style="color:#4a5568;text-decoration:none;">개인정보 처리방침</a>
-    </p>
-    <p style="font-size:12px;">
-      본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.
-    </p>
+  <footer class="login-footer">
+    <div>&copy; 2026 Draw2Trade</div>
+    <div>
+      <a href="/terms">이용약관</a> &nbsp;·&nbsp;
+      <a href="/privacy">개인정보 처리방침</a>
+    </div>
+    <div style="margin-top:4px;font-size:11px;">본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.</div>
   </footer>
 </body>
 </html>

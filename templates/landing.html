@@ -39,14 +39,15 @@
       background: rgba(13, 17, 23, 0.92);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--border);
+      overflow: hidden;
     }
     .lp-nav-brand {
       display: flex; align-items: center; gap: 10px;
       font-size: 18px; font-weight: 700; color: var(--orange);
-      text-decoration: none;
+      text-decoration: none; flex-shrink: 0;
     }
     .lp-nav-brand img { height: 28px; width: 28px; }
-    .lp-nav-links { display: flex; gap: 8px; }
+    .lp-nav-links { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
     .btn-outline {
       padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600;
       border: 1px solid var(--border); background: transparent;
@@ -240,9 +241,35 @@
 
     /* ── 반응형 ── */
     @media (max-width: 700px) {
-      .lp-nav { padding: 0 20px; }
+      .lp-nav { padding: 0 14px; height: 50px; }
+      .lp-nav-brand { font-size: 15px; gap: 7px; }
+      .lp-nav-brand img { height: 22px; width: 22px; }
+      .lp-nav-links { gap: 5px; }
+      /* 공지사항·문의하기는 좁은 화면에서 숨김 */
+      .lp-nav-hide-mobile { display: none !important; }
+      .btn-outline { padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+      .btn-primary { padding: 5px 12px; font-size: 12px; white-space: nowrap; }
       .how-step { grid-template-columns: 1fr; gap: 28px; }
       .how-step.reverse { direction: ltr; }
+      section { padding: 60px 20px; }
+      .hero-cta { flex-direction: column; align-items: center; gap: 10px; }
+      .btn-hero-primary, .btn-hero-outline { padding: 13px 28px; font-size: 14px; width: 100%; max-width: 280px; text-align: center; }
+      .plans-grid { grid-template-columns: 1fr; max-width: 100%; }
+    }
+    @media (max-width: 480px) {
+      .lp-nav { padding: 0 12px; height: 48px; }
+      .lp-nav-brand { font-size: 14px; gap: 6px; }
+      .lp-nav-brand img { height: 20px; width: 20px; }
+      .lp-nav-links { gap: 4px; }
+      .btn-outline { padding: 5px 9px; font-size: 11px; }
+      .btn-primary { padding: 5px 11px; font-size: 11px; }
+    }
+    @media (max-width: 380px) {
+      .lp-nav { padding: 0 10px; }
+      .lp-nav-brand span { display: none; } /* 로고 아이콘만 */
+      .btn-outline { padding: 5px 8px; font-size: 11px; }
+      .btn-primary { padding: 5px 10px; font-size: 11px; }
+      section { padding: 48px 16px; }
     }
   </style>
 </head>
@@ -255,9 +282,9 @@
   </a>
   <div class="lp-nav-links">
     <a href="/pricing" class="btn-outline">요금제</a>
-    <a href="/notices" class="btn-outline">공지사항</a>
+    <a href="/notices" class="btn-outline lp-nav-hide-mobile">공지사항</a>
     <a href="/app" class="btn-primary">시작하기</a>
-    <a href="#" onclick="openContact();return false;" class="btn-outline">문의하기</a>
+    <a href="#" onclick="openContact();return false;" class="btn-outline lp-nav-hide-mobile">문의하기</a>
   </div>
 </nav>
 

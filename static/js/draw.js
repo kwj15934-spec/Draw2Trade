@@ -1442,24 +1442,40 @@
     loadFavorites();
     loadDrawingsList();
 
-    // 플랜 확인 → 무료 계정 기능 잠금
+    // 플랜 확인 → Pro 아닌 경우(비로그인 포함) 자동 분석 잠금
     fetch('/api/auth/me')
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
-        if (!data || !data.authenticated) return;
-        var plan = (data.user && data.user.plan) || 'free';
-        window._userPlan = plan;
-        if (plan !== 'pro') {
-          var autoBtn = document.getElementById('btn-auto-pattern');
-          if (autoBtn) {
+        var isPro = data && data.authenticated && data.user && data.user.plan === 'pro';
+        window._userPlan = isPro ? 'pro' : 'free';
+        var autoBtn = document.getElementById('btn-auto-pattern');
+        if (autoBtn) {
+          if (isPro) {
+            autoBtn.disabled = false;
+            autoBtn.style.opacity = '';
+            autoBtn.style.cursor = '';
+            autoBtn.title = '차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다';
+          } else {
             autoBtn.disabled = true;
-            autoBtn.title = '자동 분석은 Pro 계정 전용 기능입니다';
             autoBtn.style.opacity = '0.4';
             autoBtn.style.cursor = 'not-allowed';
+            autoBtn.title = data && data.authenticated
+              ? '자동 분석은 Pro 계정 전용 기능입니다'
+              : '자동 분석은 로그인 후 Pro 계정에서 이용 가능합니다';
           }
         }
       })
-      .catch(function() {});
+      .catch(function() {
+        // 오류 시 비로그인으로 간주 → 잠금
+        window._userPlan = 'free';
+        var autoBtn = document.getElementById('btn-auto-pattern');
+        if (autoBtn) {
+          autoBtn.disabled = true;
+          autoBtn.title = '자동 분석은 Pro 계정 전용 기능입니다';
+          autoBtn.style.opacity = '0.4';
+          autoBtn.style.cursor = 'not-allowed';
+        }
+      });
 
     // 현재 종목 즐겨찾기 버튼
     var favTickerBtn = document.getElementById('btn-fav-ticker');
@@ -1581,6 +1597,10 @@
 
   function toggleAutoMode() {
     if (autoMode) { exitAutoMode(); return; }
+    if (window._userPlan !== 'pro') {
+      alert('자동 분석은 Pro 계정 전용 기능입니다.\n요금제 페이지에서 Pro를 신청해 주세요.');
+      return;
+    }
     if (!window.D2T || !D2T.candles || D2T.candles.length === 0) {
       alert('차트를 먼저 로드해주세요.');
       return;

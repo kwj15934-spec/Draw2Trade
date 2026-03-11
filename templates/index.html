@@ -162,7 +162,7 @@
 
     <!-- 패턴 검색 -->
     <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
-    <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="차트에서 시작 날짜를 선택하면 오늘까지의 흐름을 자동 분석합니다">📐 자동 분석</button>
+    <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
     <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
     <div id="advanced-options">
       <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
@@ -571,7 +571,7 @@
 ></script>
 <!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260312a"></script>
-<script src="/static/js/draw.js?v=20260312a"></script>
+<script src="/static/js/draw.js?v=20260312b"></script>
 <script src="/static/js/realtime.js?v=20260311b"></script>
 
 <!-- 모바일 사이드바 토글 -->
