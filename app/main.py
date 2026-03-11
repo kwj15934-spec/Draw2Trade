@@ -153,6 +153,16 @@ async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    return templates.TemplateResponse("terms.html", {"request": request})
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+
 @app.get("/robots.txt", response_class=Response)
 async def robots_txt():
     content = (
@@ -283,6 +293,16 @@ async def admin_pro_request_status(req_id: int, request: Request):
     body = await request.json()
     inquiry_service.set_pro_request_status(req_id, body.get("status", "pending"))
     return JSONResponse({"ok": True})
+
+
+@app.get("/api/admin/pro-usage/{uid}")
+async def admin_pro_usage(uid: str, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return JSONResponse({
+        "has_usage": inquiry_service.has_pro_usage(uid),
+        "logs": inquiry_service.get_pro_usage(uid),
+    })
 
 
 # ── 관리자 문의 조회 ──────────────────────────────────────────────────────────

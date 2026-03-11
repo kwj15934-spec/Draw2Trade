@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>개인정보 처리방침 — Draw2Trade</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #0d1117;
+      --bg2:    #131722;
+      --teal:   #26a69a;
+      --teal2:  #1a7a70;
+      --orange: #ff6b35;
+      --text:   #d4d8e2;
+      --muted:  #7a8499;
+      --border: #2a3145;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      line-height: 1.8;
+    }
+    .lp-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 60px;
+      background: rgba(13,17,23,0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+    .lp-nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; color: var(--orange);
+      text-decoration: none;
+    }
+    .lp-nav-brand img { height: 26px; width: 26px; }
+    .nav-links { display: flex; gap: 8px; align-items: center; }
+    .btn-outline {
+      padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text); cursor: pointer; text-decoration: none;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-outline:hover { border-color: var(--teal); color: var(--teal); }
+
+    .page-wrap {
+      max-width: 780px; margin: 0 auto;
+      padding: 100px 24px 80px;
+    }
+
+    .doc-title {
+      font-size: clamp(22px, 3vw, 32px); font-weight: 800;
+      color: #fff; margin-bottom: 6px;
+    }
+    .doc-updated {
+      font-size: 12px; color: var(--muted); margin-bottom: 40px;
+    }
+
+    .doc h2 {
+      font-size: 16px; font-weight: 700; color: #fff;
+      margin: 36px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .doc h2:first-of-type { margin-top: 0; }
+    .doc p {
+      font-size: 14px; color: var(--text); margin-bottom: 10px; line-height: 1.8;
+    }
+    .doc ul {
+      list-style: none; margin: 8px 0 12px; padding: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .doc ul li {
+      font-size: 14px; color: var(--text);
+      padding-left: 16px; position: relative; line-height: 1.7;
+    }
+    .doc ul li::before {
+      content: '·'; position: absolute; left: 0; color: var(--teal); font-weight: 700;
+    }
+
+    .data-table {
+      width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px;
+    }
+    .data-table th {
+      background: var(--bg2); color: var(--muted); font-weight: 600;
+      padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 10px 14px; border-bottom: 1px solid #1e2332; color: var(--text);
+      vertical-align: top;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+
+    footer {
+      padding: 40px 24px; text-align: center;
+      color: var(--muted); font-size: 13px;
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--teal); }
+
+    @media (max-width: 600px) {
+      .lp-nav { padding: 0 16px; }
+      .page-wrap { padding: 80px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="lp-nav">
+  <a href="/" class="lp-nav-brand">
+    <img src="/static/img/favicon.svg" alt="logo" onerror="this.style.display='none'">
+    Draw2Trade
+  </a>
+  <div class="nav-links">
+    <a href="/terms" class="btn-outline">이용약관</a>
+    <a href="/" class="btn-outline">← 메인</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="doc-title">개인정보 처리방침</div>
+  <div class="doc-updated">최종 업데이트: 2026년 3월</div>
+
+  <div class="doc">
+
+    <h2>수집하는 개인정보 항목</h2>
+    <p>Draw2Trade는 서비스 제공을 위해 최소한의 개인정보만 수집합니다.</p>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>수집 시점</th>
+          <th>목적</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>이메일 주소</td>
+          <td>회원가입 시</td>
+          <td>계정 식별, 로그인, 공지 안내</td>
+        </tr>
+        <tr>
+          <td>이름(닉네임)</td>
+          <td>회원가입 시 (선택)</td>
+          <td>서비스 내 표시명</td>
+        </tr>
+        <tr>
+          <td>서비스 이용 기록</td>
+          <td>서비스 이용 시</td>
+          <td>기능 제공, 환불 가능 여부 판단</td>
+        </tr>
+        <tr>
+          <td>접속 IP</td>
+          <td>서비스 이용 시</td>
+          <td>접속자 통계 (비식별 처리)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>개인정보 이용 목적</h2>
+    <p>수집된 개인정보는 다음 목적 이외에는 사용되지 않습니다.</p>
+    <ul>
+      <li>회원 식별 및 로그인 서비스 제공</li>
+      <li>유료 구독 관리 및 환불 처리</li>
+      <li>서비스 품질 개선 및 오류 대응</li>
+      <li>고객 문의 접수 및 응대</li>
+    </ul>
+
+    <h2>개인정보 보관 기간</h2>
+    <p>개인정보는 서비스 이용 기간 동안 보관됩니다. 회원 탈퇴 요청 시 지체 없이 파기합니다.</p>
+    <p>단, 관련 법령(전자상거래법 등)에 따라 일정 기간 보관이 필요한 경우 해당 기간 동안 보관될 수 있습니다.</p>
+
+    <h2>개인정보 제3자 제공</h2>
+    <p>Draw2Trade는 이용자의 개인정보를 외부에 제공하지 않습니다. 단, 법령에 의한 요청이 있는 경우에는 예외로 합니다.</p>
+
+    <h2>인증 서비스</h2>
+    <p>Draw2Trade는 로그인 인증을 위해 Google Firebase Authentication을 사용합니다. 인증 과정에서 이메일 주소가 Firebase 서버를 통해 처리됩니다.</p>
+    <ul>
+      <li>Firebase 개인정보 처리방침: <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener" style="color:var(--teal);">firebase.google.com/support/privacy</a></li>
+    </ul>
+
+    <h2>개인정보 보호 조치</h2>
+    <p>회사는 개인정보 보호를 위해 다음과 같은 조치를 시행합니다.</p>
+    <ul>
+      <li>로그인 세션 쿠키 암호화 저장</li>
+      <li>HTTPS를 통한 암호화 전송</li>
+      <li>서버 접근 권한 최소화</li>
+    </ul>
+
+    <h2>이용자의 권리</h2>
+    <p>이용자는 언제든지 자신의 개인정보에 대해 다음 권리를 행사할 수 있습니다.</p>
+    <ul>
+      <li>개인정보 조회 요청</li>
+      <li>개인정보 삭제(탈퇴) 요청</li>
+      <li>개인정보 처리 정지 요청</li>
+    </ul>
+    <p>관련 요청은 서비스 내 <strong>문의하기</strong>를 통해 접수해 주세요.</p>
+
+    <h2>쿠키(Cookie) 사용</h2>
+    <p>Draw2Trade는 로그인 상태 유지를 위해 세션 쿠키를 사용합니다. 쿠키에는 개인 식별 정보가 직접 저장되지 않으며, 브라우저 설정에서 쿠키를 거부할 수 있으나 이 경우 로그인 기능이 제한될 수 있습니다.</p>
+
+    <h2>문의</h2>
+    <p>개인정보 관련 문의는 서비스 내 문의하기를 통해 접수해 주세요.</p>
+
+  </div>
+</div>
+
+<footer>
+  <p style="margin-bottom:8px;">
+    &copy; 2026 Draw2Trade &nbsp;·&nbsp;
+    <a href="/terms">이용약관</a> &nbsp;·&nbsp;
+    <a href="/privacy">개인정보 처리방침</a>
+  </p>
+  <p style="font-size:12px; color:#4a5568;">
+    본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.
+  </p>
+</footer>
+
+</body>
+</html>

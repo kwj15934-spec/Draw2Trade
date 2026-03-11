@@ -184,6 +184,15 @@
     .faq-q { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
     .faq-a { font-size: 13px; color: var(--muted); line-height: 1.7; }
 
+    footer {
+      padding: 40px 24px; text-align: center;
+      color: var(--muted); font-size: 13px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--teal); }
+
     @media (max-width: 600px) {
       .lp-nav { padding: 0 16px; }
       .page-wrap { padding: 100px 16px 60px; }
@@ -301,7 +310,13 @@
 
     <div class="faq-item">
       <div class="faq-q">환불이 가능한가요?</div>
-      <div class="faq-a">Pro 전환 후 7일 이내 미사용 환불이 가능합니다. 문의하기를 통해 요청해주세요.</div>
+      <div class="faq-a">
+        결제 후 7일 이내이며 아래 조건을 모두 충족하는 경우 전액 환불이 가능합니다.<br><br>
+        · Pro 기능 사용 이력이 없는 경우<br>
+        · 결제 후 7일 이내 요청한 경우<br><br>
+        환불 요청은 문의하기를 통해 접수해 주세요.<br>
+        환불은 확인 후 영업일 기준 3일 이내에 결제 계좌로 환불 처리됩니다.
+      </div>
     </div>
 
     <div class="faq-item">
@@ -413,5 +428,17 @@
     }
   }
 </script>
+
+<footer>
+  <p style="margin-bottom:8px;">
+    &copy; 2026 Draw2Trade &nbsp;·&nbsp;
+    <a href="/terms">이용약관</a> &nbsp;·&nbsp;
+    <a href="/terms#refund">환불 정책</a> &nbsp;·&nbsp;
+    <a href="/privacy">개인정보 처리방침</a>
+  </p>
+  <p style="font-size:12px; color:#4a5568;">
+    본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.
+  </p>
+</footer>
 </body>
 </html>

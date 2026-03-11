@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.dependencies.auth import require_user
+from app.services.inquiry_service import log_pro_usage
 from app.services.similarity_service import search_similar
 
 logger = logging.getLogger(__name__)
@@ -100,5 +101,8 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
 
     if not is_pro:
         results = results[10:]  # Top 1~10 제외
+    else:
+        # Pro 전용 기능 사용 기록 (Top 1~10 결과 포함)
+        log_pro_usage(user["uid"], "pattern_search_top10", f"market={market} tf={tf}")
 
     return {"results": results, "plan": "free" if not is_pro else "pro"}

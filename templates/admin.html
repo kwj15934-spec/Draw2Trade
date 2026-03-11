@@ -559,6 +559,15 @@
     </div>
   </main>
 
+  <!-- Pro 사용 이력 모달 -->
+  <div id="pro-usage-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#1a1d2e;border:1px solid #2a2e39;border-radius:10px;padding:28px;width:100%;max-width:480px;margin:24px;max-height:80vh;overflow-y:auto;position:relative;">
+      <button onclick="document.getElementById('pro-usage-modal').style.display='none'" style="position:absolute;top:14px;right:14px;background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
+      <div style="font-size:16px;font-weight:700;color:#d1d4dc;margin-bottom:16px;">📋 Pro 기능 사용 이력</div>
+      <div id="pro-usage-content">로딩 중...</div>
+    </div>
+  </div>
+
   <script>
     var currentFilter = 'all';
     var allUsers = [];
@@ -896,10 +905,13 @@
               '</div>' +
             '</div>' +
             (r.memo ? '<div class="inquiry-msg" style="margin-top:6px;">📝 ' + r.memo.replace(/</g,'&lt;') + '</div>' : '') +
-            (isPending ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
-              '<button onclick="handleProUser(\'' + r.uid + '\',' + r.id + ')" style="background:#26a69a;border:none;border-radius:5px;color:#fff;font-size:12px;font-weight:600;padding:5px 14px;cursor:pointer;">→ Pro로 전환</button>' +
-              '<button onclick="dismissProRequest(' + r.id + ')" style="background:transparent;border:1px solid #2a2e39;border-radius:5px;color:#7a8499;font-size:12px;padding:5px 14px;cursor:pointer;">처리 완료 표시</button>' +
-            '</div>' : '') +
+            '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+              (isPending ?
+                '<button onclick="handleProUser(\'' + r.uid + '\',' + r.id + ')" style="background:#26a69a;border:none;border-radius:5px;color:#fff;font-size:12px;font-weight:600;padding:5px 14px;cursor:pointer;">→ Pro로 전환</button>' +
+                '<button onclick="dismissProRequest(' + r.id + ')" style="background:transparent;border:1px solid #2a2e39;border-radius:5px;color:#7a8499;font-size:12px;padding:5px 14px;cursor:pointer;">처리 완료 표시</button>'
+              : '') +
+              '<button onclick="showProUsage(\'' + r.uid + '\')" style="background:transparent;border:1px solid #2a2e39;border-radius:5px;color:#7a8499;font-size:12px;padding:5px 14px;cursor:pointer;">📋 사용 이력</button>' +
+            '</div>' +
           '</div>';
         }).join('');
       } catch(e) { /* 무시 */ }
@@ -930,6 +942,37 @@
         body: JSON.stringify({ status: 'done' }),
       });
       loadProRequests();
+    };
+
+    window.showProUsage = async function(uid) {
+      var modal = document.getElementById('pro-usage-modal');
+      var content = document.getElementById('pro-usage-content');
+      content.innerHTML = '로딩 중...';
+      modal.style.display = 'flex';
+      try {
+        var res = await fetch('/api/admin/pro-usage/' + uid);
+        var data = await res.json();
+        var featureLabel = { 'pattern_search_top10': 'Top1~10 패턴 검색', 'favorite_over5': '즐겨찾기 5개 초과', 'drawing_over5': '저장 5개 초과' };
+        if (!data.logs.length) {
+          content.innerHTML = '<div style="color:#7a8499;font-size:13px;padding:8px 0;">사용 이력 없음 — 환불 가능 조건 충족</div>';
+        } else {
+          content.innerHTML = '<div style="font-size:12px;color:#ef5350;margin-bottom:12px;font-weight:600;">⚠ Pro 기능 사용 이력 ' + data.logs.length + '건 — 환불 불가</div>' +
+            '<div style="display:flex;flex-direction:column;gap:6px;">' +
+            data.logs.map(function(l) {
+              var d = new Date(l.used_at * 1000);
+              var date = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0')
+                       + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+              return '<div style="background:#0d1117;border:1px solid #2a2e39;border-radius:5px;padding:8px 12px;">' +
+                '<span style="font-size:12px;color:#d4d8e2;font-weight:600;">' + (featureLabel[l.feature] || l.feature) + '</span>' +
+                '<span style="font-size:11px;color:#555;margin-left:10px;">' + (l.detail || '') + '</span>' +
+                '<div style="font-size:11px;color:#555;margin-top:2px;">' + date + '</div>' +
+              '</div>';
+            }).join('') +
+            '</div>';
+        }
+      } catch(e) {
+        content.innerHTML = '<div style="color:#ef5350;">오류: ' + e.message + '</div>';
+      }
     };
 
     async function loadInquiries() {

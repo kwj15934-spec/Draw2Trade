@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from app.dependencies.auth import require_user
 from app.services import user_data_service as svc
+from app.services.inquiry_service import log_pro_usage
 
 router = APIRouter(prefix="/api")
 
@@ -30,6 +31,11 @@ async def add_favorite(body: FavoriteBody, user: dict = Depends(require_user)):
         existing = svc.get_favorites(user["uid"])
         if len(existing) >= FREE_LIMIT:
             raise HTTPException(status_code=403, detail=f"무료 계정은 즐겨찾기를 최대 {FREE_LIMIT}개까지 저장할 수 있습니다.")
+    else:
+        # Pro 전용 기능 사용 기록 (5개 초과 즐겨찾기)
+        existing = svc.get_favorites(user["uid"])
+        if len(existing) >= FREE_LIMIT:
+            log_pro_usage(user["uid"], "favorite_over5", f"ticker={body.ticker}")
     return svc.add_favorite(user["uid"], body.ticker, body.market, body.name)
 
 
@@ -63,6 +69,11 @@ async def save_drawing(body: SaveDrawingBody, user: dict = Depends(require_user)
         existing = svc.get_drawings(user["uid"])
         if len(existing) >= FREE_LIMIT:
             raise HTTPException(status_code=403, detail=f"무료 계정은 검색 결과를 최대 {FREE_LIMIT}개까지 저장할 수 있습니다.")
+    else:
+        # Pro 전용 기능 사용 기록 (5개 초과 저장)
+        existing = svc.get_drawings(user["uid"])
+        if len(existing) >= FREE_LIMIT:
+            log_pro_usage(user["uid"], "drawing_over5", f"label={body.label}")
     if len(body.results) > 100:
         body.results = body.results[:100]
     drawing_id = svc.save_drawing(
