@@ -32,15 +32,15 @@
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
 
   <!-- Pro 신청 버튼 -->
-  <a href="/pricing" title="요금제 · Pro 신청" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#ff6b35;border:1px solid rgba(255,107,53,0.4);border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
+  <a id="btn-nav-pro" href="/pricing" title="요금제 · Pro 신청" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#ff6b35;border:1px solid rgba(255,107,53,0.4);border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='rgba(255,107,53,0.4)'">Pro 신청</a>
 
   <!-- 문의하기 버튼 -->
-  <a href="#" onclick="openContactModal();return false;" title="문의하기" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
+  <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;" title="문의하기" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.color='#26a69a';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">✉ 문의</a>
 
   <!-- 홈 버튼 -->
-  <a href="/" title="메인 페이지로" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
+  <a id="btn-nav-home" href="/" title="메인 페이지로" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#ff6b35'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">← 메인</a>
 </div>
 
@@ -232,13 +232,13 @@
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
       <button id="btn-back-to-origin" class="btn-d2t" style="display:none; margin-left:8px; color:#26a69a; border-color:#26a69a;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
       <!-- 모바일 전용: 결과 패널 토글 버튼 -->
-      <button id="mobile-results-btn" onclick="toggleMobileSidebar()"
-        style="margin-left:auto; height:22px; padding:0 10px; font-size:11px; background:#ff6b35; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
-        결과 보기 ▲
-      </button>
       <span class="ticker-label" style="margin-left: auto;">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
+      <button id="mobile-results-btn" onclick="toggleMobileSidebar()"
+        style="margin-left:8px; height:22px; padding:0 10px; font-size:11px; background:#ff6b35; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
+        결과 보기 ▲
+      </button>
     </div>
   </div>
 
