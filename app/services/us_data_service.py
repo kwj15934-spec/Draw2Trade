@@ -801,8 +801,59 @@ def get_us_company_name(symbol: str) -> str:
 # TTL 캐시: (symbol, interval_min) → (candles, expire_ts)
 _us_intraday_cache: dict[tuple, tuple] = {}
 _US_INTRADAY_TTL = {1: 60, 5: 300, 15: 600, 30: 900, 60: 1800, 240: 3600}
-_US_INTRADAY_POLL_GRACE = {1: 30, 5: 60, 15: 120, 30: 180, 60: 300, 240: 600}
 _us_intraday_refreshing: set[tuple] = set()
+
+# 서버 주도 갱신: 최근 조회된 US 종목 추적
+_active_us_intraday: dict[tuple, float] = {}
+_US_ACTIVE_TTL = 600  # 10분 미조회 시 제외
+_us_server_refresh_started = False
+
+
+def _mark_us_active(symbol: str, interval_min: int) -> None:
+    _active_us_intraday[(symbol.upper(), interval_min)] = __import__("time").time()
+
+
+def _us_server_refresh_loop() -> None:
+    """서버 주도 US 분봉 캐시 갱신 루프 (daemon thread)."""
+    import threading, time as _time
+    while True:
+        try:
+            now = _time.time()
+            expired = [k for k, t in list(_active_us_intraday.items()) if now - t > _US_ACTIVE_TTL]
+            for k in expired:
+                _active_us_intraday.pop(k, None)
+
+            for (symbol, interval_min) in list(_active_us_intraday.keys()):
+                cache_key = (symbol, interval_min)
+                if cache_key in _us_intraday_refreshing:
+                    continue
+                cached = _us_intraday_cache.get(cache_key)
+                ttl = _US_INTRADAY_TTL.get(interval_min, 60)
+                if cached:
+                    _, expire_ts = cached
+                    if expire_ts - _time.time() > ttl * 0.2:
+                        continue
+
+                _us_intraday_refreshing.add(cache_key)
+                def _do(s=symbol, m=interval_min, k=cache_key):
+                    try:
+                        get_us_intraday(s, m)
+                    finally:
+                        _us_intraday_refreshing.discard(k)
+                threading.Thread(target=_do, daemon=True).start()
+                _time.sleep(0.5)
+        except Exception:
+            pass
+        _time.sleep(10)
+
+
+def _ensure_us_server_refresh_loop() -> None:
+    global _us_server_refresh_started
+    if _us_server_refresh_started:
+        return
+    _us_server_refresh_started = True
+    import threading
+    threading.Thread(target=_us_server_refresh_loop, daemon=True).start()
 
 
 def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None:
@@ -869,34 +920,21 @@ def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None
         return None
 
 
-def _refresh_us_intraday_bg(symbol: str, interval_min: int) -> None:
-    """백그라운드에서 US 분봉 캐시 갱신 (daemon thread)."""
-    import threading
-    cache_key = (symbol.upper(), interval_min)
-    if cache_key in _us_intraday_refreshing:
-        return
-    _us_intraday_refreshing.add(cache_key)
-
-    def _do():
-        try:
-            get_us_intraday(symbol, interval_min, _force=True)
-        finally:
-            _us_intraday_refreshing.discard(cache_key)
-
-    threading.Thread(target=_do, daemon=True).start()
-
-
-def get_us_intraday(symbol: str, interval_min: int = 5, poll_only: bool = False, _force: bool = False) -> list[dict] | None:
+def get_us_intraday(symbol: str, interval_min: int = 5, poll_only: bool = False) -> list[dict] | None:
     """
     US 분봉/시간봉 캔들 반환.
     interval_min: 1 | 5 | 15 | 30 | 60 | 240
 
-    poll_only=True: 폴링 요청 — 캐시가 있으면 stale 여부와 관계없이 반환하고
-                    백그라운드에서 갱신 예약. 외부 API 직접 호출 없음.
+    poll_only=True: 폴링 요청 — 캐시가 있으면 항상 반환 (외부 API 직접 호출 없음).
+                    서버 갱신 루프가 캐시를 자동으로 최신 상태로 유지.
     """
     import time as _time
     from datetime import timezone
     from app.services.kis_client import fetch_us_minute_paginated, is_configured
+
+    # 조회 종목 등록 + 루프 시작
+    _mark_us_active(symbol, interval_min)
+    _ensure_us_server_refresh_loop()
 
     # TTL 캐시 확인
     cache_key = (symbol.upper(), interval_min)
@@ -907,11 +945,8 @@ def get_us_intraday(symbol: str, interval_min: int = 5, poll_only: bool = False,
         candles_c, expire_ts = cached
         if now_ts < expire_ts:
             return candles_c
-        grace = _US_INTRADAY_POLL_GRACE.get(interval_min, 60)
         if poll_only:
-            # 폴링 요청은 stale 캐시라도 반환 + 백그라운드 갱신
-            _refresh_us_intraday_bg(symbol, interval_min)
-            return candles_c
+            return candles_c  # 폴링은 stale 캐시라도 즉시 반환
 
     result: list[dict] | None = None
 

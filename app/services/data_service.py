@@ -389,43 +389,91 @@ def _aggregate_intraday(candles: list[dict], interval_sec: int) -> list[dict]:
 _intraday_cache: dict[tuple, tuple] = {}
 # interval별 캐시 유지 시간 (초)
 _INTRADAY_TTL = {1: 60, 5: 300, 15: 600, 30: 900, 60: 1800, 240: 3600}
-# 폴링 전용: 캐시가 stale해도 이 시간(초) 이내면 KIS 호출 없이 반환
-_INTRADAY_POLL_GRACE = {1: 30, 5: 60, 15: 120, 30: 180, 60: 300, 240: 600}
 # 캐시 갱신 중인 키 추적 (중복 KIS 호출 방지)
 _intraday_refreshing: set[tuple] = set()
 
+# ── 서버 주도 갱신: 최근 조회된 종목 추적 ─────────────────────────────────────
+# (ticker, interval_min) → 마지막 조회 시각
+_active_intraday: dict[tuple, float] = {}
+_ACTIVE_TTL = 600  # 10분간 미조회 시 갱신 대상에서 제외
+_server_refresh_started = False
 
-def _refresh_intraday_bg(ticker: str, interval_min: int) -> None:
-    """백그라운드에서 분봉 캐시 갱신 (daemon thread)."""
+
+def _mark_active(ticker: str, interval_min: int) -> None:
+    """조회된 종목을 서버 갱신 대상으로 등록."""
+    _active_intraday[(ticker.upper(), interval_min)] = time.time()
+
+
+def _server_refresh_loop() -> None:
+    """
+    서버 주도 분봉 캐시 갱신 루프 (daemon thread).
+    최근 10분 내 조회된 종목을 TTL 만료 전에 미리 갱신.
+    KIS API 부하 방지: 갱신 간 0.5초 대기.
+    """
     import threading
-    cache_key = (ticker.upper(), interval_min)
-    if cache_key in _intraday_refreshing:
-        return  # 이미 갱신 중
-    _intraday_refreshing.add(cache_key)
-
-    def _do():
+    while True:
         try:
-            get_kr_intraday(ticker, interval_min, _force=True)
-        finally:
-            _intraday_refreshing.discard(cache_key)
+            now = time.time()
+            # 10분 이상 미조회 종목 정리
+            expired = [k for k, t in list(_active_intraday.items()) if now - t > _ACTIVE_TTL]
+            for k in expired:
+                _active_intraday.pop(k, None)
 
-    t = threading.Thread(target=_do, daemon=True)
-    t.start()
+            # 캐시 만료 임박(TTL의 20% 이내) 또는 만료된 종목 갱신
+            for (ticker, interval_min) in list(_active_intraday.keys()):
+                cache_key = (ticker, interval_min)
+                if cache_key in _intraday_refreshing:
+                    continue
+                cached = _intraday_cache.get(cache_key)
+                ttl = _INTRADAY_TTL.get(interval_min, 60)
+                if cached:
+                    _, expire_ts = cached
+                    # 만료까지 TTL의 20% 미만 남았거나 이미 만료
+                    if expire_ts - time.time() > ttl * 0.2:
+                        continue  # 아직 충분히 유효
+
+                # 갱신 실행
+                _intraday_refreshing.add(cache_key)
+                def _do(t=ticker, m=interval_min, k=cache_key):
+                    try:
+                        get_kr_intraday(t, m)
+                    finally:
+                        _intraday_refreshing.discard(k)
+                threading.Thread(target=_do, daemon=True).start()
+                time.sleep(0.5)  # KIS API 분당 한도 보호
+
+        except Exception:
+            pass
+        time.sleep(10)  # 10초마다 루프
 
 
-def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False, _force: bool = False) -> list[dict] | None:
+def _ensure_server_refresh_loop() -> None:
+    """서버 갱신 루프를 최초 1회 시작."""
+    global _server_refresh_started
+    if _server_refresh_started:
+        return
+    _server_refresh_started = True
+    import threading
+    threading.Thread(target=_server_refresh_loop, daemon=True).start()
+
+
+def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False) -> list[dict] | None:
     """
     KR 분봉/시간봉 캔들 반환.
     interval_min: 1 | 5 | 15 | 30 | 60 | 240
 
-    poll_only=True: 폴링 요청 — 캐시가 있으면 stale 여부와 관계없이 반환하고
-                    백그라운드에서 갱신 예약. KIS 직접 호출 없음.
+    poll_only=True: 폴링 요청 — 캐시가 있으면 항상 반환 (KIS 직접 호출 없음).
+                    서버 갱신 루프가 캐시를 자동으로 최신 상태로 유지.
     """
     from datetime import timezone
     from app.services.kis_client import fetch_kr_minute_paginated, is_configured
 
     if not is_configured():
         return None
+
+    # 조회 종목을 서버 갱신 대상으로 등록 + 루프 시작
+    _mark_active(ticker, interval_min)
+    _ensure_server_refresh_loop()
 
     # TTL 캐시 확인
     cache_key = (ticker.upper(), interval_min)
@@ -434,18 +482,10 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False,
 
     if cached:
         candles, expire_ts = cached
-        grace = _INTRADAY_POLL_GRACE.get(interval_min, 60)
         if now_ts < expire_ts:
-            # 캐시 유효
-            return candles
-        if poll_only and (now_ts - expire_ts) < grace:
-            # 폴링 요청이고 grace 시간 이내 → 캐시 반환 + 백그라운드 갱신
-            _refresh_intraday_bg(ticker, interval_min)
-            return candles
+            return candles  # 캐시 유효
         if poll_only:
-            # grace 초과 시에도 캐시 있으면 반환하되 갱신 예약
-            _refresh_intraday_bg(ticker, interval_min)
-            return candles
+            return candles  # 폴링은 stale 캐시라도 즉시 반환 (서버 루프가 갱신 중)
 
     # interval별 취득 일수 (KIS API 호출 횟수 최소화)
     _days_map = {1: 1, 5: 2, 15: 3, 30: 5, 60: 10, 240: 20}
