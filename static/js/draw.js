@@ -809,6 +809,22 @@
   };
 
   function doSearch() {
+    // 비로그인 차단
+    if (window._userPlan === undefined || !window._isLoggedIn) {
+      var placeholder = document.getElementById('results-placeholder');
+      if (placeholder) {
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = '<div style="padding:40px 16px;text-align:center;">'
+          + '<div style="font-size:32px;margin-bottom:14px;">🔒</div>'
+          + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">로그인 후 이용해주세요</div>'
+          + '<div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:18px;">유사 종목 검색은 로그인이 필요합니다.</div>'
+          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#ff6b35;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
+          + '</div>';
+      }
+      if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+      return;
+    }
+
     // 작업 중인 추세선/직선이 있으면 자동 완료
     if (activeTool === 'trend' && trendPoints.length >= 2) finalizeTrend(null);
     if (activeTool === 'line' && linePoints.length >= 2) finalizeLine(null);
@@ -1452,6 +1468,7 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var isPro = data && data.authenticated && data.user && data.user.plan === 'pro';
+        window._isLoggedIn = !!(data && data.authenticated);
         window._userPlan = isPro ? 'pro' : 'free';
         var autoBtn = document.getElementById('btn-auto-pattern');
         if (autoBtn) {
@@ -1472,6 +1489,7 @@
       })
       .catch(function() {
         // 오류 시 비로그인으로 간주 → 잠금
+        window._isLoggedIn = false;
         window._userPlan = 'free';
         var autoBtn = document.getElementById('btn-auto-pattern');
         if (autoBtn) {
