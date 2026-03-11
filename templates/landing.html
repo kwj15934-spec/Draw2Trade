@@ -431,7 +431,7 @@
         <input id="pro-memo" type="text" placeholder="예) 홍길동, 입금완료" style="width:100%; background:#0d1117; border:1px solid #2a3145; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
       </div>
 
-      <button onclick="submitProRequest()" id="pro-submit-btn" style="width:100%; padding:13px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer; transition:background .2s;">이체 완료 — 신청하기</button>
+      <button onclick="submitProRequest()" id="pro-submit-btn" style="width:100%; padding:13px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer; transition:background .2s;">신청하기</button>
       <div id="pro-error" style="margin-top:10px; font-size:12px; color:#ef5350; text-align:center; min-height:16px;"></div>
     </div>
 
@@ -511,7 +511,7 @@
     document.getElementById('pro-error').textContent = '';
     document.getElementById('pro-memo').value = '';
     document.getElementById('pro-submit-btn').disabled = false;
-    document.getElementById('pro-submit-btn').textContent = '이체 완료 — 신청하기';
+    document.getElementById('pro-submit-btn').textContent = '신청하기';
   }
 
   function closeProModal() {
