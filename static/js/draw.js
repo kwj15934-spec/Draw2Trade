@@ -686,7 +686,7 @@
   }
 
   function onMouseDown(e) {
-    if (e.button !== 0) return;
+    if (e.button != null && e.button !== 0) return;
     var p = getCanvasPos(e);
 
     if (activeTool === 'pen') {
