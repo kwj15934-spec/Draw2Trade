@@ -233,6 +233,12 @@
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + '  |  ' + data.candles.length + unit;
         }
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
+        // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
+        var searchInp = document.getElementById('ticker-search');
+        if (searchInp && window.getComputedStyle(searchInp).display !== 'none') {
+          searchInp.placeholder = ticker + (data.name ? '  ' + data.name : '');
+          searchInp.value = '';
+        }
         if (typeof clearDraw === 'function') clearDraw();
         // 새 종목 로드 시 원본 상태/버튼 초기화
         D2T.originState = null;
