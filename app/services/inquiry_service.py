@@ -31,6 +31,18 @@ def _init_db() -> None:
             con.execute("ALTER TABLE inquiries ADD COLUMN replied INTEGER NOT NULL DEFAULT 0")
         except Exception:
             pass
+        # Pro 신청 테이블
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS pro_requests (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                uid        TEXT NOT NULL,
+                name       TEXT,
+                email      TEXT NOT NULL,
+                memo       TEXT,
+                status     TEXT NOT NULL DEFAULT 'pending',
+                created_at REAL NOT NULL
+            )
+        """)
 
 
 try:
@@ -65,3 +77,31 @@ def set_replied(inquiry_id: int, replied: bool) -> None:
             "UPDATE inquiries SET replied=? WHERE id=?",
             (1 if replied else 0, inquiry_id),
         )
+
+
+# ── Pro 신청 ──────────────────────────────────────────────────────────────────
+
+def save_pro_request(uid: str, name: str, email: str, memo: str = "") -> int:
+    with _conn() as con:
+        cur = con.execute(
+            "INSERT INTO pro_requests (uid, name, email, memo, created_at) VALUES (?, ?, ?, ?, ?)",
+            (uid, name or "", email, memo or "", time.time()),
+        )
+        return cur.lastrowid
+
+
+def get_pro_requests() -> list[dict]:
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT id, uid, name, email, memo, status, created_at FROM pro_requests ORDER BY created_at DESC"
+        ).fetchall()
+    return [
+        {"id": r[0], "uid": r[1], "name": r[2], "email": r[3],
+         "memo": r[4], "status": r[5], "created_at": r[6]}
+        for r in rows
+    ]
+
+
+def set_pro_request_status(request_id: int, status: str) -> None:
+    with _conn() as con:
+        con.execute("UPDATE pro_requests SET status=? WHERE id=?", (status, request_id))

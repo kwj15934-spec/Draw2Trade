@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 load_dotenv()  # draw2trade_web/.env 자동 로드
@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.dependencies.auth import get_optional_user
+from app.dependencies.auth import get_optional_user, require_user
 from app.routers import auth, chart, pattern, realtime, us_chart, user_data
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
@@ -148,11 +148,17 @@ async def pending_page(request: Request):
     return templates.TemplateResponse("pending.html", {"request": request})
 
 
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    return templates.TemplateResponse("pricing.html", {"request": request})
+
+
 @app.get("/robots.txt", response_class=Response)
 async def robots_txt():
     content = (
         "User-agent: *\n"
         "Allow: /$\n"
+        "Allow: /pricing\n"
         "Disallow: /app\n"
         "Disallow: /login\n"
         "Disallow: /pending\n"
@@ -247,6 +253,36 @@ async def admin_delete_notice(notice_id: int, request: Request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     ok = notice_service.delete_notice(notice_id)
     return JSONResponse({"ok": ok})
+
+
+# ── Pro 신청 ──────────────────────────────────────────────────────────────────
+@app.post("/api/pro-request")
+async def pro_request(request: Request, user: dict = Depends(require_user)):
+    body = await request.json()
+    memo = (body.get("memo") or "").strip()
+    inquiry_service.save_pro_request(
+        uid=user["uid"],
+        name=user.get("name", ""),
+        email=user.get("email", ""),
+        memo=memo,
+    )
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/admin/pro-requests")
+async def admin_pro_requests(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return JSONResponse(inquiry_service.get_pro_requests())
+
+
+@app.post("/api/admin/pro-requests/{req_id}/status")
+async def admin_pro_request_status(req_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    inquiry_service.set_pro_request_status(req_id, body.get("status", "pending"))
+    return JSONResponse({"ok": True})
 
 
 # ── 관리자 문의 조회 ──────────────────────────────────────────────────────────

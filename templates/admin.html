@@ -486,6 +486,12 @@
       <div class="empty">로딩 중...</div>
     </div>
 
+    <h1 style="margin-top:48px;">Pro 신청 내역</h1>
+    <div class="sub">계좌이체 완료 후 신청한 목록입니다. 확인 후 플랜을 변경해주세요.</div>
+    <div id="pro-request-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+      <div class="empty">로딩 중...</div>
+    </div>
+
     <h1 style="margin-top:48px;">문의 내역</h1>
     <div class="sub">사용자가 남긴 문의입니다.</div>
     <div class="inquiry-list" id="inquiry-list">
@@ -862,6 +868,69 @@
     });
 
     loadUsers();
+
+    async function loadProRequests() {
+      try {
+        var res = await fetch('/api/admin/pro-requests');
+        if (!res.ok) return;
+        var list = await res.json();
+        var el = document.getElementById('pro-request-list');
+        if (!list.length) { el.innerHTML = '<div class="empty">신청 내역이 없습니다.</div>'; return; }
+        el.innerHTML = list.map(function(r) {
+          var d = new Date(r.created_at * 1000);
+          var date = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0')
+                   + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+          var isPending = r.status === 'pending';
+          var statusColor = isPending ? '#ff6b35' : '#26a69a';
+          var statusLabel = isPending ? '⏳ 대기 중' : '✓ 처리 완료';
+          return '<div class="inquiry-card" id="pr-' + r.id + '" style="border-left:3px solid ' + statusColor + ';">' +
+            '<div class="inquiry-header">' +
+              '<div>' +
+                '<div class="inquiry-name">' + (r.name || '(이름 없음)') + '</div>' +
+                '<div class="inquiry-email">' + r.email + '</div>' +
+                '<div style="font-size:11px;color:#555;margin-top:2px;">uid: ' + r.uid + '</div>' +
+              '</div>' +
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+                '<div class="inquiry-date">' + date + '</div>' +
+                '<span style="font-size:11px;font-weight:600;color:' + statusColor + ';">' + statusLabel + '</span>' +
+              '</div>' +
+            '</div>' +
+            (r.memo ? '<div class="inquiry-msg" style="margin-top:6px;">📝 ' + r.memo.replace(/</g,'&lt;') + '</div>' : '') +
+            (isPending ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
+              '<button onclick="handleProUser(\'' + r.uid + '\',' + r.id + ')" style="background:#26a69a;border:none;border-radius:5px;color:#fff;font-size:12px;font-weight:600;padding:5px 14px;cursor:pointer;">→ Pro로 전환</button>' +
+              '<button onclick="dismissProRequest(' + r.id + ')" style="background:transparent;border:1px solid #2a2e39;border-radius:5px;color:#7a8499;font-size:12px;padding:5px 14px;cursor:pointer;">처리 완료 표시</button>' +
+            '</div>' : '') +
+          '</div>';
+        }).join('');
+      } catch(e) { /* 무시 */ }
+    }
+    loadProRequests();
+
+    window.handleProUser = async function(uid, reqId) {
+      try {
+        var r1 = await fetch('/api/admin/set-plan', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: uid, plan: 'pro' }),
+        });
+        if (!r1.ok) { alert('플랜 변경 실패'); return; }
+        await fetch('/api/admin/pro-requests/' + reqId + '/status', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done' }),
+        });
+        var user = allUsers.find(function(u) { return u.uid === uid; });
+        if (user) user.plan = 'pro';
+        renderUsers();
+        loadProRequests();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    window.dismissProRequest = async function(reqId) {
+      await fetch('/api/admin/pro-requests/' + reqId + '/status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      });
+      loadProRequests();
+    };
 
     async function loadInquiries() {
       try {
