@@ -367,6 +367,9 @@
           ]);
         } else {
           D2T.chart.timeScale().fitContent();
+          requestAnimationFrame(function () {
+            if (typeof redraw === 'function') redraw();
+          });
         }
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');

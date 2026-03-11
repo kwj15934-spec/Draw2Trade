@@ -107,7 +107,9 @@
     var result = [];
     var hasValid = false;
     for (var i = 0; i < pts.length; i++) {
-      var cc = pixelToChart(pts[i].x, pts[i].y);
+      var pt = pts[i];
+      if (!pt || pt.x == null || pt.y == null) { result.push(null); continue; }
+      var cc = pixelToChart(pt.x, pt.y);
       result.push(cc);
       if (cc) hasValid = true;
     }
@@ -767,8 +769,11 @@
   function loadResultMatch(idx, ticker, periodFrom, periodTo) {
     var data = _resultMatches[idx];
     matchPoints = (data && data.matchNormalized) ? data.matchNormalized : null;
+    // redraw()는 chart.js의 loadResultChart() 내부에서
+    // fetch 완료 후 requestAnimationFrame으로 호출됨.
+    // 여기서 즉시 호출하면 D2T.matchPeriodData가 아직 null이라
+    // 잘못된 좌표로 드로잉이 렌더링되는 버그 발생.
     D2T.loadResultChart(ticker, periodFrom || '', periodTo || '');
-    redraw();
   }
 
   // ── 기간 UI 상태 ──────────────────────────────────────────────────────────
@@ -1311,6 +1316,8 @@
         y: margin + (1 - v) * (h - 2 * margin),
       };
     });
+    // 픽셀→차트 좌표 변환 저장 (줌/스크롤 후에도 위치 추적 가능)
+    _drawChartCoords = ptsToChartCoords(drawPoints);
     parallelChannels = [];
     redraw();
   }
