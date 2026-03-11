@@ -448,7 +448,7 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False,
             return candles
 
     # interval별 취득 일수 (KIS API 호출 횟수 최소화)
-    _days_map = {1: 2, 5: 3, 15: 5, 30: 10, 60: 20, 240: 30}
+    _days_map = {1: 1, 5: 2, 15: 3, 30: 5, 60: 10, 240: 20}
     days = _days_map.get(interval_min, 3)
 
     raw = fetch_kr_minute_paginated(ticker, days=days)
