@@ -760,7 +760,7 @@
 
     _pollTimer = setInterval(function () {
       if (!D2T.ticker || D2T.timeframe !== tf || D2T.loading) return;
-      fetch(chartUrl(ticker, tf))
+      fetch(chartUrl(ticker, tf) + '&poll=1')
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data || !data.candles || !data.candles.length) return;

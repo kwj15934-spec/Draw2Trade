@@ -54,7 +54,7 @@ async def us_categories():
 
 
 @router.get("/chart/{symbol}")
-async def us_chart_data(symbol: str, timeframe: str = "daily"):
+async def us_chart_data(symbol: str, timeframe: str = "daily", poll: int = 0):
     """
     US 종목 OHLCV 반환.
 
@@ -68,7 +68,7 @@ async def us_chart_data(symbol: str, timeframe: str = "daily"):
     _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
     if tf in _INTRADAY:
         interval_min = int(tf.rstrip("m"))
-        candles = us_data_service.get_us_intraday(symbol, interval_min)
+        candles = us_data_service.get_us_intraday(symbol, interval_min, poll_only=bool(poll))
         if not candles:
             raise HTTPException(status_code=503, detail=f"분봉 데이터 없음: {symbol} (장 마감 후 또는 API 미응답)")
         return {

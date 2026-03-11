@@ -66,6 +66,7 @@ async def chart_data(
     ticker: str,
     timeframe: str = "monthly",
     months: int = 120,
+    poll: int = 0,
 ):
     """
     OHLCV 반환 (Lightweight Charts candle 포맷).
@@ -82,7 +83,7 @@ async def chart_data(
     _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
     if tf in _INTRADAY:
         interval_min = int(tf.rstrip("m"))
-        candles = data_service.get_kr_intraday(ticker, interval_min)
+        candles = data_service.get_kr_intraday(ticker, interval_min, poll_only=bool(poll))
         if not candles:
             raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {ticker}")
         return {
