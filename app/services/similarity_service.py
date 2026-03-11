@@ -185,12 +185,16 @@ def search_similar(
                 arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
             normed = normalize(resample(arr, PATTERN_LEN))
             comp = _score_components(tmpl, normed)
+            # 고정 기간 모드: 요청된 date_from/date_to를 기간으로 표시
+            # (실제 데이터 첫/마지막이 아닌, 검색 기준 기간을 표시)
+            disp_from = date_from or dates[indices[0]]
+            disp_to   = date_to   or dates[indices[-1]]
             results.append({
                 "ticker": ticker,
                 "company_name": names.get(ticker, ticker),
                 "similarity_score": round(comp["total"], 4),
                 "score_detail": {k: round(v, 3) for k, v in comp.items() if k != "total"},
-                "period": f"{dates[indices[0]]} ~ {dates[indices[-1]]}",
+                "period": f"{disp_from} ~ {disp_to}",
                 "period_from": dates[indices[0]],
                 "period_to": dates[indices[-1]],
                 "match_normalized": [round(v, 4) for v in normed.tolist()],
