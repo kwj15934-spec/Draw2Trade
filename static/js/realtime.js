@@ -18,6 +18,7 @@
   var _market         = null;   // 'KR' | 'US'
   var _rtCandle       = null;   // 실시간 캔들 {time,open,high,low,close,volume}
   var _prevClose      = null;   // 구독 시점의 직전 종가 (% 계산용)
+  var _candleBaseVol  = null;   // 현재 캔들 시작 시점 누적거래량 (KR 분봉 거래량 계산용)
   var _retryDelay     = 3000;
   var _retryTimer     = null;
   var _intentionalClose = false;
@@ -121,25 +122,34 @@
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
 
-    var timeStr = _candleTime(tick.date, tick.time);
-    var price   = tick.price;
+    var timeStr   = _candleTime(tick.date, tick.time);
+    var price     = tick.price;
+    var rawVol    = tick.volume || 0;  // KR: 누적거래량, US: 누적 or 틱 거래량
 
     if (!_rtCandle || _rtCandle.time !== timeStr) {
-      // 새 캔들 or 최초 틱
+      // 새 캔들 or 최초 틱 — 누적거래량 기준점 리셋
+      _candleBaseVol = rawVol;
+      var candleVol = 0;  // 새 캔들 첫 틱은 거래량 0으로 시작
       _rtCandle = {
         time:   timeStr,
         open:   tick.open  || price,
         high:   tick.high  || price,
         low:    tick.low   || price,
         close:  price,
-        volume: tick.volume || 0,
+        volume: candleVol,
       };
     } else {
       // 기존 캔들 업데이트
-      _rtCandle.close  = price;
-      _rtCandle.high   = Math.max(_rtCandle.high, price);
-      _rtCandle.low    = Math.min(_rtCandle.low,  price);
-      if (tick.volume) _rtCandle.volume = tick.volume;
+      _rtCandle.close = price;
+      _rtCandle.high  = Math.max(_rtCandle.high, price);
+      _rtCandle.low   = Math.min(_rtCandle.low,  price);
+      // KR: 누적거래량 차이로 캔들 내 거래량 계산
+      // US: 틱 거래량 그대로 누적
+      if (_market === 'KR' && _candleBaseVol !== null) {
+        _rtCandle.volume = Math.max(0, rawVol - _candleBaseVol);
+      } else if (rawVol) {
+        _rtCandle.volume = rawVol;
+      }
     }
 
     // 차트 업데이트
@@ -203,9 +213,10 @@
     if (_ticker && _ws && _ws.readyState === WebSocket.OPEN) {
       _send('unsubscribe', _ticker, _market);
     }
-    _ticker    = ticker;
-    _market    = market;
-    _rtCandle  = null;
+    _ticker        = ticker;
+    _market        = market;
+    _rtCandle      = null;
+    _candleBaseVol = null;
     _setLive(false);
 
     // prevClose: D2T.candles 마지막 종가 저장

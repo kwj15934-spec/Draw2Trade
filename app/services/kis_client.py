@@ -435,7 +435,8 @@ def fetch_kr_minute_paginated(
     KR 거래 시간: 09:00~15:30 = 390분/일, 30건/호출.
     """
     now = datetime.now()
-    start_time = "153000"
+    # 160000으로 시작해야 15:30 봉까지 첫 페이지에 포함됨
+    start_time = "160000"
     all_records: list[dict] = []
     seen: set[str] = set()
     cutoff_days = days + 1   # 영업일 여유
