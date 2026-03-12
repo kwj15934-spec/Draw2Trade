@@ -274,9 +274,11 @@
       };
     }
 
-    // 결과 차트는 시장 기본 타임프레임으로 로드
-    var resultTf = MARKET_DEFAULT_TF[D2T.market] || 'monthly';
-    D2T.timeframe = resultTf;
+    // 결과 차트는 현재 타임프레임 유지 (월봉→월봉, 주봉→주봉, 일봉→일봉)
+    // 단, 분봉으로 검색한 경우 일봉으로 폴백 (유사종목은 일봉 이상만 지원)
+    var resultTf = INTRADAY_TF[D2T.timeframe]
+      ? (MARKET_DEFAULT_TF[D2T.market] || 'daily')
+      : D2T.timeframe;
 
     // 빈 캔버스 모드면 자동 해제
     var wrapper = document.getElementById('chart-wrapper');
@@ -318,12 +320,13 @@
 
         // 매칭 구간으로 줌 + 마커
         if (periodFrom && periodTo) {
-          // KR(월봉): periodFrom = "YYYY-MM" → 마커 시간 "YYYY-MM-01"
-          // US(일봉): periodFrom = "YYYY-MM-DD" → 그대로 사용
+          // 타임프레임별 마커 시간 변환
+          // 월봉: "YYYY-MM" → "YYYY-MM-01"
+          // 주봉/일봉: "YYYY-MM-DD" → 그대로
           var tf, tt;
-          if (D2T.market === 'KR') {
-            tf = periodFrom + '-01';
-            tt = periodTo   + '-01';
+          if (resultTf === 'monthly') {
+            tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
+            tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
           } else {
             tf = periodFrom;
             tt = periodTo;
