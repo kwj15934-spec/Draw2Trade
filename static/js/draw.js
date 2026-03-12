@@ -204,8 +204,6 @@
     ctx.lineWidth   = lineWidth;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
-    ctx.shadowColor = shadowColor;
-    ctx.shadowBlur  = 12;
     ctx.setLineDash(dashed ? [8, 6] : []);
     ctx.beginPath();
     var started = false;
@@ -216,7 +214,6 @@
       else          ctx.lineTo(pt.x, pt.y);
     }
     ctx.stroke();
-    ctx.shadowBlur = 0;
   }
 
   /** 두 곡선 사이 영역을 반투명으로 채워서 '닮은 부분' 시각화 (얇을수록 유사) */
@@ -282,8 +279,6 @@
         ctx.lineWidth   = 3.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
-        ctx.shadowColor = 'rgba(38,166,154,0.85)';
-        ctx.shadowBlur  = 12;
         ctx.setLineDash([]);
         ctx.beginPath();
         for (var m = 0; m < matchPoints.length; m++) {
@@ -293,7 +288,6 @@
           else         ctx.lineTo(mx, my);
         }
         ctx.stroke();
-        ctx.shadowBlur = 0;
       }
 
       if (hasMatch && hasDraw) {
@@ -301,8 +295,6 @@
         ctx.lineWidth   = 4.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
-        ctx.shadowColor = 'rgba(255,107,53,0.85)';
-        ctx.shadowBlur  = 12;
         ctx.beginPath();
         for (var ni = 0; ni < drawNormalized.length; ni++) {
           var nx = (ni / (drawNormalized.length - 1)) * canvas.width;
@@ -311,7 +303,6 @@
           else          ctx.lineTo(nx, ny);
         }
         ctx.stroke();
-        ctx.shadowBlur = 0;
       } else if (drawPoints.length >= 2) {
         // 차트 좌표 기반 렌더링 (스크롤/줌에 따라 자동 추적)
         var chartPts = chartCoordsToPixels(_drawChartCoords);
@@ -320,15 +311,13 @@
         ctx.lineWidth   = 2.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
-        ctx.shadowColor = 'rgba(255,107,53,0.3)';
-        ctx.shadowBlur  = 4;
+        ctx.setLineDash([]);
         ctx.beginPath();
         ctx.moveTo(ptsToRender[0].x, ptsToRender[0].y);
         for (var ri = 1; ri < ptsToRender.length; ri++) {
           ctx.lineTo(ptsToRender[ri].x, ptsToRender[ri].y);
         }
         ctx.stroke();
-        ctx.shadowBlur = 0;
         [ptsToRender[0], ptsToRender[ptsToRender.length - 1]].forEach(function (p) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
@@ -355,8 +344,6 @@
       ctx.lineWidth   = 2;
       ctx.lineCap     = 'round';
       ctx.setLineDash([]);
-      ctx.shadowColor = 'rgba(79,195,247,0.3)';
-      ctx.shadowBlur  = 4;
 
       ctx.beginPath();
       ctx.moveTo(ep1.x, ep1.y);
@@ -367,8 +354,6 @@
       ctx.moveTo(ep3.x, ep3.y);
       ctx.lineTo(ep4.x, ep4.y);
       ctx.stroke();
-
-      ctx.shadowBlur = 0;
       ctx.fillStyle  = 'rgba(79,195,247,0.07)';
       ctx.beginPath();
       ctx.moveTo(ep1.x, ep1.y);
@@ -477,7 +462,6 @@
       ctx.font         = '12px "Segoe UI", sans-serif';
       ctx.textBaseline = 'middle';
       var lx = 10, ly = 10, lineH = 22, boxW = 220;
-      ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(10,12,18,0.96)';
       ctx.strokeStyle = '#ff6b35';
       ctx.lineWidth = 1.5;
@@ -744,16 +728,21 @@
     }
   }
 
+  var _rafPending = false;
   function onMouseMove(e) {
     var p = getCanvasPos(e);
     lastMousePos = p;
     if (activeTool === 'pen' && isPenDown) {
       drawPoints.push(p);
-      redraw();
-    } else if ((activeTool === 'line' && linePoints.length === 1) ||
-               (activeTool === 'trend' && trendPoints.length >= 1) ||
-               (activeTool === 'parallel' && parallelPoints.length >= 1)) {
-      redraw(); // 직선/추세선/평행선 프리뷰 갱신
+    }
+    if (!_rafPending && (
+        (activeTool === 'pen' && isPenDown) ||
+        (activeTool === 'line' && linePoints.length === 1) ||
+        (activeTool === 'trend' && trendPoints.length >= 1) ||
+        (activeTool === 'parallel' && parallelPoints.length >= 1)
+    )) {
+      _rafPending = true;
+      requestAnimationFrame(function () { _rafPending = false; redraw(); });
     }
   }
 
