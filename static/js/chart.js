@@ -642,12 +642,17 @@
         e.preventDefault();
       });
 
+      var _resizerRaf = null;
       document.addEventListener('mousemove', function (e) {
         if (!isDragging) return;
         var newH = Math.max(40, Math.min(320, startH - (e.clientY - startY)));
         volCont.style.height = newH + 'px';
-        if (D2T.volumeChart) D2T.volumeChart.resize(volCont.offsetWidth, newH);
-        if (D2T.chart) D2T.chart.resize(chartWrap.offsetWidth, chartWrap.offsetHeight);
+        if (_resizerRaf !== null) return;
+        _resizerRaf = requestAnimationFrame(function () {
+          _resizerRaf = null;
+          if (D2T.volumeChart) D2T.volumeChart.resize(volCont.offsetWidth, volCont.offsetHeight);
+          if (D2T.chart) D2T.chart.resize(chartWrap.offsetWidth, chartWrap.offsetHeight);
+        });
       });
 
       document.addEventListener('mouseup', function () {

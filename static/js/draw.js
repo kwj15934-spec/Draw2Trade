@@ -239,10 +239,21 @@
   // ── 캔버스 다시 그리기 ────────────────────────────────────────────────────
   function redraw() {
     if (!ctx || !canvas) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     var hasMatch = (matchPoints && matchPoints.length >= 2);
     var hasDraw  = (drawNormalized && drawNormalized.length >= 2);
+    var hasDrawPts = (drawPoints.length >= 2);
+    var hasLines = (trendPoints.length >= 1 || linePoints.length >= 1 ||
+                    parallelPoints.length >= 1 || parallelChannels.length > 0);
+
+    // 그릴 것이 없으면 지우고 즉시 반환 (스크롤/줌 중 불필요한 연산 방지)
+    if (!hasMatch && !hasDraw && !hasDrawPts && !hasLines &&
+        activeTool !== 'pen') {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 티커가 로드된 경우 항상 표시 (범례는 좌상단, 오버레이는 우상단 — 겹치지 않음)
     var tickerOverlay = document.getElementById('ticker-overlay');
