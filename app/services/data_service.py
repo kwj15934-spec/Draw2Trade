@@ -508,8 +508,9 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
             continue
         seen.add(key)
         try:
+            # 초(seconds)를 0으로 정규화 → 같은 분 내 여러 체결을 하나의 버킷으로
             dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
-                          int(t[:2]), int(t[2:4]), int(t[4:]),
+                          int(t[:2]), int(t[2:4]), 0,
                           tzinfo=timezone.utc)
             candles_1m.append({
                 "time":   int(dt.timestamp()),
@@ -524,6 +525,9 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
 
     if not candles_1m:
         return None
+
+    # 시간순 정렬 보장 (페이지네이션 역순 조합 시 순서 깨질 수 있음)
+    candles_1m.sort(key=lambda c: c["time"])
 
     if interval_min == 1:
         result = candles_1m
