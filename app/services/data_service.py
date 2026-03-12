@@ -529,6 +529,13 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
     # 시간순 정렬 보장 (페이지네이션 역순 조합 시 순서 깨질 수 있음)
     candles_1m.sort(key=lambda c: c["time"])
 
+    # 미래 캔들 제거: close=0 이거나 현재 시각 이후인 캔들 제외
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    candles_1m = [c for c in candles_1m if c["close"] > 0 and c["time"] <= now_ts]
+
+    if not candles_1m:
+        return None
+
     # KIS API에서 interval_min 단위로 직접 반환 → 추가 집계 불필요
     result = candles_1m
 
