@@ -491,7 +491,7 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
     _days_map = {1: 1, 5: 2, 15: 3, 30: 5, 60: 10, 240: 20}
     days = _days_map.get(interval_min, 3)
 
-    raw = fetch_kr_minute_paginated(ticker, days=days)
+    raw = fetch_kr_minute_paginated(ticker, days=days, interval_min=interval_min)
     if not raw:
         return None
 
@@ -529,10 +529,8 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
     # 시간순 정렬 보장 (페이지네이션 역순 조합 시 순서 깨질 수 있음)
     candles_1m.sort(key=lambda c: c["time"])
 
-    if interval_min == 1:
-        result = candles_1m
-    else:
-        result = _aggregate_intraday(candles_1m, interval_min * 60)
+    # KIS API에서 interval_min 단위로 직접 반환 → 추가 집계 불필요
+    result = candles_1m
 
     # TTL 캐시 저장
     ttl = _INTRADAY_TTL.get(interval_min, 300)

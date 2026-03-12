@@ -474,18 +474,20 @@ def fetch_us_ohlcv_paginated(
 
 def fetch_kr_minute(
     ticker: str,
-    input_time: str = "153000",   # HHMMSS, 이 시각 포함 이전 30분봉
+    input_time: str = "153000",   # HHMMSS, 이 시각 포함 이전 데이터
     pw_data_yn: str = "Y",        # Y=이전일 포함
+    interval: str = "1",          # 분 단위: "1"|"3"|"5"|"10"|"15"|"30"|"60"|"120"
 ) -> Optional[list[dict]]:
     """
     FHKST03010200 — 주식 분봉 조회.
     최대 30건/호출. 반환: 최신→과거 순.
     필드: stck_bsop_date, stck_cntg_hour, stck_prpr, stck_oprc, stck_hgpr, stck_lwpr, cntg_vol
+    FID_ETC_CLS_CODE: "1"=1분, "3"=3분, "5"=5분, "10"=10분, "15"=15분, "30"=30분, "60"=1시간
     """
     result = _get(
         "/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
         {
-            "FID_ETC_CLS_CODE":    "",
+            "FID_ETC_CLS_CODE":    interval,
             "FID_COND_MRKT_DIV_CODE": "J",
             "FID_INPUT_ISCD":      ticker,
             "FID_INPUT_HOUR_1":    input_time,
@@ -503,20 +505,26 @@ def fetch_kr_minute(
 def fetch_kr_minute_paginated(
     ticker: str,
     days: int = 3,
+    interval_min: int = 1,
 ) -> list[dict]:
     """
-    days 영업일치 1분봉 데이터 반환 (최신→과거 순 → 호출 후 뒤집기 필요).
+    days 영업일치 분봉 데이터 반환 (최신→과거 순 → 호출 후 뒤집기 필요).
     KR 거래 시간: 09:00~15:30 = 390분/일, 30건/호출.
+    interval_min: 1|3|5|10|15|30|60|120
     """
     now = datetime.now()
+    interval_str = str(interval_min)
     # 160000으로 시작해야 15:30 봉까지 첫 페이지에 포함됨
     start_time = "160000"
     all_records: list[dict] = []
     seen: set[str] = set()
     cutoff_days = days + 1   # 영업일 여유
 
+    # 페이지당 30건 × interval_min분 = 한 페이지 커버 시간(분)
+    page_span_min = 30 * interval_min
+
     for _ in range(days * 14 + 2):   # 최대 페이지 수
-        recs = fetch_kr_minute(ticker, start_time, pw_data_yn="Y")
+        recs = fetch_kr_minute(ticker, start_time, pw_data_yn="Y", interval=interval_str)
         if not recs:
             break
 
@@ -548,7 +556,7 @@ def fetch_kr_minute_paginated(
         if (now.date() - dt.date()).days >= cutoff_days:
             break
 
-        dt -= timedelta(minutes=1)
+        dt -= timedelta(minutes=interval_min)
         # 시간이 09:00 미만이면 전날 15:30으로 전환 (FID_PW_DATA_INCU_YN=Y가 처리)
         if dt.hour < 9:
             start_time = "153000"
