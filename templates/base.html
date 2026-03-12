@@ -733,7 +733,7 @@
     #ticker-overlay {
       position: absolute;
       top: 8px;
-      right: 110px;
+      right: 8px;
       z-index: 5;
       pointer-events: none;
       user-select: none;
@@ -1097,6 +1097,12 @@
       #ticker-overlay-symbol { font-size: 14px; }
       #ticker-overlay-name { font-size: 10px; max-width: 120px; }
       #ticker-overlay-meta { display: none; }
+      /* ── 현재가 패널: 모바일 컴팩트 ── */
+      #price-panel { top: 6px; left: 6px; }
+      #pp-price { font-size: 17px !important; }
+      #pp-chg { font-size: 11px !important; }
+      #pp-vol { display: none; }
+      #pp-time { font-size: 9px !important; }
 
       /* ── 차트 하단바 ── */
       .d2t-chart-footer { height: 30px; padding: 0 8px; gap: 6px; }

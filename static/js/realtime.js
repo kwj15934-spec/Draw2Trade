@@ -166,6 +166,54 @@
 
     _setLive(true);
     _updateOverlay(price);
+    _updatePricePanel(tick);
+  }
+
+  // ── 현재가 패널 업데이트 ─────────────────────────────────────────────────
+
+  function _updatePricePanel(tick) {
+    var panel = document.getElementById('price-panel');
+    if (!panel) return;
+
+    var price   = tick.price;
+    var vol     = _rtCandle ? _rtCandle.volume : 0;
+    var timeStr = tick.time || '';
+
+    // 가격 표시
+    var ppPrice = document.getElementById('pp-price');
+    if (ppPrice) {
+      ppPrice.textContent = price >= 1000 ? price.toLocaleString() : price;
+    }
+
+    // 등락률
+    var ppChg = document.getElementById('pp-chg');
+    if (ppChg && _prevClose) {
+      var chgPct = ((price - _prevClose) / _prevClose * 100).toFixed(2);
+      var chgAmt = (price - _prevClose).toFixed(price >= 1000 ? 0 : 2);
+      var sign   = chgPct >= 0 ? '+' : '';
+      var color  = chgPct >= 0 ? '#26a69a' : '#ef5350';
+      ppChg.innerHTML =
+        '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + ' <span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+    } else if (ppChg) {
+      ppChg.textContent = '—';
+    }
+
+    // 거래량
+    var ppVol = document.getElementById('pp-vol');
+    if (ppVol) {
+      ppVol.textContent = '거래량 ' + (vol >= 10000
+        ? (vol / 10000).toFixed(1) + '만'
+        : vol.toLocaleString());
+    }
+
+    // 시간 (HHMMSS → HH:MM:SS)
+    var ppTime = document.getElementById('pp-time');
+    if (ppTime && timeStr.length >= 6) {
+      ppTime.textContent = timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6);
+    }
+
+    panel.style.display = 'block';
   }
 
   // ── 오버레이 업데이트 ─────────────────────────────────────────────────────
@@ -218,6 +266,17 @@
     _rtCandle      = null;
     _candleBaseVol = null;
     _setLive(false);
+    // 패널 초기화
+    var panel = document.getElementById('price-panel');
+    if (panel) panel.style.display = 'none';
+    var ppPrice = document.getElementById('pp-price');
+    if (ppPrice) ppPrice.textContent = '—';
+    var ppChg = document.getElementById('pp-chg');
+    if (ppChg) ppChg.textContent = '—';
+    var ppVol = document.getElementById('pp-vol');
+    if (ppVol) ppVol.textContent = '거래량 —';
+    var ppTime = document.getElementById('pp-time');
+    if (ppTime) ppTime.textContent = '—';
 
     // prevClose: D2T.candles 마지막 종가 저장
     _prevClose = null;

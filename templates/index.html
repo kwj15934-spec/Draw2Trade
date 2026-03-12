@@ -219,6 +219,20 @@
           <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
         </span>
       </div>
+
+      <!-- 현재가 패널 (차트 우상단) -->
+      <div id="price-panel" style="display:none; position:absolute; top:8px; left:8px; z-index:6; pointer-events:none; user-select:none;">
+        <div style="background:rgba(19,23,34,0.88); border:1px solid #2a2e39; border-radius:8px; padding:10px 14px; backdrop-filter:blur(4px); min-width:130px;">
+          <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
+            <span id="pp-price" style="font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.5px; line-height:1;">—</span>
+            <span id="pp-chg" style="font-size:13px; font-weight:600; color:#888;">—</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap;">
+            <span id="pp-vol" style="font-size:11px; color:#7a8499;">거래량 —</span>
+            <span id="pp-time" style="font-size:10px; color:#555;">—</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 거래량 패널 리사이저 -->
@@ -572,7 +586,7 @@
 <!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260312g"></script>
 <script src="/static/js/draw.js?v=20260312g"></script>
-<script src="/static/js/realtime.js?v=20260311b"></script>
+<script src="/static/js/realtime.js?v=20260312a"></script>
 
 <!-- 모바일 사이드바 토글 -->
 <script>
