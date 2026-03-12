@@ -529,9 +529,15 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
     # 시간순 정렬 보장 (페이지네이션 역순 조합 시 순서 깨질 수 있음)
     candles_1m.sort(key=lambda c: c["time"])
 
-    # 미래 캔들 제거: close=0 이거나 현재 시각 이후인 캔들 제외
-    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
-    candles_1m = [c for c in candles_1m if c["close"] > 0 and c["time"] <= now_ts]
+    # 미래 캔들 제거: close=0 이거나 현재 KST 시각 이후인 캔들 제외
+    # 분봉 time은 "fake UTC" (KST 시각을 UTC timestamp로 표기)이므로
+    # 비교 기준도 KST now를 fake UTC timestamp로 변환 (= 실제 UTC + 9h)
+    from datetime import timedelta
+    now_kst = datetime.now(tz=timezone.utc) + timedelta(hours=9)
+    now_fake_ts = int(datetime(now_kst.year, now_kst.month, now_kst.day,
+                               now_kst.hour, now_kst.minute, 0,
+                               tzinfo=timezone.utc).timestamp())
+    candles_1m = [c for c in candles_1m if c["close"] > 0 and c["time"] <= now_fake_ts]
 
     if not candles_1m:
         return None
