@@ -1707,7 +1707,17 @@
     var lbl  = document.getElementById('auto-ruler-date');
     line.style.left = r.x + 'px';
     lbl.style.left  = r.x + 'px';
-    lbl.textContent = r.date.slice(0, 7);
+    // 분봉: timestamp → HH:MM 표시, 일/주/월봉: YYYY-MM 표시
+    var isIntraday = window.D2T && D2T.candles && D2T.candles.length > 0 && typeof D2T.candles[0].time === 'number';
+    if (isIntraday) {
+      var ts = parseInt(r.date, 10);
+      if (!isNaN(ts)) {
+        var d = new Date(ts * 1000);
+        lbl.textContent = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
+      }
+    } else {
+      lbl.textContent = r.date.slice(0, 7);
+    }
   }
 
   function onRulerClick(e) {
@@ -1724,7 +1734,16 @@
     aLine.style.left    = r.x + 'px';
     aDate.style.display = '';
     aDate.style.left    = r.x + 'px';
-    aDate.textContent   = r.date.slice(0, 7);
+    var _isIntraday = window.D2T && D2T.candles && D2T.candles.length > 0 && typeof D2T.candles[0].time === 'number';
+    var _dateLabel;
+    if (_isIntraday) {
+      var _ts = parseInt(r.date, 10);
+      var _d  = new Date(_ts * 1000);
+      _dateLabel = pad2(_d.getUTCHours()) + ':' + pad2(_d.getUTCMinutes());
+    } else {
+      _dateLabel = r.date.slice(0, 7);
+    }
+    aDate.textContent   = _dateLabel;
 
     fill.style.display = '';
     fill.style.left    = r.x + 'px';
@@ -1732,7 +1751,7 @@
 
     // 힌트 업데이트
     var hint = document.getElementById('auto-ruler-hint');
-    if (hint) hint.textContent = r.date.slice(0, 7) + ' ~ 오늘 구간으로 분석 중...';
+    if (hint) hint.textContent = _dateLabel + ' ~ 현재 구간으로 분석 중...';
 
     runAutoSearch(r.date);
   }
@@ -1741,13 +1760,23 @@
     var candles = window.D2T && D2T.candles;
     if (!candles || !candles.length) { exitAutoMode(); showStatus('차트 데이터가 없습니다.', 'error'); return; }
 
-    var startYM  = startDate.slice(0, 7);
-    var filtered = candles.filter(function(c) {
-      var t = typeof c.time === 'object'
-        ? (c.time.year + '-' + pad2(c.time.month))
-        : String(c.time);
-      return t >= startYM;
-    });
+    // 분봉: c.time은 Unix timestamp(정수) → startDate도 timestamp 문자열
+    // 일/주/월봉: c.time은 날짜 문자열 "YYYY-MM-DD" 또는 객체
+    var isIntraday = candles.length > 0 && typeof candles[0].time === 'number';
+    var filtered;
+    if (isIntraday) {
+      // startDate = "1741737000" 형태 → 정수 비교
+      var startTs = parseInt(startDate, 10);
+      filtered = candles.filter(function(c) { return c.time >= startTs; });
+    } else {
+      var startYM = startDate.slice(0, 7);
+      filtered = candles.filter(function(c) {
+        var t = typeof c.time === 'object'
+          ? (c.time.year + '-' + pad2(c.time.month))
+          : String(c.time);
+        return t >= startYM;
+      });
+    }
 
     if (filtered.length < 3) {
       exitAutoMode();
