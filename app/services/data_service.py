@@ -40,6 +40,7 @@ _SECTORS_FILE = _BASE_DIR / "data" / "sectors.json"
 
 # ── 메모리 캐시 ───────────────────────────────────────────────────────────────
 _mem_ohlcv: dict[str, dict] = {}   # ticker → OHLCV dict
+_mem_ohlcv_date: str = ""          # 캐시가 로드된 날짜 (YYYY-MM-DD), 날짜 바뀌면 무효화
 _mem_names: dict[str, str] = {}    # ticker → 회사명
 _sectors_cache: list[dict] | None = None  # sectors.json 1회 로드 후 재사용
 
@@ -304,20 +305,30 @@ def get_monthly_ohlcv(ticker: str, years: int = 10) -> dict[str, Any] | None:
         dict with keys: dates, open, high, low, close, volume, last_month
         None if no data.
     """
-    # 1) 메모리 캐시
-    if ticker in _mem_ohlcv:
-        return _mem_ohlcv[ticker]
-
+    global _mem_ohlcv_date
     _ensure_dirs()
     cp = _OHLCV_DIR / f"{ticker}.json"
     now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
     current_month = now.strftime("%Y-%m")
+
+    # 날짜가 바뀌면 메모리 캐시 전체 무효화 (장이 열리는 매일 최신 데이터 반영)
+    if _mem_ohlcv_date != today_str and now.weekday() < 5:  # 평일만
+        _mem_ohlcv.clear()
+        _mem_ohlcv_date = today_str
+
+    # 1) 메모리 캐시
+    if ticker in _mem_ohlcv:
+        return _mem_ohlcv[ticker]
 
     # 2) 디스크 캐시
     if cp.exists():
         try:
             data = json.loads(cp.read_text(encoding="utf-8"))
-            if data.get("last_month", "") >= current_month and "volume" in data:
+            # 같은 달 데이터인지 + 오늘 날짜에 갱신됐는지 확인
+            file_mtime = datetime.fromtimestamp(cp.stat().st_mtime).strftime("%Y-%m-%d")
+            cache_fresh = (file_mtime >= today_str) or (now.weekday() >= 5)  # 주말은 갱신 불필요
+            if data.get("last_month", "") >= current_month and "volume" in data and cache_fresh:
                 _mem_ohlcv[ticker] = data
                 return data
         except Exception:
