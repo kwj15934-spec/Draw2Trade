@@ -6,6 +6,7 @@ DB / 스케줄러 / 알림 기능 없음.
 """
 import asyncio
 import logging
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -68,7 +69,13 @@ async def lifespan(app: FastAPI):
         logger.info("US 이름 캐시 완료 + OHLCV 백그라운드 프리페치 시작 - 서버 준비됨.")
     except Exception as e:
         logger.error("US 캐시 빌드 실패: %s", e)
+    # 패턴 검색용 ProcessPoolExecutor (GIL 우회 — CPU 병렬 처리)
+    from app.routers.pattern import init_process_pool
+    init_process_pool()
+    logger.info("PatternSearch ProcessPoolExecutor 시작.")
     yield
+    from app.routers.pattern import shutdown_process_pool
+    shutdown_process_pool()
     await kis_stream.stop()
     logger.info("Draw2Trade 종료.")
 

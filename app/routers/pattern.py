@@ -4,8 +4,13 @@ Pattern router
 POST /api/pattern/search — 사용자 그린 패턴과 유사한 종목 검색
 """
 import asyncio
+import hashlib
+import json
 import logging
+import time
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -16,6 +21,60 @@ from app.services.similarity_service import search_similar
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
+
+# ── ProcessPoolExecutor (GIL 우회 CPU 병렬 처리) ──────────────────────────────
+_process_pool: ProcessPoolExecutor | None = None
+
+def init_process_pool(max_workers: int = 2) -> None:
+    global _process_pool
+    _process_pool = ProcessPoolExecutor(max_workers=max_workers)
+
+def shutdown_process_pool() -> None:
+    global _process_pool
+    if _process_pool:
+        _process_pool.shutdown(wait=False)
+        _process_pool = None
+
+# ── TTL 결과 캐시 ──────────────────────────────────────────────────────────────
+_CACHE_TTL = 60  # 초
+_result_cache: dict[str, tuple[float, Any]] = {}  # key → (expire_ts, results)
+
+def _cache_key(
+    draw_points: list[float],
+    market: str,
+    timeframe: str,
+    effective_lookback: int,
+    anchor_today: bool,
+    date_from: str | None,
+    date_to: str | None,
+    top_n: int,
+) -> str:
+    pts_rounded = [round(v, 2) for v in draw_points]
+    raw = json.dumps({
+        "p": pts_rounded,
+        "m": market,
+        "tf": timeframe,
+        "lb": effective_lookback,
+        "at": anchor_today,
+        "df": date_from,
+        "dt": date_to,
+        "n": top_n,
+    }, separators=(",", ":"))
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+def _get_cached(key: str) -> Any | None:
+    entry = _result_cache.get(key)
+    if entry and time.monotonic() < entry[0]:
+        return entry[1]
+    _result_cache.pop(key, None)
+    return None
+
+def _set_cache(key: str, value: Any) -> None:
+    # 캐시 크기 상한 (최대 200개) — 오래된 항목 제거
+    if len(_result_cache) >= 200:
+        oldest = min(_result_cache.items(), key=lambda x: x[1][0])
+        _result_cache.pop(oldest[0], None)
+    _result_cache[key] = (time.monotonic() + _CACHE_TTL, value)
 
 
 class PatternSearchRequest(BaseModel):
@@ -88,29 +147,46 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
     is_pro = user.get("plan") == "pro"
     search_top_n = body.top_n if is_pro else max(body.top_n, 50)
 
-    # CPU 집약적 작업을 스레드풀에서 실행 → FastAPI 이벤트루프 비차단
-    loop = asyncio.get_event_loop()
-    results = await loop.run_in_executor(
-        None,
-        partial(
-            search_similar,
-            draw_points=body.draw_points,
-            lookback_months=effective_lookback,
-            top_n=search_top_n,
-            date_from=body.date_from,
-            date_to=body.date_to,
-            ohlcv_cache=ohlcv_cache,
-            names_cache=names_cache,
-            smooth_window=smooth_window,
-            anchor_today=body.anchor_today,
-            max_search_bars=max_search_bars,
-        ),
+    # TTL 캐시 확인 (draw_points를 소수점 2자리로 버켓팅하여 키 생성)
+    cache_key = _cache_key(
+        draw_points=body.draw_points,
+        market=market,
+        timeframe=tf,
+        effective_lookback=effective_lookback,
+        anchor_today=body.anchor_today,
+        date_from=body.date_from,
+        date_to=body.date_to,
+        top_n=search_top_n,
     )
+    cached = _get_cached(cache_key)
+    if cached is not None:
+        logger.info("패턴 검색 캐시 히트 (market=%s tf=%s)", market, tf)
+        results = cached
+    else:
+        # CPU 집약적 작업을 ProcessPoolExecutor에서 실행 (GIL 우회)
+        loop = asyncio.get_event_loop()
+        executor = _process_pool  # None이면 기본 ThreadPoolExecutor로 폴백
+        results = await loop.run_in_executor(
+            executor,
+            partial(
+                search_similar,
+                draw_points=body.draw_points,
+                lookback_months=effective_lookback,
+                top_n=search_top_n,
+                date_from=body.date_from,
+                date_to=body.date_to,
+                ohlcv_cache=ohlcv_cache,
+                names_cache=names_cache,
+                smooth_window=smooth_window,
+                anchor_today=body.anchor_today,
+                max_search_bars=max_search_bars,
+            ),
+        )
+        _set_cache(cache_key, results)
 
     if not is_pro:
         results = results[10:]  # Top 1~10 제외
     else:
-        # Pro 전용 기능 사용 기록 (Top 1~10 결과 포함)
         log_pro_usage(user["uid"], "pattern_search_top10", f"market={market} tf={tf}")
 
     return {"results": results, "plan": "free" if not is_pro else "pro"}
