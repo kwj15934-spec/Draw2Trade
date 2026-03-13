@@ -101,9 +101,10 @@
           var day = d.getDate();
           var tf = D2T.timeframe || 'monthly';
           var isIntra = !!{ '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 }[tf];
-          if (tf === 'monthly') return y + '년 ' + mo + '월';
+          var yy = String(y).slice(-2);
+          if (tf === 'monthly') return yy + '년 ' + mo + '월';
           if (isIntra) return mo + '/' + (day < 10 ? '0'+day : day) + ' ' + (d.getHours() < 10 ? '0'+d.getHours() : d.getHours()) + ':' + (d.getMinutes() < 10 ? '0'+d.getMinutes() : d.getMinutes());
-          return y + '년 ' + mo + '월 ' + day + '일';
+          return mo + '/' + (day < 10 ? '0'+day : day);
         },
       },
       handleScroll: true,

@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any
 
@@ -22,18 +22,14 @@ from app.services.similarity_service import search_similar
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
-# ── ProcessPoolExecutor (GIL 우회 CPU 병렬 처리) ──────────────────────────────
-_process_pool: ProcessPoolExecutor | None = None
+# ── ThreadPoolExecutor (NumPy 연산 중 GIL 해제 → 실질적 병렬 처리) ─────────────
+_thread_pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
 
 def init_process_pool(max_workers: int = 2) -> None:
-    global _process_pool
-    _process_pool = ProcessPoolExecutor(max_workers=max_workers)
+    pass  # 하위 호환 — main.py lifespan에서 호출됨
 
 def shutdown_process_pool() -> None:
-    global _process_pool
-    if _process_pool:
-        _process_pool.shutdown(wait=False)
-        _process_pool = None
+    _thread_pool.shutdown(wait=False)
 
 # ── TTL 결과 캐시 ──────────────────────────────────────────────────────────────
 _CACHE_TTL = 60  # 초
@@ -163,9 +159,9 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
         logger.info("패턴 검색 캐시 히트 (market=%s tf=%s)", market, tf)
         results = cached
     else:
-        # CPU 집약적 작업을 ProcessPoolExecutor에서 실행 (GIL 우회)
+        # CPU 집약적 작업을 ThreadPoolExecutor에서 실행 (NumPy 연산 중 GIL 해제)
         loop = asyncio.get_event_loop()
-        executor = _process_pool  # None이면 기본 ThreadPoolExecutor로 폴백
+        executor = _thread_pool
         results = await loop.run_in_executor(
             executor,
             partial(
