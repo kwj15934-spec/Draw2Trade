@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Draw2Trade — KOSPI 패턴 유사도 검색{% endblock %}
+{% block footer_align %}left{% endblock %}
 
 {% block content %}
 
-<!-- ── 네비게이션 바 ─────────────────────────────────────────────────────── -->
 <div class="d2t-nav">
   <span class="d2t-brand">
     <img src="/static/img/logo.png" alt="Draw2Trade" class="d2t-logo-img" onerror="this.src='/static/img/favicon.svg'">
@@ -14,10 +14,8 @@
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
     <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button>
   </div>
-  <!-- 장 시간 표시 -->
   <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
 
-  <!-- 로그인 상태: 유저 박스 -->
   <div id="nav-user-box" class="nav-user-box" style="display:none;">
     <div class="nav-user-avatar" id="nav-user-avatar">?</div>
     <span class="nav-user-name" id="nav-user-name"></span>
@@ -28,29 +26,22 @@
     </button>
   </div>
 
-  <!-- 비로그인: 로그인 버튼 -->
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
 
-  <!-- Pro 신청 버튼 -->
   <a id="btn-nav-pro" href="/pricing" title="요금제 · Pro 신청" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#ff6b35;border:1px solid rgba(255,107,53,0.4);border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='rgba(255,107,53,0.4)'">Pro 신청</a>
 
-  <!-- 문의하기 버튼 -->
   <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;" title="문의하기" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.color='#26a69a';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">✉ 문의</a>
 
-  <!-- 홈 버튼 -->
   <a id="btn-nav-home" href="/" title="메인 페이지로" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2a3145;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
     onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#ff6b35'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">← 메인</a>
 </div>
 
-<!-- ── 툴바 ─────────────────────────────────────────────────────────────── -->
 <div class="d2t-toolbar">
 
-  <!-- ── Row 1: 종목 선택 + 봉 타입 ──────────────────────────────────────── -->
   <div class="toolbar-row">
 
-    <!-- 카테고리 (KR) -->
     <div id="category-group" class="ticker-control-group" style="display:none;">
       <label for="category-select">카테고리</label>
       <select id="category-select" title="섹터/업종 필터">
@@ -58,7 +49,6 @@
       </select>
     </div>
 
-    <!-- 거래소 필터 (US) -->
     <div id="exchange-group" class="ticker-control-group" style="display:none;">
       <label>거래소</label>
       <div class="timeframe-group">
@@ -71,7 +61,6 @@
 
     <div class="vr"></div>
 
-    <!-- 종목 검색 + 드롭다운 -->
     <div class="ticker-control-group">
       <label for="ticker-select">종목</label>
       <div class="ticker-search-wrap" id="ticker-search-wrap">
@@ -89,7 +78,6 @@
 
     <div class="vr"></div>
 
-    <!-- 봉 타입 -->
     <label>봉</label>
     <div class="timeframe-group">
       <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월봉</button>
@@ -103,21 +91,17 @@
       <button class="btn-d2t timeframe-btn" data-tf="1m"   title="1분봉">1m</button>
     </div>
 
-    <!-- US 안내 힌트 (인라인) -->
     <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; margin-left:4px;">
       거래소·카테고리 미선택 시 S&amp;P 500만 표시
     </span>
 
-    <!-- 공지 배너 (툴바 오른쪽 끝) -->
     <div id="toolbar-notice-banner" style="display:none; margin-left:auto; flex-shrink:0; max-width:320px;">
       <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
     </div>
   </div>
 
-  <!-- ── Row 2: 드로잉 + 기간 + 검색 ─────────────────────────────────────── -->
   <div class="toolbar-row">
 
-    <!-- 드로잉 도구 -->
     <label>드로잉</label>
     <div class="draw-tool-grid">
       <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
@@ -136,7 +120,6 @@
 
     <div class="vr"></div>
 
-    <!-- 기간 설정 -->
     <div class="period-group">
       <label>기간</label>
       <span id="period-chart-chip" class="period-chip" title="차트에 표시 중인 봉 수를 자동으로 감지합니다">차트 자동</span>
@@ -160,7 +143,6 @@
 
     <div class="vr"></div>
 
-    <!-- 패턴 검색 -->
     <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
     <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
     <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
@@ -179,48 +161,36 @@
 
 </div>
 
-<!-- ── 모바일: 딤 오버레이 (사이드바 열릴 때) ────────────────────────────── -->
 <div id="mobile-sidebar-overlay" onclick="closeMobileSidebar()"></div>
 
-<!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
 <div class="d2t-main">
 
-  <!-- 좌측: 차트 패널 -->
   <div class="d2t-chart-panel">
 
-    <!-- 차트 + 드로잉 오버레이 -->
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
 
-      <!-- 자동 패턴 분석 줄자 오버레이 -->
       <div id="auto-ruler-overlay" style="display:none; position:absolute; inset:0; z-index:15; cursor:col-resize;">
-        <!-- 이동 중 수직 점선 -->
         <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #26a69a; pointer-events:none; transition:left .03s;"></div>
         <div id="auto-ruler-date" style="position:absolute; top:8px; background:#26a69a; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
-        <!-- 클릭 후 고정된 앵커 -->
         <div id="auto-anchor-line" style="display:none; position:absolute; top:0; bottom:0; width:0; border-left:2px solid #ff6b35; pointer-events:none;"></div>
         <div id="auto-anchor-date" style="display:none; position:absolute; top:8px; background:#ff6b35; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
-        <!-- 앵커~오른쪽 끝 구간 하이라이트 -->
         <div id="auto-range-fill" style="display:none; position:absolute; top:0; bottom:0; background:rgba(255,107,53,0.07); pointer-events:none;"></div>
-        <!-- 하단 힌트 -->
         <div id="auto-ruler-hint" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(13,17,23,0.85); color:#d4d8e2; font-size:12px; padding:5px 14px; border-radius:6px; white-space:nowrap; pointer-events:none; border:1px solid #2a3145;">
           시작 날짜를 클릭하세요 &nbsp;·&nbsp; <span style="color:#7a8499;">ESC 취소</span>
         </div>
       </div>
 
-      <!-- 종목 정보 오버레이 (차트 좌상단) -->
       <div id="ticker-overlay" style="display:none;">
         <div id="ticker-overlay-symbol"></div>
         <div id="ticker-overlay-name"></div>
         <div id="ticker-overlay-meta"></div>
-        <!-- 실시간 LIVE 배지 -->
         <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;margin-top:3px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
           <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
         </span>
       </div>
 
-      <!-- 현재가 패널 (차트 우상단) -->
       <div id="price-panel" style="display:none; position:absolute; top:8px; left:8px; z-index:6; pointer-events:none; user-select:none;">
         <div style="background:rgba(19,23,34,0.95); border:1px solid #2a2e39; border-radius:8px; padding:10px 14px; min-width:130px;">
           <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
@@ -235,17 +205,13 @@
       </div>
     </div>
 
-    <!-- 거래량 패널 리사이저 -->
     <div id="vol-resizer" title="드래그하여 거래량 패널 크기 조절"></div>
 
-    <!-- 거래량 패널 -->
     <div id="volume-container"></div>
 
-    <!-- 차트 하단 정보 바 -->
     <div class="d2t-chart-footer">
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
       <button id="btn-back-to-origin" class="btn-d2t" style="display:none; margin-left:8px; color:#26a69a; border-color:#26a69a;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
-      <!-- 모바일 전용: 결과 패널 토글 버튼 -->
       <span class="ticker-label" style="margin-left: auto;">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
@@ -256,16 +222,13 @@
     </div>
   </div>
 
-  <!-- 우측: 사이드바 -->
   <div class="d2t-sidebar">
-    <!-- 탭 헤더 -->
     <div class="sidebar-tabs">
       <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
       <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
       <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장된 검색</button>
     </div>
 
-    <!-- 유사 종목 패널 -->
     <div id="sidebar-panel-results">
       <div class="d2t-sidebar-header" style="padding-top:8px;">
         <span id="result-count" class="d2t-badge">Top 20</span>
@@ -281,12 +244,10 @@
       </div>
     </div>
 
-    <!-- 즐겨찾기 패널 -->
     <div id="sidebar-panel-favorites" style="display:none;">
       <div id="fav-list" style="padding:8px 0;"></div>
     </div>
 
-    <!-- 저장된 검색 패널 -->
     <div id="sidebar-panel-drawings" style="display:none;">
       <div id="drawings-list" style="padding:8px 0;"></div>
     </div>
@@ -302,7 +263,6 @@
   </div>
 </div>
 
-<!-- 기간 선택 모달 -->
 <div id="period-select-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
   <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;">
     <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기준으로 검색할까요?</div>
@@ -328,7 +288,6 @@
   </div>
 </div>
 
-<!-- 저장 모달 -->
 <div id="save-drawing-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
   <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;">
     <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;">검색 결과 저장</div>
@@ -364,7 +323,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- 장 시간 표시 -->
 <script>
 (function () {
   var HOURS = {
@@ -372,10 +330,8 @@
     US: { tz: 'America/New_York', open: [9, 30], close: [16, 0] },
   };
 
-  /** ET 시각(HH, MM)을 KST 'HH:MM' 문자열로 변환 (서머타임 자동 반영). */
   function _etToKst(h, m) {
     var now = new Date();
-    // ET UTC 오프셋 계산: New York 현재 오프셋
     var etParts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
       hour: 'numeric', minute: 'numeric', hour12: false,
@@ -389,16 +345,13 @@
     };
     var etH = getV(etParts, 'hour'), etM = getV(etParts, 'minute');
     var krH = getV(krParts, 'hour'), krM = getV(krParts, 'minute');
-    // 현재 KST - 현재 ET = offset(분)
     var offsetMin = (krH * 60 + krM) - (etH * 60 + etM);
-    // 날짜 넘어가는 경우 보정 (하루 = 1440분)
     if (offsetMin < 0) offsetMin += 1440;
     var totalMin = (h * 60 + m + offsetMin) % 1440;
     var rh = Math.floor(totalMin / 60), rm = totalMin % 60;
     return (rh < 10 ? '0' + rh : rh) + ':' + (rm < 10 ? '0' + rm : rm);
   }
 
-  /** US 장 시간 레이블 (KST 기준, 서머타임 자동) */
   function _usLabel() {
     try {
       var openKst  = _etToKst(9, 30);
@@ -447,7 +400,6 @@
     chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
   };
 
-  // 초기 렌더 + 1분마다 갱신
   document.addEventListener('DOMContentLoaded', function () {
     window.updateMarketHoursChip('KR');
     setInterval(function () {
@@ -458,7 +410,6 @@
 })();
 </script>
 
-<!-- 네브 유저 박스 초기화 -->
 <script>
 (function () {
   fetch('/api/auth/me')
@@ -469,14 +420,12 @@
       if (data.authenticated && data.user) {
         var u = data.user;
         var avatarEl = document.getElementById('nav-user-avatar');
-        // 프로필 사진 있으면 이미지, 없으면 이니셜
         if (u.picture) {
           avatarEl.innerHTML = '<img src="' + u.picture + '" alt="">';
         } else {
           avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
         }
         document.getElementById('nav-user-name').textContent = u.name || u.email;
-        // 플랜 배지
         var planBadge = document.getElementById('nav-plan-badge');
         if (planBadge) {
           var isPro = (u.plan === 'pro');
@@ -494,7 +443,6 @@
       }
     })
     .catch(function () {
-      // 오류 시 로그인 버튼 표시
       var loginBtn = document.getElementById('btn-nav-login');
       if (loginBtn) loginBtn.style.display = 'flex';
     });
@@ -506,7 +454,6 @@
 })();
 </script>
 
-<!-- ── 문의 모달 ─────────────────────────────────────────────────────────── -->
 <div id="app-contact-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7); align-items:center; justify-content:center;">
   <div style="background:#1a1d2e; border:1px solid #2a3145; border-radius:12px; padding:32px; width:100%; max-width:440px; margin:24px; position:relative;">
     <button onclick="closeContactModal()" style="position:absolute; top:14px; right:14px; background:none; border:none; color:#7a8499; font-size:20px; cursor:pointer;">✕</button>
@@ -578,17 +525,14 @@
   50%      { opacity:.2; }
 }
 </style>
-<!-- TradingView Lightweight Charts -->
 <script
   src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
   crossorigin="anonymous"
 ></script>
-<!-- Draw2Trade JS -->
 <script src="/static/js/chart.js?v=20260312i"></script>
 <script src="/static/js/draw.js?v=20260312j"></script>
 <script src="/static/js/realtime.js?v=20260312a"></script>
 
-<!-- 모바일 사이드바 토글 -->
 <script>
 (function() {
   function isMobile() { return window.innerWidth <= 640; }
@@ -619,7 +563,6 @@
     if (btn) btn.textContent = '결과 보기 ▲';
   };
 
-  // 검색 완료 시 모바일에서 자동으로 사이드바 열기
   window._onSearchComplete = function(count) {
     if (!isMobile() || count === 0) return;
     var sb = document.querySelector('.d2t-sidebar');
@@ -628,7 +571,6 @@
     }
   };
 
-  // 화면 크기 변경 시 데스크탑으로 전환되면 사이드바 상태 초기화
   window.addEventListener('resize', function() {
     if (!isMobile()) {
       closeMobileSidebar();
@@ -637,16 +579,13 @@
 })();
 </script>
 
-<!-- 공지 상세 모달 -->
 <div id="notice-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding-top:60px;">
   <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;width:100%;max-width:520px;margin:0 24px;position:relative;max-height:80vh;display:flex;flex-direction:column;">
-    <!-- 헤더 -->
     <div style="display:flex;align-items:center;gap:8px;padding:18px 20px 14px;border-bottom:1px solid #2a3145;flex-shrink:0;">
       <span id="ndm-type-badge" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid;flex-shrink:0;"></span>
       <span id="ndm-title" style="font-size:15px;font-weight:700;color:#fff;flex:1;min-width:0;"></span>
       <button onclick="closeNoticeModal()" style="background:none;border:none;color:#7a8499;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
     </div>
-    <!-- 메타 (날짜 + 조회수) -->
     <div style="display:flex;align-items:center;gap:12px;padding:8px 20px;font-size:11px;color:#555;flex-shrink:0;border-bottom:1px solid #1e2535;">
       <span id="ndm-date"></span>
       <span style="color:#2a3145;">|</span>
@@ -655,9 +594,7 @@
         <span id="ndm-views-count">0</span>
       </span>
     </div>
-    <!-- 본문 -->
     <div id="ndm-content" style="padding:18px 20px;font-size:13px;color:#c8ccd4;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-word;"></div>
-    <!-- 닫기 버튼 -->
     <div style="padding:12px 20px;border-top:1px solid #1e2535;flex-shrink:0;">
       <button onclick="closeNoticeModal()" style="width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">닫기</button>
     </div>
@@ -671,7 +608,6 @@
     var dateEl  = document.getElementById('ndm-date');
     var viewsEl = document.getElementById('ndm-views-count');
     var bodyEl  = document.getElementById('ndm-content');
-    // 로딩 상태
     titleEl.textContent = '불러오는 중...';
     badgeEl.textContent = '';
     dateEl.textContent  = '';
@@ -703,7 +639,6 @@
   });
 </script>
 
-<!-- 공지 배너 (툴바 Row 1 오른쪽 끝) -->
 <script>
 (function () {
   var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
@@ -740,7 +675,6 @@
           (n.views || 0).toLocaleString() +
         '</span>' +
         '<button style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px 0 4px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
-      // 닫기 버튼
       item.querySelector('button').addEventListener('click', function (e) {
         e.stopPropagation();
         var id = parseInt(this.getAttribute('data-nid'), 10);
@@ -748,7 +682,6 @@
         item.remove();
         if (!listEl.children.length) wrap.style.display = 'none';
       });
-      // 클릭 시 모달 오픈
       item.addEventListener('click', function () {
         openNoticeModal(n.id);
       });
