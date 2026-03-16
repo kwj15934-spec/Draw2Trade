@@ -211,6 +211,13 @@ async def contact(
     return JSONResponse({"ok": True})
 
 
+# ── 팝업 조회 (public) ────────────────────────────────────────────────────────
+@app.get("/api/popup")
+async def get_popup(page: str = "landing"):
+    popup = notice_service.get_active_popup(page)
+    return JSONResponse(popup if popup else {})
+
+
 # ── 공지 조회 (public) ────────────────────────────────────────────────────────
 @app.get("/api/notices")
 async def get_notices():
@@ -310,6 +317,55 @@ async def admin_pro_usage(uid: str, request: Request):
         "has_usage": inquiry_service.has_pro_usage(uid),
         "logs": inquiry_service.get_pro_usage(uid),
     })
+
+
+# ── 팝업 관리 (admin) ────────────────────────────────────────────────────────
+@app.get("/api/admin/popups")
+async def admin_get_popups(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return JSONResponse(notice_service.get_all_popups())
+
+
+@app.post("/api/admin/popups")
+async def admin_create_popup(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    nid = notice_service.create_popup(
+        title=body.get("title", ""),
+        content=body.get("content", ""),
+        image_url=body.get("image_url", ""),
+        link_url=body.get("link_url", ""),
+        pages=body.get("pages", "both"),
+        active=bool(body.get("active", True)),
+    )
+    return JSONResponse({"ok": True, "id": nid})
+
+
+@app.patch("/api/admin/popups/{popup_id}")
+async def admin_update_popup(popup_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    ok = notice_service.update_popup(
+        popup_id=popup_id,
+        title=body.get("title", ""),
+        content=body.get("content", ""),
+        image_url=body.get("image_url", ""),
+        link_url=body.get("link_url", ""),
+        pages=body.get("pages", "both"),
+        active=bool(body.get("active", True)),
+    )
+    return JSONResponse({"ok": ok})
+
+
+@app.delete("/api/admin/popups/{popup_id}")
+async def admin_delete_popup(popup_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    ok = notice_service.delete_popup(popup_id)
+    return JSONResponse({"ok": ok})
 
 
 # ── 관리자 문의 조회 ──────────────────────────────────────────────────────────

@@ -433,7 +433,15 @@
     D2T.originState = null;
     var backBtn = document.getElementById('btn-back-to-origin');
     if (backBtn) backBtn.style.display = 'none';
-    if (typeof window.redraw === 'function') window.redraw();
+    // fitContent() 후 차트 렌더링이 완료된 다음 프레임에서 redraw 호출
+    // (즉시 호출 시 timeToCoordinate가 아직 갱신되지 않아 그림이 깨짐)
+    if (typeof window.redraw === 'function') {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          window.redraw();
+        });
+      });
+    }
   };
 
   // ── 종목 드롭다운 로딩 ────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ from pathlib import Path
 _DB_PATH = Path(__file__).resolve().parent.parent.parent / "cache" / "activity.db"
 
 VALID_TYPES = {"update", "event", "notice"}
+VALID_POPUP_PAGES = {"landing", "app", "both"}
 
 
 def _conn() -> sqlite3.Connection:
@@ -34,6 +35,19 @@ def _init_db() -> None:
             con.execute("ALTER TABLE notices ADD COLUMN views INTEGER NOT NULL DEFAULT 0")
         except Exception:
             pass
+        # 팝업 테이블
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS popups (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                title      TEXT NOT NULL DEFAULT '',
+                content    TEXT NOT NULL DEFAULT '',
+                image_url  TEXT NOT NULL DEFAULT '',
+                link_url   TEXT NOT NULL DEFAULT '',
+                pages      TEXT NOT NULL DEFAULT 'both',
+                active     INTEGER NOT NULL DEFAULT 1,
+                created_at REAL NOT NULL
+            )
+        """)
 
 
 try:
@@ -103,4 +117,64 @@ def update_notice(notice_id: int, type_: str, title: str, content: str, pinned: 
 def delete_notice(notice_id: int) -> bool:
     with _conn() as con:
         cur = con.execute("DELETE FROM notices WHERE id=?", (notice_id,))
+        return cur.rowcount > 0
+
+
+# ── 팝업 CRUD ─────────────────────────────────────────────────────────────────
+
+def _popup_row(r) -> dict:
+    import datetime
+    dt = datetime.datetime.fromtimestamp(r[7]).strftime("%Y.%m.%d")
+    return {
+        "id": r[0], "title": r[1], "content": r[2],
+        "image_url": r[3], "link_url": r[4],
+        "pages": r[5], "active": bool(r[6]),
+        "created_at": r[7], "date": dt,
+    }
+
+
+def get_active_popup(page: str) -> dict | None:
+    """현재 활성 팝업 1개 반환 (page: 'landing' | 'app')"""
+    with _conn() as con:
+        row = con.execute(
+            "SELECT id,title,content,image_url,link_url,pages,active,created_at "
+            "FROM popups WHERE active=1 AND (pages=? OR pages='both') "
+            "ORDER BY created_at DESC LIMIT 1",
+            (page,),
+        ).fetchone()
+    return _popup_row(row) if row else None
+
+
+def get_all_popups() -> list[dict]:
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT id,title,content,image_url,link_url,pages,active,created_at "
+            "FROM popups ORDER BY created_at DESC"
+        ).fetchall()
+    return [_popup_row(r) for r in rows]
+
+
+def create_popup(title: str, content: str, image_url: str, link_url: str, pages: str, active: bool) -> int:
+    pages = pages if pages in VALID_POPUP_PAGES else "both"
+    with _conn() as con:
+        cur = con.execute(
+            "INSERT INTO popups (title,content,image_url,link_url,pages,active,created_at) VALUES (?,?,?,?,?,?,?)",
+            (title, content, image_url, link_url, pages, 1 if active else 0, time.time()),
+        )
+        return cur.lastrowid
+
+
+def update_popup(popup_id: int, title: str, content: str, image_url: str, link_url: str, pages: str, active: bool) -> bool:
+    pages = pages if pages in VALID_POPUP_PAGES else "both"
+    with _conn() as con:
+        cur = con.execute(
+            "UPDATE popups SET title=?,content=?,image_url=?,link_url=?,pages=?,active=? WHERE id=?",
+            (title, content, image_url, link_url, pages, 1 if active else 0, popup_id),
+        )
+        return cur.rowcount > 0
+
+
+def delete_popup(popup_id: int) -> bool:
+    with _conn() as con:
+        cur = con.execute("DELETE FROM popups WHERE id=?", (popup_id,))
         return cur.rowcount > 0
