@@ -935,59 +935,6 @@
       margin-top: 2px;
     }
 
-    /* ── 기간 설정 ───────────────────────────────────────── */
-    .period-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .period-group label {
-      font-size: 12px;
-      color: #888;
-      white-space: nowrap;
-    }
-
-    .period-mode-btn {
-      height: 28px;
-      padding: 0 9px;
-      font-size: 12px;
-    }
-
-    #period-recent-controls select,
-    #period-range-controls input[type="month"],
-    #period-range-controls input[type="date"] {
-      height: 30px;
-      padding: 0 6px;
-      background: #1e2130;
-      color: #d1d4dc;
-      border: 1px solid #2a2e39;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-
-    #period-recent-controls select:focus,
-    #period-range-controls input[type="month"]:focus {
-      outline: none;
-      border-color: #ff6b35;
-    }
-
-    #period-range-controls {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    #period-range-controls input[type="month"],
-    #period-range-controls input[type="date"] {
-      width: 130px;
-      color-scheme: dark;
-    }
-
-    .period-sep {
-      color: #666;
-      font-size: 13px;
-    }
 
     /* ── 자동 분석 그룹 ────────────────────────────────────── */
     .auto-group {
@@ -1069,20 +1016,6 @@
       cursor: pointer;
     }
 
-    /* 차트 자동 감지 칩 */
-    .period-chip {
-      display: inline-flex;
-      align-items: center;
-      height: 26px;
-      padding: 0 10px;
-      border-radius: 13px;
-      background: rgba(38,166,154,0.15);
-      border: 1px solid rgba(38,166,154,0.4);
-      color: #26a69a;
-      font-size: 12px;
-      white-space: nowrap;
-      user-select: none;
-    }
 
     /* ── 타임프레임 (하위 호환 — blank.html 등) ─────────────── */
     .timeframe-group {
@@ -1145,9 +1078,7 @@
       .btn-d2t { height: 28px; padding: 0 8px; font-size: 12px; }
       .timeframe-btn { padding: 0 6px; font-size: 11px; height: 26px; }
       .market-selector { gap: 3px; }
-      #period-range-controls input[type="month"],
-      #period-range-controls input[type="date"] { width: 110px; font-size: 11px; }
-      .auto-date-input { width: 90px; font-size: 10px; }
+.auto-date-input { width: 90px; font-size: 10px; }
       .auto-group { padding: 3px 8px; height: 34px; }
       #ticker-overlay { top: 8px; right: 72px; }
     }
@@ -1189,9 +1120,6 @@
       #btn-advanced { display: none !important; }
       #advanced-options { display: none !important; }
       #search-status { display: none !important; }
-      .period-chip { display: none !important; }
-      #btn-mode-range { display: none !important; }
-      #period-range-controls { display: none !important; }
       #btn-fav-ticker { display: none !important; }
       #btn-save-draw { display: none !important; }
       .d2t-toolbar label { display: none !important; }

@@ -778,24 +778,9 @@
 
   // ── 기간 UI 상태 ──────────────────────────────────────────────────────────
   var isBlankMode = false; // 빈 캔버스 모드 여부
-  var rangeMode   = false; // 날짜 범위 토글 여부
-
-  /**
-   * 빈 캔버스 모드 전환 시 호출 (chart.js → window.updatePeriodUI)
-   * 차트 모드: 차트 자동 칩 표시
-   * 빈 캔버스 모드: 수동 드롭다운 표시
-   */
   window.updatePeriodUI = function (isBlank) {
     isBlankMode = !!isBlank;
   };
-
-  function toggleRangeMode() {
-    rangeMode = !rangeMode;
-    var btn  = document.getElementById('btn-mode-range');
-    var ctrl = document.getElementById('period-range-controls');
-    if (btn)  btn.classList.toggle('active', rangeMode);
-    if (ctrl) ctrl.style.display = rangeMode ? '' : 'none';
-  }
 
   // ── 유사 종목 검색 ────────────────────────────────────────────────────────
   function getPatternPoints() {
@@ -821,10 +806,6 @@
       // _autoMeta 유지 (날짜 정보를 _doSearchActual에서 읽어야 하므로)
     } else {
       _autoMeta = null;  // 그 외 모드: 자동 분석 메타 무시
-    }
-    if (mode === 'range') {
-      // 날짜 범위 모드 활성화 후 검색
-      if (!rangeMode) toggleRangeMode();
     }
     _doSearchActual();
   };
@@ -860,8 +841,8 @@
       return;
     }
 
-    // 날짜 범위 모드 or 빈 캔버스: 바로 검색
-    if (rangeMode || isBlankMode) {
+    // 빈 캔버스 모드: 바로 검색
+    if (isBlankMode) {
       _doSearchActual();
       return;
     }
@@ -904,17 +885,6 @@
       body.anchor_today  = true;
       body.lookback_bars = _autoMeta.lookback_bars;
       _autoMeta = null; // 한 번만 사용
-    } else if (rangeMode) {
-      // 날짜 범위 모드
-      var dateFrom = (document.getElementById('date-from').value || '').trim();
-      var dateTo   = (document.getElementById('date-to').value   || '').trim();
-      if (!dateFrom && !dateTo) {
-        showStatus('시작 월 또는 종료 월을 입력하세요.', 'error');
-        return;
-      }
-      if (dateFrom) body.date_from = dateFrom;
-      if (dateTo)   body.date_to   = dateTo;
-      body.anchor_today = false;
     } else if (_searchMode === 'chart-period') {
       // 차트와 같은 기간: 자동분석 메타 우선, 없으면 차트 화면 범위 사용
       if (_autoMeta && _autoMeta.date_from) {
@@ -963,8 +933,8 @@
       }
       body.anchor_today = false;
     } else if (isBlankMode) {
-      // 빈 캔버스 모드: 드롭다운 수동 선택
-      body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
+      // 빈 캔버스 모드: 기본 36개월
+      body.lookback_months = 36;
       body.anchor_today = true;
     } else {
       // 차트 모드 + 지금 이 모양과 비슷한 종목 찾기:
@@ -981,9 +951,9 @@
       if (detectedBars !== null) {
         body.lookback_bars = detectedBars;
       } else {
-        body.lookback_months = parseInt(document.getElementById('lookback-months').value || '36', 10);
+        body.lookback_months = 36;
       }
-      body.anchor_today = true;   // 끝=오늘 고정, 시작 가변으로 최적 모양 탐색
+      body.anchor_today = true;
     }
 
     var anchorDesc = body.date_from ? ' · 날짜 고정' : (body.anchor_today ? ' · 끝=오늘, 시작 가변' : ' · 날짜 고정 구간');
@@ -1490,10 +1460,6 @@
       window.clearDraw();
       setTool(null);
     });
-
-    // 날짜 범위 토글
-    var btnRange = document.getElementById('btn-mode-range');
-    if (btnRange) btnRange.addEventListener('click', toggleRangeMode);
 
     // loadResultMatch, redraw 전역 노출 (chart.js가 차트 로드 후 redraw 호출)
     if (window.D2T) window.D2T.loadResultMatch = loadResultMatch;

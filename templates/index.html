@@ -110,24 +110,6 @@
         title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
     </div>
 
-    <div class="period-group">
-      <label>기간</label>
-      <select id="lookback-months" title="비교할 기간">
-        <option value="3"  data-kr="3개월"  data-us="3개월">3개월</option>
-        <option value="6"  data-kr="6개월"  data-us="6개월">6개월</option>
-        <option value="12" data-kr="12개월" data-us="1년">12개월</option>
-        <option value="24" data-kr="24개월" data-us="2년">24개월</option>
-        <option value="36" data-kr="36개월" data-us="3년" selected>36개월</option>
-        <option value="48" data-kr="48개월" data-us="4년">48개월</option>
-        <option value="60" data-kr="60개월" data-us="5년">60개월</option>
-      </select>
-<button id="btn-mode-range" class="btn-d2t period-mode-btn" title="날짜 범위 직접 지정">날짜 범위</button>
-      <div id="period-range-controls" style="display:none;">
-        <input type="month" id="date-from" title="시작 월" placeholder="시작">
-        <span class="period-sep">~</span>
-        <input type="month" id="date-to" title="종료 월" placeholder="종료">
-      </div>
-    </div>
 
     <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
     <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
