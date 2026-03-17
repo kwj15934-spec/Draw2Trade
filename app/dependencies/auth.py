@@ -5,7 +5,7 @@ import os
 
 from fastapi import Depends, HTTPException, Request
 
-from app.services.auth_service import COOKIE_NAME, decode_session_token, get_user_plan
+from app.services.auth_service import COOKIE_NAME, decode_session_token, get_user_plan, _load_users
 
 
 def get_optional_user(request: Request) -> dict | None:
@@ -16,8 +16,12 @@ def get_optional_user(request: Request) -> dict | None:
     user = decode_session_token(token)
     if user is None:
         return None
-    # plan은 항상 DB에서 최신값을 읽어 반영 (admin에서 변경 시 즉시 적용)
-    user["plan"] = get_user_plan(user["uid"])
+    # plan은 항상 DB에서 최신값을 읽어 반영 (admin에서 변경 시 즉시 적용, pro 만료 자동 체크 포함)
+    uid = user["uid"]
+    user["plan"] = get_user_plan(uid)
+    # pro_expires_at도 함께 노출
+    db_user = _load_users().get(uid, {})
+    user["pro_expires_at"] = db_user.get("pro_expires_at")
     return user
 
 

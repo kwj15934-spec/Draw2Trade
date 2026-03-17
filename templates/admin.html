@@ -546,6 +546,7 @@
       <button class="filter-btn" data-filter="pending">대기 중</button>
       <button class="filter-btn" data-filter="approved">승인됨</button>
       <button class="filter-btn" data-filter="rejected">거절됨</button>
+      <button class="filter-btn" data-filter="pro" style="border-color:rgba(255,152,0,.4);color:#ff9800;">PRO만</button>
     </div>
 
     <div class="user-list" id="user-list">
@@ -678,6 +679,34 @@
     </div>
   </main>
 
+  <!-- Pro 플랜 설정 모달 -->
+  <div id="pro-plan-modal" style="display:none;position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.75);align-items:center;justify-content:center;" onclick="if(event.target===this)closeProPlanModal()">
+    <div style="background:#1a1d2e;border:1px solid #2a2e39;border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;position:relative;">
+      <button onclick="closeProPlanModal()" style="position:absolute;top:14px;right:14px;background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
+      <div style="font-size:15px;font-weight:700;color:#ff9800;margin-bottom:6px;">⭐ Pro 플랜 설정</div>
+      <div id="pro-plan-modal-name" style="font-size:13px;color:#888;margin-bottom:20px;"></div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;color:#666;margin-bottom:8px;">적용 기간</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="pro-preset-btns">
+          <button onclick="setProPreset(30)"  style="background:#2a3145;border:1px solid #3a4155;color:#d1d4dc;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;">1개월</button>
+          <button onclick="setProPreset(90)"  style="background:#2a3145;border:1px solid #3a4155;color:#d1d4dc;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;">3개월</button>
+          <button onclick="setProPreset(180)" style="background:#2a3145;border:1px solid #3a4155;color:#d1d4dc;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;">6개월</button>
+          <button onclick="setProPreset(365)" style="background:#2a3145;border:1px solid #3a4155;color:#d1d4dc;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;">1년</button>
+          <button onclick="setProPreset(0)"   style="background:#2a3145;border:1px solid #3a4155;color:#d1d4dc;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer;">무기한</button>
+        </div>
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">또는 직접 입력 (만료일)</div>
+        <input type="date" id="pro-expires-input" style="background:#131722;border:1px solid #2a2e39;color:#d1d4dc;border-radius:5px;padding:6px 10px;font-size:13px;width:100%;box-sizing:border-box;">
+        <div style="font-size:11px;color:#555;margin-top:4px;">비워두면 무기한 적용</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button onclick="confirmSetPro()" style="flex:1;background:#ff9800;border:none;color:#fff;border-radius:6px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;">Pro 적용</button>
+        <button onclick="confirmSetFree()" style="flex:1;background:#2a3145;border:1px solid #3a4155;color:#ef5350;border-radius:6px;padding:9px;font-size:13px;font-weight:600;cursor:pointer;">Free로 변경</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Pro 사용 이력 모달 -->
   <div id="pro-usage-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
     <div style="background:#1a1d2e;border:1px solid #2a2e39;border-radius:10px;padding:28px;width:100%;max-width:480px;margin:24px;max-height:80vh;overflow-y:auto;position:relative;">
@@ -709,7 +738,14 @@
 
     function renderUsers() {
       var list = document.getElementById('user-list');
-      var filtered = currentFilter === 'all' ? allUsers : allUsers.filter(function(u) { return u.status === currentFilter; });
+      var filtered;
+      if (currentFilter === 'pro') {
+        filtered = allUsers.filter(function(u) { return u.plan === 'pro'; });
+      } else if (currentFilter === 'all') {
+        filtered = allUsers;
+      } else {
+        filtered = allUsers.filter(function(u) { return u.status === currentFilter; });
+      }
 
       if (!filtered.length) {
         list.innerHTML = '<div class="empty">해당 유저가 없습니다.</div>';
@@ -719,19 +755,25 @@
       list.innerHTML = filtered.map(function(u) {
         var isPending = u.status === 'pending';
         var isPro = u.plan === 'pro';
+        var expiresStr = '';
+        if (isPro) {
+          expiresStr = u.pro_expires_at
+            ? ' · 만료 ' + formatDate(u.pro_expires_at)
+            : ' · 무기한';
+        }
         return '<div class="user-card" data-uid="' + u.uid + '">' +
           (u.picture ? '<img class="avatar" src="' + u.picture + '" onerror="this.style.display=\'none\'">' : '<div class="avatar"></div>') +
           '<div class="user-info">' +
             '<div class="user-name">' + (u.name || '(이름 없음)') + '</div>' +
             '<div class="user-email">' + (u.email || '') + '</div>' +
-            '<div class="user-date">' + formatDate(u.created_at) + ' 가입 신청</div>' +
+            '<div class="user-date">' + formatDate(u.created_at) + ' 가입 신청' + (isPro ? '<span style="color:#ff9800;margin-left:8px;">PRO' + expiresStr + '</span>' : '') + '</div>' +
           '</div>' +
           '<span class="status-badge status-' + u.status + '">' + statusLabel(u.status) + '</span>' +
           '<span class="plan-badge ' + (isPro ? 'plan-pro' : 'plan-free') + '">' + (isPro ? 'PRO' : 'FREE') + '</span>' +
           '<div class="actions">' +
             '<button class="btn-approve" ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'approve\')">승인</button>' +
             '<button class="btn-reject"  ' + (isPending ? '' : 'disabled') + ' onclick="handleAction(\'' + u.uid + '\', \'reject\')">거절</button>' +
-            '<button class="btn-plan" onclick="handleSetPlan(\'' + u.uid + '\', \'' + (isPro ? 'free' : 'pro') + '\')">' + (isPro ? '→ Free' : '→ Pro') + '</button>' +
+            '<button class="btn-plan" onclick="openProPlanModal(\'' + u.uid + '\')">' + (isPro ? '⭐ Pro 수정' : '→ Pro') + '</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -765,20 +807,74 @@
       }
     }
 
-    async function handleSetPlan(uid, plan) {
+    // ── Pro 플랜 모달 ────────────────────────────────────────────────────────
+    var _proPlanUid = null;
+
+    function openProPlanModal(uid) {
+      _proPlanUid = uid;
+      var user = allUsers.find(function(u) { return u.uid === uid; });
+      var nameEl = document.getElementById('pro-plan-modal-name');
+      nameEl.textContent = (user ? (user.name || user.email || uid) : uid);
+
+      // 기존 만료일이 있으면 input에 채워줌
+      var expiresInput = document.getElementById('pro-expires-input');
+      if (user && user.pro_expires_at) {
+        expiresInput.value = user.pro_expires_at.substring(0, 10);
+      } else {
+        expiresInput.value = '';
+      }
+
+      var modal = document.getElementById('pro-plan-modal');
+      modal.style.display = 'flex';
+    }
+
+    function closeProPlanModal() {
+      document.getElementById('pro-plan-modal').style.display = 'none';
+      _proPlanUid = null;
+    }
+
+    function setProPreset(days) {
+      var input = document.getElementById('pro-expires-input');
+      if (days === 0) {
+        input.value = '';
+        return;
+      }
+      var d = new Date();
+      d.setDate(d.getDate() + days);
+      input.value = d.toISOString().substring(0, 10);
+    }
+
+    async function confirmSetPro() {
+      if (!_proPlanUid) return;
+      var expiresVal = document.getElementById('pro-expires-input').value;
+      var proExpiresAt = expiresVal ? expiresVal + 'T23:59:59Z' : null;
+      await _doSetPlan(_proPlanUid, 'pro', proExpiresAt);
+      closeProPlanModal();
+    }
+
+    async function confirmSetFree() {
+      if (!_proPlanUid) return;
+      await _doSetPlan(_proPlanUid, 'free', null);
+      closeProPlanModal();
+    }
+
+    async function _doSetPlan(uid, plan, proExpiresAt) {
       showError('');
       try {
         var res = await fetch('/api/admin/set-plan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: uid, plan: plan }),
+          body: JSON.stringify({ uid: uid, plan: plan, pro_expires_at: proExpiresAt }),
         });
         if (!res.ok) {
           var d = await res.json().catch(function() { return {}; });
           throw new Error(d.detail || '플랜 변경 실패');
         }
         var user = allUsers.find(function(u) { return u.uid === uid; });
-        if (user) user.plan = plan;
+        if (user) {
+          user.plan = plan;
+          user.pro_expires_at = proExpiresAt;
+        }
         renderUsers();
       } catch (e) {
         showError(e.message);
@@ -801,10 +897,10 @@
       }
     }
 
-    // 필터 버튼
-    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    // 필터 버튼 (data-filter 있는 버튼만)
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         currentFilter = btn.dataset.filter;
         renderUsers();
@@ -1037,22 +1133,41 @@
     }
     loadProRequests();
 
-    window.handleProUser = async function(uid, reqId) {
-      try {
-        var r1 = await fetch('/api/admin/set-plan', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: uid, plan: 'pro' }),
-        });
-        if (!r1.ok) { alert('플랜 변경 실패'); return; }
-        await fetch('/api/admin/pro-requests/' + reqId + '/status', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'done' }),
-        });
-        var user = allUsers.find(function(u) { return u.uid === uid; });
-        if (user) user.plan = 'pro';
-        renderUsers();
-        loadProRequests();
-      } catch(e) { alert('오류: ' + e.message); }
+    var _pendingProReqId = null;
+
+    window.handleProUser = function(uid, reqId) {
+      // Pro 신청 승인: 모달 열고 확인 후 처리
+      _pendingProReqId = reqId;
+      openProPlanModal(uid);
+
+      // 모달 Pro 적용 버튼을 눌렀을 때 pro-request도 함께 처리하도록 confirmSetPro 래핑
+      var origConfirm = window._proModalOnConfirm;
+      window._proModalOnConfirm = async function(uid2, plan, proExpiresAt) {
+        if (plan !== 'pro') { window._proModalOnConfirm = null; _pendingProReqId = null; return; }
+        await _doSetPlan(uid2, 'pro', proExpiresAt);
+        if (_pendingProReqId !== null) {
+          await fetch('/api/admin/pro-requests/' + _pendingProReqId + '/status', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'done' }),
+          });
+          _pendingProReqId = null;
+          loadProRequests();
+        }
+        window._proModalOnConfirm = null;
+      };
+    };
+
+    // confirmSetPro를 훅으로 확장
+    var _origConfirmSetPro = confirmSetPro;
+    confirmSetPro = async function() {
+      if (window._proModalOnConfirm && _proPlanUid) {
+        var expiresVal = document.getElementById('pro-expires-input').value;
+        var proExpiresAt = expiresVal ? expiresVal + 'T23:59:59Z' : null;
+        closeProPlanModal();
+        await window._proModalOnConfirm(_proPlanUid, 'pro', proExpiresAt);
+      } else {
+        await _origConfirmSetPro();
+      }
     };
 
     window.dismissProRequest = async function(reqId) {

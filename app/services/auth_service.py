@@ -159,22 +159,40 @@ def reject_user(uid: str) -> bool:
 
 
 def get_user_plan(uid: str) -> str:
-    """'free' | 'pro'"""
+    """'free' | 'pro' — pro 만료 시 자동으로 free 로 다운그레이드."""
     users = _load_users()
-    return users.get(uid, {}).get("plan", "free")
+    user = users.get(uid, {})
+    plan = user.get("plan", "free")
+    if plan == "pro":
+        expires = user.get("pro_expires_at")
+        if expires:
+            now = datetime.now(timezone.utc).isoformat()
+            if now >= expires:
+                # 만료됨 → free 로 자동 전환
+                users[uid]["plan"] = "free"
+                users[uid]["pro_expires_at"] = None
+                _save_users(users)
+                _firestore_upsert_user(uid, {"plan": "free", "pro_expires_at": None})
+                logger.info("Pro 만료 자동 해제: %s", uid)
+                return "free"
+    return plan
 
 
-def set_user_plan(uid: str, plan: str) -> bool:
-    """유저 플랜 변경. plan: 'free' | 'pro'"""
+def set_user_plan(uid: str, plan: str, pro_expires_at: str | None = None) -> bool:
+    """유저 플랜 변경. plan: 'free' | 'pro', pro_expires_at: ISO8601 날짜 (pro일 때만 사용)"""
     if plan not in ("free", "pro"):
         return False
     users = _load_users()
     if uid not in users:
         return False
     users[uid]["plan"] = plan
+    if plan == "pro":
+        users[uid]["pro_expires_at"] = pro_expires_at  # None이면 무기한
+    else:
+        users[uid]["pro_expires_at"] = None
     _save_users(users)
-    _firestore_upsert_user(uid, {"plan": plan})
-    logger.info("유저 플랜 변경: %s → %s", uid, plan)
+    _firestore_upsert_user(uid, {"plan": plan, "pro_expires_at": users[uid].get("pro_expires_at")})
+    logger.info("유저 플랜 변경: %s → %s (만료: %s)", uid, plan, pro_expires_at)
     return True
 
 

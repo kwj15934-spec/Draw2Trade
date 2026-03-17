@@ -57,8 +57,7 @@
       gap: 8px;
     }
     .d2t-logo-img { height: 26px; width: 26px; object-fit: contain; }
-    .btn-fav-ticker { font-size: 16px; padding: 0 8px; color: #555; transition: color .15s; }
-    .btn-fav-ticker:hover, .btn-fav-starred { color: #ff6b35 !important; }
+    .btn-fav-starred { color: #ff6b35 !important; }
 
     .d2t-subtitle {
       font-size: 12px;
@@ -182,7 +181,8 @@
       font-size: 12px;
     }
 
-    .d2t-toolbar select {
+    /* .d2t-toolbar 내 기본 select (하위 호환 — tb-pill-select 미적용 요소) */
+    .d2t-toolbar select:not(.tb-pill-select) {
       background: #1e2130;
       color: #d1d4dc;
       border: 1px solid #2a2e39;
@@ -193,7 +193,7 @@
       max-width: 240px;
     }
 
-    .d2t-toolbar select:focus {
+    .d2t-toolbar select:not(.tb-pill-select):focus {
       outline: none;
       border-color: #ff6b35;
     }
@@ -209,7 +209,89 @@
       font-size: 12px;
     }
 
-    /* 종목 검색 + 카테고리 */
+    /* ── 툴바 pill 컨트롤 ─────────────────────────────────── */
+    .tb-pill-group {
+      display: flex;
+      align-items: center;
+    }
+
+    /* pill 스타일 select */
+    .tb-pill-select {
+      background: #1e2130;
+      color: #d1d4dc;
+      border: 1px solid #2a2e39;
+      border-radius: 7px;
+      padding: 0 10px;
+      height: 32px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color .15s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 9px center;
+      padding-right: 26px;
+    }
+    .tb-pill-select:focus { outline: none; border-color: #ff6b35; }
+    .tb-pill-select:hover { border-color: #3a4155; }
+
+    #category-select.tb-pill-select { min-width: 110px; max-width: 160px; }
+
+    /* 종목 검색 pill */
+    .tb-ticker-group { flex: 0 0 auto; }
+    .tb-ticker-select { min-width: 200px; max-width: 260px; }
+
+    /* 버튼 그룹 pill 컨테이너 */
+    .tb-btn-group {
+      display: flex;
+      align-items: center;
+      background: #161925;
+      border: 1px solid #2a2e39;
+      border-radius: 7px;
+      padding: 2px;
+      gap: 1px;
+    }
+    .tb-btn-group .btn-d2t {
+      border: none;
+      background: transparent;
+      border-radius: 5px;
+      height: 26px;
+      padding: 0 10px;
+      font-size: 12px;
+      color: #8a90a0;
+      font-weight: 500;
+    }
+    .tb-btn-group .btn-d2t:hover { background: #2a2e39; color: #d1d4dc; border: none; }
+    .tb-btn-group .btn-d2t.active { background: #ff6b35; color: #fff; }
+
+    /* 타임프레임 그룹 */
+    .tb-tf-group {}
+    .tf-intra-sep {
+      width: 1px;
+      height: 16px;
+      background: #2a2e39;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* 차트 로드 버튼 강조 */
+    .btn-load-chart {
+      background: #1a3a5c;
+      border-color: #1e5f99;
+      color: #90caf9;
+      font-weight: 600;
+    }
+    .btn-load-chart:hover { background: #1e5f99; border-color: #1e5f99; color: #fff; }
+
+    /* 즐겨찾기 버튼 */
+    .btn-fav-ticker { font-size: 16px; padding: 0 8px; color: #555; transition: color .15s; }
+    .btn-fav-ticker:hover, .btn-starred { color: #ff6b35 !important; }
+
+    /* 빈 캔버스 버튼 */
+    .btn-blank-canvas { color: #9aa0b0; }
+
+    /* 종목 검색 + 카테고리 (하위 호환) */
     .ticker-control-group {
       display: flex;
       align-items: center;
@@ -287,10 +369,7 @@
       font-size: 11px;
     }
 
-    #category-select {
-      min-width: 120px;
-      max-width: 160px;
-    }
+    /* #category-select → .tb-pill-select로 처리됨 */
 
     /* ── 버튼 스타일 ──────────────────────────────────────── */
     .btn-d2t {
@@ -913,7 +992,7 @@
       user-select: none;
     }
 
-    /* ── 타임프레임 (월봉/주봉/일봉) ────────────────────────── */
+    /* ── 타임프레임 (하위 호환 — blank.html 등) ─────────────── */
     .timeframe-group {
       display: flex;
       align-items: center;
@@ -966,6 +1045,9 @@
       /* 툴바 */
       .toolbar-row { padding: 4px 8px; min-height: 38px; gap: 4px 6px; }
       .d2t-toolbar select { min-width: 120px; max-width: 160px; font-size: 12px; height: 28px; }
+      .tb-pill-select { height: 28px; font-size: 12px; }
+      .tb-ticker-select { min-width: 140px; max-width: 180px; }
+      .tb-btn-group .btn-d2t { height: 22px; padding: 0 7px; font-size: 11px; }
       .ticker-search-wrap input,
       .ticker-search-wrap.kr-mode #ticker-search { min-width: 130px; max-width: 160px; height: 28px; font-size: 12px; }
       .btn-d2t { height: 28px; padding: 0 8px; font-size: 12px; }
@@ -1146,11 +1228,13 @@
     color: #555d7a;
     line-height: 1.8;
   ">
-    <span>상호: FORMETA</span>&ensp;|&ensp;
-    <span>대표자: 김원준</span>&ensp;|&ensp;
-    <span>사업자등록번호: 536-32-01566</span><br>
-    <span>사업장 주소: 서울특별시 서대문구 포방터길 48-4, B1층(홍은동)</span>&ensp;|&ensp;
-    <span>이메일: <a href="mailto:kwj15934@formeta.kr" style="color:#555d7a;text-decoration:none;">kwj15934@formeta.kr</a></span>
+    <span>상호 : FORMETA</span>&ensp;|&ensp;
+    <span>대표자 : 김원준</span>&ensp;|&ensp;
+    <span>사업자등록번호 : 536-32-01566</span><br>
+    <span>사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동)</span>&ensp;|&ensp;
+    <span>이메일 : <a href="mailto:kwj15934@formeta.kr" style="color:#555d7a;text-decoration:none;">kwj15934@formeta.kr</a></span><br>
+    <a href="/terms"   style="color:#555d7a;text-decoration:none;">이용약관</a>&ensp;|&ensp;
+    <a href="/privacy" style="color:#555d7a;text-decoration:none;">개인정보처리방침</a>
   </footer>
 
   <!-- 팝업 -->

@@ -137,14 +137,23 @@ async def admin_reject(body: UserActionBody, admin=Depends(require_admin)):
 
 class SetPlanBody(BaseModel):
     uid: str
-    plan: str  # 'free' | 'pro'
+    plan: str           # 'free' | 'pro'
+    pro_expires_at: str | None = None  # ISO8601 날짜 문자열, None이면 무기한
 
 
 @router.post("/api/admin/set-plan")
 async def admin_set_plan(body: SetPlanBody, admin=Depends(require_admin)):
-    if not set_user_plan(body.uid, body.plan):
+    if not set_user_plan(body.uid, body.plan, body.pro_expires_at):
         raise HTTPException(status_code=400, detail="플랜 변경 실패 (uid 없음 또는 잘못된 플랜)")
     return {"ok": True}
+
+
+@router.get("/api/admin/pro-users")
+async def admin_pro_users(admin=Depends(require_admin)):
+    """Pro 플랜 유저만 반환 (만료된 pro는 자동 제외)."""
+    all_users = get_all_users()
+    pro_users = [u for u in all_users if u.get("plan") == "pro"]
+    return {"users": pro_users}
 
 
 @router.get("/api/admin/stats")
