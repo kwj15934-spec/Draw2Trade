@@ -718,8 +718,7 @@
     }
     .rch-rank  { width: 36px; flex-shrink: 0; }
     .rch-name  { flex: 1; }
-    .rch-score { width: 90px; flex-shrink: 0; }
-    .rch-change{ width: 44px; flex-shrink: 0; text-align: right; }
+    .rch-score { width: 80px; flex-shrink: 0; }
 
     /* ── 결과 카드 ───────────────────────────────────────── */
     .result-card {
@@ -760,7 +759,7 @@
 
     /* 유사도 바 */
     .result-score-wrap {
-      width: 90px;
+      width: 80px;
       flex-shrink: 0;
     }
     .result-score-pct {
@@ -781,14 +780,6 @@
       transition: width 0.4s;
     }
 
-    /* 등락 */
-    .result-change {
-      width: 44px;
-      flex-shrink: 0;
-      font-size: 12px;
-      font-weight: 600;
-      text-align: right;
-    }
 
     /* ── TOP 10 잠금 블록 ─────────────────────────────────── */
     .result-lock-block {
@@ -912,36 +903,36 @@
     /* ── 종목 정보 오버레이 ─────────────────────────────── */
     #ticker-overlay {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      bottom: 36px;   /* 차트 footer 바로 위 */
+      left: 8px;
       z-index: 5;
       pointer-events: none;
       user-select: none;
-      text-align: right;
-      background: rgba(19, 23, 34, 0.92);
+      text-align: left;
+      background: rgba(19, 23, 34, 0.88);
       border-radius: 6px;
-      padding: 7px 10px 6px;
+      padding: 6px 10px 5px;
     }
     #ticker-overlay-symbol {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 700;
       color: #ffffff;
       line-height: 1.1;
       letter-spacing: 0.5px;
     }
     #ticker-overlay-name {
-      font-size: 12px;
+      font-size: 11px;
       color: #c8ccd4;
       margin-top: 2px;
-      max-width: 200px;
+      max-width: 180px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     #ticker-overlay-meta {
-      font-size: 11px;
+      font-size: 10px;
       color: #9aa3b2;
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     /* ── 기간 설정 ───────────────────────────────────────── */
@@ -1158,7 +1149,7 @@
       #period-range-controls input[type="date"] { width: 110px; font-size: 11px; }
       .auto-date-input { width: 90px; font-size: 10px; }
       .auto-group { padding: 3px 8px; height: 34px; }
-      #ticker-overlay { right: 8px; }
+      #ticker-overlay { left: 8px; bottom: 36px; }
     }
 
     /* ══════════════════════════════════════════════════════
@@ -1275,8 +1266,8 @@
       }
 
       /* ── 티커 오버레이 ── */
-      #ticker-overlay { right: 6px; top: 6px; }
-      #ticker-overlay-symbol { font-size: 14px; }
+      #ticker-overlay { left: 6px; bottom: 34px; }
+      #ticker-overlay-symbol { font-size: 13px; }
       #ticker-overlay-name { font-size: 10px; max-width: 120px; }
       #ticker-overlay-meta { display: none; }
       /* ── 현재가 패널: 모바일 컴팩트 ── */

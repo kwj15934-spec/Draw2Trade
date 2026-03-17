@@ -1114,15 +1114,14 @@
         var mk = escHtml(market);
         var nm = escHtml(r.company_name || r.ticker);
 
-        // 등락 (period 이후 가격 변화, 있을 경우)
-        var chg = r.price_change_pct;
-        var chgHtml = '';
-        if (chg !== undefined && chg !== null) {
-          var chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
-          var chgColor = chg > 0 ? '#ef5350' : chg < 0 ? '#26a69a' : '#7a8499';
-          chgHtml = '<span class="result-change" style="color:' + chgColor + '">' + chgStr + '</span>';
-        } else {
-          chgHtml = '<span class="result-change" style="color:#444">-</span>';
+        // 유사 구간 날짜 (period_from ~ period_to 축약)
+        var periodHtml = '';
+        if (r.period_from && r.period_to) {
+          var pfShort = r.period_from.substring(0, 7); // YYYY-MM
+          var ptShort = r.period_to.substring(0, 7);
+          periodHtml = '<div class="result-period">' + pfShort + ' ~ ' + ptShort + '</div>';
+        } else if (r.period) {
+          periodHtml = '<div class="result-period">' + escHtml(r.period) + '</div>';
         }
 
         return (
@@ -1133,12 +1132,12 @@
             '<div class="result-info">' +
               '<div class="result-name">' + nm + '</div>' +
               '<div class="result-ticker">' + tk + '</div>' +
+              periodHtml +
             '</div>' +
             '<div class="result-score-wrap">' +
               '<div class="result-score-pct" style="color:' + color + '">' + pct + '%</div>' +
               '<div class="result-score-bar"><div class="result-score-fill" style="width:' + barW + '%;background:' + color + '"></div></div>' +
             '</div>' +
-            chgHtml +
           '</div>'
         );
       })
