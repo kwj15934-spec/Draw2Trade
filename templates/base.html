@@ -903,12 +903,12 @@
     /* ── 종목 정보 오버레이 ─────────────────────────────── */
     #ticker-overlay {
       position: absolute;
-      bottom: 36px;   /* 차트 footer 바로 위 */
-      left: 8px;
+      top: 8px;
+      right: 72px;   /* 오른쪽 price scale 너비만큼 여백 */
       z-index: 5;
       pointer-events: none;
       user-select: none;
-      text-align: left;
+      text-align: right;
       background: rgba(19, 23, 34, 0.88);
       border-radius: 6px;
       padding: 6px 10px 5px;
@@ -1149,7 +1149,7 @@
       #period-range-controls input[type="date"] { width: 110px; font-size: 11px; }
       .auto-date-input { width: 90px; font-size: 10px; }
       .auto-group { padding: 3px 8px; height: 34px; }
-      #ticker-overlay { left: 8px; bottom: 36px; }
+      #ticker-overlay { top: 8px; right: 72px; }
     }
 
     /* ══════════════════════════════════════════════════════
@@ -1266,7 +1266,7 @@
       }
 
       /* ── 티커 오버레이 ── */
-      #ticker-overlay { left: 6px; bottom: 34px; }
+      #ticker-overlay { top: 6px; right: 66px; }
       #ticker-overlay-symbol { font-size: 13px; }
       #ticker-overlay-name { font-size: 10px; max-width: 120px; }
       #ticker-overlay-meta { display: none; }
