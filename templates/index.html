@@ -72,13 +72,10 @@
     <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
     <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환">✏ 빈 캔버스</button>
 
-    <div class="vr"></div>
-
     <div class="tb-btn-group tb-tf-group">
       <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
       <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
       <button id="tf-daily"   class="btn-d2t timeframe-btn"        data-tf="daily"   title="일봉">일</button>
-      <div class="tf-intra-sep"></div>
       <button class="btn-d2t timeframe-btn" data-tf="60m"  title="1시간봉">1H</button>
       <button class="btn-d2t timeframe-btn" data-tf="30m"  title="30분봉">30m</button>
       <button class="btn-d2t timeframe-btn" data-tf="15m"  title="15분봉">15m</button>
@@ -113,8 +110,6 @@
         title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
     </div>
 
-    <div class="vr"></div>
-
     <div class="period-group">
       <label>기간</label>
       <span id="period-chart-chip" class="period-chip" title="차트에 표시 중인 봉 수를 자동으로 감지합니다">차트 자동</span>
@@ -135,8 +130,6 @@
         <input type="month" id="date-to" title="종료 월" placeholder="종료">
       </div>
     </div>
-
-    <div class="vr"></div>
 
     <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
     <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
