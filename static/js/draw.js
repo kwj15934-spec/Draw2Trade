@@ -1042,7 +1042,9 @@
     var list        = document.getElementById('results-list');
     var placeholder = document.getElementById('results-placeholder');
     var countBadge  = document.getElementById('result-count');
+    var colHeader   = document.getElementById('result-col-header');
     rankOffset = rankOffset || 0;
+    var isFree = rankOffset > 0;
 
     // 현재 차트 종목은 유사 종목 결과에서 제외
     var currentTicker = (window.D2T && D2T.ticker) ? D2T.ticker : null;
@@ -1054,16 +1056,20 @@
       placeholder.style.display = 'block';
       placeholder.innerHTML     = '유사한 종목이 없습니다.<br><small>패턴이 너무 단순하거나 lookback이 부족할 수 있습니다.</small>';
       list.style.display        = 'none';
-      if (countBadge) countBadge.textContent = '0';
+      if (countBadge) { countBadge.textContent = ''; countBadge.style.display = 'none'; }
+      if (colHeader)  colHeader.style.display = 'none';
       return;
     }
 
     placeholder.style.display = 'none';
     list.style.display        = 'block';
-    var lastRank = rankOffset + results.length;
-    if (countBadge) countBadge.textContent = rankOffset > 0
-      ? (rankOffset + 1) + '~' + lastRank + '위'
-      : 'Top ' + results.length;
+    if (colHeader)  colHeader.style.display = 'flex';
+
+    var totalCount = rankOffset + results.length;
+    if (countBadge) {
+      countBadge.textContent = totalCount + '건';
+      countBadge.style.display = 'inline';
+    }
 
     // 결과별 매칭 데이터 저장 (onclick에서 인덱스로 참조)
     _resultMatches = results.map(function (r) {
@@ -1075,32 +1081,49 @@
     });
 
     var market = (window.D2T && D2T.market) ? D2T.market : 'KR';
-    list.innerHTML = results
+
+    // TOP 10 잠금 블록 (free 계정)
+    var lockBlock = '';
+    if (isFree) {
+      lockBlock =
+        '<div class="result-lock-block">' +
+          '<div class="result-lock-overlay">' +
+            '<div class="result-lock-row"></div>' +
+            '<div class="result-lock-row"></div>' +
+            '<div class="result-lock-row"></div>' +
+          '</div>' +
+          '<div class="result-lock-content">' +
+            '<div class="result-lock-icon">🔒</div>' +
+            '<div class="result-lock-title">TOP 10 결과는 Pro 전용입니다</div>' +
+            '<a href="/pricing" class="result-lock-btn">Pro 업그레이드</a>' +
+          '</div>' +
+        '</div>';
+    }
+
+    list.innerHTML = lockBlock + results
       .map(function (r, idx) {
-        var pct   = (r.similarity_score * 100).toFixed(1);
-        var color = r.similarity_score >= 0.85 ? '#26a69a'
-                  : r.similarity_score >= 0.75 ? '#ff9800'
+        var score = r.similarity_score;
+        var pct   = (score * 100).toFixed(1);
+        var color = score >= 0.85 ? '#26a69a'
+                  : score >= 0.75 ? '#ff9800'
                   : '#90a4ae';
-        var periodHtml = r.period
-          ? '<div class="result-period">' + escHtml(r.period) + '</div>'
-          : '';
+        var barW  = Math.round(score * 100);
         var pf = escHtml(r.period_from || '');
         var pt = escHtml(r.period_to   || '');
-
-        // 유사도 특징 한 줄 요약
-        var breakdownHtml = '';
-        var d = r.score_detail;
-        if (d) {
-          var summary = _scoreSummary(d.shape, d.diff, d.extremum, d.volatility);
-          if (summary) {
-            breakdownHtml = '<div class="result-summary">' + summary + '</div>';
-          }
-        }
-
         var tk = escHtml(r.ticker);
         var mk = escHtml(market);
-        var nm = escHtml(r.company_name || '');
-        var isStarred = _favorites.has(favKey(r.ticker, market));
+        var nm = escHtml(r.company_name || r.ticker);
+
+        // 등락 (period 이후 가격 변화, 있을 경우)
+        var chg = r.price_change_pct;
+        var chgHtml = '';
+        if (chg !== undefined && chg !== null) {
+          var chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
+          var chgColor = chg > 0 ? '#ef5350' : chg < 0 ? '#26a69a' : '#7a8499';
+          chgHtml = '<span class="result-change" style="color:' + chgColor + '">' + chgStr + '</span>';
+        } else {
+          chgHtml = '<span class="result-change" style="color:#444">-</span>';
+        }
 
         return (
           '<div class="result-card" ' +
@@ -1110,16 +1133,12 @@
             '<div class="result-info">' +
               '<div class="result-name">' + nm + '</div>' +
               '<div class="result-ticker">' + tk + '</div>' +
-              periodHtml +
-              breakdownHtml +
             '</div>' +
-            '<div style="display:flex;align-items:center;gap:6px">' +
-              '<div class="result-score" style="color:' + color + '">' + pct + '%</div>' +
-              '<button class="result-star' + (isStarred ? ' starred' : '') + '" ' +
-                'data-ticker="' + tk + '" data-market="' + mk + '" ' +
-                'onclick="event.stopPropagation();toggleFavorite(\'' + tk + '\',\'' + mk + '\',\'' + nm + '\',this)" ' +
-                'title="즐겨찾기">' + (isStarred ? '★' : '☆') + '</button>' +
+            '<div class="result-score-wrap">' +
+              '<div class="result-score-pct" style="color:' + color + '">' + pct + '%</div>' +
+              '<div class="result-score-bar"><div class="result-score-fill" style="width:' + barW + '%;background:' + color + '"></div></div>' +
             '</div>' +
+            chgHtml +
           '</div>'
         );
       })

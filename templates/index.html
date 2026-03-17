@@ -218,9 +218,17 @@
     </div>
 
     <div id="sidebar-panel-results">
-      <div class="d2t-sidebar-header" style="padding-top:8px;">
-        <span id="result-count" class="d2t-badge">Top 20</span>
-        <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">💾 저장</button>
+      <div class="d2t-sidebar-header">
+        <span class="result-header-title">☰ 검색 결과</span>
+        <span id="result-count" class="result-header-count" style="display:none;"></span>
+        <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">🔖 저장</button>
+      </div>
+      <!-- 결과 컬럼 헤더 -->
+      <div id="result-col-header" style="display:none;" class="result-col-header">
+        <span class="rch-rank">순위</span>
+        <span class="rch-name">종목</span>
+        <span class="rch-score">유사도</span>
+        <span class="rch-change">등락</span>
       </div>
       <div id="results-wrapper">
         <div id="results-placeholder">
