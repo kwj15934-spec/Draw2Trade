@@ -787,10 +787,6 @@
    */
   window.updatePeriodUI = function (isBlank) {
     isBlankMode = !!isBlank;
-    var chip   = document.getElementById('period-chart-chip');
-    var select = document.getElementById('lookback-months');
-    if (chip)   chip.style.display   = isBlankMode ? 'none' : '';
-    if (select) select.style.display = isBlankMode ? ''     : 'none';
   };
 
   function toggleRangeMode() {
