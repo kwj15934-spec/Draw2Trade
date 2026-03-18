@@ -33,14 +33,23 @@ class BroadcastHub:
                     del self._subs[ticker]
 
     async def broadcast(self, ticker: str, data: dict) -> None:
-        """ticker 구독자 전체에 데이터 전달. 큐가 가득 찬 클라이언트는 drop."""
+        """ticker 구독자 전체에 데이터 전달.
+        큐가 가득 찬 경우 오래된 데이터를 버리고 최신 데이터를 삽입 (렉 방지)."""
         async with self._lock:
             subs = set(self._subs.get(ticker, set()))
         for q in subs:
             try:
                 q.put_nowait(data)
             except asyncio.QueueFull:
-                pass  # 느린 클라이언트 drop
+                # 오래된 틱 제거 후 최신 틱 삽입 → 버퍼 쌓임 방지
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                try:
+                    q.put_nowait(data)
+                except asyncio.QueueFull:
+                    pass
 
     def subscriber_count(self, ticker: str) -> int:
         return len(self._subs.get(ticker, set()))

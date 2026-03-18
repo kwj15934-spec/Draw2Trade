@@ -34,8 +34,8 @@ router = APIRouter()
 async def ws_realtime(ws: WebSocket):
     await ws.accept()
 
-    # 이 연결의 단일 수신 큐
-    q: asyncio.Queue = asyncio.Queue(maxsize=200)
+    # 이 연결의 단일 수신 큐 (작게 유지해 오래된 틱 누적 방지)
+    q: asyncio.Queue = asyncio.Queue(maxsize=30)
 
     # ticker → (market, excd)
     subs: dict[str, tuple[str, str]] = {}

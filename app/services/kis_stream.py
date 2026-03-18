@@ -37,9 +37,20 @@ def _ws_url() -> str:
 
 # ── Approval Key ─────────────────────────────────────────────────────────────
 
+_approval_key_cache: str = ""          # 캐시된 key
+_approval_key_ts: float = 0.0         # 발급 시각 (time.monotonic)
+_APPROVAL_KEY_TTL = 21600             # 6시간 (KIS 유효기간 24h 기준 보수적)
+
 async def _get_approval_key() -> Optional[str]:
-    """WebSocket 전용 approval key 비동기 발급."""
+    """WebSocket 전용 approval key 비동기 발급. 유효 기간 내에는 캐시 반환."""
+    import time as _time
     import urllib.request as _req
+    global _approval_key_cache, _approval_key_ts
+
+    # 캐시 유효하면 즉시 반환 (재연결마다 HTTP 호출 제거)
+    if _approval_key_cache and (_time.monotonic() - _approval_key_ts) < _APPROVAL_KEY_TTL:
+        return _approval_key_cache
+
     app_key, app_secret = get_credentials()
     base_url = (
         "https://openapivts.koreainvestment.com:29443"
@@ -63,11 +74,14 @@ async def _get_approval_key() -> Optional[str]:
         )
         key = result.get("approval_key")
         if key:
+            _approval_key_cache = key
+            _approval_key_ts = _time.monotonic()
             logger.info("KIS WS approval key 발급 완료")
         return key
     except Exception as e:
         logger.error("KIS WS approval key 발급 실패: %s", e)
-        return None
+        # 실패 시 기존 캐시라도 반환
+        return _approval_key_cache or None
 
 
 # ── 데이터 파싱 ──────────────────────────────────────────────────────────────
@@ -118,8 +132,8 @@ def _parse_us(raw: str) -> Optional[dict]:
 
 # ── 스트림 클라이언트 상태 ────────────────────────────────────────────────────
 
-_approval_key: str = ""
-_ws_conn = None                              # 현재 WS 연결 객체
+_approval_key: str = ""   # connect_loop에서 사용하는 현재 key (캐시와 별도)
+_ws_conn = None           # 현재 WS 연결 객체
 _subs: set[tuple[str, str]] = set()         # (tr_id, tr_key)
 _running: bool = False
 

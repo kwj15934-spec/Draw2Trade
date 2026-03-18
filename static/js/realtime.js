@@ -23,6 +23,10 @@
   var _retryTimer     = null;
   var _intentionalClose = false;
 
+  // RAF 배치: 틱이 빠르게 들어올 때 마지막 상태만 렌더링
+  var _pendingTick    = null;
+  var _rafPending     = false;
+
   // ── 날짜 변환 헬퍼 ────────────────────────────────────────────────────────
 
   /** YYYYMMDD → YYYY-MM-DD */
@@ -152,7 +156,21 @@
       }
     }
 
-    // 차트 업데이트
+    // RAF 배치 렌더링 — 틱이 연속으로 들어올 때 마지막 상태만 렌더링
+    _pendingTick = tick;
+    if (!_rafPending) {
+      _rafPending = true;
+      requestAnimationFrame(_flushTick);
+    }
+  }
+
+  function _flushTick() {
+    _rafPending = false;
+    var tick = _pendingTick;
+    _pendingTick = null;
+    if (!tick || !_rtCandle || !window.D2T || !D2T.series) return;
+
+    var timeStr = _rtCandle.time;
     D2T.series.update(_rtCandle);
     if (D2T.volumeSeries) {
       D2T.volumeSeries.update({
@@ -165,7 +183,7 @@
     }
 
     _setLive(true);
-    _updateOverlay(price);
+    _updateOverlay(tick.price);
     _updatePricePanel(tick);
   }
 
