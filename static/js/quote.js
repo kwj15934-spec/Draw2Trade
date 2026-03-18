@@ -389,7 +389,7 @@
 
       var tick = {
         price: c.close,
-        volume: c.volume || 0,   // 누적거래량 컬럼에 표시
+        volume: 0,               // 캔들 volume은 구간 합산이라 누적거래량 아님 → 비표시
         cvol: 0,                 // 캔들에서는 개별 체결량 알 수 없음 → 비표시
         time: timeStr,
         bs: '',
