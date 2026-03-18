@@ -549,6 +549,29 @@ def fetch_kr_price(ticker: str) -> dict | None:
     return result.get("output") or None
 
 
+def fetch_nxt_price(ticker: str) -> dict | None:
+    """
+    FHKST03010100 — NXT 주식현재가 시세.
+    NXT 시간대(08:00~08:50, 18:00~24:00) 현재가/고가/저가/거래량 반환.
+    """
+    if not is_configured():
+        return None
+
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-price",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": ticker,
+        },
+        "FHKST03010100",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug("KIS NXT price error (%s): %s",
+                     ticker, result.get("msg1") if result else "no resp")
+        return None
+    return result.get("output") or None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 국내 주식 분봉
 # ─────────────────────────────────────────────────────────────────────────────

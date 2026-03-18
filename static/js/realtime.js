@@ -352,46 +352,57 @@
     return 'transition';  // 08:50~09:00, 15:30~15:40
   }
 
-  /** 세션 전환 시 재구독 (unsubscribe → subscribe) */
+  /** 세션 전환 시 WS 강제 재연결 + 호가/체결 초기화 */
   function _checkSessionChange() {
     var current = _getCurrentSession();
     if (_lastSession && _lastSession !== current && current !== 'transition') {
-      // 세션이 바뀜 → 서버에 재구독 (서버가 새 TR ID로 갱신)
-      if (_ticker && _ws && _ws.readyState === WebSocket.OPEN) {
-        _send('unsubscribe', _ticker, _market);
-        setTimeout(function () {
-          _send('subscribe', _ticker, _market);
-          // 초기 틱 데이터도 다시 로드
-          if (window._loadInitialTrades) window._loadInitialTrades();
-        }, 500);
-      }
+      // 세션 전환 → 완전 재연결 (가장 확실한 방법)
+      _forceReconnect('세션 전환: ' + _lastSession + ' → ' + current);
     }
     _lastSession = current;
   }
 
+  /** WS 강제 재연결 + UI 초기화 */
+  function _forceReconnect(reason) {
+    if (!_ticker) return;
+    // 호가/체결 UI 초기화
+    if (window._clearTradeList) window._clearTradeList();
+    // rtCandle 리셋
+    _rtCandle = null;
+    _candleBaseVol = null;
+    _lastTickTime = Date.now();
+
+    // WS 끊고 재연결
+    _intentionalClose = false;
+    if (_ws) {
+      _ws.close();  // onclose → 자동 재연결 → onopen → 자동 구독
+    } else {
+      connect();
+    }
+    // 초기 틱 데이터 재로드
+    setTimeout(function () {
+      if (window._loadInitialTrades) window._loadInitialTrades();
+    }, 1000);
+  }
+
   /** 데이터 안 들어올 때 WS 강제 재연결 (안전장치) */
   function _checkStaleConnection() {
-    // 구독 중인데 3분 이상 틱이 안 오면 재연결
     if (!_ticker || !_ws) return;
-    if (_lastTickTime === 0) return;  // 아직 첫 틱도 안 옴
-    var elapsed = Date.now() - _lastTickTime;
     var session = _getCurrentSession();
-    // 정규장/NXT 중에만 체크 (transition/overtime은 데이터가 드물 수 있음)
-    if ((session === 'regular' || session === 'nxt_pre' || session === 'nxt_night')
-        && elapsed > 180000) {  // 3분
-      _lastTickTime = Date.now();  // 리셋 (무한 재연결 방지)
-      _intentionalClose = false;
-      if (_ws) {
-        _ws.close();  // onclose에서 자동 재연결
-      }
+    // 거래 가능 시간에만 체크
+    if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night') return;
+    var elapsed = Date.now() - _lastTickTime;
+    // 2분 이상 틱 미수신 → 강제 재연결
+    if (elapsed > 120000) {
+      _forceReconnect('스테일 감지: ' + Math.round(elapsed / 1000) + '초');
     }
   }
 
-  // 30초마다 세션 전환 + 스테일 체크
+  // 15초마다 체크 (더 빈번하게)
   setInterval(function () {
     _checkSessionChange();
     _checkStaleConnection();
-  }, 30000);
+  }, 15000);
 
   // ── 초기 연결 ─────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {

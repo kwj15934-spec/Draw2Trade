@@ -18,6 +18,7 @@ from app.services.kis_client import (
     fetch_kr_tick_history,
     fetch_kr_price,
     fetch_nxt_tick_history,
+    fetch_nxt_price,
     is_configured,
 )
 from app.services.kis_stream import get_cached_ticks
@@ -151,20 +152,43 @@ async def chart_data(
         if not candles:
             candles = []
 
-        # NXT/시간외 캐시 틱 → 캔들로 변환해서 뒤에 붙이기
+        # NXT/시간외: 캐시 틱 → 캔들 + NXT 현재가 fallback
         now = datetime.now()
         hm = now.hour * 100 + now.minute
-        # 정규장 외 시간이면 캐시 틱으로 보충
         if hm < 900 or hm >= 1530:
+            # 1) 캐시 틱 → 분봉 캔들
             cached = get_cached_ticks(ticker)
             nxt_candles = _ticks_to_candles(cached, interval_min)
             if nxt_candles:
-                # 기존 캔들과 시간 겹침 제거
                 existing_times = {c["time"] for c in candles} if candles else set()
                 for nc in nxt_candles:
                     if nc["time"] not in existing_times:
                         candles.append(nc)
                 candles.sort(key=lambda c: c["time"])
+
+            # 2) NXT 현재가 API → 최소 1개 캔들 보장
+            if not nxt_candles and is_configured():
+                nxt_data = fetch_nxt_price(ticker)
+                if not nxt_data:
+                    nxt_data = fetch_kr_price(ticker)
+                if nxt_data:
+                    try:
+                        p = int(nxt_data.get("stck_prpr", "0").replace(",", ""))
+                        h = int(nxt_data.get("stck_hgpr", "0").replace(",", "")) or p
+                        l = int(nxt_data.get("stck_lwpr", "0").replace(",", "")) or p
+                        o = int(nxt_data.get("stck_oprc", "0").replace(",", "")) or p
+                        v = int(nxt_data.get("acml_vol", "0").replace(",", ""))
+                        if p > 0:
+                            import calendar as _cal
+                            ts = int(_cal.timegm(now.timetuple()))
+                            bucket = (ts // (interval_min * 60)) * (interval_min * 60)
+                            candles.append({
+                                "time": bucket, "open": o, "high": h,
+                                "low": l, "close": p, "volume": v,
+                            })
+                            candles.sort(key=lambda c: c["time"])
+                    except (ValueError, TypeError):
+                        pass
 
         if not candles:
             raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {ticker}")
@@ -206,6 +230,39 @@ async def chart_data(
         for i, d in enumerate(dates)
         if ohlcv["close"][i] > 0
     ]
+
+    # NXT 시간대: 오늘 날짜 캔들이 없으면 NXT 현재가로 생성
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    hm = now.hour * 100 + now.minute
+    has_today = any(c["time"] == today_str for c in candles) if tf == "daily" else False
+
+    if tf == "daily" and not has_today and is_configured():
+        # NXT 시간대면 NXT 현재가 시도, 아니면 정규장 현재가
+        nxt_data = None
+        if hm < 900 or hm >= 1530:
+            nxt_data = fetch_nxt_price(ticker)
+        if not nxt_data:
+            nxt_data = fetch_kr_price(ticker)
+
+        if nxt_data:
+            try:
+                nxt_price = int(nxt_data.get("stck_prpr", "0").replace(",", ""))
+                nxt_high  = int(nxt_data.get("stck_hgpr", "0").replace(",", "")) or nxt_price
+                nxt_low   = int(nxt_data.get("stck_lwpr", "0").replace(",", "")) or nxt_price
+                nxt_open  = int(nxt_data.get("stck_oprc", "0").replace(",", "")) or nxt_price
+                nxt_vol   = int(nxt_data.get("acml_vol", "0").replace(",", ""))
+                if nxt_price > 0:
+                    candles.append({
+                        "time":   today_str,
+                        "open":   nxt_open,
+                        "high":   nxt_high,
+                        "low":    nxt_low,
+                        "close":  nxt_price,
+                        "volume": nxt_vol,
+                    })
+            except (ValueError, TypeError):
+                pass
 
     return {
         "ticker": ticker,
