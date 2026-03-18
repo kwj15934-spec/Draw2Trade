@@ -39,16 +39,15 @@
     onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#ff6b35'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2a3145'">← 메인</a>
 </div>
 
-<div class="d2t-toolbar">
-
-  <div class="toolbar-row">
-
+<!-- ── 상단 종목 헤더 바 ───────────────────────────────── -->
+<div id="ticker-header-bar">
+  <!-- 좌측: 종목 검색/선택 -->
+  <div class="thb-left">
     <div id="category-group" class="tb-pill-group" style="display:none;">
       <select id="category-select" class="tb-pill-select" title="섹터/업종 필터">
         <option value="">전체 섹터</option>
       </select>
     </div>
-
     <div id="exchange-group" class="tb-pill-group" style="display:none;">
       <div class="tb-btn-group">
         <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
@@ -57,7 +56,6 @@
         <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
       </div>
     </div>
-
     <div class="tb-pill-group tb-ticker-group">
       <div class="ticker-search-wrap" id="ticker-search-wrap">
         <input type="text" id="ticker-search" placeholder="종목명 / 티커 검색" title="검색 후 클릭하여 선택" autocomplete="off" style="display:none;">
@@ -67,11 +65,25 @@
         </select>
       </div>
     </div>
-
     <button id="btn-load" class="btn-d2t btn-load-chart">차트 로드</button>
     <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
-    <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환">✏ 빈 캔버스</button>
+  </div>
 
+  <!-- 중앙: 현재가 정보 -->
+  <div class="thb-center" id="thb-price-area">
+    <span id="thb-name" class="thb-name">—</span>
+    <span id="thb-price" class="thb-price">—</span>
+    <span id="thb-chg" class="thb-chg">—</span>
+    <span id="thb-vol" class="thb-vol">거래량 —</span>
+    <span id="thb-time" class="thb-time">—</span>
+    <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+    </span>
+  </div>
+
+  <!-- 우측: 타임프레임 -->
+  <div class="thb-right">
+    <div id="market-hours-chip2" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
     <div class="tb-btn-group tb-tf-group">
       <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
       <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
@@ -82,18 +94,18 @@
       <button class="btn-d2t timeframe-btn" data-tf="5m"   title="5분봉">5m</button>
       <button class="btn-d2t timeframe-btn" data-tf="1m"   title="1분봉">1m</button>
     </div>
-
     <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; margin-left:4px;">
       거래소·카테고리 미선택 시 S&amp;P 500만 표시
     </span>
-
-    <div id="toolbar-notice-banner" style="display:none; margin-left:auto; flex-shrink:0; max-width:320px;">
+    <div id="toolbar-notice-banner" style="display:none; flex-shrink:0; max-width:240px;">
       <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
     </div>
   </div>
+</div>
 
+<!-- ── 드로잉 툴바 ────────────────────────────────────── -->
+<div class="d2t-toolbar">
   <div class="toolbar-row">
-
     <label>드로잉</label>
     <div class="draw-tool-grid">
       <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
@@ -124,16 +136,16 @@
       </select>
     </div>
     <span id="search-status" class="search-status"></span>
+    <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환" style="margin-left:auto;">✏ 빈 캔버스</button>
   </div>
-
 </div>
 
 <div id="mobile-sidebar-overlay" onclick="closeMobileSidebar()"></div>
 
 <div class="d2t-main">
 
+  <!-- ── 차트 패널 ───────────────────────────── -->
   <div class="d2t-chart-panel">
-
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
@@ -149,29 +161,13 @@
         </div>
       </div>
 
+      <!-- 차트 좌상단 ticker overlay (심볼/이름/메타) -->
       <div id="ticker-overlay" style="display:none;">
         <div id="ticker-overlay-symbol"></div>
         <div id="ticker-overlay-name"></div>
         <div id="ticker-overlay-meta"></div>
-        <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;margin-top:3px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
-        </span>
-      </div>
-
-      <div id="price-panel" style="display:none; position:absolute; top:8px; left:8px; z-index:6; pointer-events:none; user-select:none;">
-        <div style="background:rgba(19,23,34,0.95); border:1px solid #2a2e39; border-radius:8px; padding:10px 14px; min-width:130px;">
-          <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
-            <span id="pp-price" style="font-size:22px; font-weight:700; color:#fff; letter-spacing:-0.5px; line-height:1;">—</span>
-            <span id="pp-chg" style="font-size:13px; font-weight:600; color:#888;">—</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap;">
-            <span id="pp-vol" style="font-size:11px; color:#7a8499;">거래량 —</span>
-            <span id="pp-time" style="font-size:10px; color:#555;">—</span>
-          </div>
-        </div>
       </div>
     </div>
-
 
     <div class="d2t-chart-footer">
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
@@ -186,20 +182,63 @@
     </div>
   </div>
 
+  <!-- ── 우측 사이드바 (토스증권 스타일) ──────── -->
   <div class="d2t-sidebar">
+
+    <!-- 탭 헤더 -->
     <div class="sidebar-tabs">
-      <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
+      <button class="sidebar-tab-btn active" data-tab="quote" id="sidebar-tab-quote">시세·호가</button>
+      <button class="sidebar-tab-btn" data-tab="results" id="sidebar-tab-results">유사 종목</button>
       <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
-      <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장된 검색</button>
+      <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
     </div>
 
-    <div id="sidebar-panel-results">
+    <!-- ── 시세·호가 패널 ─────────────────────── -->
+    <div id="sidebar-panel-quote" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+
+      <!-- 호가창 -->
+      <div id="asking-panel">
+        <div class="asking-header">
+          <span>매도호가</span>
+          <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
+          <span>매수호가</span>
+          <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
+        </div>
+        <div id="asking-rows">
+          <!-- JS로 렌더링 -->
+          <div class="asking-empty">실시간 데이터 대기 중...</div>
+        </div>
+        <div class="asking-footer">
+          <span id="ask-total-label" class="ask-total">매도 잔량</span>
+          <span id="bid-total-label" class="bid-total">매수 잔량</span>
+        </div>
+      </div>
+
+      <!-- 구분선 -->
+      <div style="height:1px;background:#1e2130;flex-shrink:0;"></div>
+
+      <!-- 실시간 체결 내역 -->
+      <div id="trade-panel" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="trade-header">
+          <span>체결가</span>
+          <span>체결량</span>
+          <span>등락률</span>
+          <span>시간</span>
+        </div>
+        <div id="trade-list" style="flex:1;overflow-y:auto;">
+          <div class="asking-empty" style="padding:20px 0;">체결 데이터 대기 중...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── 유사 종목 패널 ─────────────────────── -->
+    <div id="sidebar-panel-results" style="display:none;">
       <div class="d2t-sidebar-header">
         <span class="result-header-title">☰ 검색 결과</span>
         <span id="result-count" class="result-header-count" style="display:none;"></span>
         <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">🔖 저장</button>
       </div>
-      <!-- 결과 컬럼 헤더 -->
       <div id="result-col-header" style="display:none;" class="result-col-header">
         <span class="rch-rank">순위</span>
         <span class="rch-name">종목</span>
@@ -215,25 +254,28 @@
       </div>
     </div>
 
+    <!-- ── 즐겨찾기 패널 ──────────────────────── -->
     <div id="sidebar-panel-favorites" style="display:none;">
       <div id="fav-list" style="padding:8px 0;"></div>
     </div>
 
+    <!-- ── 저장된 검색 패널 ───────────────────── -->
     <div id="sidebar-panel-drawings" style="display:none;">
       <div id="drawings-list" style="padding:8px 0;"></div>
     </div>
-    <div style="padding:12px 16px;border-top:1px solid #1e2332;margin-top:auto;font-size:11px;color:#3a4255;line-height:1.7;">
-      <div>&copy; 2026 Draw2Trade</div>
-      <div style="margin-top:2px;">본 서비스는 투자 참고 정보를 제공하며<br>투자 결과에 대한 책임은 이용자에게 있습니다.</div>
-      <div style="margin-top:6px;">
-        <a href="/terms" target="_blank" style="color:#3a4255;text-decoration:none;">이용약관</a>
+
+    <div style="padding:10px 14px;border-top:1px solid #1e2332;flex-shrink:0;font-size:10px;color:#2a3255;line-height:1.6;">
+      <div>&copy; 2026 Draw2Trade &nbsp;·&nbsp; 투자 결과 책임은 이용자에게 있습니다.</div>
+      <div style="margin-top:3px;">
+        <a href="/terms" target="_blank" style="color:#2a3255;text-decoration:none;">이용약관</a>
         &nbsp;·&nbsp;
-        <a href="/privacy" target="_blank" style="color:#3a4255;text-decoration:none;">개인정보</a>
+        <a href="/privacy" target="_blank" style="color:#2a3255;text-decoration:none;">개인정보</a>
       </div>
     </div>
   </div>
 </div>
 
+<!-- ── 모달들 (기존 유지) ─────────────────────── -->
 <div id="period-select-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
   <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;">
     <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기준으로 검색할까요?</div>
@@ -242,17 +284,17 @@
       <button onclick="runSearchWithMode('chart-period')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2a3145'">
         <div style="font-weight:700;margin-bottom:4px;">① 차트와 같은 기간으로 찾기</div>
-        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의<br>종목을 검색합니다.<br>같은 시기에 함께 움직인 종목을 확인할 때 적합합니다.</div>
+        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의<br>종목을 검색합니다.</div>
       </button>
       <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#2a3145'">
         <div style="font-weight:700;margin-bottom:4px;">② 지금 이 모양과 비슷한 종목 찾기 <span style="font-size:10px;color:#ff6b35;font-weight:400;">(끝=오늘 고정)</span></div>
-        <div style="font-size:11px;color:#7a8499;">각 종목의 <strong style="color:#d4d8e2;">끝 시점을 오늘로 고정</strong>하고, 시작 날짜를 조정하며<br>현재 내가 그린 차트 모양과 가장 닮은 구간을 찾습니다.<br>지금 이 순간 비슷한 흐름에 있는 종목을 발견할 때 적합합니다.</div>
+        <div style="font-size:11px;color:#7a8499;">각 종목의 끝 시점을 오늘로 고정하고, 현재 모양과 가장 닮은 구간을 찾습니다.</div>
       </button>
       <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#131722;border:1px solid #2a3145;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
         onmouseover="this.style.borderColor='#7a8499'" onmouseout="this.style.borderColor='#2a3145'">
         <div style="font-weight:700;margin-bottom:4px;">③ 날짜 범위 직접 지정</div>
-        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.<br>툴바의 날짜 범위 입력창을 통해 직접 기간을 설정합니다.</div>
+        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.</div>
       </button>
     </div>
     <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
@@ -303,17 +345,9 @@
 
   function _etToKst(h, m) {
     var now = new Date();
-    var etParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric', minute: 'numeric', hour12: false,
-    }).formatToParts(now);
-    var krParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Seoul',
-      hour: 'numeric', minute: 'numeric', hour12: false,
-    }).formatToParts(now);
-    var getV = function (parts, t) {
-      return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10);
-    };
+    var etParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now);
+    var krParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now);
+    var getV = function (parts, t) { return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10); };
     var etH = getV(etParts, 'hour'), etM = getV(etParts, 'minute');
     var krH = getV(krParts, 'hour'), krM = getV(krParts, 'minute');
     var offsetMin = (krH * 60 + krM) - (etH * 60 + etM);
@@ -324,51 +358,37 @@
   }
 
   function _usLabel() {
-    try {
-      var openKst  = _etToKst(9, 30);
-      var closeKst = _etToKst(16, 0);
-      return openKst + '~' + closeKst + ' KST';
-    } catch (e) {
-      return '22:30~05:00 KST';
-    }
+    try { return _etToKst(9, 30) + '~' + _etToKst(16, 0) + ' KST'; }
+    catch (e) { return '22:30~05:00 KST'; }
   }
 
   function isOpen(market) {
     var h = HOURS[market];
     try {
       var now = new Date();
-      var parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: h.tz,
-        hour: 'numeric', minute: 'numeric', weekday: 'short',
-        hour12: false,
-      }).formatToParts(now);
+      var parts = new Intl.DateTimeFormat('en-US', { timeZone: h.tz, hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false }).formatToParts(now);
       var get = function (t) { return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10); };
       var weekday = (parts.find(function (p) { return p.type === 'weekday'; }) || {}).value || '';
       var isWd = ['Mon','Tue','Wed','Thu','Fri'].indexOf(weekday) >= 0;
       if (!isWd) return false;
       var hh = get('hour'), mm = get('minute');
-      var cur  = hh * 60 + mm;
-      var open = h.open[0]  * 60 + h.open[1];
-      var cls  = h.close[0] * 60 + h.close[1];
-      return cur >= open && cur < cls;
-    } catch (e) {
-      return false;
-    }
+      var cur = hh * 60 + mm;
+      return cur >= (h.open[0] * 60 + h.open[1]) && cur < (h.close[0] * 60 + h.close[1]);
+    } catch (e) { return false; }
   }
 
   window.updateMarketHoursChip = function (market) {
-    var chip = document.getElementById('market-hours-chip');
-    if (!chip) return;
-    var h   = HOURS[market];
-    if (!h) { chip.innerHTML = ''; return; }
-    var label = market === 'US' ? _usLabel() : h.label;
-    var on  = isOpen(market);
-    var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
-            + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
-    var status = on
-      ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
-      : '<span style="color:#555;">마감</span>';
-    chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
+    ['market-hours-chip', 'market-hours-chip2'].forEach(function(id) {
+      var chip = document.getElementById(id);
+      if (!chip) return;
+      var h = HOURS[market];
+      if (!h) { chip.innerHTML = ''; return; }
+      var label = market === 'US' ? _usLabel() : h.label;
+      var on = isOpen(market);
+      var dot = '<span style="width:7px;height:7px;border-radius:50%;background:' + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
+      var status = on ? '<span style="color:#26a69a;font-weight:700;">개장</span>' : '<span style="color:#555;">마감</span>';
+      chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
+    });
   };
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -391,11 +411,8 @@
       if (data.authenticated && data.user) {
         var u = data.user;
         var avatarEl = document.getElementById('nav-user-avatar');
-        if (u.picture) {
-          avatarEl.innerHTML = '<img src="' + u.picture + '" alt="">';
-        } else {
-          avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
-        }
+        if (u.picture) { avatarEl.innerHTML = '<img src="' + u.picture + '" alt="">'; }
+        else { avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase(); }
         document.getElementById('nav-user-name').textContent = u.name || u.email;
         var planBadge = document.getElementById('nav-plan-badge');
         if (planBadge) {
@@ -419,8 +436,7 @@
     });
 
   document.getElementById('btn-nav-logout').addEventListener('click', function () {
-    fetch('/api/auth/logout', { method: 'POST' })
-      .then(function () { window.location.href = '/login'; });
+    fetch('/api/auth/logout', { method: 'POST' }).then(function () { window.location.href = '/login'; });
   });
 })();
 </script>
@@ -458,17 +474,12 @@
     document.getElementById('app-contact-form').style.display = 'block';
     document.getElementById('app-contact-submit').disabled = false;
   }
-  function closeContactModal() {
-    document.getElementById('app-contact-modal').style.display = 'none';
-  }
-  document.getElementById('app-contact-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeContactModal();
-  });
+  function closeContactModal() { document.getElementById('app-contact-modal').style.display = 'none'; }
+  document.getElementById('app-contact-modal').addEventListener('click', function(e) { if (e.target === this) closeContactModal(); });
   async function submitContactModal(e) {
     e.preventDefault();
     var btn = document.getElementById('app-contact-submit');
-    btn.disabled = true;
-    btn.textContent = '전송 중...';
+    btn.disabled = true; btn.textContent = '전송 중...';
     var form = e.target;
     try {
       var res = await fetch('/api/contact', { method: 'POST', body: new FormData(form) });
@@ -477,32 +488,104 @@
         form.style.display = 'none';
         document.getElementById('app-contact-success').style.display = 'block';
         form.reset();
-      } else {
-        btn.disabled = false;
-        btn.textContent = '보내기';
-        alert(data.error || '오류가 발생했습니다.');
-      }
-    } catch {
-      btn.disabled = false;
-      btn.textContent = '보내기';
-      alert('전송 중 오류가 발생했습니다.');
-    }
+      } else { btn.disabled = false; btn.textContent = '보내기'; alert(data.error || '오류가 발생했습니다.'); }
+    } catch { btn.disabled = false; btn.textContent = '보내기'; alert('전송 중 오류가 발생했습니다.'); }
   }
 </script>
 
 <style>
-@keyframes rt-blink {
-  0%,100% { opacity:1; }
-  50%      { opacity:.2; }
-}
+@keyframes rt-blink { 0%,100% { opacity:1; } 50% { opacity:.2; } }
 </style>
-<script
-  src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
-  crossorigin="anonymous"
-></script>
-<script src="/static/js/chart.js?v=20260312i"></script>
-<script src="/static/js/draw.js?v=20260312j"></script>
-<script src="/static/js/realtime.js?v=20260312a"></script>
+
+<div id="notice-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding-top:60px;">
+  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;width:100%;max-width:520px;margin:0 24px;position:relative;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;gap:8px;padding:18px 20px 14px;border-bottom:1px solid #2a3145;flex-shrink:0;">
+      <span id="ndm-type-badge" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid;flex-shrink:0;"></span>
+      <span id="ndm-title" style="font-size:15px;font-weight:700;color:#fff;flex:1;min-width:0;"></span>
+      <button onclick="closeNoticeModal()" style="background:none;border:none;color:#7a8499;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 20px;font-size:11px;color:#555;flex-shrink:0;border-bottom:1px solid #1e2535;">
+      <span id="ndm-date"></span>
+      <span style="color:#2a3145;">|</span>
+      <span id="ndm-views"><span id="ndm-views-count">0</span></span>
+    </div>
+    <div id="ndm-content" style="padding:18px 20px;font-size:13px;color:#c8ccd4;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-word;"></div>
+    <div style="padding:12px 20px;border-top:1px solid #1e2535;flex-shrink:0;">
+      <button onclick="closeNoticeModal()" style="width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+<script>
+  function openNoticeModal(id) {
+    var modal = document.getElementById('notice-detail-modal');
+    var titleEl = document.getElementById('ndm-title');
+    var badgeEl = document.getElementById('ndm-type-badge');
+    var dateEl  = document.getElementById('ndm-date');
+    var viewsEl = document.getElementById('ndm-views-count');
+    var bodyEl  = document.getElementById('ndm-content');
+    titleEl.textContent = '불러오는 중...'; badgeEl.textContent = ''; dateEl.textContent = ''; viewsEl.textContent = '0'; bodyEl.textContent = '';
+    modal.style.display = 'flex';
+    fetch('/api/notices/' + id)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (n) {
+        if (!n) { titleEl.textContent = '공지를 불러올 수 없습니다.'; return; }
+        var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
+        var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
+        var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
+        badgeEl.textContent = TYPE_LABEL[n.type] || '공지';
+        badgeEl.style.cssText += ';background:' + color + '20;color:' + color + ';border-color:' + color + '40;';
+        titleEl.textContent = n.title;
+        dateEl.textContent  = n.date || '';
+        viewsEl.textContent = (n.views || 0).toLocaleString();
+        bodyEl.textContent  = n.content || '';
+      })
+      .catch(function () { titleEl.textContent = '오류가 발생했습니다.'; });
+  }
+  function closeNoticeModal() { document.getElementById('notice-detail-modal').style.display = 'none'; }
+  document.getElementById('notice-detail-modal').addEventListener('click', function (e) { if (e.target === this) closeNoticeModal(); });
+</script>
+
+<script>
+(function () {
+  var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
+  var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
+  function dismissKey(id) { return 'notice_dismissed_' + id; }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function renderToolbarNotices(list) {
+    var wrap = document.getElementById('toolbar-notice-banner');
+    var listEl = document.getElementById('toolbar-notice-list');
+    if (!wrap || !listEl) return;
+    var visible = list.filter(function (n) { return !sessionStorage.getItem(dismissKey(n.id)); });
+    if (!visible.length) return;
+    listEl.innerHTML = '';
+    visible.forEach(function (n) {
+      var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
+      var label = TYPE_LABEL[n.type] || '공지';
+      var item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;background:#0f1320;border:1px solid #1e2535;border-radius:4px;padding:3px 7px 3px 6px;white-space:nowrap;max-width:240px;cursor:pointer;';
+      item.innerHTML =
+        '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid ' + color + '40;background:' + color + '20;color:' + color + ';flex-shrink:0;">' + label + '</span>' +
+        '<span style="font-size:11px;color:#c8ccd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + escHtml(n.title) + '</span>' +
+        '<button style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px 0 4px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
+      item.querySelector('button').addEventListener('click', function (e) {
+        e.stopPropagation();
+        sessionStorage.setItem(dismissKey(parseInt(this.getAttribute('data-nid'), 10)), '1');
+        item.remove();
+        if (!listEl.children.length) wrap.style.display = 'none';
+      });
+      item.addEventListener('click', function () { openNoticeModal(n.id); });
+      listEl.appendChild(item);
+    });
+    wrap.style.display = 'flex';
+  }
+
+  fetch('/api/notices')
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (list) { if (list && list.length) renderToolbarNotices(list); })
+    .catch(function () {});
+})();
+</script>
 
 <script>
 (function() {
@@ -535,139 +618,48 @@
   };
 
   window._onSearchComplete = function(count) {
+    // 검색 완료 시 유사종목 탭으로 자동 전환
+    var tab = document.querySelector('.sidebar-tab-btn[data-tab="results"]');
+    if (tab && !tab.classList.contains('active')) tab.click();
     if (!isMobile() || count === 0) return;
     var sb = document.querySelector('.d2t-sidebar');
-    if (sb && !sb.classList.contains('mobile-open')) {
-      window.toggleMobileSidebar();
-    }
+    if (sb && !sb.classList.contains('mobile-open')) window.toggleMobileSidebar();
   };
 
   window.addEventListener('resize', function() {
-    if (!isMobile()) {
-      closeMobileSidebar();
-    }
+    if (!isMobile()) closeMobileSidebar();
+  });
+
+  // 사이드바 탭 전환
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.sidebar-tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tab = this.dataset.tab;
+        document.querySelectorAll('.sidebar-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        var panels = ['quote','results','favorites','drawings'];
+        panels.forEach(function(p) {
+          var el = document.getElementById('sidebar-panel-' + p);
+          if (el) el.style.display = (p === tab) ? (p === 'quote' ? 'flex' : 'block') : 'none';
+        });
+        // quote 패널은 flex + flex-direction:column
+        if (tab === 'quote') {
+          var qp = document.getElementById('sidebar-panel-quote');
+          if (qp) { qp.style.display = 'flex'; qp.style.flexDirection = 'column'; }
+        }
+      });
+    });
   });
 })();
 </script>
 
-<div id="notice-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding-top:60px;">
-  <div style="background:#1a1d2e;border:1px solid #2a3145;border-radius:12px;width:100%;max-width:520px;margin:0 24px;position:relative;max-height:80vh;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;gap:8px;padding:18px 20px 14px;border-bottom:1px solid #2a3145;flex-shrink:0;">
-      <span id="ndm-type-badge" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid;flex-shrink:0;"></span>
-      <span id="ndm-title" style="font-size:15px;font-weight:700;color:#fff;flex:1;min-width:0;"></span>
-      <button onclick="closeNoticeModal()" style="background:none;border:none;color:#7a8499;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:8px 20px;font-size:11px;color:#555;flex-shrink:0;border-bottom:1px solid #1e2535;">
-      <span id="ndm-date"></span>
-      <span style="color:#2a3145;">|</span>
-      <span id="ndm-views" style="display:flex;align-items:center;gap:3px;">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span id="ndm-views-count">0</span>
-      </span>
-    </div>
-    <div id="ndm-content" style="padding:18px 20px;font-size:13px;color:#c8ccd4;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-word;"></div>
-    <div style="padding:12px 20px;border-top:1px solid #1e2535;flex-shrink:0;">
-      <button onclick="closeNoticeModal()" style="width:100%;padding:9px;background:none;border:1px solid #2a3145;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">닫기</button>
-    </div>
-  </div>
-</div>
-<script>
-  function openNoticeModal(id) {
-    var modal = document.getElementById('notice-detail-modal');
-    var titleEl = document.getElementById('ndm-title');
-    var badgeEl = document.getElementById('ndm-type-badge');
-    var dateEl  = document.getElementById('ndm-date');
-    var viewsEl = document.getElementById('ndm-views-count');
-    var bodyEl  = document.getElementById('ndm-content');
-    titleEl.textContent = '불러오는 중...';
-    badgeEl.textContent = '';
-    dateEl.textContent  = '';
-    viewsEl.textContent = '0';
-    bodyEl.textContent  = '';
-    modal.style.display = 'flex';
-    fetch('/api/notices/' + id)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (n) {
-        if (!n) { titleEl.textContent = '공지를 불러올 수 없습니다.'; return; }
-        var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
-        var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
-        var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
-        var label = TYPE_LABEL[n.type] || '공지';
-        badgeEl.textContent = label;
-        badgeEl.style.cssText += ';background:' + color + '20;color:' + color + ';border-color:' + color + '40;';
-        titleEl.textContent   = n.title;
-        dateEl.textContent    = n.date || '';
-        viewsEl.textContent   = (n.views || 0).toLocaleString();
-        bodyEl.textContent    = n.content || '';
-      })
-      .catch(function () { titleEl.textContent = '오류가 발생했습니다.'; });
-  }
-  function closeNoticeModal() {
-    document.getElementById('notice-detail-modal').style.display = 'none';
-  }
-  document.getElementById('notice-detail-modal').addEventListener('click', function (e) {
-    if (e.target === this) closeNoticeModal();
-  });
-</script>
+<script
+  src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"
+  crossorigin="anonymous"
+></script>
+<script src="/static/js/chart.js?v=20260318a"></script>
+<script src="/static/js/draw.js?v=20260312j"></script>
+<script src="/static/js/realtime.js?v=20260318a"></script>
+<script src="/static/js/quote.js?v=20260318a"></script>
 
-<script>
-(function () {
-  var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
-  var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
-
-  function dismissKey(id) { return 'notice_dismissed_' + id; }
-
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function renderToolbarNotices(list) {
-    var wrap = document.getElementById('toolbar-notice-banner');
-    var listEl = document.getElementById('toolbar-notice-list');
-    if (!wrap || !listEl) return;
-
-    var visible = list.filter(function (n) {
-      return !sessionStorage.getItem(dismissKey(n.id));
-    });
-    if (!visible.length) return;
-
-    listEl.innerHTML = '';
-    visible.forEach(function (n) {
-      var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
-      var label = TYPE_LABEL[n.type] || '공지';
-      var item = document.createElement('div');
-      item.style.cssText = 'display:flex; align-items:center; gap:5px; background:#0f1320; border:1px solid #1e2535; border-radius:4px; padding:3px 7px 3px 6px; white-space:nowrap; max-width:320px; cursor:pointer;';
-      item.title = '클릭하여 공지 보기';
-      item.innerHTML =
-        '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid ' + color + '40;background:' + color + '20;color:' + color + ';flex-shrink:0;">' + label + '</span>' +
-        '<span style="font-size:11px;color:#c8ccd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + escHtml(n.title) + '</span>' +
-        '<span style="font-size:10px;color:#555;display:flex;align-items:center;gap:2px;flex-shrink:0;padding:0 2px;">' +
-          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
-          (n.views || 0).toLocaleString() +
-        '</span>' +
-        '<button style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px 0 4px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
-      item.querySelector('button').addEventListener('click', function (e) {
-        e.stopPropagation();
-        var id = parseInt(this.getAttribute('data-nid'), 10);
-        sessionStorage.setItem(dismissKey(id), '1');
-        item.remove();
-        if (!listEl.children.length) wrap.style.display = 'none';
-      });
-      item.addEventListener('click', function () {
-        openNoticeModal(n.id);
-      });
-      listEl.appendChild(item);
-    });
-    wrap.style.display = 'flex';
-  }
-
-  fetch('/api/notices')
-    .then(function (r) { return r.ok ? r.json() : []; })
-    .then(function (list) {
-      if (!list || !list.length) return;
-      renderToolbarNotices(list);
-    })
-    .catch(function () {});
-})();
-</script>
 {% endblock %}

@@ -108,6 +108,32 @@ def _parse_kr(raw: str) -> Optional[dict]:
         return None
 
 
+def _parse_kr_asking(raw: str) -> Optional[dict]:
+    """H0STASP0 호가 데이터 파싱. '^' 구분 필드.
+    매도: f[3]~f[12](가격), f[23]~f[32](잔량)  10단계 (1=최우선)
+    매수: f[13]~f[22](가격), f[33]~f[42](잔량) 10단계 (1=최우선)
+    f[0]=종목코드, f[1]=영업시간, f[2]=시간구분
+    """
+    f = raw.split("^")
+    if len(f) < 53:
+        return None
+    try:
+        asks, bids = [], []
+        for i in range(10):
+            asks.append({"price": float(f[3 + i]),  "volume": int(f[23 + i])})
+            bids.append({"price": float(f[13 + i]), "volume": int(f[33 + i])})
+        return {
+            "type":   "asking",
+            "market": "KR",
+            "ticker": f[0],
+            "time":   f[1],
+            "asks":   asks,   # 매도 (낮은 인덱스 = 최우선 = 최저 매도가)
+            "bids":   bids,   # 매수 (낮은 인덱스 = 최우선 = 최고 매수가)
+        }
+    except (ValueError, IndexError):
+        return None
+
+
 def _parse_us(raw: str) -> Optional[dict]:
     """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
@@ -145,6 +171,14 @@ _running: bool = False
 
 async def subscribe_kr(ticker: str) -> None:
     await _subscribe("H0STCNT0", ticker)
+
+
+async def subscribe_kr_asking(ticker: str) -> None:
+    await _subscribe("H0STASP0", ticker)
+
+
+async def unsubscribe_kr_asking(ticker: str) -> None:
+    await _unsubscribe("H0STASP0", ticker)
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
@@ -225,6 +259,10 @@ async def _on_message(msg: str) -> None:
         tick = _parse_kr(raw)
         if tick:
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+    elif tr_id == "H0STASP0":
+        asking = _parse_kr_asking(raw)
+        if asking:
+            asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
     elif tr_id == "HDFSCNT0":
         tick = _parse_us(raw)
         if tick:

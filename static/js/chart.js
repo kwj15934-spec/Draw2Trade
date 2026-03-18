@@ -222,6 +222,9 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + '  |  ' + data.candles.length + unit;
         }
+        // 헤더바 종목명 업데이트
+        var thbName = document.getElementById('thb-name');
+        if (thbName) thbName.textContent = data.name ? data.name + ' (' + ticker + ')' : ticker;
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');

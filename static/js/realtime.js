@@ -95,7 +95,8 @@
     _ws.onmessage = function (e) {
       try {
         var msg = JSON.parse(e.data);
-        if (msg.type === 'tick') _onTick(msg);
+        if (msg.type === 'tick')   _onTick(msg);
+        else if (msg.type === 'asking' && window._onAsking) _onAsking(msg);
       } catch (_) {}
     };
 
@@ -212,48 +213,39 @@
   // ── 현재가 패널 업데이트 ─────────────────────────────────────────────────
 
   function _updatePricePanel(tick) {
-    var panel = document.getElementById('price-panel');
-    if (!panel) return;
-
     var price   = tick.price;
     var vol     = _rtCandle ? _rtCandle.volume : 0;
     var timeStr = tick.time || '';
+    var dispPrice = price >= 1000 ? price.toLocaleString() : price;
+    var volStr = vol >= 10000 ? (vol / 10000).toFixed(1) + '만' : vol.toLocaleString();
+    var timeDisp = timeStr.length >= 6
+      ? timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6) : '';
 
-    // 가격 표시
-    var ppPrice = document.getElementById('pp-price');
-    if (ppPrice) {
-      ppPrice.textContent = price >= 1000 ? price.toLocaleString() : price;
+    var chgPct = null, chgAmt = null, color = '#888', sign = '';
+    if (_prevClose) {
+      chgPct = ((price - _prevClose) / _prevClose * 100).toFixed(2);
+      chgAmt = (price - _prevClose).toFixed(price >= 1000 ? 0 : 2);
+      sign   = chgPct >= 0 ? '+' : '';
+      color  = chgPct >= 0 ? '#26a69a' : '#ef5350';
     }
 
-    // 등락률
-    var ppChg = document.getElementById('pp-chg');
-    if (ppChg && _prevClose) {
-      var chgPct = ((price - _prevClose) / _prevClose * 100).toFixed(2);
-      var chgAmt = (price - _prevClose).toFixed(price >= 1000 ? 0 : 2);
-      var sign   = chgPct >= 0 ? '+' : '';
-      var color  = chgPct >= 0 ? '#26a69a' : '#ef5350';
-      ppChg.innerHTML =
-        '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
-        + ' <span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
-    } else if (ppChg) {
-      ppChg.textContent = '—';
+    // 헤더바 업데이트
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbName = document.getElementById('thb-name');
+    if (thbName && window.D2T && D2T.ticker) thbName.textContent = D2T.ticker;
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg && chgPct !== null) {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
     }
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 ' + volStr;
+    var thbTime = document.getElementById('thb-time');
+    if (thbTime) thbTime.textContent = timeDisp;
 
-    // 거래량
-    var ppVol = document.getElementById('pp-vol');
-    if (ppVol) {
-      ppVol.textContent = '거래량 ' + (vol >= 10000
-        ? (vol / 10000).toFixed(1) + '만'
-        : vol.toLocaleString());
-    }
-
-    // 시간 (HHMMSS → HH:MM:SS)
-    var ppTime = document.getElementById('pp-time');
-    if (ppTime && timeStr.length >= 6) {
-      ppTime.textContent = timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6);
-    }
-
-    panel.style.display = 'block';
+    // 체결 내역에 추가 (quote.js 연동)
+    if (window._addTradeRow) window._addTradeRow(tick, chgPct, sign, color);
   }
 
   // ── 오버레이 업데이트 ─────────────────────────────────────────────────────
@@ -306,17 +298,17 @@
     _rtCandle      = null;
     _candleBaseVol = null;
     _setLive(false);
-    // 패널 초기화
-    var panel = document.getElementById('price-panel');
-    if (panel) panel.style.display = 'none';
-    var ppPrice = document.getElementById('pp-price');
-    if (ppPrice) ppPrice.textContent = '—';
-    var ppChg = document.getElementById('pp-chg');
-    if (ppChg) ppChg.textContent = '—';
-    var ppVol = document.getElementById('pp-vol');
-    if (ppVol) ppVol.textContent = '거래량 —';
-    var ppTime = document.getElementById('pp-time');
-    if (ppTime) ppTime.textContent = '—';
+    // 헤더바 초기화
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = '—'; thbPrice.style.color = '#fff'; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg) thbChg.textContent = '—';
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 —';
+    var thbTime = document.getElementById('thb-time');
+    if (thbTime) thbTime.textContent = '—';
+    // 체결 내역 초기화
+    if (window._clearTradeList) window._clearTradeList();
 
     // prevClose: D2T.candles 마지막 종가 저장
     _prevClose = null;
