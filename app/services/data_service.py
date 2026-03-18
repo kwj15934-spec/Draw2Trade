@@ -42,6 +42,7 @@ _SECTORS_FILE = _BASE_DIR / "data" / "sectors.json"
 _mem_ohlcv: dict[str, dict] = {}   # ticker → OHLCV dict
 _mem_ohlcv_date: str = ""          # 캐시가 로드된 날짜 (YYYY-MM-DD), 날짜 바뀌면 무효화
 _mem_names: dict[str, str] = {}    # ticker → 회사명
+_mem_tickers: list[str] = []       # 메모리 티커 리스트 (search_tickers 고속화)
 _sectors_cache: list[dict] | None = None  # sectors.json 1회 로드 후 재사용
 
 
@@ -88,7 +89,11 @@ def _fetch_kospi_tickers_and_names() -> list[tuple[str, str]]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_kospi_tickers() -> list[str]:
-    """KOSPI 전 종목 티커 반환. 당일 캐시 → KRX API 순서로 조회."""
+    """KOSPI 전 종목 티커 반환. 메모리 캐시 → 디스크 캐시 → KRX API 순서로 조회."""
+    global _mem_tickers
+    if _mem_tickers:
+        return _mem_tickers
+
     _ensure_dirs()
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -100,8 +105,9 @@ def get_kospi_tickers() -> list[str]:
                 for item in data.get("ticker_names", []):
                     if item.get("name"):
                         _mem_names[item["ticker"]] = item["name"]
-                logger.info("티커 캐시 로드: %d개", len(data["tickers"]))
-                return data["tickers"]
+                _mem_tickers = data["tickers"]
+                logger.info("티커 캐시 로드: %d개", len(_mem_tickers))
+                return _mem_tickers
         except Exception:
             pass
 
@@ -118,7 +124,8 @@ def get_kospi_tickers() -> list[str]:
                     for item in data.get("ticker_names", []):
                         if item.get("name"):
                             _mem_names[item["ticker"]] = item["name"]
-                    return tickers
+                    _mem_tickers = tickers
+                    return _mem_tickers
             except Exception:
                 pass
         logger.error("티커 수집 완전 실패")
@@ -128,9 +135,10 @@ def get_kospi_tickers() -> list[str]:
     for t, n in pairs:
         _mem_names[t] = n
 
+    _mem_tickers = tickers
     _save_ticker_cache(tickers, today_str)
     logger.info("KRX finder API로 티커 수집: %d개", len(tickers))
-    return tickers
+    return _mem_tickers
 
 
 def _save_ticker_cache(tickers: list[str], date_str: str) -> None:
@@ -688,12 +696,7 @@ def search_tickers(q: str, limit: int = 50) -> list[dict[str, Any]]:
     for t in tickers:
         name = names.get(t, t)
         if q in t or q in (name or "").lower():
-            sector_id = _get_sector_for_name(name)
-            results.append({
-                "ticker": t,
-                "name": name,
-                "sector_id": sector_id,
-            })
+            results.append({"ticker": t, "name": name})
         if len(results) >= limit:
             break
     return results
