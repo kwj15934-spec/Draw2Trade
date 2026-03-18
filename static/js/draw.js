@@ -140,7 +140,7 @@
           + '<div style="font-size:32px;margin-bottom:14px;">🔒</div>'
           + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">로그인 후 이용해주세요</div>'
           + '<div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:18px;">드로잉 기능은 로그인이 필요합니다.</div>'
-          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#ff6b35;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
+          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#26a69a;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
           + '</div>';
       }
       if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
@@ -277,11 +277,11 @@
         ctx.fillRect(Math.min(x0,x1), 0, Math.abs(x1 - x0), canvas.height);
       }
       // ② 두 곡선 사이 영역 (얇을수록 유사, 두꺼울수록 다른 부분)
-      drawCurveFill(drawNormalized, matchPoints, 'rgba(255,107,53,0.30)');
+      drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.30)');
       // ③ 유사 종목 매칭 구간 가상선 (청록 점선)
       drawNormCurve(matchPoints,   '#26a69a', 'rgba(38,166,154,0.85)', 3.5, true);
       // ④ 내 패턴 가상선 (주황 실선)
-      drawNormCurve(drawNormalized, '#ff6b35', 'rgba(255,107,53,0.85)',  4.5, false);
+      drawNormCurve(drawNormalized, '#26a69a', 'rgba(38,166,154,0.85)',  4.5, false);
 
     } else {
       // 차트 좌표 없을 때: 정규화 캔버스 좌표 (폴백)
@@ -302,7 +302,7 @@
       }
 
       if (hasMatch && hasDraw) {
-        ctx.strokeStyle = '#ff6b35';
+        ctx.strokeStyle = '#26a69a';
         ctx.lineWidth   = 4.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
@@ -318,7 +318,7 @@
         // 차트 좌표 기반 렌더링 (스크롤/줌에 따라 자동 추적)
         var chartPts = chartCoordsToPixels(_drawChartCoords);
         var ptsToRender = (chartPts && chartPts.length >= 2) ? chartPts : drawPoints;
-        ctx.strokeStyle = '#ff6b35';
+        ctx.strokeStyle = '#26a69a';
         ctx.lineWidth   = 2.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
@@ -332,7 +332,7 @@
         [ptsToRender[0], ptsToRender[ptsToRender.length - 1]].forEach(function (p) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = '#ff6b35';
+          ctx.fillStyle = '#26a69a';
           ctx.fill();
         });
       }
@@ -474,7 +474,7 @@
       ctx.textBaseline = 'middle';
       var lx = 10, ly = 10, lineH = 22, boxW = 220;
       ctx.fillStyle = 'rgba(10,12,18,0.96)';
-      ctx.strokeStyle = '#ff6b35';
+      ctx.strokeStyle = '#26a69a';
       ctx.lineWidth = 1.5;
       ctx.fillRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
       ctx.strokeRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
@@ -483,7 +483,7 @@
       ctx.fillText('가상선 비교 — 두 선이 가까울수록 유사', lx + 2, ly + 4);
       ly += lineH;
       ctx.setLineDash([]);
-      ctx.fillStyle = '#ff6b35';
+      ctx.fillStyle = '#26a69a';
       ctx.fillRect(lx, ly + 1, 18, 4);
       ctx.fillStyle = '#e8eaed';
       ctx.font = '12px "Segoe UI", sans-serif';
@@ -820,7 +820,7 @@
           + '<div style="font-size:32px;margin-bottom:14px;">🔒</div>'
           + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">로그인 후 이용해주세요</div>'
           + '<div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:18px;">유사 종목 검색은 로그인이 필요합니다.</div>'
-          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#ff6b35;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
+          + '<a href="/login" style="display:inline-block;padding:8px 22px;background:#26a69a;border-radius:5px;color:#fff;font-size:13px;font-weight:600;text-decoration:none;">로그인하기</a>'
           + '</div>';
       }
       if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');

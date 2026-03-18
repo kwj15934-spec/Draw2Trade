@@ -73,7 +73,7 @@
         },
       },
       layout: {
-        background: { color: '#131722' },
+        background: { color: '#121214' },
         textColor: '#d1d4dc',
       },
       grid: {
@@ -361,7 +361,7 @@
 
           D2T.series.setMarkers([
             { time: tf, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
-            { time: tt, position: 'aboveBar', color: '#ff6b35', shape: 'arrowDown', text: '종료' },
+            { time: tt, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
           ]);
         } else {
           D2T.chart.timeScale().fitContent();
