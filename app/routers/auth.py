@@ -169,6 +169,20 @@ async def admin_kis_usage(admin=Depends(require_admin)):
     return kis_client.get_api_usage()
 
 
+@router.get("/api/admin/kis-stream-status")
+async def admin_kis_stream_status(admin=Depends(require_admin)):
+    """KIS WebSocket 실시간 스트림 연결 상태 (관리자 전용)."""
+    from app.services import kis_stream, broadcast_hub as _hub, kis_client
+    return {
+        "ws_connected":    kis_stream._ws_conn is not None,
+        "running":         kis_stream._running,
+        "subscriptions":   list(kis_stream._subs),
+        "active_tickers":  _hub.hub.get_active_tickers(),
+        "is_configured":   kis_client.is_configured(),
+        "approval_key_ok": bool(kis_stream._approval_key_cache),
+    }
+
+
 @router.post("/api/admin/rebuild-us-tickers")
 async def admin_rebuild_us_tickers(admin=Depends(require_admin)):
     """US 티커 목록 강제 재빌드 (캐시 초기화 후 재로드)."""

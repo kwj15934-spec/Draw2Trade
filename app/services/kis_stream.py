@@ -93,16 +93,17 @@ def _parse_kr(raw: str) -> Optional[dict]:
         return None
     try:
         return {
-            "type":   "tick",
-            "market": "KR",
-            "ticker": f[0],          # 종목코드
-            "date":   f[34],         # YYYYMMDD (영업일자)
-            "time":   f[1],          # HHMMSS
-            "price":  float(f[2]),   # 현재가
-            "open":   float(f[7]),   # 시가
-            "high":   float(f[8]),   # 고가
-            "low":    float(f[9]),   # 저가
-            "volume": int(f[13]),    # 누적거래량
+            "type":    "tick",
+            "market":  "KR",
+            "ticker":  f[0],          # 종목코드
+            "date":    f[34],         # YYYYMMDD (영업일자)
+            "time":    f[1],          # HHMMSS
+            "price":   float(f[2]),   # 현재가
+            "open":    float(f[7]),   # 시가
+            "high":    float(f[8]),   # 고가
+            "low":     float(f[9]),   # 저가
+            "volume":  int(f[13]),    # 누적거래량
+            "session": f[21] if len(f) > 21 else "",  # 체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
         }
     except (ValueError, IndexError):
         return None

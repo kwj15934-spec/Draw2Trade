@@ -77,13 +77,26 @@
     var dir   = (chgPct !== null && chgPct >= 0) ? 'up' : 'down';
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
+    // 시간외 구분 (session: 1=장중, 2=시간외단일가, 5=장전, 7=시간외종가, 그 외=기타)
+    var session = tick.session || '';
+    var sessionBadge = '';
+    if (session === '5') {
+      sessionBadge = '<span class="tr-session pre">장전</span>';
+    } else if (session === '2') {
+      sessionBadge = '<span class="tr-session after">단일가</span>';
+    } else if (session === '7') {
+      sessionBadge = '<span class="tr-session after">시외</span>';
+    } else if (session !== '' && session !== '1') {
+      sessionBadge = '<span class="tr-session after">시외</span>';
+    }
+
     var row = document.createElement('div');
     row.className = 'trade-row ' + dir;
     row.innerHTML =
       '<span class="tr-price">' + price.toLocaleString() + '</span>' +
       '<span class="tr-vol">'   + _fmtVol(vol) + '</span>' +
       '<span class="tr-chg">'   + chgStr + '</span>' +
-      '<span class="tr-time">'  + timeDisp + '</span>';
+      '<span class="tr-time">'  + timeDisp + sessionBadge + '</span>';
 
     list.insertBefore(row, list.firstChild);
 

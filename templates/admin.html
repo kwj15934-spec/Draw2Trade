@@ -514,6 +514,10 @@
           <div class="kis-metric-label">토큰 만료</div>
           <div class="kis-metric-value" style="font-size:13px;line-height:1.6;" id="kis-token-exp">-</div>
         </div>
+        <div class="kis-metric">
+          <div class="kis-metric-label">실시간 WS</div>
+          <div class="kis-metric-value" style="font-size:13px;line-height:1.6;" id="kis-ws-status">-</div>
+        </div>
       </div>
 
     </div>
@@ -1014,6 +1018,26 @@
         document.getElementById('kis-mode').innerHTML = d.mode === 'real'
           ? '실전투자 <span class="kis-badge real">real</span>'
           : '모의투자 <span class="kis-badge mock">mock</span>';
+
+        // ── WS 실시간 연결 상태 ────────────────────────────────────
+        try {
+          var wsRes = await fetch('/api/admin/kis-stream-status');
+          if (wsRes.ok) {
+            var ws = await wsRes.json();
+            var wsEl = document.getElementById('kis-ws-status');
+            if (wsEl) {
+              var connColor = ws.ws_connected ? '#26a69a' : '#ef5350';
+              var connText  = ws.ws_connected ? '● 연결됨' : '○ 미연결';
+              var subList   = ws.active_tickers && ws.active_tickers.length
+                ? ws.active_tickers.join(', ')
+                : '없음';
+              wsEl.innerHTML =
+                '<span style="color:' + connColor + ';font-weight:600;">' + connText + '</span>' +
+                (ws.is_configured ? '' : ' <span style="color:#ef5350;font-size:11px;">(KIS 키 미설정)</span>') +
+                '<br><span style="color:#555;font-size:11px;">구독 중: ' + subList + '</span>';
+            }
+          }
+        } catch(e) {}
 
         // ── TR 테이블 ──────────────────────────────────────────────
         var byTr = d.by_tr || {};
