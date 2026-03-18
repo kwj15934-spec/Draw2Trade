@@ -249,11 +249,16 @@
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
-    // KR 종목: 틱 단위 체결 내역 API 우선 사용
+    // KR 종목: 틱 단위 체결 내역 + 현재가 시세 API
     if (market === 'KR') {
       fetch('/api/ticks/' + encodeURIComponent(ticker))
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
+          // 현재가 시세 → 헤더바 업데이트 (장 마감 후에도 항상 반환)
+          if (data && data.quote) {
+            _updateHeaderFromQuote(data.quote);
+          }
+          // 틱 히스토리 → 체결 리스트 (있으면)
           if (data && data.ticks && data.ticks.length) {
             _renderTickHistory(data.ticks);
           } else {
@@ -331,6 +336,26 @@
     }
   }
 
+  /** 현재가 시세(KIS inquire-price) → 헤더바 업데이트 */
+  function _updateHeaderFromQuote(q) {
+    var price = q.price;
+    var dispPrice = price >= 1000 ? price.toLocaleString() : price;
+    var chgRate = parseFloat(q.chgRate) || 0;
+    var sign = chgRate >= 0 ? '+' : '';
+    var color = chgRate >= 0 ? '#26a69a' : '#ef5350';
+    var chgAmt = q.chgAmt || 0;
+
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg) {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt.toLocaleString() + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgRate.toFixed(2) + '%)</span>';
+    }
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(q.accvol);
+  }
+
   /** 캔들 기반 fallback (1분봉 → 일봉) */
   function _fallbackCandleLoad(ticker, market) {
     var baseUrl = market === 'US'
@@ -389,8 +414,8 @@
 
       var tick = {
         price: c.close,
-        volume: 0,               // 캔들 volume은 구간 합산이라 누적거래량 아님 → 비표시
-        cvol: 0,                 // 캔들에서는 개별 체결량 알 수 없음 → 비표시
+        volume: c.volume || 0,   // 캔들 volume → 거래량 컬럼에 표시 (구간 합산)
+        cvol: 0,                 // 캔들에서는 개별 체결량 알 수 없음 → '—' 표시
         time: timeStr,
         bs: '',
         _dateLabel: !isMinute ? (c.time || '').replace(/-/g, '.').slice(5) : ''

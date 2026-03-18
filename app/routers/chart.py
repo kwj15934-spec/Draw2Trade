@@ -12,7 +12,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import data_service
-from app.services.kis_client import fetch_kr_tick_history, is_configured
+from app.services.kis_client import fetch_kr_tick_history, fetch_kr_price, is_configured
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -151,11 +151,9 @@ async def tick_history(ticker: str):
         raise HTTPException(status_code=503, detail="KIS API 미설정")
 
     raw = fetch_kr_tick_history(ticker)
-    if not raw:
-        return {"ticker": ticker, "ticks": []}
 
     ticks = []
-    for r in raw:
+    for r in (raw or []):
         try:
             ticks.append({
                 "time":    r.get("stck_cntg_hour", ""),
@@ -168,4 +166,21 @@ async def tick_history(ticker: str):
         except (ValueError, TypeError):
             continue
 
-    return {"ticker": ticker, "ticks": ticks}
+    # 현재가 시세 (장 마감 후에도 항상 반환됨)
+    quote = None
+    pdata = fetch_kr_price(ticker)
+    if pdata:
+        try:
+            quote = {
+                "price":   int(pdata.get("stck_prpr", "0").replace(",", "")),
+                "chgRate": pdata.get("prdy_ctrt", "0"),
+                "chgSign": pdata.get("prdy_vrss_sign", "3"),
+                "chgAmt":  int(pdata.get("prdy_vrss", "0").replace(",", "")),
+                "accvol":  int(pdata.get("acml_vol", "0").replace(",", "")),
+                "high":    int(pdata.get("stck_hgpr", "0").replace(",", "")),
+                "low":     int(pdata.get("stck_lwpr", "0").replace(",", "")),
+            }
+        except (ValueError, TypeError):
+            pass
+
+    return {"ticker": ticker, "ticks": ticks, "quote": quote}

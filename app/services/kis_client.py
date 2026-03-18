@@ -505,6 +505,27 @@ def fetch_kr_tick_history(ticker: str) -> list[dict]:
     return result.get("output") or []
 
 
+def fetch_kr_price(ticker: str) -> dict | None:
+    """
+    FHKST01010100 — 주식현재가 시세.
+    장 마감 후에도 당일 종가/등락률/누적거래량 반환.
+    """
+    if not is_configured():
+        return None
+
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-price",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": ticker,
+        },
+        "FHKST01010100",
+    )
+    if not result or result.get("rt_cd") != "0":
+        return None
+    return result.get("output") or None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 국내 주식 분봉
 # ─────────────────────────────────────────────────────────────────────────────
