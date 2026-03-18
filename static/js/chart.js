@@ -86,6 +86,7 @@
       rightPriceScale: {
         borderColor: '#2a2e39',
         fontSize: window.innerWidth <= 640 ? 9 : 12,
+        autoScale: true,
       },
       timeScale: {
         borderColor: '#2a2e39',
@@ -121,6 +122,7 @@
       priceScaleId:  'right',
     });
     D2T.chart.priceScale('right').applyOptions({
+      autoScale:    true,
       scaleMargins: { top: 0.05, bottom: 0.25 },
     });
 
