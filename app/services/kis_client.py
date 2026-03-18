@@ -18,7 +18,9 @@ import threading
 import time
 import urllib.parse as _parse
 import urllib.request as _req
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+_KST = timezone(timedelta(hours=9))
 from pathlib import Path
 from typing import Any, Optional
 
@@ -199,22 +201,28 @@ def is_configured() -> bool:
 
 def is_market_hours() -> bool:
     """
-    현재 국내 또는 미국 주식 시장 개장 시간이면 True.
+    현재 국내(정규+NXT) 또는 미국 주식 시장 개장 시간이면 True.
 
-    UTC 기준 (DST 미반영 — 약 30분 오차 허용):
-      국장: 00:00 ~ 06:30 UTC  (KST 09:00 ~ 15:30, 평일)
-      미장: 14:30 ~ 21:00 UTC  (EST 09:30 ~ 16:00, 평일)
+    KST 기준:
+      정규장:    09:00 ~ 15:30
+      NXT 장전:  08:00 ~ 08:50
+      NXT 야간:  18:00 ~ 24:00
+    UTC 기준 (미국):
+      미장: 14:30 ~ 21:00 UTC  (EST 09:30 ~ 16:00)
 
     개장 시간에는 KIS 대량 조회를 자제해 API 부하를 줄인다.
     """
-    from datetime import timezone
-    now = datetime.now(timezone.utc)
-    if now.weekday() >= 5:          # 토(5) · 일(6) → 항상 False
+    now_kst = datetime.now(_KST)
+    if now_kst.weekday() >= 5:          # 토(5) · 일(6) → 항상 False
         return False
-    t = now.hour * 60 + now.minute  # 자정 기준 분
-    kr_open, kr_close = 0 * 60,      6 * 60 + 30   # 00:00 ~ 06:30 UTC
-    us_open, us_close = 14 * 60 + 30, 21 * 60       # 14:30 ~ 21:00 UTC
-    return (kr_open <= t < kr_close) or (us_open <= t < us_close)
+    hm = now_kst.hour * 100 + now_kst.minute
+    # 국내: 정규장 + NXT 장전 + NXT 야간
+    if (800 <= hm < 850) or (900 <= hm < 1530) or (hm >= 1800):
+        return True
+    # 미국: UTC 14:30 ~ 21:00
+    now_utc = datetime.now(timezone.utc)
+    t = now_utc.hour * 60 + now_utc.minute
+    return 14 * 60 + 30 <= t < 21 * 60
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -371,7 +379,7 @@ def fetch_kr_ohlcv_paginated(
     페이지네이션하여 years년치 전체 레코드 반환.
     최대 5페이지 (500건) 조회.
     """
-    now = datetime.now()
+    now = datetime.now(_KST)
     start_str = (now.replace(year=now.year - years)).strftime("%Y%m%d")
     end_str = now.strftime("%Y%m%d")
 
@@ -441,7 +449,7 @@ def fetch_us_ohlcv_paginated(
     """
     페이지네이션하여 years년치 전체 레코드 반환.
     """
-    now = datetime.now()
+    now = datetime.now(_KST)
     start_str = (now.replace(year=now.year - years)).strftime("%Y%m%d")
     end_str = now.strftime("%Y%m%d")
 
@@ -616,7 +624,7 @@ def fetch_kr_minute_paginated(
     KR 거래 시간: 09:00~15:30 = 390분/일, 30건/호출.
     interval_min: 1|3|5|10|15|30|60|120
     """
-    now = datetime.now()
+    now = datetime.now(_KST)
     interval_str = str(interval_min)
     # 160000으로 시작해야 15:30 봉까지 첫 페이지에 포함됨
     start_time = "160000"

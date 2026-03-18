@@ -159,6 +159,21 @@ async def chart_data(
         if not candles:
             candles = []
 
+        # Flatline 필터: 거래 시간(KST 08:00~15:30) 외 캔들 제거
+        # 분봉 time은 "fake UTC" timestamp → KST 시/분으로 변환 후 필터
+        if candles:
+            _filtered = []
+            for c in candles:
+                try:
+                    import time as _tm
+                    _gm = _tm.gmtime(c["time"])
+                    _hm = _gm.tm_hour * 100 + _gm.tm_min
+                    if 800 <= _hm <= 1530:
+                        _filtered.append(c)
+                except Exception:
+                    _filtered.append(c)  # 파싱 실패 시 유지
+            candles = _filtered
+
         # NXT/시간외: 캐시 틱 → 캔들 + NXT 현재가 fallback
         now = _now_kst()
         hm = now.hour * 100 + now.minute
@@ -185,7 +200,7 @@ async def chart_data(
                         l = int(nxt_data.get("stck_lwpr", "0").replace(",", "")) or p
                         o = int(nxt_data.get("stck_oprc", "0").replace(",", "")) or p
                         v = int(nxt_data.get("acml_vol", "0").replace(",", ""))
-                        if p > 0:
+                        if p > 0 and v > 0:
                             import calendar as _cal
                             ts = int(_cal.timegm(now.timetuple()))
                             bucket = (ts // (interval_min * 60)) * (interval_min * 60)
@@ -340,7 +355,9 @@ async def tick_history(ticker: str):
 
     # NXT 시간대 (08:00~08:50, 18:00~24:00) → NXT 체결 우선
     if (800 <= hm < 850) or (hm >= 1800):
-        _parse_raw_ticks(fetch_nxt_tick_history(ticker), "nxt")
+        nxt_raw = fetch_nxt_tick_history(ticker)
+        logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw) if nxt_raw else 0)
+        _parse_raw_ticks(nxt_raw, "nxt")
 
     # 정규장 체결도 항상 시도 (NXT가 비었거나 정규장 시간)
     if not ticks:

@@ -19,6 +19,7 @@ GET /ws/realtime
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -28,6 +29,23 @@ from app.services import us_data_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+_KST = timezone(timedelta(hours=9))
+
+
+def _kr_session_now() -> str:
+    """KST 기준 현재 세션 반환: 'nxt_pre' | 'regular' | 'overtime' | 'nxt_night' | 'closed'"""
+    now = datetime.now(_KST)
+    hm = now.hour * 100 + now.minute
+    if 800 <= hm < 850:
+        return "nxt_pre"
+    if 900 <= hm < 1530:
+        return "regular"
+    if 1540 <= hm < 1800:
+        return "overtime"
+    if hm >= 1800 or hm < 700:
+        return "nxt_night"
+    return "closed"
 
 
 @router.websocket("/ws/realtime")
@@ -60,15 +78,27 @@ async def ws_realtime(ws: WebSocket):
                     subs[ticker] = (market, excd)
                     await _hub.hub.subscribe(ticker, q)
                     if market == "KR":
-                        await kis_stream.subscribe_kr(ticker)
-                        await kis_stream.subscribe_kr_overtime(ticker)
-                        await kis_stream.subscribe_kr_asking(ticker)
-                        await kis_stream.subscribe_kr_asking_overtime(ticker)
-                        await kis_stream.subscribe_nxt(ticker)
-                        await kis_stream.subscribe_nxt_asking(ticker)
+                        session = _kr_session_now()
+                        logger.info("WS sub: %s (KR, session=%s)", ticker, session)
+                        if session == "nxt_pre" or session == "nxt_night":
+                            # NXT 장전/야간 → NXT 체결+호가만
+                            await kis_stream.subscribe_nxt(ticker)
+                            await kis_stream.subscribe_nxt_asking(ticker)
+                        elif session == "regular":
+                            # 정규장 → 정규 체결+호가만
+                            await kis_stream.subscribe_kr(ticker)
+                            await kis_stream.subscribe_kr_asking(ticker)
+                        elif session == "overtime":
+                            # 시간외 단일가 → 시간외 체결+호가
+                            await kis_stream.subscribe_kr_overtime(ticker)
+                            await kis_stream.subscribe_kr_asking_overtime(ticker)
+                        else:
+                            # closed/transition → 정규장 기본 구독 (장 시작 대비)
+                            await kis_stream.subscribe_kr(ticker)
+                            await kis_stream.subscribe_kr_asking(ticker)
                     else:
                         await kis_stream.subscribe_us(excd, ticker)
-                    logger.info("WS sub: %s (%s/%s)", ticker, market, excd)
+                        logger.info("WS sub: %s (%s/%s)", ticker, market, excd)
 
                 elif action == "unsubscribe" and ticker in subs:
                     market, excd = subs.pop(ticker)

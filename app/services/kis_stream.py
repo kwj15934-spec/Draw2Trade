@@ -424,9 +424,14 @@ async def _on_message(msg: str) -> None:
             pass
         return
 
-    # 실시간 데이터: "0|{tr_id}|{count}|{data}"
+    # 실시간 데이터: "0|{tr_id}|{count}|{data}" 또는 "1|..." (암호화)
     parts = msg.split("|", 3)
-    if len(parts) < 4 or parts[0] != "0":
+    if len(parts) < 4 or parts[0] not in ("0", "1"):
+        return
+
+    # 암호화 플래그 "1"인 경우 — 현재 복호화 미구현이므로 로그만 남김
+    if parts[0] == "1":
+        logger.debug("[WS DATA] 암호화 데이터 수신 (tr_id=%s), 복호화 필요", parts[1])
         return
 
     _, tr_id, _cnt, raw = parts

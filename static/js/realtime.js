@@ -119,6 +119,8 @@
 
   // ── 틱 처리 ──────────────────────────────────────────────────────────────
 
+  var _lastCandleTs = 0;  // 마지막 캔들의 Unix timestamp (4시간 갭 감지용)
+
   function _onTick(tick) {
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
@@ -131,31 +133,49 @@
     // 실시간 데이터 도착 → 초기 로드 데이터 무시 플래그
     if (window._markRealtimeActive) window._markRealtimeActive();
 
-    var timeStr   = _candleTime(tick.date, tick.time);
-    var price     = tick.price;
-    var rawVol    = tick.volume || 0;  // KR: 누적거래량, US: 누적 or 틱 거래량
-    var cvol      = tick.cvol   || 0;  // 건별 체결량
+    // ── 데이터 파싱 방어 (NXT 데이터 null/undefined 대응) ──
+    var price, rawVol, cvol, timeStr;
+    try {
+      price   = parseFloat(tick.price)  || 0;
+      rawVol  = parseInt(tick.volume, 10) || 0;
+      cvol    = parseInt(tick.cvol, 10)   || 0;
+      if (!tick.date || !tick.time || price <= 0) return;
+      timeStr = _candleTime(tick.date, tick.time);
+    } catch (_e) { return; }
 
-    if (!_rtCandle || _rtCandle.time !== timeStr) {
+    // ── 4시간 이상 갭 감지 → 새 캔들 강제 생성 (일직선 방지) ──
+    var GAP_SEC = 4 * 3600;
+    var curTs = 0;
+    try {
+      var d = tick.date, t = tick.time || '000000';
+      curTs = Date.UTC(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8),
+                       +t.slice(0,2), +t.slice(2,4), +t.slice(4,6)) / 1000;
+    } catch (_e2) {}
+    var forceNew = (_rtCandle && _lastCandleTs > 0 && curTs > 0
+                    && Math.abs(curTs - _lastCandleTs) > GAP_SEC);
+
+    if (!_rtCandle || _rtCandle.time !== timeStr || forceNew) {
       // 새 캔들 시작
       _candleBaseVol = rawVol;
+      _lastCandleTs  = curTs;
       _rtCandle = {
         time:   timeStr,
         open:   price,
         high:   price,
         low:    price,
         close:  price,
-        volume: cvol,  // 첫 틱의 체결량
+        volume: cvol || 0,
       };
     } else {
       // 기존 캔들 업데이트 — 매 틱마다 즉시 반영
+      _lastCandleTs  = curTs;
       _rtCandle.close = price;
       _rtCandle.high  = Math.max(_rtCandle.high, price);
       _rtCandle.low   = Math.min(_rtCandle.low,  price);
       // 거래량: KR은 cvol 누적, fallback으로 누적거래량 차이 사용
       if (_market === 'KR') {
         if (cvol > 0) {
-          _rtCandle.volume += cvol;
+          _rtCandle.volume = (_rtCandle.volume || 0) + cvol;
         } else if (_candleBaseVol !== null) {
           _rtCandle.volume = Math.max(0, rawVol - _candleBaseVol);
         }
@@ -164,14 +184,16 @@
       }
     }
 
-    // 즉시 차트 업데이트 (지연 없음)
+    // NaN 방어
+    _rtCandle.volume = _rtCandle.volume || 0;
+
+    // 즉시 가격 캔들 업데이트 → 직후 거래량 업데이트 (순서 보장)
     D2T.series.update(_rtCandle);
 
-    // 거래량 막대 실시간 업데이트
     if (D2T.volumeSeries) {
       D2T.volumeSeries.update({
         time:  _rtCandle.time,
-        value: _rtCandle.volume,
+        value: _rtCandle.volume || 0,
         color: (_rtCandle.close >= _rtCandle.open)
           ? 'rgba(38,166,154,0.45)'
           : 'rgba(239,83,80,0.45)',
