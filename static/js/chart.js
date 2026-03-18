@@ -212,6 +212,8 @@
         D2T.candles = data.candles;
         setVolumeData(data.candles);
         D2T.chart.timeScale().fitContent();
+        // 오른쪽에 여백을 두어 실시간 캔들이 바로 보이도록
+        D2T.chart.timeScale().scrollToRealTime();
         D2T.ticker = ticker;
         var tfLabel = TF_LABELS[data.timeframe || tf] || tf;
         var unit = TF_UNITS[data.timeframe || tf] || '개';

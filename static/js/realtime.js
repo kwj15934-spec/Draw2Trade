@@ -182,9 +182,31 @@
       });
     }
 
+    // 사용자가 오른쪽 끝(최신)을 보고 있을 때만 자동 스크롤
+    _autoScrollToLatest();
+
     _setLive(true);
     _updateOverlay(tick.price);
     _updatePricePanel(tick);
+  }
+
+  // 마지막 캔들이 화면 오른쪽에 보이도록 유지.
+  // 사용자가 과거를 탐색 중(마지막 bar가 뷰 밖)이면 스크롤 안 함.
+  function _autoScrollToLatest() {
+    if (!D2T.chart || !D2T.series) return;
+    try {
+      var ts   = D2T.chart.timeScale();
+      var range = ts.getVisibleLogicalRange();
+      if (!range) return;
+      // 시리즈 전체 bar 수
+      var barsInfo = D2T.series.barsInLogicalRange(range);
+      // 마지막 bar 인덱스 (D2T.candles 기준 + 실시간 캔들 1개)
+      var totalBars = (D2T.candles ? D2T.candles.length : 0);
+      // range.to 가 총 bar 수 근처(±2)면 최신 상태로 간주 → scrollToRealTime
+      if (range.to >= totalBars - 2) {
+        ts.scrollToRealTime();
+      }
+    } catch (_) {}
   }
 
   // ── 현재가 패널 업데이트 ─────────────────────────────────────────────────
