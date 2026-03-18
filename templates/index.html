@@ -146,6 +146,7 @@
 
   <!-- ── 차트 패널 ───────────────────────────── -->
   <div class="d2t-chart-panel">
+
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
@@ -182,54 +183,52 @@
     </div>
   </div>
 
-  <!-- ── 우측 사이드바 (토스증권 스타일) ──────── -->
+  <!-- ── 호가·체결 독립 패널 ──────────────────── -->
+  <div id="quote-panel">
+
+    <!-- 호가창 -->
+    <div id="asking-panel">
+      <div class="asking-header">
+        <span>매도호가</span>
+        <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
+        <span>매수호가</span>
+        <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
+      </div>
+      <div id="asking-rows">
+        <div class="asking-empty">실시간 대기 중...</div>
+      </div>
+      <div class="asking-footer">
+        <span id="ask-total-label" class="ask-total">매도 잔량</span>
+        <span id="bid-total-label" class="bid-total">매수 잔량</span>
+      </div>
+    </div>
+
+    <!-- 구분선 -->
+    <div style="height:1px;background:#1e2130;flex-shrink:0;"></div>
+
+    <!-- 실시간 체결 내역 -->
+    <div id="trade-panel">
+      <div class="trade-header">
+        <span>체결가</span>
+        <span>체결량</span>
+        <span>등락률</span>
+        <span>시간</span>
+      </div>
+      <div id="trade-list">
+        <div class="asking-empty" style="padding:20px 0;">체결 대기 중...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
 
     <!-- 탭 헤더 -->
     <div class="sidebar-tabs">
-      <button class="sidebar-tab-btn active" data-tab="quote" id="sidebar-tab-quote">시세·호가</button>
-      <button class="sidebar-tab-btn" data-tab="results" id="sidebar-tab-results">유사 종목</button>
+      <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
       <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
       <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
-    </div>
-
-    <!-- ── 시세·호가 패널 ─────────────────────── -->
-    <div id="sidebar-panel-quote" style="display:flex; flex-direction:column; flex:1; min-height:0;">
-
-      <!-- 호가창 -->
-      <div id="asking-panel">
-        <div class="asking-header">
-          <span>매도호가</span>
-          <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
-          <span>매수호가</span>
-          <span style="color:#555;font-size:10px;font-weight:400;">잔량</span>
-        </div>
-        <div id="asking-rows">
-          <!-- JS로 렌더링 -->
-          <div class="asking-empty">실시간 데이터 대기 중...</div>
-        </div>
-        <div class="asking-footer">
-          <span id="ask-total-label" class="ask-total">매도 잔량</span>
-          <span id="bid-total-label" class="bid-total">매수 잔량</span>
-        </div>
-      </div>
-
-      <!-- 구분선 -->
-      <div style="height:1px;background:#1e2130;flex-shrink:0;"></div>
-
-      <!-- 실시간 체결 내역 -->
-      <div id="trade-panel" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-        <div class="trade-header">
-          <span>체결가</span>
-          <span>체결량</span>
-          <span>등락률</span>
-          <span>시간</span>
-        </div>
-        <div id="trade-list" style="flex:1;overflow-y:auto;">
-          <div class="asking-empty" style="padding:20px 0;">체결 데이터 대기 중...</div>
-        </div>
-      </div>
-
     </div>
 
     <!-- ── 유사 종목 패널 ─────────────────────── -->
@@ -637,16 +636,11 @@
         var tab = this.dataset.tab;
         document.querySelectorAll('.sidebar-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         this.classList.add('active');
-        var panels = ['quote','results','favorites','drawings'];
+        var panels = ['results','favorites','drawings'];
         panels.forEach(function(p) {
           var el = document.getElementById('sidebar-panel-' + p);
-          if (el) el.style.display = (p === tab) ? (p === 'quote' ? 'flex' : 'block') : 'none';
+          if (el) el.style.display = (p === tab) ? 'block' : 'none';
         });
-        // quote 패널은 flex + flex-direction:column
-        if (tab === 'quote') {
-          var qp = document.getElementById('sidebar-panel-quote');
-          if (qp) { qp.style.display = 'flex'; qp.style.flexDirection = 'column'; }
-        }
       });
     });
   });

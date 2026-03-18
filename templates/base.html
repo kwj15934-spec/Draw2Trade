@@ -1102,6 +1102,29 @@
       flex-shrink: 0;
     }
 
+    /* ── 호가·체결 독립 패널 ────────────────────────────── */
+    #quote-panel {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #2a2e39;
+      background: #161925;
+      overflow: hidden;
+    }
+
+    #trade-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #trade-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
     /* ── 호가창 ─────────────────────────────────────────── */
     #asking-panel {
       flex-shrink: 0;
@@ -1359,6 +1382,8 @@
         min-height: 0;
       }
       .d2t-chart-panel { flex: 1 !important; border-right: none; min-height: 0; }
+      /* 모바일: 호가·체결 패널 숨김 */
+      #quote-panel { display: none !important; }
       #chart-wrapper { min-height: 58vh; min-height: 58dvh; }
 
       /* ── 사이드바: 하단 슬라이드업 패널 ── */
