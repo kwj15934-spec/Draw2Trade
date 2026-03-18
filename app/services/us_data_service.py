@@ -35,7 +35,9 @@ _US_CACHE_DIR = _BASE_DIR / "cache" / "us" / "ohlcv"
 _US_TICKERS_FILE = _BASE_DIR / "cache" / "us" / "tickers.json"
 
 # ── 메모리 캐시 (lazy) ────────────────────────────────────────────────────────
-_mem_us_ohlcv: dict[str, dict] = {}
+_mem_us_ohlcv: dict[str, dict] = {}         # symbol → 일봉 OHLCV
+_mem_us_ohlcv_tf: dict[str, dict] = {}      # "symbol_w/m" → 주봉/월봉 OHLCV
+_mem_us_ohlcv_tf_date: str = ""             # 주봉/월봉 캐시 날짜
 _mem_us_names: dict[str, str] = {}
 _ticker_list_cache: list[dict] = []
 
@@ -769,25 +771,61 @@ def get_us_ohlcv_by_timeframe(symbol: str, timeframe: str = "daily") -> Optional
     """
     timeframe: 'daily' | 'weekly' | 'monthly'
     daily → get_us_ohlcv() (캐시 활용)
-    weekly/monthly → KIS 또는 yfinance 직접 (no disk cache)
+    weekly/monthly → 메모리+디스크 캐시 → KIS/yfinance
     """
+    global _mem_us_ohlcv_tf_date
     symbol = symbol.upper()
     if timeframe == "daily":
         return get_us_ohlcv(symbol)
 
-    # KIS
+    freq_key = "w" if timeframe == "weekly" else "m"
+    cache_key = f"{symbol}_{freq_key}"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # 날짜가 바뀌면 주봉/월봉 메모리 캐시 무효화
+    if _mem_us_ohlcv_tf_date != today_str:
+        _mem_us_ohlcv_tf.clear()
+        _mem_us_ohlcv_tf_date = today_str
+
+    # 메모리 캐시
+    if cache_key in _mem_us_ohlcv_tf:
+        return _mem_us_ohlcv_tf[cache_key]
+
+    # 디스크 캐시
+    _US_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cp = _US_CACHE_DIR / f"{symbol}_{freq_key}.json"
+    if cp.exists():
+        try:
+            disk = json.loads(cp.read_text(encoding="utf-8"))
+            file_mtime = datetime.fromtimestamp(cp.stat().st_mtime).strftime("%Y-%m-%d")
+            if file_mtime >= today_str and disk.get("dates"):
+                _mem_us_ohlcv_tf[cache_key] = disk
+                return disk
+        except Exception:
+            pass
+
+    # 네트워크 조회
+    data = None
     if kis_client.is_configured():
         gubn_map = {"weekly": "1", "monthly": "2"}
-        gubn = gubn_map.get(timeframe, "1")
-        data = _fetch_from_kis(symbol, years=10, gubn=gubn)
-        if data:
-            return data
-        logger.debug("KIS US OHLCV timeframe 실패, yfinance fallback (%s, %s)", symbol, timeframe)
+        data = _fetch_from_kis(symbol, years=10, gubn=gubn_map.get(timeframe, "1"))
+        if not data:
+            logger.debug("KIS US OHLCV timeframe 실패, yfinance fallback (%s, %s)", symbol, timeframe)
 
-    # yfinance fallback
-    interval_map = {"weekly": "1wk", "monthly": "1mo"}
-    interval = interval_map.get(timeframe, "1wk")
-    return _fetch_from_yfinance(symbol, period="10y", interval=interval)
+    if not data:
+        interval_map = {"weekly": "1wk", "monthly": "1mo"}
+        data = _fetch_from_yfinance(symbol, period="10y", interval=interval_map.get(timeframe, "1wk"))
+
+    if not data:
+        return None
+
+    # 디스크 + 메모리에 저장
+    try:
+        cp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+    _mem_us_ohlcv_tf[cache_key] = data
+    return data
 
 
 def get_us_company_name(symbol: str) -> str:

@@ -39,10 +39,12 @@ _TICKERS_FILE = _CACHE_DIR / "tickers.json"
 _SECTORS_FILE = _BASE_DIR / "data" / "sectors.json"
 
 # ── 메모리 캐시 ───────────────────────────────────────────────────────────────
-_mem_ohlcv: dict[str, dict] = {}   # ticker → OHLCV dict
-_mem_ohlcv_date: str = ""          # 캐시가 로드된 날짜 (YYYY-MM-DD), 날짜 바뀌면 무효화
-_mem_names: dict[str, str] = {}    # ticker → 회사명
-_mem_tickers: list[str] = []       # 메모리 티커 리스트 (search_tickers 고속화)
+_mem_ohlcv: dict[str, dict] = {}        # ticker → 월봉 OHLCV dict
+_mem_ohlcv_date: str = ""               # 캐시가 로드된 날짜 (YYYY-MM-DD)
+_mem_ohlcv_wd: dict[str, dict] = {}    # ticker → {w: ..., d: ...} 주봉/일봉 캐시
+_mem_ohlcv_wd_date: str = ""           # 주봉/일봉 캐시 날짜
+_mem_names: dict[str, str] = {}        # ticker → 회사명
+_mem_tickers: list[str] = []           # 메모리 티커 리스트
 _sectors_cache: list[dict] | None = None  # sectors.json 1회 로드 후 재사용
 
 
@@ -367,15 +369,54 @@ def get_ohlcv_by_timeframe(
         dict with keys: dates, open, high, low, close, volume, timeframe
         dates: monthly='YYYY-MM', weekly/daily='YYYY-MM-DD'
     """
+    global _mem_ohlcv_wd_date
+
     if timeframe == "monthly":
         data = get_monthly_ohlcv(ticker, years)
         if data:
             data["timeframe"] = "monthly"
         return data
+
     freq = "w" if timeframe == "weekly" else "d"
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+
+    # 날짜가 바뀌면 주봉/일봉 메모리 캐시 무효화 (평일만)
+    if _mem_ohlcv_wd_date != today_str and now.weekday() < 5:
+        _mem_ohlcv_wd.clear()
+        _mem_ohlcv_wd_date = today_str
+
+    cache_key = f"{ticker}_{freq}"
+
+    # 메모리 캐시 확인
+    if cache_key in _mem_ohlcv_wd:
+        return _mem_ohlcv_wd[cache_key]
+
+    # 디스크 캐시 확인
+    _ensure_dirs()
+    cp = _OHLCV_DIR / f"{ticker}_{freq}.json"
+    if cp.exists():
+        try:
+            disk = json.loads(cp.read_text(encoding="utf-8"))
+            file_mtime = datetime.fromtimestamp(cp.stat().st_mtime).strftime("%Y-%m-%d")
+            if (file_mtime >= today_str or now.weekday() >= 5) and disk.get("dates"):
+                _mem_ohlcv_wd[cache_key] = disk
+                return disk
+        except Exception:
+            pass
+
+    # 네트워크 조회
     data = _get_ohlcv(ticker, freq, years)
-    if data:
-        data["timeframe"] = timeframe
+    if not data:
+        return None
+    data["timeframe"] = timeframe
+
+    # 디스크 + 메모리에 저장
+    try:
+        cp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+    _mem_ohlcv_wd[cache_key] = data
     return data
 
 
