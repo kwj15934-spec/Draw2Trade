@@ -226,6 +226,8 @@
         var thbName = document.getElementById('thb-name');
         if (thbName) thbName.textContent = data.name ? data.name + ' (' + ticker + ')' : ticker;
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
+        // 헤더바 마지막 캔들 종가/등락률 표시 (실시간 틱 전까지 유지)
+        _initHeaderBar(data.candles);
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
         if (searchInp && window.getComputedStyle(searchInp).display !== 'none') {
@@ -721,6 +723,37 @@
       });
     });
   });
+
+  function _initHeaderBar(candles) {
+    if (!candles || candles.length < 1) return;
+    var last = candles[candles.length - 1];
+    var prev = candles.length > 1 ? candles[candles.length - 2] : null;
+    var close = last.close;
+    var vol   = last.volume || 0;
+
+    var dispPrice = close >= 1000 ? close.toLocaleString() : close;
+    var color = '#888', sign = '', chgAmt = '', chgPct = '';
+    if (prev && prev.close) {
+      var pct = ((close - prev.close) / prev.close * 100).toFixed(2);
+      var amt = (close - prev.close).toFixed(close >= 1000 ? 0 : 2);
+      sign = pct >= 0 ? '+' : '';
+      color = pct >= 0 ? '#26a69a' : '#ef5350';
+      chgAmt = amt; chgPct = pct;
+    }
+    var volStr = vol >= 10000 ? (vol / 10000).toFixed(1) + '만' : vol.toLocaleString();
+
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg && chgPct !== '') {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+    }
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 ' + volStr;
+    var thbTime = document.getElementById('thb-time');
+    if (thbTime) thbTime.textContent = typeof last.time === 'string' ? last.time : '';
+  }
 
   function setTickerOverlay(ticker, name, tfLabel, candles) {
     var overlay = document.getElementById('ticker-overlay');
