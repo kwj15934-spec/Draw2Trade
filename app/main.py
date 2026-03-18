@@ -29,6 +29,7 @@ from app.services.data_service import build_cache
 from app.services.kis_client import start_token_refresh_loop
 from app.services import kis_stream
 from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
+from app.services.vite_manifest import load_manifest, is_production, vite_asset, vite_imports
 
 # ── 경로 설정 ────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent  # draw2trade_web/
@@ -42,6 +43,10 @@ logger = logging.getLogger(__name__)
 
 # ── 템플릿 ───────────────────────────────────────────────────────────────────
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+# Jinja2 전역 함수: 템플릿에서 {{ vite_asset('app') }} 로 사용
+templates.env.globals["vite_asset"] = vite_asset
+templates.env.globals["vite_imports"] = vite_imports
+templates.env.globals["is_production"] = is_production
 
 
 # ── Lifespan: 시작 시 KOSPI 데이터 캐싱 ──────────────────────────────────────
@@ -89,6 +94,8 @@ async def lifespan(app: FastAPI):
     from app.routers.pattern import init_process_pool
     init_process_pool()
     logger.info("PatternSearch ProcessPoolExecutor 시작.")
+    # Vite manifest 로드 (빌드 결과물이 있으면 production 모드)
+    load_manifest()
     yield
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()

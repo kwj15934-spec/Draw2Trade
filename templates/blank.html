@@ -116,6 +116,11 @@
 {% endblock %}
 
 {% block scripts %}
+{% if is_production() %}
+{% for src in vite_imports('blank') %}<script type="module" src="{{ src }}"></script>
+{% endfor %}<script type="module" src="{{ vite_asset('blank') }}"></script>
+{% else %}
 <script src="/static/js/blank.js"></script>
 <script src="/static/js/draw.js"></script>
+{% endif %}
 {% endblock %}

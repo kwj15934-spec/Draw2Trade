@@ -411,7 +411,11 @@
       document.getElementById('pending-modal').classList.add('show');
     };
   </script>
+  {% if is_production() %}
+  <script type="module" src="{{ vite_asset('login') }}"></script>
+  {% else %}
   <script src="/static/js/auth.js"></script>
+  {% endif %}
   <footer class="login-footer">
     <div>&copy; 2026 Draw2Trade</div>
     <div>

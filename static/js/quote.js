@@ -56,6 +56,9 @@
 
   // ── 체결 내역 추가 ─────────────────────────────────────────────────────────
 
+  /** 실시간 틱이 도착하면 호출 — 초기 로드를 중단시킴 */
+  window._markRealtimeActive = function () { _initialLoaded = true; };
+
   window._addTradeRow = function (tick, chgPct, sign, color) {
     var list = document.getElementById('trade-list');
     if (!list) return;
@@ -225,6 +228,120 @@
       .catch(function() {
         list.innerHTML = '<div class="tl-empty">로드 실패</div>';
       });
+  }
+
+  // ── 마지막 체결 데이터 로드 (장 마감 후에도 데이터 표시) ─────────────────
+
+  var _initialLoaded = false;  // 실시간 틱이 오면 초기 로드 건너뛰기
+
+  window._loadInitialTrades = function () {
+    _initialLoaded = false;
+    var ticker = window.D2T && window.D2T.ticker;
+    var market = window.D2T && window.D2T.market;
+    if (!ticker) return;
+
+    // 1분봉 데이터로 최근 체결 내역 생성
+    var url = market === 'US'
+      ? '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=1m'
+      : '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=1m';
+
+    fetch(url)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.candles || !data.candles.length) return;
+        // 이미 실시간 데이터가 들어왔으면 초기 로드 무시
+        if (_initialLoaded) return;
+        _initialLoaded = true;
+
+        var candles = data.candles;
+        // 최근 50개만 (최신이 마지막)
+        var recent = candles.slice(-MAX_TRADES);
+
+        // prevClose: 가장 오래된 캔들의 이전 캔들 (있으면)
+        var baseClose = candles.length > recent.length
+          ? candles[candles.length - recent.length - 1].close : null;
+
+        // 오래된 것부터 추가 (addTradeRow는 맨 위에 삽입하므로)
+        for (var i = 0; i < recent.length; i++) {
+          var c = recent[i];
+          var prevC = (i > 0) ? recent[i - 1].close : baseClose;
+          var chgPct = null, sign = '', color = '#888';
+          if (prevC && prevC > 0) {
+            chgPct = ((c.close - prevC) / prevC * 100).toFixed(2);
+            sign = chgPct >= 0 ? '+' : '';
+            color = chgPct >= 0 ? '#26a69a' : '#ef5350';
+          }
+
+          // 1분봉의 time을 체결 시간으로 변환
+          var timeStr = '';
+          if (typeof c.time === 'number') {
+            // Unix timestamp → HHMMSS
+            var dt = new Date(c.time * 1000);
+            var hh = ('0' + dt.getUTCHours()).slice(-2);
+            var mm = ('0' + dt.getUTCMinutes()).slice(-2);
+            var ss = ('0' + dt.getUTCSeconds()).slice(-2);
+            timeStr = hh + mm + ss;
+          }
+
+          var tick = {
+            price: c.close,
+            volume: c.volume || 0,
+            cvol: c.volume || 0,
+            time: timeStr,
+            bs: ''
+          };
+          window._addTradeRow(tick, chgPct, sign, color);
+        }
+
+        // 마지막 캔들로 헤더바 현재가 업데이트
+        var last = candles[candles.length - 1];
+        _updateHeaderFromCandle(last, candles);
+      })
+      .catch(function () { /* silent */ });
+  };
+
+  /** 캔들 데이터로 헤더바 현재가/등락률/거래량 업데이트 */
+  function _updateHeaderFromCandle(last, candles) {
+    if (!last) return;
+    var price = last.close;
+    var dispPrice = price >= 1000 ? price.toLocaleString() : price;
+
+    // 전일 종가 계산 (일봉 기준 D2T.candles 사용)
+    var prevClose = null;
+    if (window.D2T && D2T.candles && D2T.candles.length) {
+      var dCandles = D2T.candles;
+      var today = new Date().toISOString().slice(0, 10);
+      var lastD = dCandles[dCandles.length - 1];
+      if (lastD.time >= today && dCandles.length >= 2) {
+        prevClose = dCandles[dCandles.length - 2].close;
+      } else {
+        prevClose = lastD.close;
+      }
+    }
+
+    var color = '#888', sign = '', chgPct = null, chgAmt = null;
+    if (prevClose && prevClose > 0) {
+      chgPct = ((price - prevClose) / prevClose * 100).toFixed(2);
+      chgAmt = (price - prevClose).toFixed(price >= 1000 ? 0 : 2);
+      sign = chgPct >= 0 ? '+' : '';
+      color = chgPct >= 0 ? '#26a69a' : '#ef5350';
+    }
+
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg && chgPct !== null) {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+    }
+
+    // 누적 거래량 (모든 캔들의 volume 합산)
+    var totalVol = 0;
+    for (var i = 0; i < candles.length; i++) {
+      totalVol += (candles[i].volume || 0);
+    }
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(totalVol);
   }
 
   // ── 차트 로드 시 종목명 헤더바 업데이트 ──────────────────────────────────

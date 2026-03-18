@@ -18,6 +18,12 @@ cache/kis_token.json
 # 로그
 logs/
 
+# Node.js
+node_modules/
+
+# Vite 빌드 결과물 (배포 서버에서 npm run build로 생성)
+static/dist/
+
 # Python
 __pycache__/
 *.pyc

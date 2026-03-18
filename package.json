@@ -1,0 +1,14 @@
+{
+  "name": "draw2trade",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.0",
+    "vite-plugin-html": "^3.2.2"
+  }
+}

@@ -127,6 +127,9 @@
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
 
+    // 실시간 데이터 도착 → 초기 로드 데이터 무시 플래그
+    if (window._markRealtimeActive) window._markRealtimeActive();
+
     var timeStr   = _candleTime(tick.date, tick.time);
     var price     = tick.price;
     var rawVol    = tick.volume || 0;  // KR: 누적거래량, US: 누적 or 틱 거래량
@@ -307,8 +310,12 @@
     if (thbVol) thbVol.textContent = '거래량 —';
     var thbTime = document.getElementById('thb-time');
     if (thbTime) thbTime.textContent = '—';
-    // 체결 내역 초기화
+    // 체결 내역 초기화 → 마지막 체결 데이터 로드 (장 마감 후에도 표시)
     if (window._clearTradeList) window._clearTradeList();
+    // 약간의 지연 후 초기 데이터 로드 (D2T.ticker/market 설정 완료 대기)
+    setTimeout(function () {
+      if (window._loadInitialTrades) window._loadInitialTrades();
+    }, 300);
 
     // prevClose: D2T.candles 마지막 종가 저장
     _prevClose = null;
