@@ -299,8 +299,9 @@ async def connect_loop() -> None:
 
             async with websockets.connect(
                 url,
+                open_timeout=30,
                 ping_interval=20,
-                ping_timeout=10,
+                ping_timeout=30,
                 close_timeout=5,
             ) as ws:
                 _ws_conn = ws
