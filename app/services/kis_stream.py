@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+import ssl
 from typing import Optional
 
 import websockets
@@ -297,8 +298,12 @@ async def connect_loop() -> None:
             url = _ws_url()
             logger.info("KIS WebSocket 연결 시도: %s", url)
 
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
             async with websockets.connect(
                 url,
+                ssl=ssl_ctx,
                 open_timeout=30,
                 ping_interval=20,
                 ping_timeout=30,
