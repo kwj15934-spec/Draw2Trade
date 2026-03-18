@@ -183,6 +183,9 @@
     </div>
   </div>
 
+  <!-- ── 드래그 핸들 (차트 ↔ 호가) ──────────── -->
+  <div id="quote-resize-handle" title="드래그하여 너비 조절"></div>
+
   <!-- ── 호가·체결 독립 패널 ──────────────────── -->
   <div id="quote-panel">
 
@@ -662,6 +665,66 @@
           if (el) el.style.display = (p === tab) ? 'block' : 'none';
         });
       });
+    });
+  });
+})();
+</script>
+
+<script>
+// ── 호가 패널 드래그 리사이즈 ──────────────────────────────
+(function () {
+  var STORAGE_KEY = 'd2t_quote_panel_width';
+  var MIN_W = 160, MAX_W = 340;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  function applyWidth(w) {
+    var panel = document.getElementById('quote-panel');
+    if (panel) panel.style.width = w + 'px';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var handle = document.getElementById('quote-resize-handle');
+    if (!handle) return;
+
+    // 저장된 너비 복원
+    var saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+    if (saved && saved >= MIN_W && saved <= MAX_W) applyWidth(saved);
+
+    var startX, startW;
+
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      var panel = document.getElementById('quote-panel');
+      if (!panel) return;
+      startX = e.clientX;
+      startW = panel.offsetWidth;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!handle.classList.contains('dragging')) return;
+      // 핸들이 패널 왼쪽에 있으므로 오른쪽으로 드래그 = 패널 넓어짐
+      var delta = startX - e.clientX;
+      var newW = clamp(startW + delta, MIN_W, MAX_W);
+      applyWidth(newW);
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (!handle.classList.contains('dragging')) return;
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      var panel = document.getElementById('quote-panel');
+      if (panel) localStorage.setItem(STORAGE_KEY, panel.offsetWidth);
+    });
+
+    // 더블클릭 → 기본 너비로 리셋
+    handle.addEventListener('dblclick', function () {
+      applyWidth(220);
+      localStorage.setItem(STORAGE_KEY, 220);
     });
   });
 })();

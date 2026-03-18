@@ -14,6 +14,9 @@
     rel="stylesheet"
     crossorigin="anonymous"
   >
+  <!-- Pretendard 폰트 -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 
   <style>
     /* ── 기본 레이아웃 ─────────────────────────────────────── */
@@ -24,10 +27,10 @@
       height: 100%;
       margin: 0;
       padding: 0;
-      background: #0f1117;
+      background: #0b0d14;
       color: #d1d4dc;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif !important;
-      font-size: 14px !important;
+      font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+      font-size: 13px !important;
     }
     /* Bootstrap이 덮어쓰는 요소들도 강제 통일 */
     button, input, select, textarea, .btn {
@@ -36,9 +39,9 @@
 
     /* ── 네비게이션 바 ─────────────────────────────────────── */
     .d2t-nav {
-      height: 48px;
-      background: #1a1d2e;
-      border-bottom: 1px solid #2a2e39;
+      height: 46px;
+      background: #12151f;
+      border-bottom: 1px solid #1e2535;
       display: flex;
       align-items: center;
       padding: 0 16px;
@@ -47,21 +50,21 @@
     }
 
     .d2t-brand {
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 16px;
+      font-weight: 800;
       color: #ff6b35;
-      letter-spacing: 0.5px;
+      letter-spacing: -0.2px;
       white-space: nowrap;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .d2t-logo-img { height: 26px; width: 26px; object-fit: contain; }
+    .d2t-logo-img { height: 24px; width: 24px; object-fit: contain; }
     .btn-fav-starred { color: #ff6b35 !important; }
 
     .d2t-subtitle {
       font-size: 12px;
-      color: #666;
+      color: #4a5170;
     }
 
     /* ── 시장 선택 (KR / US) ──────────────────────────────── */
@@ -146,8 +149,8 @@
 
     /* ── 툴바 ─────────────────────────────────────────────── */
     .d2t-toolbar {
-      background: #161925;
-      border-bottom: 1px solid #2a2e39;
+      background: #0f1220;
+      border-bottom: 1px solid #1e2535;
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
@@ -217,9 +220,9 @@
 
     /* pill 스타일 select */
     .tb-pill-select {
-      background: #1e2130;
-      color: #d1d4dc;
-      border: 1px solid #2a2e39;
+      background: #151929;
+      color: #c0c8dc;
+      border: 1px solid #1e2535;
       border-radius: 7px;
       padding: 0 10px;
       height: 32px;
@@ -246,8 +249,8 @@
     .tb-btn-group {
       display: flex;
       align-items: center;
-      background: #161925;
-      border: 1px solid #2a2e39;
+      background: #0d1020;
+      border: 1px solid #1e2535;
       border-radius: 7px;
       padding: 2px;
       gap: 1px;
@@ -259,10 +262,10 @@
       height: 26px;
       padding: 0 10px;
       font-size: 12px;
-      color: #8a90a0;
-      font-weight: 500;
+      color: #5a6480;
+      font-weight: 600;
     }
-    .tb-btn-group .btn-d2t:hover { background: #2a2e39; color: #d1d4dc; border: none; }
+    .tb-btn-group .btn-d2t:hover { background: #1e2535; color: #c0c8dc; border: none; }
     .tb-btn-group .btn-d2t.active { background: #ff6b35; color: #fff; }
 
     /* 타임프레임 그룹 */
@@ -375,17 +378,18 @@
     .btn-d2t {
       height: 30px;
       padding: 0 12px;
-      border-radius: 4px;
-      font-size: 13px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
       cursor: pointer;
-      border: 1px solid #2a2e39;
-      background: #1e2130;
-      color: #d1d4dc;
+      border: 1px solid #1e2535;
+      background: #151929;
+      color: #c0c8dc;
       white-space: nowrap;
       transition: all 0.15s;
     }
 
-    .btn-d2t:hover { border-color: #ff6b35; color: #ff6b35; }
+    .btn-d2t:hover { border-color: #ff6b35; color: #ff6b35; background: rgba(255,107,53,0.06); }
     .btn-d2t.active { background: #ff6b35; border-color: #ff6b35; color: #fff; }
     .btn-d2t:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -430,8 +434,35 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
-      border-right: 1px solid #2a2e39;
+      border-right: 1px solid #1e2535;
     }
+
+    /* ── 드래그 핸들 (차트 ↔ 호가 사이) ─────────────────── */
+    #quote-resize-handle {
+      width: 5px;
+      flex-shrink: 0;
+      background: transparent;
+      cursor: col-resize;
+      position: relative;
+      z-index: 10;
+      transition: background 0.15s;
+    }
+    #quote-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 40px;
+      background: #2a3145;
+      border-radius: 2px;
+      transition: background 0.15s, height 0.15s;
+    }
+    #quote-resize-handle:hover { background: rgba(255,107,53,0.08); }
+    #quote-resize-handle:hover::after { background: #ff6b35; height: 60px; }
+    #quote-resize-handle.dragging { background: rgba(255,107,53,0.12); }
+    #quote-resize-handle.dragging::after { background: #ff6b35; height: 80px; }
 
     #chart-wrapper {
       flex: 1;
@@ -458,8 +489,8 @@
 
     .d2t-chart-footer {
       height: 28px;
-      background: #161925;
-      border-top: 1px solid #2a2e39;
+      background: #0f1220;
+      border-top: 1px solid #1e2535;
       display: flex;
       align-items: center;
       padding: 0 12px;
@@ -483,7 +514,7 @@
       max-width: 320px;
       display: flex;
       flex-direction: column;
-      background: #161925;
+      background: #0f1220;
       flex-shrink: 0;
     }
 
@@ -555,24 +586,26 @@
     /* ── 사이드바 탭 ─────────────────────────────────────── */
     .sidebar-tabs {
       display: flex;
-      border-bottom: 1px solid #2a2e39;
+      border-bottom: 1px solid #1e2535;
       flex-shrink: 0;
+      background: #0b0e1a;
     }
     .sidebar-tab-btn {
       flex: 1;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
-      color: #666;
+      color: #3a4560;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       padding: 10px 4px;
       cursor: pointer;
       transition: color .15s, border-color .15s;
       white-space: nowrap;
+      letter-spacing: 0.2px;
     }
-    .sidebar-tab-btn.active { color: #d1d4dc; border-bottom-color: #ff6b35; }
-    .sidebar-tab-btn:hover  { color: #aaa; }
+    .sidebar-tab-btn.active { color: #d1d8f0; border-bottom-color: #ff6b35; }
+    .sidebar-tab-btn:hover  { color: #8090b0; }
 
     /* ── 공지 배너 ───────────────────────────────────────── */
     #notice-banner {
@@ -706,11 +739,11 @@
       display: flex;
       align-items: center;
       padding: 9px 14px;
-      border-bottom: 1px solid #1a1d2b;
+      border-bottom: 1px solid #0f1428;
       cursor: pointer;
       transition: background 0.12s;
     }
-    .result-card:hover { background: #1e2130; }
+    .result-card:hover { background: #141829; }
 
     .result-rank {
       width: 36px;
@@ -1021,9 +1054,9 @@
     /* ── 빈 캔버스 모드 ─────────────────────────────────────── */
     #chart-wrapper.blank-mode {
       background:
-        linear-gradient(rgba(42,46,57,0.55) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(42,46,57,0.55) 1px, transparent 1px),
-        #131722;
+        linear-gradient(rgba(30,37,53,0.55) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30,37,53,0.55) 1px, transparent 1px),
+        #0b0d14;
       background-size: 10% 25%;
     }
 
@@ -1035,8 +1068,8 @@
     #ticker-header-bar {
       display: flex;
       align-items: center;
-      background: #161925;
-      border-bottom: 1px solid #2a2e39;
+      background: #0f1220;
+      border-bottom: 1px solid #1e2535;
       padding: 0 12px;
       height: 52px;
       gap: 12px;
@@ -1108,8 +1141,8 @@
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid #2a2e39;
-      background: #161925;
+      border-right: 1px solid #1e2535;
+      background: #0f1220;
       overflow: hidden;
     }
 
@@ -1134,13 +1167,14 @@
       display: grid;
       grid-template-columns: 1fr auto 1fr auto;
       gap: 0;
-      padding: 5px 10px;
+      padding: 6px 10px;
       font-size: 10px;
-      font-weight: 600;
-      color: #555;
-      background: #131722;
-      border-bottom: 1px solid #1e2130;
+      font-weight: 700;
+      color: #3a4560;
+      background: #0b0e1a;
+      border-bottom: 1px solid #1a2038;
       text-align: center;
+      letter-spacing: 0.3px;
     }
 
     #asking-rows {
@@ -1152,67 +1186,73 @@
       display: grid;
       grid-template-columns: 1fr auto 1fr auto;
       align-items: center;
-      padding: 3px 10px;
-      border-bottom: 1px solid #0f111a;
+      padding: 2.5px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.025);
       position: relative;
-      font-size: 12px;
+      font-size: 11.5px;
       gap: 0;
     }
+    .asking-row:hover { background: rgba(255,255,255,0.03); }
 
     .ask-price {
       color: #ef5350;
       font-weight: 600;
       text-align: right;
-      padding-right: 8px;
+      padding-right: 6px;
+      font-variant-numeric: tabular-nums;
     }
     .ask-vol {
-      color: #888;
-      font-size: 11px;
-      min-width: 52px;
+      color: #566080;
+      font-size: 10px;
+      min-width: 48px;
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
     .bid-price {
-      color: #26a69a;
+      color: #26c6a0;
       font-weight: 600;
       text-align: left;
-      padding-left: 8px;
+      padding-left: 6px;
+      font-variant-numeric: tabular-nums;
     }
     .bid-vol {
-      color: #888;
-      font-size: 11px;
-      min-width: 52px;
+      color: #566080;
+      font-size: 10px;
+      min-width: 48px;
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     /* 호가 잔량 바 배경 */
     .ask-bar-bg {
       position: absolute;
       top: 0; right: 0; bottom: 0;
-      background: rgba(239,83,80,0.07);
+      background: rgba(239,83,80,0.08);
       pointer-events: none;
     }
     .bid-bar-bg {
       position: absolute;
       top: 0; left: 0; bottom: 0;
-      background: rgba(38,166,154,0.07);
+      background: rgba(38,198,160,0.08);
       pointer-events: none;
     }
 
     .asking-footer {
       display: flex;
       justify-content: space-between;
-      padding: 4px 10px;
+      padding: 5px 10px;
       font-size: 10px;
-      background: #0f111a;
-      border-top: 1px solid #1e2130;
+      font-weight: 700;
+      background: #090c18;
+      border-top: 1px solid #1a2038;
     }
-    .ask-total { color: #ef5350; font-weight: 600; }
-    .bid-total { color: #26a69a; font-weight: 600; }
+    .ask-total { color: #ef5350; }
+    .bid-total { color: #26c6a0; }
 
     .asking-empty {
       padding: 24px 0;
       text-align: center;
-      color: #3a4255;
+      color: #2a3560;
       font-size: 11px;
     }
 
@@ -1220,23 +1260,24 @@
     .trade-tabs {
       display: flex;
       flex-shrink: 0;
-      border-bottom: 1px solid #1e2130;
-      background: #131722;
+      border-bottom: 1px solid #1a2038;
+      background: #0b0e1a;
     }
     .trade-tab-btn {
       flex: 1;
       padding: 7px 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: #555;
+      font-size: 11px;
+      font-weight: 700;
+      color: #3a4560;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
       cursor: pointer;
       transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.2px;
     }
-    .trade-tab-btn:hover { color: #aaa; }
-    .trade-tab-btn.active { color: #d1d4dc; border-bottom-color: #26a69a; }
+    .trade-tab-btn:hover { color: #8090b0; }
+    .trade-tab-btn.active { color: #d1d8f0; border-bottom-color: #26c6a0; }
 
     /* ── 체결 내역 ───────────────────────────────────────── */
     .trade-header {
@@ -1244,12 +1285,13 @@
       grid-template-columns: 1fr 1fr 1fr 1fr;
       padding: 5px 10px;
       font-size: 10px;
-      font-weight: 600;
-      color: #555;
-      background: #131722;
-      border-bottom: 1px solid #1e2130;
+      font-weight: 700;
+      color: #3a4560;
+      background: #0b0e1a;
+      border-bottom: 1px solid #1a2038;
       text-align: right;
       flex-shrink: 0;
+      letter-spacing: 0.2px;
     }
     .trade-header span:first-child { text-align: left; }
 
@@ -1257,22 +1299,24 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
       padding: 3px 10px;
-      border-bottom: 1px solid #0f111a;
+      border-bottom: 1px solid rgba(255,255,255,0.025);
       font-size: 11px;
       text-align: right;
       transition: background 0.1s;
+      font-variant-numeric: tabular-nums;
     }
-    .trade-row:hover { background: #1a1d2b; }
+    .trade-row:hover { background: rgba(255,255,255,0.03); }
     .trade-row span:first-child { text-align: left; }
 
-    .trade-row.up   .tr-price { color: #ef5350; }
-    .trade-row.down .tr-price { color: #26a69a; }
+    .trade-row.up   .tr-price { color: #ef5350; font-weight: 600; }
+    .trade-row.down .tr-price { color: #26c6a0; font-weight: 600; }
     .trade-row.up   .tr-chg   { color: #ef5350; }
-    .trade-row.down .tr-chg   { color: #26a69a; }
-    .tr-time { color: #555; font-size: 10px; display: flex; align-items: center; gap: 3px; }
-    .tr-session { font-size: 9px; padding: 1px 3px; border-radius: 2px; font-weight: 600; line-height: 1; }
-    .tr-session.pre   { background: #1a3a5c; color: #5ba3f5; }
-    .tr-session.after { background: #2e1a3a; color: #c77dff; }
+    .trade-row.down .tr-chg   { color: #26c6a0; }
+    .tr-vol { color: #8090b0; font-size: 10px; }
+    .tr-time { color: #3a4560; font-size: 10px; display: flex; align-items: center; gap: 3px; }
+    .tr-session { font-size: 9px; padding: 1px 3px; border-radius: 2px; font-weight: 700; line-height: 1; }
+    .tr-session.pre   { background: rgba(91,163,245,0.15); color: #5ba3f5; }
+    .tr-session.after { background: rgba(199,125,255,0.15); color: #c77dff; }
 
     #trade-pane-rt, #trade-pane-daily {
       display: flex;
@@ -1291,9 +1335,9 @@
 
     /* ── 사이드바 너비 조정 ──────────────────────────────── */
     .d2t-sidebar {
-      width: 300px;
-      min-width: 260px;
-      max-width: 340px;
+      width: 290px;
+      min-width: 250px;
+      max-width: 360px;
     }
 
     /* ── 툴바 1행으로 축소 ───────────────────────────────── */
