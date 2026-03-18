@@ -127,6 +127,82 @@
     return v.toLocaleString();
   }
 
+  // ── 탭 전환 ───────────────────────────────────────────────────────────────
+
+  var _activeTab = 'rt';
+
+  window._switchTradeTab = function (tab) {
+    _activeTab = tab;
+    var rtPane    = document.getElementById('trade-pane-rt');
+    var dailyPane = document.getElementById('trade-pane-daily');
+    var rtBtn     = document.getElementById('trade-tab-rt');
+    var dailyBtn  = document.getElementById('trade-tab-daily');
+    if (!rtPane || !dailyPane) return;
+
+    if (tab === 'rt') {
+      rtPane.style.display = '';
+      dailyPane.style.display = 'none';
+      rtBtn.classList.add('active');
+      dailyBtn.classList.remove('active');
+    } else {
+      rtPane.style.display = 'none';
+      dailyPane.style.display = 'flex';
+      rtBtn.classList.remove('active');
+      dailyBtn.classList.add('active');
+      _loadDailyTrades();
+    }
+  };
+
+  // ── 일별 데이터 로드 ───────────────────────────────────────────────────────
+
+  function _loadDailyTrades() {
+    var ticker = window.D2T && window.D2T.ticker;
+    var market = window.D2T && window.D2T.market;
+    if (!ticker) return;
+
+    var list = document.getElementById('trade-list-daily');
+    if (!list) return;
+    list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">로딩 중...</div>';
+
+    var url = market === 'US'
+      ? '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=daily'
+      : '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=daily';
+
+    fetch(url)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data || !data.candles || !data.candles.length) {
+          list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">데이터 없음</div>';
+          return;
+        }
+        // 최신→과거 순으로 표시
+        var candles = data.candles.slice().reverse();
+        var html = '';
+        for (var i = 0; i < candles.length; i++) {
+          var c = candles[i];
+          var prev = candles[i + 1];
+          var chgStr = '—', dir = '';
+          if (prev && prev.close) {
+            var pct = ((c.close - prev.close) / prev.close * 100).toFixed(2);
+            var sign = pct >= 0 ? '+' : '';
+            chgStr = sign + pct + '%';
+            dir = pct >= 0 ? 'up' : 'down';
+          }
+          var dateDisp = typeof c.time === 'string' ? c.time.replace(/-/g, '.') : c.time;
+          html += '<div class="trade-row ' + dir + '">' +
+            '<span class="tr-price" style="font-size:10px;color:#aaa;">' + dateDisp + '</span>' +
+            '<span class="tr-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
+            '<span class="tr-chg">' + chgStr + '</span>' +
+            '<span style="text-align:right;font-size:10px;color:#555;">' + _fmtVol(c.volume || 0) + '</span>' +
+            '</div>';
+        }
+        list.innerHTML = html;
+      })
+      .catch(function() {
+        list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">로드 실패</div>';
+      });
+  }
+
   // ── 차트 로드 시 종목명 헤더바 업데이트 ──────────────────────────────────
 
   (function patchOnChartLoaded() {
@@ -135,6 +211,8 @@
       // 헤더바 종목명 업데이트
       var thbName = document.getElementById('thb-name');
       if (thbName) thbName.textContent = ticker;
+      // 일별 탭이 열려있으면 새 종목 데이터 새로고침
+      if (_activeTab === 'daily') _loadDailyTrades();
       if (_orig) _orig(ticker, market);
     };
   })();

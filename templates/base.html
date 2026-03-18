@@ -1216,6 +1216,28 @@
       font-size: 11px;
     }
 
+    /* ── 체결 탭 ─────────────────────────────────────────── */
+    .trade-tabs {
+      display: flex;
+      flex-shrink: 0;
+      border-bottom: 1px solid #1e2130;
+      background: #131722;
+    }
+    .trade-tab-btn {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .trade-tab-btn:hover { color: #aaa; }
+    .trade-tab-btn.active { color: #d1d4dc; border-bottom-color: #26a69a; }
+
     /* ── 체결 내역 ───────────────────────────────────────── */
     .trade-header {
       display: grid;
@@ -1252,6 +1274,17 @@
     .tr-session.pre   { background: #1a3a5c; color: #5ba3f5; }
     .tr-session.after { background: #2e1a3a; color: #c77dff; }
 
+    #trade-pane-rt, #trade-pane-daily {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    #trade-pane-daily { display: none; }
+    #trade-list-daily { flex: 1; overflow-y: auto; }
+    #trade-list-daily::-webkit-scrollbar { width: 3px; }
+    #trade-list-daily::-webkit-scrollbar-track { background: #131722; }
+    #trade-list-daily::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
     #trade-list::-webkit-scrollbar { width: 3px; }
     #trade-list::-webkit-scrollbar-track { background: #131722; }
     #trade-list::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
