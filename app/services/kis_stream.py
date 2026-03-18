@@ -11,6 +11,9 @@ KIS WebSocket 주소:
 
 TR 코드:
   H0STCNT0  — 국내주식 실시간 체결  (tr_key: 종목코드 6자리)
+  H0STCVT0  — 국내주식 시간외 단일가 체결
+  H0STASP0  — 국내주식 실시간 호가
+  H0STASV0  — 국내주식 시간외 실시간 호가 (KRX)
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
@@ -160,6 +163,14 @@ def _parse_kr_overtime(raw: str) -> Optional[dict]:
     return tick
 
 
+def _parse_kr_asking_overtime(raw: str) -> Optional[dict]:
+    """H0STASV0 시간외 호가 파싱. 필드 구조는 H0STASP0과 동일."""
+    asking = _parse_kr_asking(raw)
+    if asking:
+        asking["session"] = "overtime"
+    return asking
+
+
 def _parse_us(raw: str) -> Optional[dict]:
     """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
@@ -213,6 +224,14 @@ async def subscribe_kr_asking(ticker: str) -> None:
 
 async def unsubscribe_kr_asking(ticker: str) -> None:
     await _unsubscribe("H0STASP0", ticker)
+
+
+async def subscribe_kr_asking_overtime(ticker: str) -> None:
+    await _subscribe("H0STASV0", ticker)
+
+
+async def unsubscribe_kr_asking_overtime(ticker: str) -> None:
+    await _unsubscribe("H0STASV0", ticker)
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
@@ -299,6 +318,10 @@ async def _on_message(msg: str) -> None:
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
     elif tr_id == "H0STASP0":
         asking = _parse_kr_asking(raw)
+        if asking:
+            asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
+    elif tr_id == "H0STASV0":
+        asking = _parse_kr_asking_overtime(raw)
         if asking:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
     elif tr_id == "HDFSCNT0":

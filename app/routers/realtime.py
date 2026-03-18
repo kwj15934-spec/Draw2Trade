@@ -63,6 +63,7 @@ async def ws_realtime(ws: WebSocket):
                         await kis_stream.subscribe_kr(ticker)
                         await kis_stream.subscribe_kr_overtime(ticker)
                         await kis_stream.subscribe_kr_asking(ticker)
+                        await kis_stream.subscribe_kr_asking_overtime(ticker)
                     else:
                         await kis_stream.subscribe_us(excd, ticker)
                     logger.info("WS sub: %s (%s/%s)", ticker, market, excd)
@@ -75,6 +76,7 @@ async def ws_realtime(ws: WebSocket):
                             await kis_stream.unsubscribe_kr(ticker)
                             await kis_stream.unsubscribe_kr_overtime(ticker)
                             await kis_stream.unsubscribe_kr_asking(ticker)
+                            await kis_stream.unsubscribe_kr_asking_overtime(ticker)
                         else:
                             await kis_stream.unsubscribe_us(excd, ticker)
                     logger.info("WS unsub: %s", ticker)
@@ -116,6 +118,8 @@ async def ws_realtime(ws: WebSocket):
                 if market == "KR":
                     await kis_stream.unsubscribe_kr(ticker)
                     await kis_stream.unsubscribe_kr_overtime(ticker)
+                    await kis_stream.unsubscribe_kr_asking(ticker)
+                    await kis_stream.unsubscribe_kr_asking_overtime(ticker)
                 else:
                     await kis_stream.unsubscribe_us(excd, ticker)
         logger.info("WS 연결 종료, 구독 %d개 정리", len(subs))
