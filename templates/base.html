@@ -439,25 +439,6 @@
       min-height: 0;
     }
 
-    #vol-resizer {
-      height: 5px;
-      flex-shrink: 0;
-      background: #2a2e39;
-      cursor: row-resize;
-      user-select: none;
-      transition: background 0.15s;
-    }
-    #vol-resizer:hover, #vol-resizer.dragging { background: #ff6b35; }
-
-    #volume-container {
-      height: 100px;
-      flex-shrink: 0;
-    }
-
-    #chart-wrapper.blank-mode ~ #vol-resizer,
-    #chart-wrapper.blank-mode ~ #volume-container {
-      display: none;
-    }
 
     #chart-container {
       width: 100%;
@@ -1152,9 +1133,6 @@
       }
       .d2t-chart-panel { flex: 1 !important; border-right: none; min-height: 0; }
       #chart-wrapper { min-height: 58vh; min-height: 58dvh; }
-      /* 모바일: 볼륨 패널 숨겨서 차트 공간 확보 */
-      #vol-resizer { display: none !important; }
-      #volume-container { display: none !important; }
 
       /* ── 사이드바: 하단 슬라이드업 패널 ── */
       .d2t-sidebar {

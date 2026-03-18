@@ -111,61 +111,27 @@
       handleScale: true,
     });
 
+    // 캔들 시리즈: 상단 75% 영역 사용 (하단 25%는 거래량)
     D2T.series = D2T.chart.addCandlestickSeries({
       upColor:       '#26a69a',
       downColor:     '#ef5350',
       borderVisible: false,
       wickUpColor:   '#26a69a',
       wickDownColor: '#ef5350',
+      priceScaleId:  'right',
+    });
+    D2T.chart.priceScale('right').applyOptions({
+      scaleMargins: { top: 0.05, bottom: 0.25 },
     });
 
-    // 거래량 — 별도 패널 차트
-    var volContainer = document.getElementById('volume-container');
-    if (volContainer) {
-      D2T.volumeChart = LightweightCharts.createChart(volContainer, {
-        width:  volContainer.offsetWidth  || 600,
-        height: volContainer.offsetHeight || 100,
-        layout: {
-          background: { color: '#131722' },
-          textColor: '#888',
-        },
-        grid: {
-          vertLines: { color: '#1e2130' },
-          horzLines: { color: '#1e2130' },
-        },
-        rightPriceScale: {
-          borderColor: '#2a2e39',
-          scaleMargins: { top: 0.1, bottom: 0.05 },
-          fontSize: window.innerWidth <= 640 ? 9 : 12,
-        },
-        timeScale: {
-          borderColor: '#2a2e39',
-          visible: false,
-        },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        handleScroll: false,
-        handleScale: false,
-      });
-
-      D2T.volumeSeries = D2T.volumeChart.addHistogramSeries({
-        priceFormat: { type: 'volume' },
-      });
-
-      // 시간축 동기화 (양방향)
-      var _syncing = false;
-      D2T.chart.timeScale().subscribeVisibleLogicalRangeChange(function (range) {
-        if (_syncing || !range || !D2T.volumeChart) return;
-        _syncing = true;
-        D2T.volumeChart.timeScale().setVisibleLogicalRange(range);
-        _syncing = false;
-      });
-      D2T.volumeChart.timeScale().subscribeVisibleLogicalRangeChange(function (range) {
-        if (_syncing || !range) return;
-        _syncing = true;
-        D2T.chart.timeScale().setVisibleLogicalRange(range);
-        _syncing = false;
-      });
-    }
+    // 거래량 — 메인 차트 하단 오버레이 (별도 price scale 'vol')
+    D2T.volumeSeries = D2T.chart.addHistogramSeries({
+      priceFormat:   { type: 'volume' },
+      priceScaleId:  'vol',
+    });
+    D2T.chart.priceScale('vol').applyOptions({
+      scaleMargins: { top: 0.80, bottom: 0.0 },
+    });
 
     // 시간축 스크롤/줌 시 드로잉 캔버스 재렌더 (draw.js 연동)
     // requestAnimationFrame으로 쓰로틀 — 초당 최대 60회(모니터 주사율)로 제한
@@ -188,32 +154,23 @@
           if (D2T.chart) {
             D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
           }
-          if (D2T.volumeChart && volContainer) {
-            D2T.volumeChart.resize(volContainer.offsetWidth, volContainer.offsetHeight || 100);
-          }
           if (typeof syncCanvas === 'function') syncCanvas();
         }, 100);
       });
       ro.observe(wrapper);
-      if (volContainer) ro.observe(volContainer);
     }
   }
 
   // ── 거래량 데이터 세팅 헬퍼 ──────────────────────────────────────────────
   function setVolumeData(candles) {
-    if (!D2T.volumeSeries || !candles) {
-      console.warn('[volume] volumeSeries:', D2T.volumeSeries, 'candles:', candles && candles.length);
-      return;
-    }
-    var volData = candles.map(function (c) {
+    if (!D2T.volumeSeries || !candles) return;
+    D2T.volumeSeries.setData(candles.map(function (c) {
       return {
         time:  c.time,
         value: c.volume || 0,
         color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
       };
-    });
-    console.log('[volume] setData', volData.length, 'bars, sample:', volData[0]);
-    D2T.volumeSeries.setData(volData);
+    }));
   }
 
   // ── 차트 데이터 로딩 ──────────────────────────────────────────────────────
@@ -661,46 +618,6 @@
 
     initChart();
 
-    // ── 거래량 패널 리사이저 ────────────────────────────────────────────────
-    (function () {
-      var resizer   = document.getElementById('vol-resizer');
-      var volCont   = document.getElementById('volume-container');
-      var chartWrap = document.getElementById('chart-wrapper');
-      if (!resizer || !volCont || !chartWrap) return;
-
-      var isDragging = false, startY = 0, startH = 0;
-
-      resizer.addEventListener('mousedown', function (e) {
-        isDragging = true;
-        startY = e.clientY;
-        startH = volCont.offsetHeight;
-        resizer.classList.add('dragging');
-        document.body.style.cursor     = 'row-resize';
-        document.body.style.userSelect = 'none';
-        e.preventDefault();
-      });
-
-      var _resizerRaf = null;
-      document.addEventListener('mousemove', function (e) {
-        if (!isDragging) return;
-        var newH = Math.max(40, Math.min(320, startH - (e.clientY - startY)));
-        volCont.style.height = newH + 'px';
-        if (_resizerRaf !== null) return;
-        _resizerRaf = requestAnimationFrame(function () {
-          _resizerRaf = null;
-          if (D2T.volumeChart) D2T.volumeChart.resize(volCont.offsetWidth, volCont.offsetHeight);
-          if (D2T.chart) D2T.chart.resize(chartWrap.offsetWidth, chartWrap.offsetHeight);
-        });
-      });
-
-      document.addEventListener('mouseup', function () {
-        if (!isDragging) return;
-        isDragging = false;
-        resizer.classList.remove('dragging');
-        document.body.style.cursor     = '';
-        document.body.style.userSelect = '';
-      });
-    })();
 
     // 카테고리/검색 UI 초기 표시 (KR·US 모두)
     var catGroup = document.getElementById('category-group');
