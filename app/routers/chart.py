@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.services import data_service
 from app.services.kis_client import fetch_kr_tick_history, fetch_kr_price, is_configured
+from app.services.kis_stream import get_cached_ticks
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -155,16 +156,48 @@ async def tick_history(ticker: str):
     ticks = []
     for r in (raw or []):
         try:
+            cvol = int(r.get("cntg_vol", "0").replace(",", ""))
+            if cvol <= 0:
+                continue  # 체결량 0인 데이터 무시
             ticks.append({
                 "time":    r.get("stck_cntg_hour", ""),
                 "price":   int(r.get("stck_prpr", "0").replace(",", "")),
-                "cvol":    int(r.get("cntg_vol", "0").replace(",", "")),
+                "cvol":    cvol,
                 "accvol":  int(r.get("acml_vol", "0").replace(",", "")),
                 "chgRate": r.get("prdy_ctrt", "0"),
                 "chgSign": r.get("prdy_vrss_sign", "3"),
+                "session": "",
             })
         except (ValueError, TypeError):
             continue
+
+    # KIS REST가 빈 배열 → 서버 메모리 캐시(실시간 틱)에서 가져오기
+    if not ticks:
+        cached = get_cached_ticks(ticker)
+        for t in cached:
+            if t.get("type") != "tick":
+                continue
+            cvol = int(t.get("cvol", 0))
+            if cvol <= 0:
+                continue
+            price = t.get("price", 0)
+            volume = t.get("volume", 0)
+            # 등락률 계산 (prevClose 역산 불가 → 서버에 저장된 값 사용)
+            prev_close = t.get("prev_close", 0)
+            if prev_close and prev_close > 0:
+                chg_rate = round((price - prev_close) / prev_close * 100, 2)
+            else:
+                chg_rate = 0
+            chg_sign = "2" if chg_rate >= 0 else "5"
+            ticks.append({
+                "time":    t.get("time", ""),
+                "price":   int(price),
+                "cvol":    cvol,
+                "accvol":  int(volume),
+                "chgRate": str(chg_rate),
+                "chgSign": chg_sign,
+                "session": t.get("session", ""),
+            })
 
     # 현재가 시세 (장 마감 후에도 항상 반환됨)
     quote = None

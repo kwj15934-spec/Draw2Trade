@@ -27,10 +27,31 @@ from typing import Optional
 import websockets
 import websockets.exceptions
 
+from collections import deque
+
 from app.services import broadcast_hub as _hub
 from app.services.kis_client import get_credentials, is_configured
 
 logger = logging.getLogger(__name__)
+
+# ── 최근 틱 캐시 (종목별 최대 50건, /api/ticks fallback용) ──────────────────
+_tick_cache: dict[str, deque] = {}   # ticker → deque of tick dicts
+_TICK_CACHE_MAX = 50
+
+
+def _cache_tick(tick: dict) -> None:
+    """틱 데이터를 캐시에 저장 (type=tick인 것만)."""
+    ticker = tick.get("ticker", "")
+    if not ticker:
+        return
+    if ticker not in _tick_cache:
+        _tick_cache[ticker] = deque(maxlen=_TICK_CACHE_MAX)
+    _tick_cache[ticker].appendleft(tick)
+
+
+def get_cached_ticks(ticker: str) -> list[dict]:
+    """캐시된 최근 틱 반환 (최신→과거 순)."""
+    return list(_tick_cache.get(ticker, []))
 
 _REAL_WS  = "ws://ops.koreainvestment.com:21000"
 _MOCK_WS  = "ws://openvts.koreainvestment.com:31000"
@@ -349,10 +370,12 @@ async def _on_message(msg: str) -> None:
     if tr_id == "H0STCNT0":
         tick = _parse_kr(raw)
         if tick:
+            _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
     elif tr_id == "H0STCVT0":
         tick = _parse_kr_overtime(raw)
         if tick:
+            _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
     elif tr_id == "H0STASP0":
         asking = _parse_kr_asking(raw)
@@ -365,6 +388,7 @@ async def _on_message(msg: str) -> None:
     elif tr_id == "H0NMCNT0":
         tick = _parse_nxt(raw)
         if tick:
+            _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
     elif tr_id == "H0NMASP0":
         asking = _parse_nxt_asking(raw)
@@ -373,7 +397,6 @@ async def _on_message(msg: str) -> None:
     elif tr_id == "HDFSCNT0":
         tick = _parse_us(raw)
         if tick:
-            # tick["ticker"] = f[1] SYMB (순수 종목코드, EXCD 없음)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
 
 
