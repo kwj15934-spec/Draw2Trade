@@ -75,6 +75,8 @@
     var time    = tick.time  || '';
     var timeDisp = time.length >= 6
       ? time.slice(0,2) + ':' + time.slice(2,4) + ':' + time.slice(4,6) : '';
+    // 일봉 fallback: 날짜 레이블 사용
+    if (!timeDisp && tick._dateLabel) timeDisp = tick._dateLabel;
 
     // 매수/매도 구분: bs='1'=매수→빨강, '5'=매도→파랑
     // 없으면 전일 대비 등락으로 fallback
@@ -240,65 +242,77 @@
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
-    // 1분봉 데이터로 최근 체결 내역 생성
-    var url = market === 'US'
-      ? '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=1m'
-      : '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=1m';
+    var baseUrl = market === 'US'
+      ? '/api/us/chart/' + encodeURIComponent(ticker)
+      : '/api/chart/' + encodeURIComponent(ticker);
 
-    fetch(url)
+    // 1분봉 먼저 시도 → 없으면 일봉 fallback
+    fetch(baseUrl + '?timeframe=1m')
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (!data || !data.candles || !data.candles.length) return;
-        // 이미 실시간 데이터가 들어왔으면 초기 로드 무시
-        if (_initialLoaded) return;
-        _initialLoaded = true;
-
-        var candles = data.candles;
-        // 최근 50개만 (최신이 마지막)
-        var recent = candles.slice(-MAX_TRADES);
-
-        // prevClose: 가장 오래된 캔들의 이전 캔들 (있으면)
-        var baseClose = candles.length > recent.length
-          ? candles[candles.length - recent.length - 1].close : null;
-
-        // 오래된 것부터 추가 (addTradeRow는 맨 위에 삽입하므로)
-        for (var i = 0; i < recent.length; i++) {
-          var c = recent[i];
-          var prevC = (i > 0) ? recent[i - 1].close : baseClose;
-          var chgPct = null, sign = '', color = '#888';
-          if (prevC && prevC > 0) {
-            chgPct = ((c.close - prevC) / prevC * 100).toFixed(2);
-            sign = chgPct >= 0 ? '+' : '';
-            color = chgPct >= 0 ? '#26a69a' : '#ef5350';
-          }
-
-          // 1분봉의 time을 체결 시간으로 변환
-          var timeStr = '';
-          if (typeof c.time === 'number') {
-            // Unix timestamp → HHMMSS
-            var dt = new Date(c.time * 1000);
-            var hh = ('0' + dt.getUTCHours()).slice(-2);
-            var mm = ('0' + dt.getUTCMinutes()).slice(-2);
-            var ss = ('0' + dt.getUTCSeconds()).slice(-2);
-            timeStr = hh + mm + ss;
-          }
-
-          var tick = {
-            price: c.close,
-            volume: c.volume || 0,
-            cvol: c.volume || 0,
-            time: timeStr,
-            bs: ''
-          };
-          window._addTradeRow(tick, chgPct, sign, color);
+        if (data && data.candles && data.candles.length) {
+          _renderInitialTrades(data.candles, true);
+        } else {
+          // 1분봉 없음 → 일봉으로 fallback (장 마감 후)
+          return fetch(baseUrl + '?timeframe=daily')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (dData) {
+              if (dData && dData.candles && dData.candles.length) {
+                _renderInitialTrades(dData.candles, false);
+              }
+            });
         }
-
-        // 마지막 캔들로 헤더바 현재가 업데이트
-        var last = candles[candles.length - 1];
-        _updateHeaderFromCandle(last, candles);
       })
       .catch(function () { /* silent */ });
   };
+
+  /** 캔들 데이터를 체결 내역으로 렌더링 */
+  function _renderInitialTrades(candles, isMinute) {
+    if (_initialLoaded) return;
+    _initialLoaded = true;
+
+    var recent = candles.slice(-MAX_TRADES);
+    var baseClose = candles.length > recent.length
+      ? candles[candles.length - recent.length - 1].close : null;
+
+    for (var i = 0; i < recent.length; i++) {
+      var c = recent[i];
+      var prevC = (i > 0) ? recent[i - 1].close : baseClose;
+      var chgPct = null, sign = '', color = '#888';
+      if (prevC && prevC > 0) {
+        chgPct = ((c.close - prevC) / prevC * 100).toFixed(2);
+        sign = chgPct >= 0 ? '+' : '';
+        color = chgPct >= 0 ? '#26a69a' : '#ef5350';
+      }
+
+      var timeStr = '';
+      if (isMinute && typeof c.time === 'number') {
+        // 분봉: Unix timestamp → HH:MM:SS
+        var dt = new Date(c.time * 1000);
+        var hh = ('0' + dt.getUTCHours()).slice(-2);
+        var mm = ('0' + dt.getUTCMinutes()).slice(-2);
+        var ss = ('0' + dt.getUTCSeconds()).slice(-2);
+        timeStr = hh + mm + ss;
+      } else if (!isMinute && typeof c.time === 'string') {
+        // 일봉: 'YYYY-MM-DD' → 'MM.DD' 형태로 표시
+        timeStr = '';  // 일봉은 날짜를 tl-time에 직접 표시
+      }
+
+      var tick = {
+        price: c.close,
+        volume: c.volume || 0,
+        cvol: c.volume || 0,
+        time: timeStr,
+        bs: '',
+        _dateLabel: !isMinute ? (c.time || '').replace(/-/g, '.').slice(5) : ''
+      };
+      window._addTradeRow(tick, chgPct, sign, color);
+    }
+
+    // 헤더바 현재가 업데이트
+    var last = candles[candles.length - 1];
+    _updateHeaderFromCandle(last, candles);
+  }
 
   /** 캔들 데이터로 헤더바 현재가/등락률/거래량 업데이트 */
   function _updateHeaderFromCandle(last, candles) {
