@@ -109,22 +109,25 @@ def _parse_kr(raw: str) -> Optional[dict]:
 
 
 def _parse_us(raw: str) -> Optional[dict]:
-    """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드."""
+    """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
+    f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
+    f[8]=OPEN, f[9]=HIGH, f[10]=LOW, f[11]=LAST, f[18]=EVOL(체결량), f[19]=TVOL(거래량)
+    """
     f = raw.split("^")
-    if len(f) < 19:
+    if len(f) < 20:
         return None
     try:
         return {
             "type":   "tick",
             "market": "US",
-            "ticker": f[0],           # SYMB
-            "date":   f[2],           # YYYYMMDD (UTC)
-            "time":   f[3],           # HHMMSS (UTC)
-            "open":   float(f[6]),
-            "high":   float(f[7]),
-            "low":    float(f[8]),
-            "price":  float(f[9]),    # LAST (현재가)
-            "volume": int(f[18]),     # TVOL (누적거래량)
+            "ticker": f[1],           # SYMB (종목코드만)
+            "date":   f[4],           # XYMD 현지일자 YYYYMMDD
+            "time":   f[5],           # XHMS 현지시간 HHMMSS
+            "open":   float(f[8]),    # OPEN
+            "high":   float(f[9]),    # HIGH
+            "low":    float(f[10]),   # LOW
+            "price":  float(f[11]),   # LAST (현재가)
+            "volume": int(f[18]),     # EVOL 체결량
         }
     except (ValueError, IndexError):
         return None
@@ -145,7 +148,8 @@ async def subscribe_kr(ticker: str) -> None:
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
-    await _subscribe("HDFSCNT0", f"{excd}_{symbol}")
+    # tr_key 형식: D + 시장구분(3자리) + 종목코드 (예: DNASAAPL)
+    await _subscribe("HDFSCNT0", f"D{excd}{symbol}")
 
 
 async def unsubscribe_kr(ticker: str) -> None:
@@ -153,7 +157,7 @@ async def unsubscribe_kr(ticker: str) -> None:
 
 
 async def unsubscribe_us(excd: str, symbol: str) -> None:
-    await _unsubscribe("HDFSCNT0", f"{excd}_{symbol}")
+    await _unsubscribe("HDFSCNT0", f"D{excd}{symbol}")
 
 
 async def _subscribe(tr_id: str, tr_key: str) -> None:
@@ -224,7 +228,7 @@ async def _on_message(msg: str) -> None:
     elif tr_id == "HDFSCNT0":
         tick = _parse_us(raw)
         if tick:
-            # KIS 응답의 f[0]은 심볼만(EXCD 없음) → ticker 그대로 broadcast
+            # tick["ticker"] = f[1] SYMB (순수 종목코드, EXCD 없음)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
 
 
