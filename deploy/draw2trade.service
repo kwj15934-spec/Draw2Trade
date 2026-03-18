@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/srv/draw2trade
-ExecStart=/srv/draw2trade/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+ExecStart=/srv/draw2trade/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=always
 RestartSec=5
 
