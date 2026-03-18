@@ -1404,6 +1404,50 @@
     /* 일별 날짜 */
     .tl-date { font-size: 10.5px; color: #52525b; font-weight: 500; }
 
+    /* ── 일별 탭 전용 레이아웃 ────────────────────────── */
+    #trade-pane-daily .tl-header,
+    #trade-pane-daily .tl-row {
+      grid-template-columns: 1.8fr 1.4fr 1.2fr 1.6fr;
+      gap: 4px;
+    }
+    #trade-pane-daily .tl-header span:nth-child(5),
+    #trade-pane-daily .tl-row   span:nth-child(5) {
+      display: none;
+    }
+    #trade-pane-daily .tl-price,
+    #trade-pane-daily .tl-chg,
+    #trade-pane-daily .tl-vol {
+      text-align: right;
+    }
+    #trade-pane-daily .tl-row {
+      font-size: 11px;
+      padding: 4px 10px 4px 8px;
+    }
+    #trade-pane-daily .tl-date {
+      font-size: 11px;
+      color: #8a8fa0;
+      white-space: nowrap;
+    }
+    #trade-pane-daily .tl-price { font-size: 11.5px; }
+    #trade-pane-daily .tl-chg   { font-size: 10.5px; }
+    #trade-pane-daily .tl-vol   {
+      font-size: 10px;
+      color: #7a8499;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    @media (max-width: 420px) {
+      #trade-pane-daily .tl-header,
+      #trade-pane-daily .tl-row {
+        grid-template-columns: 1.6fr 1.4fr 1.2fr;
+      }
+      #trade-pane-daily .tl-header span:nth-child(4),
+      #trade-pane-daily .tl-row   span:nth-child(4) {
+        display: none;
+      }
+    }
+
     /* 시간외 배지 */
     .tr-session {
       font-size: 9px;
