@@ -61,10 +61,10 @@
         dateFormat: 'yyyy년 MM월 dd일',
         timeFormatter: function (time) {
           var d = (typeof time === 'number') ? new Date(time * 1000) : new Date(time);
-          var y = d.getFullYear();
-          var mo = d.getMonth() + 1;
-          var day = d.getDate();
-          var h = d.getHours(), m = d.getMinutes();
+          var y = d.getUTCFullYear();
+          var mo = d.getUTCMonth() + 1;
+          var day = d.getUTCDate();
+          var h = d.getUTCHours(), m = d.getUTCMinutes();
           var tf = D2T.timeframe || 'monthly';
           var isIntra = !!{ '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 }[tf];
           if (tf === 'monthly') return y + '년 ' + mo + '월';
@@ -96,14 +96,14 @@
           var d = (typeof time === 'number')
             ? new Date(time * 1000)
             : new Date(time);
-          var y = d.getFullYear();
-          var mo = d.getMonth() + 1;
-          var day = d.getDate();
+          var y = d.getUTCFullYear();
+          var mo = d.getUTCMonth() + 1;
+          var day = d.getUTCDate();
           var tf = D2T.timeframe || 'monthly';
           var isIntra = !!{ '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 }[tf];
           var yy = String(y).slice(-2);
           if (tf === 'monthly') return yy + '년 ' + mo + '월';
-          if (isIntra) return mo + '/' + (day < 10 ? '0'+day : day) + ' ' + (d.getHours() < 10 ? '0'+d.getHours() : d.getHours()) + ':' + (d.getMinutes() < 10 ? '0'+d.getMinutes() : d.getMinutes());
+          if (isIntra) return mo + '/' + (day < 10 ? '0'+day : day) + ' ' + (d.getUTCHours() < 10 ? '0'+d.getUTCHours() : d.getUTCHours()) + ':' + (d.getUTCMinutes() < 10 ? '0'+d.getUTCMinutes() : d.getUTCMinutes());
           return mo + '/' + (day < 10 ? '0'+day : day);
         },
       },
