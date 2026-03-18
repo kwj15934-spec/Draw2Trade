@@ -261,11 +261,15 @@
           // 틱 히스토리 → 체결 리스트 (있으면)
           if (data && data.ticks && data.ticks.length) {
             _renderTickHistory(data.ticks);
+          } else if (data && data.quote) {
+            // 틱 없지만 현재가 있음 → 종가 1행 표시
+            _renderQuoteAsRow(data.quote);
           } else {
-            _fallbackCandleLoad(ticker, market);
+            // KR: 1분봉 fallback만 (일봉 fallback 제거)
+            _fallbackMinuteOnly(ticker);
           }
         })
-        .catch(function () { _fallbackCandleLoad(ticker, market); });
+        .catch(function () { _fallbackMinuteOnly(ticker); });
     } else {
       _fallbackCandleLoad(ticker, market);
     }
@@ -356,7 +360,37 @@
     if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(q.accvol);
   }
 
-  /** 캔들 기반 fallback (1분봉 → 일봉) */
+  /** 현재가 시세 → 체결 리스트 1행으로 표시 (장 마감 후 fallback) */
+  function _renderQuoteAsRow(q) {
+    if (_initialLoaded) return;
+    _initialLoaded = true;
+    var chgRate = parseFloat(q.chgRate) || 0;
+    var sign = chgRate >= 0 ? '+' : '';
+    var color = chgRate >= 0 ? '#26a69a' : '#ef5350';
+    var tick = {
+      price: q.price,
+      volume: q.accvol || 0,
+      cvol: 0,
+      time: '',
+      bs: ''
+    };
+    window._addTradeRow(tick, q.chgRate, sign, color);
+  }
+
+  /** KR 종목: 1분봉만 fallback (일봉 fallback 제거) */
+  function _fallbackMinuteOnly(ticker) {
+    var url = '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=1m';
+    fetch(url)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.candles && data.candles.length) {
+          _renderInitialTrades(data.candles, true);
+        }
+      })
+      .catch(function () { /* silent */ });
+  }
+
+  /** 캔들 기반 fallback (1분봉 → 일봉, US 종목용) */
   function _fallbackCandleLoad(ticker, market) {
     var baseUrl = market === 'US'
       ? '/api/us/chart/' + encodeURIComponent(ticker)
