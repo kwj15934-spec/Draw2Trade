@@ -151,6 +151,27 @@ async def tick_history(ticker: str):
     if not is_configured():
         raise HTTPException(status_code=503, detail="KIS API 미설정")
 
+    # 현재가 시세 먼저 조회 (등락률 계산에 필요한 전일 종가 포함)
+    quote = None
+    prev_close = 0
+    pdata = fetch_kr_price(ticker)
+    if pdata:
+        try:
+            q_price = int(pdata.get("stck_prpr", "0").replace(",", ""))
+            prev_close = q_price - int(pdata.get("prdy_vrss", "0").replace(",", ""))
+            quote = {
+                "price":   q_price,
+                "chgRate": pdata.get("prdy_ctrt", "0"),
+                "chgSign": pdata.get("prdy_vrss_sign", "3"),
+                "chgAmt":  int(pdata.get("prdy_vrss", "0").replace(",", "")),
+                "accvol":  int(pdata.get("acml_vol", "0").replace(",", "")),
+                "high":    int(pdata.get("stck_hgpr", "0").replace(",", "")),
+                "low":     int(pdata.get("stck_lwpr", "0").replace(",", "")),
+            }
+        except (ValueError, TypeError):
+            pass
+
+    # KIS REST 당일 체결 조회
     raw = fetch_kr_tick_history(ticker)
 
     ticks = []
@@ -158,7 +179,7 @@ async def tick_history(ticker: str):
         try:
             cvol = int(r.get("cntg_vol", "0").replace(",", ""))
             if cvol <= 0:
-                continue  # 체결량 0인 데이터 무시
+                continue
             ticks.append({
                 "time":    r.get("stck_cntg_hour", ""),
                 "price":   int(r.get("stck_prpr", "0").replace(",", "")),
@@ -171,7 +192,7 @@ async def tick_history(ticker: str):
         except (ValueError, TypeError):
             continue
 
-    # KIS REST가 빈 배열 → 서버 메모리 캐시(실시간 틱)에서 가져오기
+    # KIS REST 빈 배열 → 서버 캐시(메모리+디스크) 에서 가져오기
     if not ticks:
         cached = get_cached_ticks(ticker)
         for t in cached:
@@ -180,10 +201,9 @@ async def tick_history(ticker: str):
             cvol = int(t.get("cvol", 0))
             if cvol <= 0:
                 continue
-            price = t.get("price", 0)
-            volume = t.get("volume", 0)
-            # 등락률 계산 (prevClose 역산 불가 → 서버에 저장된 값 사용)
-            prev_close = t.get("prev_close", 0)
+            price = float(t.get("price", 0))
+            volume = int(t.get("volume", 0))
+            # 등락률: 현재가 시세에서 전일 종가 사용
             if prev_close and prev_close > 0:
                 chg_rate = round((price - prev_close) / prev_close * 100, 2)
             else:
@@ -193,27 +213,10 @@ async def tick_history(ticker: str):
                 "time":    t.get("time", ""),
                 "price":   int(price),
                 "cvol":    cvol,
-                "accvol":  int(volume),
+                "accvol":  volume,
                 "chgRate": str(chg_rate),
                 "chgSign": chg_sign,
                 "session": t.get("session", ""),
             })
-
-    # 현재가 시세 (장 마감 후에도 항상 반환됨)
-    quote = None
-    pdata = fetch_kr_price(ticker)
-    if pdata:
-        try:
-            quote = {
-                "price":   int(pdata.get("stck_prpr", "0").replace(",", "")),
-                "chgRate": pdata.get("prdy_ctrt", "0"),
-                "chgSign": pdata.get("prdy_vrss_sign", "3"),
-                "chgAmt":  int(pdata.get("prdy_vrss", "0").replace(",", "")),
-                "accvol":  int(pdata.get("acml_vol", "0").replace(",", "")),
-                "high":    int(pdata.get("stck_hgpr", "0").replace(",", "")),
-                "low":     int(pdata.get("stck_lwpr", "0").replace(",", "")),
-            }
-        except (ValueError, TypeError):
-            pass
 
     return {"ticker": ticker, "ticks": ticks, "quote": quote}

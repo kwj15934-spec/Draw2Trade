@@ -22,6 +22,7 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 import websockets
@@ -34,13 +35,16 @@ from app.services.kis_client import get_credentials, is_configured
 
 logger = logging.getLogger(__name__)
 
-# ── 최근 틱 캐시 (종목별 최대 50건, /api/ticks fallback용) ──────────────────
+# ── 최근 틱 캐시 (종목별 최대 50건, 디스크 영속화) ───────────────────────────
 _tick_cache: dict[str, deque] = {}   # ticker → deque of tick dicts
 _TICK_CACHE_MAX = 50
+_TICK_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "ticks"
+_SAVE_INTERVAL = 10      # N건마다 디스크 저장 (성능 최적화)
+_save_counters: dict[str, int] = {}  # ticker → 미저장 카운터
 
 
 def _cache_tick(tick: dict) -> None:
-    """틱 데이터를 캐시에 저장 (type=tick인 것만)."""
+    """틱 데이터를 메모리 캐시 + 디스크에 저장."""
     ticker = tick.get("ticker", "")
     if not ticker:
         return
@@ -48,10 +52,61 @@ def _cache_tick(tick: dict) -> None:
         _tick_cache[ticker] = deque(maxlen=_TICK_CACHE_MAX)
     _tick_cache[ticker].appendleft(tick)
 
+    # N건마다 디스크 저장 (매 틱마다 저장하면 I/O 과부하)
+    _save_counters[ticker] = _save_counters.get(ticker, 0) + 1
+    if _save_counters[ticker] >= _SAVE_INTERVAL:
+        _save_counters[ticker] = 0
+        _persist_ticks(ticker)
+
+
+def _persist_ticks(ticker: str) -> None:
+    """메모리 캐시 → 디스크 JSON 저장."""
+    try:
+        _TICK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path = _TICK_CACHE_DIR / f"{ticker}.json"
+        ticks = list(_tick_cache.get(ticker, []))
+        # 직렬화 가능한 필드만 저장
+        data = []
+        for t in ticks:
+            data.append({
+                "type":    t.get("type", "tick"),
+                "market":  t.get("market", "KR"),
+                "ticker":  t.get("ticker", ""),
+                "date":    t.get("date", ""),
+                "time":    t.get("time", ""),
+                "price":   t.get("price", 0),
+                "cvol":    t.get("cvol", 0),
+                "volume":  t.get("volume", 0),
+                "bs":      t.get("bs", ""),
+                "session": t.get("session", ""),
+            })
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        logger.debug("틱 캐시 저장 실패 (%s): %s", ticker, e)
+
+
+def _load_ticks_from_disk(ticker: str) -> list[dict]:
+    """디스크에서 캐시된 틱 로드 (서버 시작 시 또는 캐시 miss 시)."""
+    path = _TICK_CACHE_DIR / f"{ticker}.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
 
 def get_cached_ticks(ticker: str) -> list[dict]:
-    """캐시된 최근 틱 반환 (최신→과거 순)."""
-    return list(_tick_cache.get(ticker, []))
+    """캐시된 최근 틱 반환 (최신→과거 순). 메모리 없으면 디스크에서 로드."""
+    if ticker in _tick_cache and len(_tick_cache[ticker]) > 0:
+        return list(_tick_cache[ticker])
+    # 디스크에서 로드 → 메모리 캐시에 복원
+    disk_ticks = _load_ticks_from_disk(ticker)
+    if disk_ticks:
+        _tick_cache[ticker] = deque(disk_ticks, maxlen=_TICK_CACHE_MAX)
+        return disk_ticks
+    return []
 
 _REAL_WS  = "ws://ops.koreainvestment.com:21000"
 _MOCK_WS  = "ws://openvts.koreainvestment.com:31000"
