@@ -127,6 +127,9 @@
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
 
+    // 마지막 틱 수신 시각 갱신 (스테일 체크용)
+    _lastTickTime = Date.now();
+
     // 실시간 데이터 도착 → 초기 로드 데이터 무시 플래그
     if (window._markRealtimeActive) window._markRealtimeActive();
 
@@ -340,7 +343,75 @@
     // CONNECTING 상태: onopen 에서 처리
   };
 
+  // ── 시장 세션 전환 감지 + 자동 재구독 ──────────────────────────────────────
+
+  // 세션 경계 시각 (KST): 08:00, 09:00, 15:30, 15:40, 18:00
+  var _SESSION_BOUNDARIES = [
+    { h: 8,  m: 0  },   // NXT 장전 시작
+    { h: 9,  m: 0  },   // 정규장 시작
+    { h: 15, m: 30 },   // 정규장 종료
+    { h: 15, m: 40 },   // 시간외 단일가 시작
+    { h: 18, m: 0  },   // NXT 야간 시작
+  ];
+  var _lastSession = '';
+  var _lastTickTime = 0;    // 마지막 틱 수신 시각 (Date.now())
+
+  /** 현재 세션 이름 반환 */
+  function _getCurrentSession() {
+    var now = new Date();
+    var hm = now.getHours() * 100 + now.getMinutes();
+    if (hm >= 1800 || hm < 800)  return 'nxt_night';
+    if (hm >= 800 && hm < 850)   return 'nxt_pre';
+    if (hm >= 900 && hm < 1530)  return 'regular';
+    if (hm >= 1540 && hm < 1800) return 'overtime';
+    return 'transition';  // 08:50~09:00, 15:30~15:40
+  }
+
+  /** 세션 전환 시 재구독 (unsubscribe → subscribe) */
+  function _checkSessionChange() {
+    var current = _getCurrentSession();
+    if (_lastSession && _lastSession !== current && current !== 'transition') {
+      // 세션이 바뀜 → 서버에 재구독 (서버가 새 TR ID로 갱신)
+      if (_ticker && _ws && _ws.readyState === WebSocket.OPEN) {
+        _send('unsubscribe', _ticker, _market);
+        setTimeout(function () {
+          _send('subscribe', _ticker, _market);
+          // 초기 틱 데이터도 다시 로드
+          if (window._loadInitialTrades) window._loadInitialTrades();
+        }, 500);
+      }
+    }
+    _lastSession = current;
+  }
+
+  /** 데이터 안 들어올 때 WS 강제 재연결 (안전장치) */
+  function _checkStaleConnection() {
+    // 구독 중인데 3분 이상 틱이 안 오면 재연결
+    if (!_ticker || !_ws) return;
+    if (_lastTickTime === 0) return;  // 아직 첫 틱도 안 옴
+    var elapsed = Date.now() - _lastTickTime;
+    var session = _getCurrentSession();
+    // 정규장/NXT 중에만 체크 (transition/overtime은 데이터가 드물 수 있음)
+    if ((session === 'regular' || session === 'nxt_pre' || session === 'nxt_night')
+        && elapsed > 180000) {  // 3분
+      _lastTickTime = Date.now();  // 리셋 (무한 재연결 방지)
+      _intentionalClose = false;
+      if (_ws) {
+        _ws.close();  // onclose에서 자동 재연결
+      }
+    }
+  }
+
+  // 30초마다 세션 전환 + 스테일 체크
+  setInterval(function () {
+    _checkSessionChange();
+    _checkStaleConnection();
+  }, 30000);
+
   // ── 초기 연결 ─────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', connect);
+  document.addEventListener('DOMContentLoaded', function () {
+    _lastSession = _getCurrentSession();
+    connect();
+  });
 
 })();

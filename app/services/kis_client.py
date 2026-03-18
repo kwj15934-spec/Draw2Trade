@@ -505,6 +505,29 @@ def fetch_kr_tick_history(ticker: str) -> list[dict]:
     return result.get("output") or []
 
 
+def fetch_nxt_tick_history(ticker: str) -> list[dict]:
+    """
+    FHKST03010300 — NXT 주식현재가 체결 (당일 NXT 체결 내역).
+    최신 → 과거 순 최대 30건 반환. 필드는 FHKST01010300과 동일.
+    """
+    if not is_configured():
+        return []
+
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-ccnl",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": ticker,
+        },
+        "FHKST03010300",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug("KIS NXT tick history error (%s): %s",
+                     ticker, result.get("msg1") if result else "no resp")
+        return []
+    return result.get("output") or []
+
+
 def fetch_kr_price(ticker: str) -> dict | None:
     """
     FHKST01010100 — 주식현재가 시세.

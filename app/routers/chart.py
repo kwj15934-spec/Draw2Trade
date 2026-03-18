@@ -12,7 +12,14 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import data_service
-from app.services.kis_client import fetch_kr_tick_history, fetch_kr_price, is_configured
+from datetime import datetime
+
+from app.services.kis_client import (
+    fetch_kr_tick_history,
+    fetch_kr_price,
+    fetch_nxt_tick_history,
+    is_configured,
+)
 from app.services.kis_stream import get_cached_ticks
 
 logger = logging.getLogger(__name__)
@@ -171,26 +178,37 @@ async def tick_history(ticker: str):
         except (ValueError, TypeError):
             pass
 
-    # KIS REST 당일 체결 조회
-    raw = fetch_kr_tick_history(ticker)
+    # 시간대에 따라 적절한 체결 API 호출
+    now = datetime.now()
+    hm = now.hour * 100 + now.minute
 
     ticks = []
-    for r in (raw or []):
-        try:
-            cvol = int(r.get("cntg_vol", "0").replace(",", ""))
-            if cvol <= 0:
+
+    def _parse_raw_ticks(raw_list: list, session_tag: str) -> None:
+        for r in (raw_list or []):
+            try:
+                cvol = int(r.get("cntg_vol", "0").replace(",", ""))
+                if cvol <= 0:
+                    continue
+                ticks.append({
+                    "time":    r.get("stck_cntg_hour", ""),
+                    "price":   int(r.get("stck_prpr", "0").replace(",", "")),
+                    "cvol":    cvol,
+                    "accvol":  int(r.get("acml_vol", "0").replace(",", "")),
+                    "chgRate": r.get("prdy_ctrt", "0"),
+                    "chgSign": r.get("prdy_vrss_sign", "3"),
+                    "session": session_tag,
+                })
+            except (ValueError, TypeError):
                 continue
-            ticks.append({
-                "time":    r.get("stck_cntg_hour", ""),
-                "price":   int(r.get("stck_prpr", "0").replace(",", "")),
-                "cvol":    cvol,
-                "accvol":  int(r.get("acml_vol", "0").replace(",", "")),
-                "chgRate": r.get("prdy_ctrt", "0"),
-                "chgSign": r.get("prdy_vrss_sign", "3"),
-                "session": "",
-            })
-        except (ValueError, TypeError):
-            continue
+
+    # NXT 시간대 (08:00~08:50, 18:00~24:00) → NXT 체결 우선
+    if (800 <= hm < 850) or (hm >= 1800):
+        _parse_raw_ticks(fetch_nxt_tick_history(ticker), "nxt")
+
+    # 정규장 체결도 항상 시도 (NXT가 비었거나 정규장 시간)
+    if not ticks:
+        _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
 
     # KIS REST 빈 배열 → 서버 캐시(메모리+디스크) 에서 가져오기
     if not ticks:
