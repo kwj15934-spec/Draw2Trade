@@ -295,9 +295,13 @@ async def _on_message(msg: str) -> None:
             tr_id = obj.get("header", {}).get("tr_id", "")
             if tr_id == "PINGPONG":
                 await _ws_conn.send(msg)
-            elif obj.get("body", {}).get("rt_cd") == "0":
-                logger.debug("KIS WS 구독 확인: %s / %s", tr_id,
-                             obj.get("body", {}).get("msg1", ""))
+            else:
+                rt_cd = obj.get("body", {}).get("rt_cd", "")
+                msg1 = obj.get("body", {}).get("msg1", "")
+                if rt_cd == "0":
+                    logger.info("KIS WS 구독 확인: %s / %s", tr_id, msg1)
+                else:
+                    logger.warning("KIS WS 응답: %s / rt_cd=%s / %s", tr_id, rt_cd, msg1)
         except Exception:
             pass
         return
