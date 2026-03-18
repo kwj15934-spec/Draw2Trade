@@ -469,6 +469,43 @@ def fetch_us_ohlcv_paginated(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 국내 주식 당일 체결 내역 (틱 단위)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def fetch_kr_tick_history(ticker: str) -> list[dict]:
+    """
+    FHKST01010300 — 주식현재가 체결 (당일 체결 내역).
+    최신 → 과거 순으로 최대 30건 반환.
+
+    반환 필드 (output):
+      stck_cntg_hour  체결시간 HHMMSS
+      stck_prpr       현재가(체결가)
+      prdy_vrss       전일대비
+      prdy_vrss_sign  전일대비부호 (1:상한, 2:상승, 3:보합, 4:하한, 5:하락)
+      prdy_ctrt       전일대비율
+      cntg_vol        체결량 (건별)
+      acml_vol        누적거래량
+      acml_tr_pbmn    누적거래대금
+    """
+    if not is_configured():
+        return []
+
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/inquire-ccnl",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": ticker,
+        },
+        "FHKST01010300",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug("KIS KR tick history error (%s): %s",
+                     ticker, result.get("msg1") if result else "no resp")
+        return []
+    return result.get("output") or []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 국내 주식 분봉
 # ─────────────────────────────────────────────────────────────────────────────
 

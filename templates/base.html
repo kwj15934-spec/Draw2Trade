@@ -39,7 +39,7 @@
     /* 숫자 모노스페이스 폰트 유틸리티 */
     .mono, .thb-price, .thb-chg, .thb-vol,
     .ask-price, .ask-vol, .bid-price, .bid-vol,
-    .tl-price, .tl-vol, .tl-chg, .tl-time, .tl-date,
+    .tl-price, .tl-vol, .tl-chg, .tl-accvol, .tl-time, .tl-date,
     .result-score-pct, .rb-val {
       font-family: 'JetBrains Mono', 'Pretendard Variable', monospace !important;
       font-variant-numeric: tabular-nums;
@@ -1305,7 +1305,7 @@
     /* 헤더 */
     .tl-header {
       display: grid;
-      grid-template-columns: 2fr 1.4fr 1.4fr 1.6fr;
+      grid-template-columns: 2fr 1fr 1.2fr 1.6fr 1.4fr;
       padding: 6px 12px 5px;
       font-size: 10px;
       font-weight: 700;
@@ -1342,7 +1342,7 @@
     /* 행 — 슬라이드인 애니메이션 */
     .tl-row {
       display: grid;
-      grid-template-columns: 2fr 1.4fr 1.4fr 1.6fr;
+      grid-template-columns: 2fr 1fr 1.2fr 1.6fr 1.4fr;
       align-items: center;
       padding: 5px 10px 5px 8px;
       border-bottom: 1px solid rgba(255,255,255,0.028);
@@ -1385,6 +1385,9 @@
     .tl-chg { font-size: 10.5px; font-weight: 600; }
     .tl-buy  .tl-chg { color: #d94040; }
     .tl-sell .tl-chg { color: #3da0e0; }
+
+    /* 누적거래량 */
+    .tl-accvol { font-size: 10px; color: #7a8499; }
 
     /* 시간 */
     .tl-time {

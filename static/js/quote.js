@@ -68,9 +68,9 @@
     if (empty) empty.remove();
 
     var price   = tick.price;
-    var cvol    = tick.cvol   || 0;   // 건별 체결량 (백엔드 추가 필드)
-    var accvol  = tick.volume || 0;   // 누적거래량 (fallback)
-    var dispVol = cvol > 0 ? cvol : accvol;  // cvol 없으면 누적으로 표시
+    var cvol    = tick.cvol   || 0;   // 건별 체결량
+    var accvol  = tick.volume || 0;   // 누적거래량
+    var dispVol = cvol;               // 체결량 = 건별 체결량만 표시 (0이면 '—')
 
     var time    = tick.time  || '';
     var timeDisp = time.length >= 6
@@ -112,10 +112,16 @@
     var row = document.createElement('div');
     row.className = 'tl-row' + (isBuy ? ' tl-buy' : ' tl-sell') + (isBig ? ' tl-big' : '');
 
+    // 체결량 표시: cvol이 없으면 '—'
+    var volStr = dispVol > 0 ? _fmtVol(dispVol) : '—';
+    // 누적거래량
+    var accvolStr = accvol > 0 ? _fmtVol(accvol) : '';
+
     row.insertAdjacentHTML('afterbegin',
       '<span class="tl-price">' + price.toLocaleString() + '</span>' +
-      '<span class="tl-vol">'   + _fmtVol(dispVol) + '</span>' +
+      '<span class="tl-vol">'   + volStr + '</span>' +
       '<span class="tl-chg">'   + chgStr + '</span>' +
+      '<span class="tl-accvol">' + accvolStr + '</span>' +
       '<span class="tl-time">'  + timeDisp + sessionBadge + '</span>');
 
     // 삽입 + 슬라이드인 애니메이션
@@ -223,6 +229,7 @@
             '<span class="tl-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
             '<span class="tl-chg">'   + chgStr + '</span>' +
             '<span class="tl-vol">'   + _fmtVol(c.volume || 0) + '</span>' +
+            '<span></span>' +
             '</div>';
         }
         list.innerHTML = html;
@@ -242,18 +249,100 @@
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
+    // KR 종목: 틱 단위 체결 내역 API 우선 사용
+    if (market === 'KR') {
+      fetch('/api/ticks/' + encodeURIComponent(ticker))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (data && data.ticks && data.ticks.length) {
+            _renderTickHistory(data.ticks);
+          } else {
+            _fallbackCandleLoad(ticker, market);
+          }
+        })
+        .catch(function () { _fallbackCandleLoad(ticker, market); });
+    } else {
+      _fallbackCandleLoad(ticker, market);
+    }
+  };
+
+  /** 틱 체결 내역(KIS FHKST01010300) → 체결 리스트 렌더링 */
+  function _renderTickHistory(ticks) {
+    if (_initialLoaded) return;
+    _initialLoaded = true;
+
+    // ticks: 최신→과거 순 → 뒤집어서 오래된 것부터 추가 (addTradeRow가 맨 위 삽입)
+    var list = ticks.slice(0, MAX_TRADES).reverse();
+
+    for (var i = 0; i < list.length; i++) {
+      var t = list[i];
+      var sign = (parseFloat(t.chgRate) >= 0) ? '+' : '';
+      var chgPct = t.chgRate;
+      var color = (parseFloat(t.chgRate) >= 0) ? '#26a69a' : '#ef5350';
+
+      // chgSign: 1=상한, 2=상승 → 매수(빨강), 4=하한, 5=하락 → 매도(파랑)
+      var bs = '';
+      if (t.chgSign === '1' || t.chgSign === '2') bs = '1';
+      else if (t.chgSign === '4' || t.chgSign === '5') bs = '5';
+
+      var tick = {
+        price: t.price,
+        volume: t.accvol,    // 누적거래량
+        cvol: t.cvol,        // 건별 체결량
+        time: t.time,
+        bs: bs
+      };
+      window._addTradeRow(tick, chgPct, sign, color);
+    }
+
+    // 헤더바 업데이트 (가장 최근 틱 기준)
+    if (ticks.length > 0) {
+      var latest = ticks[0];
+      _updateHeaderFromTick(latest);
+    }
+  }
+
+  /** 틱 데이터로 헤더바 현재가/등락률/거래량 업데이트 */
+  function _updateHeaderFromTick(t) {
+    var price = t.price;
+    var dispPrice = price >= 1000 ? price.toLocaleString() : price;
+    var chgRate = parseFloat(t.chgRate) || 0;
+    var sign = chgRate >= 0 ? '+' : '';
+    var color = chgRate >= 0 ? '#26a69a' : '#ef5350';
+
+    // 전일 종가 역산
+    var prevClose = price / (1 + chgRate / 100);
+    var chgAmt = (price - prevClose).toFixed(price >= 1000 ? 0 : 2);
+
+    var thbPrice = document.getElementById('thb-price');
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg) {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgRate.toFixed(2) + '%)</span>';
+    }
+    var thbVol = document.getElementById('thb-vol');
+    if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(t.accvol);
+
+    var thbTime = document.getElementById('thb-time');
+    var timeStr = t.time || '';
+    if (thbTime && timeStr.length >= 6) {
+      thbTime.textContent = timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6);
+    }
+  }
+
+  /** 캔들 기반 fallback (1분봉 → 일봉) */
+  function _fallbackCandleLoad(ticker, market) {
     var baseUrl = market === 'US'
       ? '/api/us/chart/' + encodeURIComponent(ticker)
       : '/api/chart/' + encodeURIComponent(ticker);
 
-    // 1분봉 먼저 시도 → 없으면 일봉 fallback
     fetch(baseUrl + '?timeframe=1m')
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (data && data.candles && data.candles.length) {
           _renderInitialTrades(data.candles, true);
         } else {
-          // 1분봉 없음 → 일봉으로 fallback (장 마감 후)
           return fetch(baseUrl + '?timeframe=daily')
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (dData) {
@@ -264,7 +353,7 @@
         }
       })
       .catch(function () { /* silent */ });
-  };
+  }
 
   /** 캔들 데이터를 체결 내역으로 렌더링 */
   function _renderInitialTrades(candles, isMinute) {
@@ -300,8 +389,8 @@
 
       var tick = {
         price: c.close,
-        volume: c.volume || 0,
-        cvol: c.volume || 0,
+        volume: c.volume || 0,   // 누적거래량 컬럼에 표시
+        cvol: 0,                 // 캔들에서는 개별 체결량 알 수 없음 → 비표시
         time: timeStr,
         bs: '',
         _dateLabel: !isMinute ? (c.time || '').replace(/-/g, '.').slice(5) : ''
