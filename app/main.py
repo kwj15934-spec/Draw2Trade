@@ -63,6 +63,22 @@ async def lifespan(app: FastAPI):
         logger.info("KR 캐시 완료.")
     except Exception as e:
         logger.error("KR 캐시 빌드 실패: %s", e)
+    # 초기 종목(삼성전자, AAPL) 주봉/일봉 미리 워밍업 — 첫 사용자 대기 시간 제거
+    try:
+        import threading
+        from app.services.data_service import get_ohlcv_by_timeframe
+        from app.services.us_data_service import get_us_ohlcv_by_timeframe
+        def _warmup():
+            for tf in ("weekly", "daily"):
+                try: get_ohlcv_by_timeframe("005930", tf)
+                except Exception: pass
+            for tf in ("daily", "weekly", "monthly"):
+                try: get_us_ohlcv_by_timeframe("AAPL", tf)
+                except Exception: pass
+            logger.info("초기 종목 주봉/일봉 워밍업 완료.")
+        threading.Thread(target=_warmup, daemon=True).start()
+    except Exception as e:
+        logger.error("워밍업 실패: %s", e)
     try:
         build_us_name_cache()
         prefetch_us_ohlcv_background()

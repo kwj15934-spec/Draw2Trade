@@ -476,11 +476,12 @@
           var found = tickers.find(function (t) { return t.ticker === defaultTicker; });
           if (found) sel.value = defaultTicker;
         }
-        loadChart(sel.value);
+        // 이미 차트가 로드됐거나 로딩 중이면 중복 로드 방지
+        if (!D2T.ticker && !D2T.loading) loadChart(sel.value);
       })
       .catch(function () {
         sel.innerHTML = '<option value="' + defaultTicker + '">' + defaultTicker + '</option>';
-        loadChart(defaultTicker);
+        if (!D2T.ticker && !D2T.loading) loadChart(defaultTicker);
       });
   }
 
@@ -708,6 +709,10 @@
     if (catGroup) catGroup.style.display = 'flex';
     if (searchInp) { searchInp.style.display = 'block'; searchInp.placeholder = '종목명/티커 검색 (KR)'; }
     if (searchWrap) searchWrap.classList.add('kr-mode');
+    // 초기 차트를 종목 목록 응답 전에 즉시 병렬 로드
+    var _initTicker = new URLSearchParams(window.location.search).get('ticker')
+      || (D2T.market === 'US' ? 'AAPL' : '005930');
+    loadChart(_initTicker);
     loadCategoryList();
     loadTickerList('');
 
