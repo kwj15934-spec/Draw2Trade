@@ -1279,44 +1279,7 @@
     .trade-tab-btn:hover { color: #8090b0; }
     .trade-tab-btn.active { color: #d1d8f0; border-bottom-color: #26c6a0; }
 
-    /* ── 체결 내역 ───────────────────────────────────────── */
-    .trade-header {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      padding: 5px 10px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #3a4560;
-      background: #0b0e1a;
-      border-bottom: 1px solid #1a2038;
-      text-align: right;
-      flex-shrink: 0;
-      letter-spacing: 0.2px;
-    }
-    .trade-header span:first-child { text-align: left; }
-
-    .trade-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      padding: 3px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.025);
-      font-size: 11px;
-      text-align: right;
-      transition: background 0.1s;
-      font-variant-numeric: tabular-nums;
-    }
-    .trade-row:hover { background: rgba(255,255,255,0.03); }
-    .trade-row span:first-child { text-align: left; }
-
-    .trade-row.up   .tr-price { color: #ef5350; font-weight: 600; }
-    .trade-row.down .tr-price { color: #26c6a0; font-weight: 600; }
-    .trade-row.up   .tr-chg   { color: #ef5350; }
-    .trade-row.down .tr-chg   { color: #26c6a0; }
-    .tr-vol { color: #8090b0; font-size: 10px; }
-    .tr-time { color: #3a4560; font-size: 10px; display: flex; align-items: center; gap: 3px; }
-    .tr-session { font-size: 9px; padding: 1px 3px; border-radius: 2px; font-weight: 700; line-height: 1; }
-    .tr-session.pre   { background: rgba(91,163,245,0.15); color: #5ba3f5; }
-    .tr-session.after { background: rgba(199,125,255,0.15); color: #c77dff; }
+    /* ── 체결 내역 (토스증권 스타일) ────────────────────── */
 
     #trade-pane-rt, #trade-pane-daily {
       display: flex;
@@ -1326,12 +1289,111 @@
     }
     #trade-pane-daily { display: none; }
     #trade-list-daily { flex: 1; overflow-y: auto; }
-    #trade-list-daily::-webkit-scrollbar { width: 3px; }
-    #trade-list-daily::-webkit-scrollbar-track { background: #131722; }
-    #trade-list-daily::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
-    #trade-list::-webkit-scrollbar { width: 3px; }
-    #trade-list::-webkit-scrollbar-track { background: #131722; }
-    #trade-list::-webkit-scrollbar-thumb { background: #2a2e39; border-radius: 2px; }
+
+    /* 헤더 */
+    .tl-header {
+      display: grid;
+      grid-template-columns: 2fr 1.4fr 1.4fr 1.6fr;
+      padding: 6px 12px 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #2e3d5a;
+      background: #090c18;
+      border-bottom: 1px solid #111828;
+      flex-shrink: 0;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .tl-header span:last-child { text-align: right; }
+
+    /* 빈 상태 */
+    .tl-empty {
+      padding: 32px 0;
+      text-align: center;
+      color: #253050;
+      font-size: 11px;
+    }
+
+    /* 목록 스크롤바 */
+    #trade-list {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    #trade-list::-webkit-scrollbar,
+    #trade-list-daily::-webkit-scrollbar       { width: 2px; }
+    #trade-list::-webkit-scrollbar-track,
+    #trade-list-daily::-webkit-scrollbar-track { background: transparent; }
+    #trade-list::-webkit-scrollbar-thumb,
+    #trade-list-daily::-webkit-scrollbar-thumb { background: #1a2540; border-radius: 2px; }
+
+    /* 행 — 슬라이드인 애니메이션 */
+    .tl-row {
+      display: grid;
+      grid-template-columns: 2fr 1.4fr 1.4fr 1.6fr;
+      align-items: center;
+      padding: 5px 10px 5px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.028);
+      font-variant-numeric: tabular-nums;
+      /* 진입 초기값 */
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: opacity 0.16s ease, transform 0.16s ease, background 0.1s;
+    }
+    .tl-row--visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .tl-row:hover { background: rgba(255,255,255,0.03); }
+
+    /* 좌측 인디케이터 라인 */
+    .tl-buy  { border-left: 2px solid rgba(240,84,84,0.55); padding-left: 6px; }
+    .tl-sell { border-left: 2px solid rgba(77,184,255,0.45); padding-left: 6px; }
+
+    /* 가격 */
+    .tl-price {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .tl-buy  .tl-price { color: #f05454; }
+    .tl-sell .tl-price { color: #4db8ff; }
+
+    /* 체결량 */
+    .tl-vol { font-size: 10.5px; font-weight: 500; }
+    .tl-buy  .tl-vol { color: rgba(240,84,84,0.6); }
+    .tl-sell .tl-vol { color: rgba(77,184,255,0.6); }
+
+    /* 등락률 */
+    .tl-chg { font-size: 10.5px; font-weight: 600; }
+    .tl-buy  .tl-chg { color: #d94040; }
+    .tl-sell .tl-chg { color: #3da0e0; }
+
+    /* 시간 */
+    .tl-time {
+      font-size: 10px;
+      color: #263050;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 3px;
+    }
+
+    /* 일별 날짜 */
+    .tl-date { font-size: 10.5px; color: #3a4e70; font-weight: 500; }
+
+    /* 시간외 배지 */
+    .tr-session {
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 700;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .tr-session.pre   { background: rgba(91,163,245,0.1); color: #5ba3f5; }
+    .tr-session.after { background: rgba(199,125,255,0.1); color: #c77dff; }
 
     /* ── 사이드바 너비 조정 ──────────────────────────────── */
     .d2t-sidebar {

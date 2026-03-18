@@ -206,9 +206,6 @@
       </div>
     </div>
 
-    <!-- 구분선 -->
-    <div style="height:1px;background:#1e2130;flex-shrink:0;"></div>
-
     <!-- 실시간/일별 체결 내역 -->
     <div id="trade-panel">
       <!-- 탭 -->
@@ -218,26 +215,26 @@
       </div>
       <!-- 실시간 탭 -->
       <div id="trade-pane-rt">
-        <div class="trade-header">
-          <span>체결가</span>
+        <div class="tl-header">
+          <span>가격</span>
           <span>체결량</span>
-          <span>등락률</span>
+          <span>등락</span>
           <span>시간</span>
         </div>
         <div id="trade-list">
-          <div class="asking-empty" style="padding:20px 0;">체결 대기 중...</div>
+          <div class="tl-empty">체결 대기 중...</div>
         </div>
       </div>
       <!-- 일별 탭 -->
       <div id="trade-pane-daily" style="display:none;flex-direction:column;flex:1;min-height:0;">
-        <div class="trade-header">
+        <div class="tl-header">
           <span>날짜</span>
           <span>종가</span>
-          <span>등락률</span>
+          <span>등락</span>
           <span>거래량</span>
         </div>
         <div id="trade-list-daily" style="flex:1;overflow-y:auto;">
-          <div class="asking-empty" style="padding:20px 0;">일별 데이터 대기 중...</div>
+          <div class="tl-empty">일별 데이터 대기 중...</div>
         </div>
       </div>
     </div>
@@ -737,6 +734,6 @@
 <script src="/static/js/chart.js?v=20260318a"></script>
 <script src="/static/js/draw.js?v=20260312j"></script>
 <script src="/static/js/realtime.js?v=20260318a"></script>
-<script src="/static/js/quote.js?v=20260318a"></script>
+<script src="/static/js/quote.js?v=20260318b"></script>
 
 {% endblock %}

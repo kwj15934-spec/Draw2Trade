@@ -87,23 +87,40 @@ async def _get_approval_key() -> Optional[str]:
 # ── 데이터 파싱 ──────────────────────────────────────────────────────────────
 
 def _parse_kr(raw: str) -> Optional[dict]:
-    """H0STCNT0 체결 데이터 파싱. '^' 구분 필드."""
+    """H0STCNT0 체결 데이터 파싱. '^' 구분 필드.
+    f[0]=STCK_SHRN_ISCD  종목코드
+    f[1]=STCK_CNTG_HOUR  체결시간 HHMMSS
+    f[2]=STCK_PRPR       현재가
+    f[7]=STCK_OPRC       시가
+    f[8]=STCK_HGPR       고가
+    f[9]=STCK_LWPR       저가
+    f[12]=CNTG_VOL       체결량 (건별)
+    f[13]=ACML_VOL       누적거래량
+    f[20]=SELN_CNTG_CSNU 매도체결건수 / 실질적으로 매수(1)·매도(5) 구분
+          ※ KIS 실전: f[20] = 매수매도구분코드 (1=매수, 5=매도)
+    f[21]=WHOL_LOAN_RMND_RATE01  체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
+    f[34]=BSOP_DATE      영업일자 YYYYMMDD
+    """
     f = raw.split("^")
     if len(f) < 35:
         return None
     try:
+        # 매수/매도 구분: f[20] == '1' → 매수체결, '5' → 매도체결
+        bs_raw = f[20] if len(f) > 20 else ''
         return {
             "type":    "tick",
             "market":  "KR",
-            "ticker":  f[0],          # 종목코드
-            "date":    f[34],         # YYYYMMDD (영업일자)
-            "time":    f[1],          # HHMMSS
-            "price":   float(f[2]),   # 현재가
-            "open":    float(f[7]),   # 시가
-            "high":    float(f[8]),   # 고가
-            "low":     float(f[9]),   # 저가
+            "ticker":  f[0],
+            "date":    f[34],
+            "time":    f[1],
+            "price":   float(f[2]),
+            "open":    float(f[7]),
+            "high":    float(f[8]),
+            "low":     float(f[9]),
+            "cvol":    int(f[12]),    # 건별 체결량
             "volume":  int(f[13]),    # 누적거래량
-            "session": f[21] if len(f) > 21 else "",  # 체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
+            "bs":      bs_raw,        # '1'=매수, '5'=매도
+            "session": f[21] if len(f) > 21 else "",
         }
     except (ValueError, IndexError):
         return None

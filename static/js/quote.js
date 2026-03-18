@@ -1,5 +1,5 @@
 /**
- * quote.js — 호가창 + 실시간 체결 내역
+ * quote.js — 호가창 + 실시간 체결 내역 (토스증권 스타일)
  *
  * realtime.js에서 아래 전역 함수를 호출:
  *   window._onAsking(msg)      — 호가 데이터 (type:"asking")
@@ -9,8 +9,7 @@
 (function () {
   'use strict';
 
-  var MAX_TRADES = 80;   // 최대 체결 내역 행 수
-  var _prevAsk = null;   // 이전 호가 (변화 감지용)
+  var MAX_TRADES = 50;  // 최신 50개 유지
 
   // ── 호가창 렌더링 ──────────────────────────────────────────────────────────
 
@@ -21,17 +20,15 @@
     var asks = msg.asks || [];  // asks[0] = 최우선 매도 (최저 매도가)
     var bids = msg.bids || [];  // bids[0] = 최우선 매수 (최고 매수가)
 
-    // 잔량 최대값 (바 비율 계산용)
     var maxVol = 1;
     asks.forEach(function(a) { if (a.volume > maxVol) maxVol = a.volume; });
     bids.forEach(function(b) { if (b.volume > maxVol) maxVol = b.volume; });
 
-    // 매도 총잔량, 매수 총잔량
     var askTotal = asks.reduce(function(s, a) { return s + a.volume; }, 0);
     var bidTotal = bids.reduce(function(s, b) { return s + b.volume; }, 0);
 
     // 매도: 높은 가격이 위 (역순)
-    var sortedAsks = asks.slice().reverse(); // asks[0]=최우선→ reverse→위가 가장 비쌈
+    var sortedAsks = asks.slice().reverse();
 
     var html = '';
     for (var i = 0; i < Math.max(sortedAsks.length, bids.length); i++) {
@@ -51,7 +48,6 @@
     }
     rows.innerHTML = html;
 
-    // 총잔량 업데이트
     var askTotalEl = document.getElementById('ask-total-label');
     var bidTotalEl = document.getElementById('bid-total-label');
     if (askTotalEl) askTotalEl.textContent = '매도 ' + _fmtVol(askTotal);
@@ -64,43 +60,64 @@
     var list = document.getElementById('trade-list');
     if (!list) return;
 
-    // 첫 틱이면 empty 메시지 제거
-    var empty = list.querySelector('.asking-empty');
+    // 대기 메시지 제거
+    var empty = list.querySelector('.tl-empty');
     if (empty) empty.remove();
 
-    var price = tick.price;
-    var vol   = tick.volume || 0;
-    var time  = tick.time  || '';
+    var price   = tick.price;
+    var cvol    = tick.cvol   || 0;   // 건별 체결량 (백엔드 추가 필드)
+    var accvol  = tick.volume || 0;   // 누적거래량 (fallback)
+    var dispVol = cvol > 0 ? cvol : accvol;  // cvol 없으면 누적으로 표시
+
+    var time    = tick.time  || '';
     var timeDisp = time.length >= 6
       ? time.slice(0,2) + ':' + time.slice(2,4) + ':' + time.slice(4,6) : '';
 
-    var dir   = (chgPct !== null && chgPct >= 0) ? 'up' : 'down';
+    // 매수/매도 구분: bs='1'=매수→빨강, '5'=매도→파랑
+    // 없으면 전일 대비 등락으로 fallback
+    var bs = tick.bs || '';
+    var isBuy;
+    if (bs === '1') {
+      isBuy = true;
+    } else if (bs === '5') {
+      isBuy = false;
+    } else {
+      // fallback: 등락률 기준 (양수=상승=매수우세=빨강)
+      isBuy = (chgPct !== null && parseFloat(chgPct) >= 0);
+    }
+
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
-    // 시간외 구분 (session: 1=장중, 2=시간외단일가, 5=장전, 7=시간외종가, 그 외=기타)
+    // 시간외 배지
     var session = tick.session || '';
     var sessionBadge = '';
     if (session === '5') {
       sessionBadge = '<span class="tr-session pre">장전</span>';
     } else if (session === '2') {
       sessionBadge = '<span class="tr-session after">단일가</span>';
-    } else if (session === '7') {
-      sessionBadge = '<span class="tr-session after">시외</span>';
-    } else if (session !== '' && session !== '1') {
+    } else if (session === '7' || (session !== '' && session !== '1')) {
       sessionBadge = '<span class="tr-session after">시외</span>';
     }
 
     var row = document.createElement('div');
-    row.className = 'trade-row ' + dir;
+    row.className = 'tl-row' + (isBuy ? ' tl-buy' : ' tl-sell');
+
     row.innerHTML =
-      '<span class="tr-price">' + price.toLocaleString() + '</span>' +
-      '<span class="tr-vol">'   + _fmtVol(vol) + '</span>' +
-      '<span class="tr-chg">'   + chgStr + '</span>' +
-      '<span class="tr-time">'  + timeDisp + sessionBadge + '</span>';
+      '<span class="tl-price">' + price.toLocaleString() + '</span>' +
+      '<span class="tl-vol">'   + _fmtVol(dispVol) + '</span>' +
+      '<span class="tl-chg">'   + chgStr + '</span>' +
+      '<span class="tl-time">'  + timeDisp + sessionBadge + '</span>';
 
+    // 삽입 + 슬라이드인 애니메이션
     list.insertBefore(row, list.firstChild);
+    // rAF으로 한 프레임 후 class 추가 → CSS transition 발동
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        row.classList.add('tl-row--visible');
+      });
+    });
 
-    // 최대 행 수 초과 시 오래된 항목 제거
+    // 50개 초과 시 오래된 항목 제거 (fade-out 없이 바로 제거)
     while (list.children.length > MAX_TRADES) {
       list.removeChild(list.lastChild);
     }
@@ -110,7 +127,10 @@
 
   window._clearTradeList = function () {
     var list = document.getElementById('trade-list');
-    if (list) list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">체결 데이터 대기 중...</div>';
+    if (list) {
+      list.innerHTML =
+        '<div class="tl-empty">체결 데이터 대기 중...</div>';
+    }
     var rows = document.getElementById('asking-rows');
     if (rows) rows.innerHTML = '<div class="asking-empty">실시간 데이터 대기 중...</div>';
     var askTotalEl = document.getElementById('ask-total-label');
@@ -162,7 +182,7 @@
 
     var list = document.getElementById('trade-list-daily');
     if (!list) return;
-    list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">로딩 중...</div>';
+    list.innerHTML = '<div class="tl-empty">로딩 중...</div>';
 
     var url = market === 'US'
       ? '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=daily'
@@ -172,34 +192,33 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (!data || !data.candles || !data.candles.length) {
-          list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">데이터 없음</div>';
+          list.innerHTML = '<div class="tl-empty">데이터 없음</div>';
           return;
         }
-        // 최신→과거 순으로 표시
         var candles = data.candles.slice().reverse();
         var html = '';
         for (var i = 0; i < candles.length; i++) {
-          var c = candles[i];
+          var c    = candles[i];
           var prev = candles[i + 1];
           var chgStr = '—', dir = '';
           if (prev && prev.close) {
-            var pct = ((c.close - prev.close) / prev.close * 100).toFixed(2);
-            var sign = pct >= 0 ? '+' : '';
-            chgStr = sign + pct + '%';
-            dir = pct >= 0 ? 'up' : 'down';
+            var pct  = ((c.close - prev.close) / prev.close * 100).toFixed(2);
+            var sg   = pct >= 0 ? '+' : '';
+            chgStr = sg + pct + '%';
+            dir    = pct >= 0 ? 'tl-buy' : 'tl-sell';
           }
           var dateDisp = typeof c.time === 'string' ? c.time.replace(/-/g, '.') : c.time;
-          html += '<div class="trade-row ' + dir + '">' +
-            '<span class="tr-price" style="font-size:10px;color:#aaa;">' + dateDisp + '</span>' +
-            '<span class="tr-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
-            '<span class="tr-chg">' + chgStr + '</span>' +
-            '<span style="text-align:right;font-size:10px;color:#555;">' + _fmtVol(c.volume || 0) + '</span>' +
+          html += '<div class="tl-row tl-row--visible ' + dir + '">' +
+            '<span class="tl-date">' + dateDisp + '</span>' +
+            '<span class="tl-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
+            '<span class="tl-chg">'   + chgStr + '</span>' +
+            '<span class="tl-vol">'   + _fmtVol(c.volume || 0) + '</span>' +
             '</div>';
         }
         list.innerHTML = html;
       })
       .catch(function() {
-        list.innerHTML = '<div class="asking-empty" style="padding:20px 0;">로드 실패</div>';
+        list.innerHTML = '<div class="tl-empty">로드 실패</div>';
       });
   }
 
@@ -208,10 +227,8 @@
   (function patchOnChartLoaded() {
     var _orig = window._onChartLoaded;
     window._onChartLoaded = function (ticker, market) {
-      // 헤더바 종목명 업데이트
       var thbName = document.getElementById('thb-name');
       if (thbName) thbName.textContent = ticker;
-      // 일별 탭이 열려있으면 새 종목 데이터 새로고침
       if (_activeTab === 'daily') _loadDailyTrades();
       if (_orig) _orig(ticker, market);
     };
