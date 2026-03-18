@@ -21,12 +21,20 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+            # Python 의존성
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
-
             ./venv/bin/python -m pip install -U pip setuptools wheel
             ./venv/bin/pip install -r requirements.txt
+
+            # Node.js + Vite 빌드 (JS 번들링/압축/난독화)
+            if ! command -v node &> /dev/null; then
+              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+              sudo apt-get install -y nodejs
+            fi
+            npm ci --prefer-offline
+            npm run build
 
             sudo systemctl restart draw2trade
             sudo systemctl status draw2trade --no-pager -l | head -n 30
