@@ -125,6 +125,8 @@
 
     // 마지막 틱 수신 시각 갱신 (스테일 체크용)
     _lastTickTime = Date.now();
+    // 실시간 데이터 도착 → REST polling 중단
+    if (_restPollTimer) _stopRestPolling();
 
     // 실시간 데이터 도착 → 초기 로드 데이터 무시 플래그
     if (window._markRealtimeActive) window._markRealtimeActive();
@@ -385,20 +387,46 @@
     }, 1000);
   }
 
-  /** 데이터 안 들어올 때 WS 강제 재연결 (안전장치) */
+  /** 데이터 안 들어올 때: 10초 REST polling → 2분 WS 재연결 */
+  var _restPollTimer = null;
+
   function _checkStaleConnection() {
     if (!_ticker || !_ws) return;
     var session = _getCurrentSession();
-    // 거래 가능 시간에만 체크
     if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night') return;
     var elapsed = Date.now() - _lastTickTime;
-    // 2분 이상 틱 미수신 → 강제 재연결
+
+    // 10초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신
+    if (elapsed > 10000 && !_restPollTimer) {
+      _startRestPolling();
+    }
+    // 2분 이상 틱 미수신 → WS 강제 재연결
     if (elapsed > 120000) {
+      _stopRestPolling();
       _forceReconnect('스테일 감지: ' + Math.round(elapsed / 1000) + '초');
     }
   }
 
-  // 15초마다 체크 (더 빈번하게)
+  /** REST polling: /api/ticks로 10초마다 데이터 갱신 (WS 실패 시 세이프가드) */
+  function _startRestPolling() {
+    if (_restPollTimer) return;
+    _restPollTimer = setInterval(function () {
+      if (!_ticker) { _stopRestPolling(); return; }
+      // 실시간 틱이 들어오면 polling 중단
+      if (Date.now() - _lastTickTime < 10000) { _stopRestPolling(); return; }
+      // REST로 틱 데이터 가져와서 초기 데이터 갱신
+      if (window._loadInitialTrades) window._loadInitialTrades();
+    }, 10000);
+  }
+
+  function _stopRestPolling() {
+    if (_restPollTimer) {
+      clearInterval(_restPollTimer);
+      _restPollTimer = null;
+    }
+  }
+
+  // 15초마다 세션 + 스테일 체크
   setInterval(function () {
     _checkSessionChange();
     _checkStaleConnection();

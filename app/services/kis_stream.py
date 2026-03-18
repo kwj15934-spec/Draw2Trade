@@ -168,7 +168,7 @@ async def _get_approval_key() -> Optional[str]:
 # ── 데이터 파싱 ──────────────────────────────────────────────────────────────
 
 def _parse_kr(raw: str) -> Optional[dict]:
-    """H0STCNT0 체결 데이터 파싱. '^' 구분 필드.
+    """H0STCNT0 / H0NMCNT0 / H0STCVT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=STCK_SHRN_ISCD  종목코드
     f[1]=STCK_CNTG_HOUR  체결시간 HHMMSS
     f[2]=STCK_PRPR       현재가
@@ -177,33 +177,39 @@ def _parse_kr(raw: str) -> Optional[dict]:
     f[9]=STCK_LWPR       저가
     f[12]=CNTG_VOL       체결량 (건별)
     f[13]=ACML_VOL       누적거래량
-    f[20]=SELN_CNTG_CSNU 매도체결건수 / 실질적으로 매수(1)·매도(5) 구분
-          ※ KIS 실전: f[20] = 매수매도구분코드 (1=매수, 5=매도)
-    f[21]=WHOL_LOAN_RMND_RATE01  체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
-    f[34]=BSOP_DATE      영업일자 YYYYMMDD
+    f[20]=매수매도구분코드 (1=매수, 5=매도)
+    f[21]=체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
+    f[34]=BSOP_DATE      영업일자 YYYYMMDD (NXT는 없을 수 있음)
     """
     f = raw.split("^")
-    if len(f) < 35:
+    # 최소 14개 필드만 있으면 파싱 가능 (f[0]~f[13])
+    if len(f) < 14:
+        logger.debug("KR tick 필드 부족: %d개 (raw=%s...)", len(f), raw[:80])
         return None
     try:
-        # 매수/매도 구분: f[20] == '1' → 매수체결, '5' → 매도체결
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        _KST = _tz(_td(hours=9))
+        # 매수/매도 구분
         bs_raw = f[20] if len(f) > 20 else ''
+        # 날짜: f[34]가 있으면 사용, 없으면 오늘(KST)
+        date_str = f[34] if len(f) > 34 and f[34] else _dt.now(_KST).strftime("%Y%m%d")
         return {
             "type":    "tick",
             "market":  "KR",
             "ticker":  f[0],
-            "date":    f[34],
+            "date":    date_str,
             "time":    f[1],
             "price":   float(f[2]),
-            "open":    float(f[7]),
-            "high":    float(f[8]),
-            "low":     float(f[9]),
+            "open":    float(f[7]) if len(f) > 7 and f[7] else float(f[2]),
+            "high":    float(f[8]) if len(f) > 8 and f[8] else float(f[2]),
+            "low":     float(f[9]) if len(f) > 9 and f[9] else float(f[2]),
             "cvol":    int(f[12]),    # 건별 체결량
             "volume":  int(f[13]),    # 누적거래량
             "bs":      bs_raw,        # '1'=매수, '5'=매도
             "session": f[21] if len(f) > 21 else "",
         }
-    except (ValueError, IndexError):
+    except (ValueError, IndexError) as e:
+        logger.debug("KR tick 파싱 오류: %s (fields=%d)", e, len(f))
         return None
 
 
@@ -378,6 +384,8 @@ async def _unsubscribe(tr_id: str, tr_key: str) -> None:
 # ── WS 메시지 헬퍼 ───────────────────────────────────────────────────────────
 
 async def _send_sub_msg(tr_id: str, tr_key: str, *, subscribe: bool) -> None:
+    action = "SUBSCRIBE" if subscribe else "UNSUBSCRIBE"
+    logger.info("[WS] %s %s with %s", action, tr_key, tr_id)
     msg = json.dumps({
         "header": {
             "approval_key": _approval_key,
@@ -422,6 +430,8 @@ async def _on_message(msg: str) -> None:
         return
 
     _, tr_id, _cnt, raw = parts
+    field_count = len(raw.split("^"))
+    logger.debug("[WS DATA] tr_id=%s fields=%d raw=%s...", tr_id, field_count, raw[:60])
     if tr_id == "H0STCNT0":
         tick = _parse_kr(raw)
         if tick:

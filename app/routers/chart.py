@@ -12,7 +12,14 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import data_service
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+_KST = timezone(timedelta(hours=9))
+
+
+def _now_kst() -> datetime:
+    """서버 시간대와 무관하게 한국 시간 반환."""
+    return datetime.now(_KST)
 
 from app.services.kis_client import (
     fetch_kr_tick_history,
@@ -153,7 +160,7 @@ async def chart_data(
             candles = []
 
         # NXT/시간외: 캐시 틱 → 캔들 + NXT 현재가 fallback
-        now = datetime.now()
+        now = _now_kst()
         hm = now.hour * 100 + now.minute
         if hm < 900 or hm >= 1530:
             # 1) 캐시 틱 → 분봉 캔들
@@ -232,7 +239,7 @@ async def chart_data(
     ]
 
     # NXT 시간대: 오늘 날짜 캔들이 없으면 NXT 현재가로 생성
-    now = datetime.now()
+    now = _now_kst()
     today_str = now.strftime("%Y-%m-%d")
     hm = now.hour * 100 + now.minute
     has_today = any(c["time"] == today_str for c in candles) if tf == "daily" else False
@@ -308,7 +315,7 @@ async def tick_history(ticker: str):
             pass
 
     # 시간대에 따라 적절한 체결 API 호출
-    now = datetime.now()
+    now = _now_kst()
     hm = now.hour * 100 + now.minute
 
     ticks = []
