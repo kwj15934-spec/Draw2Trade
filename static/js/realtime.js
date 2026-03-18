@@ -23,10 +23,6 @@
   var _retryTimer     = null;
   var _intentionalClose = false;
 
-  // RAF 배치: 틱이 빠르게 들어올 때 마지막 상태만 렌더링
-  var _pendingTick    = null;
-  var _rafPending     = false;
-
   // ── 날짜 변환 헬퍼 ────────────────────────────────────────────────────────
 
   /** YYYYMMDD → YYYY-MM-DD */
@@ -136,52 +132,43 @@
     var timeStr   = _candleTime(tick.date, tick.time);
     var price     = tick.price;
     var rawVol    = tick.volume || 0;  // KR: 누적거래량, US: 누적 or 틱 거래량
+    var cvol      = tick.cvol   || 0;  // 건별 체결량
 
     if (!_rtCandle || _rtCandle.time !== timeStr) {
-      // 새 캔들 or 최초 틱 — 누적거래량 기준점 리셋
+      // 새 캔들 시작
       _candleBaseVol = rawVol;
-      var candleVol = 0;  // 새 캔들 첫 틱은 거래량 0으로 시작
       _rtCandle = {
         time:   timeStr,
-        open:   tick.open  || price,
-        high:   tick.high  || price,
-        low:    tick.low   || price,
+        open:   price,
+        high:   price,
+        low:    price,
         close:  price,
-        volume: candleVol,
+        volume: cvol,  // 첫 틱의 체결량
       };
     } else {
-      // 기존 캔들 업데이트
+      // 기존 캔들 업데이트 — 매 틱마다 즉시 반영
       _rtCandle.close = price;
       _rtCandle.high  = Math.max(_rtCandle.high, price);
       _rtCandle.low   = Math.min(_rtCandle.low,  price);
-      // KR: 누적거래량 차이로 캔들 내 거래량 계산
-      // US: 틱 거래량 그대로 누적
-      if (_market === 'KR' && _candleBaseVol !== null) {
-        _rtCandle.volume = Math.max(0, rawVol - _candleBaseVol);
+      // 거래량: KR은 cvol 누적, fallback으로 누적거래량 차이 사용
+      if (_market === 'KR') {
+        if (cvol > 0) {
+          _rtCandle.volume += cvol;
+        } else if (_candleBaseVol !== null) {
+          _rtCandle.volume = Math.max(0, rawVol - _candleBaseVol);
+        }
       } else if (rawVol) {
         _rtCandle.volume = rawVol;
       }
     }
 
-    // RAF 배치 렌더링 — 틱이 연속으로 들어올 때 마지막 상태만 렌더링
-    _pendingTick = tick;
-    if (!_rafPending) {
-      _rafPending = true;
-      requestAnimationFrame(_flushTick);
-    }
-  }
-
-  function _flushTick() {
-    _rafPending = false;
-    var tick = _pendingTick;
-    _pendingTick = null;
-    if (!tick || !_rtCandle || !window.D2T || !D2T.series) return;
-
-    var timeStr = _rtCandle.time;
+    // 즉시 차트 업데이트 (지연 없음)
     D2T.series.update(_rtCandle);
+
+    // 거래량 막대 실시간 업데이트
     if (D2T.volumeSeries) {
       D2T.volumeSeries.update({
-        time:  timeStr,
+        time:  _rtCandle.time,
         value: _rtCandle.volume,
         color: (_rtCandle.close >= _rtCandle.open)
           ? 'rgba(38,166,154,0.45)'
@@ -189,11 +176,9 @@
       });
     }
 
-    // 사용자가 오른쪽 끝(최신)을 보고 있을 때만 자동 스크롤
     _autoScrollToLatest();
-
     _setLive(true);
-    _updateOverlay(tick.price);
+    _updateOverlay(price);
     _updatePricePanel(tick);
   }
 

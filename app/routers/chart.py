@@ -22,6 +22,60 @@ from app.services.kis_client import (
 )
 from app.services.kis_stream import get_cached_ticks
 
+import calendar
+
+
+def _ticks_to_candles(ticks: list[dict], interval_min: int) -> list[dict]:
+    """캐시된 틱 데이터를 분봉 캔들로 변환.
+
+    ticks: 최신→과거 순 (kis_stream 캐시 형식)
+    returns: Lightweight Charts 형식 캔들 [{time, open, high, low, close, volume}, ...]
+    """
+    if not ticks:
+        return []
+
+    interval_sec = interval_min * 60
+    buckets: dict[int, dict] = {}  # bucket_ts → candle
+
+    for t in ticks:
+        if t.get("type") != "tick":
+            continue
+        price = float(t.get("price", 0))
+        cvol = int(t.get("cvol", 0))
+        date_str = t.get("date", "")
+        time_str = t.get("time", "")
+        if not date_str or not time_str or len(date_str) < 8 or len(time_str) < 6:
+            continue
+
+        # "display local time as UTC" — chart.js와 동일한 방식
+        from datetime import datetime as _dt
+        try:
+            dt = _dt(
+                int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]),
+                int(time_str[:2]), int(time_str[2:4]), int(time_str[4:6]),
+            )
+            ts = int(calendar.timegm(dt.timetuple()))
+        except (ValueError, IndexError):
+            continue
+
+        bucket_ts = (ts // interval_sec) * interval_sec
+
+        if bucket_ts not in buckets:
+            buckets[bucket_ts] = {
+                "time": bucket_ts,
+                "open": price, "high": price, "low": price, "close": price,
+                "volume": cvol,
+            }
+        else:
+            c = buckets[bucket_ts]
+            # ticks는 최신→과거 순이므로, 나중에 만나는 데이터가 더 과거
+            c["open"] = price  # 덮어쓰기 → 마지막(가장 과거)이 open
+            c["high"] = max(c["high"], price)
+            c["low"] = min(c["low"], price)
+            c["volume"] += cvol
+
+    return sorted(buckets.values(), key=lambda c: c["time"])
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
@@ -94,6 +148,24 @@ async def chart_data(
     if tf in _INTRADAY:
         interval_min = int(tf.rstrip("m"))
         candles = data_service.get_kr_intraday(ticker, interval_min, poll_only=bool(poll))
+        if not candles:
+            candles = []
+
+        # NXT/시간외 캐시 틱 → 캔들로 변환해서 뒤에 붙이기
+        now = datetime.now()
+        hm = now.hour * 100 + now.minute
+        # 정규장 외 시간이면 캐시 틱으로 보충
+        if hm < 900 or hm >= 1530:
+            cached = get_cached_ticks(ticker)
+            nxt_candles = _ticks_to_candles(cached, interval_min)
+            if nxt_candles:
+                # 기존 캔들과 시간 겹침 제거
+                existing_times = {c["time"] for c in candles} if candles else set()
+                for nc in nxt_candles:
+                    if nc["time"] not in existing_times:
+                        candles.append(nc)
+                candles.sort(key=lambda c: c["time"])
+
         if not candles:
             raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {ticker}")
         return {
