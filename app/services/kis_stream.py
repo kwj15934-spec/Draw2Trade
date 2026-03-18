@@ -14,6 +14,8 @@ TR 코드:
   H0STCVT0  — 국내주식 시간외 단일가 체결
   H0STASP0  — 국내주식 실시간 호가
   H0STASV0  — 국내주식 시간외 실시간 호가 (KRX)
+  H0NMCNT0  — 국내주식 NXT 실시간 체결  (야간거래소 18:00~24:00)
+  H0NMASP0  — 국내주식 NXT 실시간 호가  (야간거래소 18:00~24:00)
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
@@ -171,6 +173,22 @@ def _parse_kr_asking_overtime(raw: str) -> Optional[dict]:
     return asking
 
 
+def _parse_nxt(raw: str) -> Optional[dict]:
+    """H0NMCNT0 NXT 야간거래소 체결 파싱. 필드 구조는 H0STCNT0과 동일."""
+    tick = _parse_kr(raw)
+    if tick:
+        tick["session"] = "nxt"
+    return tick
+
+
+def _parse_nxt_asking(raw: str) -> Optional[dict]:
+    """H0NMASP0 NXT 야간거래소 호가 파싱. 필드 구조는 H0STASP0과 동일."""
+    asking = _parse_kr_asking(raw)
+    if asking:
+        asking["session"] = "nxt"
+    return asking
+
+
 def _parse_us(raw: str) -> Optional[dict]:
     """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
@@ -232,6 +250,22 @@ async def subscribe_kr_asking_overtime(ticker: str) -> None:
 
 async def unsubscribe_kr_asking_overtime(ticker: str) -> None:
     await _unsubscribe("H0STASV0", ticker)
+
+
+async def subscribe_nxt(ticker: str) -> None:
+    await _subscribe("H0NMCNT0", ticker)
+
+
+async def unsubscribe_nxt(ticker: str) -> None:
+    await _unsubscribe("H0NMCNT0", ticker)
+
+
+async def subscribe_nxt_asking(ticker: str) -> None:
+    await _subscribe("H0NMASP0", ticker)
+
+
+async def unsubscribe_nxt_asking(ticker: str) -> None:
+    await _unsubscribe("H0NMASP0", ticker)
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
@@ -326,6 +360,14 @@ async def _on_message(msg: str) -> None:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
     elif tr_id == "H0STASV0":
         asking = _parse_kr_asking_overtime(raw)
+        if asking:
+            asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
+    elif tr_id == "H0NMCNT0":
+        tick = _parse_nxt(raw)
+        if tick:
+            asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+    elif tr_id == "H0NMASP0":
+        asking = _parse_nxt_asking(raw)
         if asking:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
     elif tr_id == "HDFSCNT0":

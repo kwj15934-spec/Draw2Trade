@@ -91,7 +91,9 @@
     // 시간외 배지
     var session = tick.session || '';
     var sessionBadge = '';
-    if (session === '5') {
+    if (session === 'nxt') {
+      sessionBadge = '<span class="tr-session nxt">NXT</span>';
+    } else if (session === '5') {
       sessionBadge = '<span class="tr-session pre">장전</span>';
     } else if (session === '2') {
       sessionBadge = '<span class="tr-session after">단일가</span>';
