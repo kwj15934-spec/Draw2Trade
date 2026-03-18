@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import os
-import ssl
 from typing import Optional
 
 import websockets
@@ -28,8 +27,8 @@ from app.services.kis_client import get_credentials, is_configured
 
 logger = logging.getLogger(__name__)
 
-_REAL_WS  = "wss://ops.koreainvestment.com:21000"
-_MOCK_WS  = "wss://openvts.koreainvestment.com:31000"
+_REAL_WS  = "ws://ops.koreainvestment.com:21000"
+_MOCK_WS  = "ws://openvts.koreainvestment.com:31000"
 
 
 def _ws_url() -> str:
@@ -298,12 +297,8 @@ async def connect_loop() -> None:
             url = _ws_url()
             logger.info("KIS WebSocket 연결 시도: %s", url)
 
-            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
             async with websockets.connect(
                 url,
-                ssl=ssl_ctx,
                 open_timeout=30,
                 ping_interval=20,
                 ping_timeout=30,
