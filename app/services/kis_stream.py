@@ -152,6 +152,14 @@ def _parse_kr_asking(raw: str) -> Optional[dict]:
         return None
 
 
+def _parse_kr_overtime(raw: str) -> Optional[dict]:
+    """H0STCVT0 시간외 단일가 체결 데이터 파싱. 필드 구조는 H0STCNT0과 동일."""
+    tick = _parse_kr(raw)
+    if tick:
+        tick["session"] = "2"   # 시간외 단일가 고정
+    return tick
+
+
 def _parse_us(raw: str) -> Optional[dict]:
     """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
@@ -189,6 +197,14 @@ _running: bool = False
 
 async def subscribe_kr(ticker: str) -> None:
     await _subscribe("H0STCNT0", ticker)
+
+
+async def subscribe_kr_overtime(ticker: str) -> None:
+    await _subscribe("H0STCVT0", ticker)
+
+
+async def unsubscribe_kr_overtime(ticker: str) -> None:
+    await _unsubscribe("H0STCVT0", ticker)
 
 
 async def subscribe_kr_asking(ticker: str) -> None:
@@ -275,6 +291,10 @@ async def _on_message(msg: str) -> None:
     _, tr_id, _cnt, raw = parts
     if tr_id == "H0STCNT0":
         tick = _parse_kr(raw)
+        if tick:
+            asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+    elif tr_id == "H0STCVT0":
+        tick = _parse_kr_overtime(raw)
         if tick:
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
     elif tr_id == "H0STASP0":

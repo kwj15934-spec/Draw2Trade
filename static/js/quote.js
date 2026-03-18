@@ -99,17 +99,20 @@
       sessionBadge = '<span class="tr-session after">시외</span>';
     }
 
-    var row = document.createElement('div');
-    row.className = 'tl-row' + (isBuy ? ' tl-buy' : ' tl-sell');
+    // 대량 체결 (건별 500주 이상) → 굵게
+    var isBig = dispVol >= 500;
 
-    row.innerHTML =
+    var row = document.createElement('div');
+    row.className = 'tl-row' + (isBuy ? ' tl-buy' : ' tl-sell') + (isBig ? ' tl-big' : '');
+
+    row.insertAdjacentHTML('afterbegin',
       '<span class="tl-price">' + price.toLocaleString() + '</span>' +
       '<span class="tl-vol">'   + _fmtVol(dispVol) + '</span>' +
       '<span class="tl-chg">'   + chgStr + '</span>' +
-      '<span class="tl-time">'  + timeDisp + sessionBadge + '</span>';
+      '<span class="tl-time">'  + timeDisp + sessionBadge + '</span>');
 
     // 삽입 + 슬라이드인 애니메이션
-    list.insertBefore(row, list.firstChild);
+    list.insertAdjacentElement('afterbegin', row);
     // rAF으로 한 프레임 후 class 추가 → CSS transition 발동
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
