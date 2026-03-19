@@ -43,6 +43,41 @@
   // 시장별 기본 타임프레임
   var MARKET_DEFAULT_TF = { KR: 'monthly', US: 'daily' };
 
+  var DRAW_COLOR = '#ff6b35';
+
+  // ── 패턴 비교 LineSeries 관리 ───────────────────────────────────────────
+  var _patternDrawSeries  = null; // 내 패턴 (주황 실선)
+  var _patternMatchSeries = null; // 매칭 패턴 (청록 점선)
+
+  /** 패턴 비교 시리즈 제거 */
+  function _removePatternSeries() {
+    try {
+      if (_patternDrawSeries)  { D2T.chart.removeSeries(_patternDrawSeries);  _patternDrawSeries  = null; }
+      if (_patternMatchSeries) { D2T.chart.removeSeries(_patternMatchSeries); _patternMatchSeries = null; }
+    } catch (e) { /* 이미 제거됨 */ }
+  }
+
+  /** 정규화 배열(0~1) + 매칭 캔들 → {time, value} 배열 (LW Charts LineSeries용) */
+  function _normToTimeSeries(normArr, candles) {
+    if (!normArr || !candles || candles.length < 2 || normArr.length < 2) return [];
+    var result = [];
+    for (var i = 0; i < normArr.length; i++) {
+      var ci = Math.min(candles.length - 1, Math.round(i / (normArr.length - 1) * (candles.length - 1)));
+      result.push({ time: candles[ci].time, value: normArr[i] * 100 }); // 0~100% 스케일
+    }
+    // LW Charts는 동일 time에 중복 데이터를 허용하지 않으므로 dedup
+    var seen = {};
+    var deduped = [];
+    for (var j = 0; j < result.length; j++) {
+      var t = result[j].time;
+      if (!seen[t]) {
+        seen[t] = true;
+        deduped.push(result[j]);
+      }
+    }
+    return deduped;
+  }
+
   // ── 헬퍼: 시장별 API 경로 ─────────────────────────────────────────────────
   function chartUrl(ticker, tf) {
     if (D2T.market === 'US') {
@@ -189,6 +224,7 @@
 
     if (D2T.series) D2T.series.setMarkers([]);
     D2T.matchPeriodData = null;
+    _removePatternSeries();
 
     fetch(chartUrl(ticker, tf))
       .then(function (r) {
@@ -339,7 +375,6 @@
           var tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
           var tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
 
-          // 매칭 구간 인덱스 범위 계산
           var fromIdx = -1, toIdx = -1;
           for (var bi = 0; bi < validCandles.length; bi++) {
             if (fromIdx < 0 && validCandles[bi].time >= tf) fromIdx = bi;
@@ -351,7 +386,6 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            // 매칭 구간 전후로 15% 여백 캔들 포함 (컨텍스트 표시)
             var matchLen = toIdx - fromIdx + 1;
             var pad = Math.max(2, Math.round(matchLen * 0.15));
             var sliceFrom = Math.max(0, fromIdx - pad);
@@ -370,7 +404,7 @@
           }
         }
 
-        // ── 매칭 구간(+여백) 캔들만 setData → Y축이 자동으로 이 범위에 맞춤
+        // ── 캔들 세팅 ────────────────────────────────────────────────
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
           scaleMargins: { top: 0.15, bottom: 0.28 },
@@ -387,7 +421,7 @@
         }
         setTickerOverlay(ticker, data.name, tfLabel, displayCandles);
 
-        // 마커 + fitContent
+        // 마커
         if (filtered.length > 0) {
           D2T.series.setMarkers([
             { time: filtered[0].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
@@ -395,7 +429,53 @@
           ]);
         }
 
-        // setTimeout: 브라우저 레이아웃 완료 대기 후 fitContent + redraw
+        // ── 패턴 비교 LineSeries 생성 (정규화 % 기반) ────────────────
+        // 이전 패턴 시리즈 제거
+        _removePatternSeries();
+
+        if (filtered.length >= 2 && window._getMatchPoints && window._getDrawNormalized) {
+          var matchNorm = window._getMatchPoints();
+          var drawNorm  = window._getDrawNormalized();
+
+          if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
+            // 정규화값(0~1)을 매칭 구간 캔들의 time에 매핑 → % 변환
+            // 별도 priceScale 'pattern'에 렌더하여 캔들 Y축과 독립
+            _patternDrawSeries = D2T.chart.addLineSeries({
+              color: DRAW_COLOR || '#ff6b35',
+              lineWidth: 3,
+              lineStyle: 0, // Solid
+              priceScaleId: 'pattern',
+              lastValueVisible: false,
+              priceLineVisible: false,
+              crosshairMarkerVisible: false,
+            });
+            _patternMatchSeries = D2T.chart.addLineSeries({
+              color: '#26a69a',
+              lineWidth: 2,
+              lineStyle: 2, // Dashed
+              priceScaleId: 'pattern',
+              lastValueVisible: false,
+              priceLineVisible: false,
+              crosshairMarkerVisible: false,
+            });
+
+            // pattern priceScale: 좌측에 숨김 (% 값이므로 표시 불필요)
+            D2T.chart.priceScale('pattern').applyOptions({
+              visible:      false,
+              autoScale:    true,
+              scaleMargins: { top: 0.10, bottom: 0.25 },
+            });
+
+            // 정규화값 → {time, value} 배열 (매칭 캔들의 시간축에 매핑)
+            var drawData  = _normToTimeSeries(drawNorm,  filtered);
+            var matchData = _normToTimeSeries(matchNorm, filtered);
+
+            _patternDrawSeries.setData(drawData);
+            _patternMatchSeries.setData(matchData);
+          }
+        }
+
+        // fitContent + redraw
         setTimeout(function () {
           D2T.chart.timeScale().fitContent();
           requestAnimationFrame(function () {
@@ -425,7 +505,8 @@
     D2T.chart.applyOptions({
       timeScale: { timeVisible: wasIntraday, secondsVisible: false, rightOffset: 2 },
     });
-    // 일반 차트 여백으로 복원
+    // 패턴 비교 시리즈 제거 + 일반 차트 여백 복원
+    _removePatternSeries();
     D2T.chart.priceScale('right').applyOptions({
       autoScale:    true,
       scaleMargins: { top: 0.05, bottom: 0.25 },

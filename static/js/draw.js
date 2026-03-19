@@ -767,6 +767,10 @@
   }
 
   // ── 유사 종목 결과 클릭 핸들러 ────────────────────────────────────────────
+  // chart.js에서 패턴 LineSeries용으로 접근하는 getter
+  window._getMatchPoints    = function () { return matchPoints; };
+  window._getDrawNormalized = function () { return drawNormalized; };
+
   function loadResultMatch(idx, ticker, periodFrom, periodTo) {
     var data = _resultMatches[idx];
     matchPoints = (data && data.matchNormalized) ? data.matchNormalized : null;
