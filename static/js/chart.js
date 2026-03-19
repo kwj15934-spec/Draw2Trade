@@ -567,7 +567,7 @@
           ]);
         }
 
-        // ── 패턴 비교 LineSeries (실제 가격 스케일, right 축 공유) ──
+        // ── 패턴 비교 LineSeries (캔들 1:1 매핑, 중복 time 완벽 제거) ──
         _removePatternSeries();
 
         if (filtered.length >= 2 && window._getMatchPoints && window._getDrawNormalized) {
@@ -575,25 +575,34 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            var mpd = D2T.matchPeriodData;
-            var drawData  = _normToPriceSeries(drawNorm,  filtered, mpd.priceMin, mpd.priceMax);
-            var matchData = _normToPriceSeries(matchNorm, filtered, mpd.priceMin, mpd.priceMax);
+            var pRange = pMax - pMin;
+            var safeDrawData = [];
+            var safeMatchData = [];
+
+            for (var i = 0; i < filtered.length; i++) {
+              var normIdx = Math.round((i / Math.max(1, filtered.length - 1)) * (drawNorm.length - 1));
+              safeDrawData.push({
+                time: filtered[i].time,
+                value: pMin + (drawNorm[normIdx] * pRange),
+              });
+              safeMatchData.push({
+                time: filtered[i].time,
+                value: pMin + (matchNorm[normIdx] * pRange),
+              });
+            }
 
             _patternDrawSeries = D2T.chart.addLineSeries({
-              color: DRAW_COLOR || '#ff6b35', lineWidth: 3, lineStyle: 0,
-              priceScaleId: 'right',
-              lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+              color: '#ff6b35', lineWidth: 3, priceScaleId: 'right',
+              crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
             _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a', lineWidth: 2, lineStyle: 2,
-              priceScaleId: 'right',
-              lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'right',
+              crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
 
-            _patternDrawSeries.setData(drawData);
-            _patternMatchSeries.setData(matchData);
+            _patternDrawSeries.setData(safeDrawData);
+            _patternMatchSeries.setData(safeMatchData);
 
-            // 미니 비교 패널도 표시
             _renderPatternMiniChart(drawNorm, matchNorm);
           } else {
             _hidePatternMiniChart();
@@ -602,22 +611,23 @@
           _hidePatternMiniChart();
         }
 
-        // ── X축 줌인 (매칭 구간 + 여백) ────────────────────────────
-        // fitContent로 전체 레이아웃 확정 후 → zoom 적용 (Y축 autoScale이 visible 범위에 맞춤)
-        D2T.chart.timeScale().fitContent();
+        // ── 줌인 + Y축 오토스케일 강제 갱신 ──────────────────────────
         setTimeout(function () {
-          if (D2T.matchPeriodData && D2T.matchPeriodData.zoomFrom !== undefined) {
-            D2T.chart.timeScale().setVisibleLogicalRange({
-              from: D2T.matchPeriodData.zoomFrom,
-              to:   D2T.matchPeriodData.zoomTo,
-            });
+          if (typeof sliceFrom !== 'undefined' && typeof sliceTo !== 'undefined') {
+            D2T.chart.timeScale().setVisibleLogicalRange({ from: sliceFrom, to: sliceTo });
+          } else {
+            D2T.chart.timeScale().fitContent();
           }
+          D2T.chart.priceScale('right').applyOptions({
+            autoScale: true,
+            scaleMargins: { top: 0.1, bottom: 0.25 },
+          });
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();
             });
           });
-        }, 80);
+        }, 50);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
