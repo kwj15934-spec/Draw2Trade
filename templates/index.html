@@ -704,9 +704,12 @@
 
   /** 차트 캔버스를 부모 wrapper 크기에 동기화 */
   function _syncChartSize() {
+    var panel = document.querySelector('.d2t-chart-panel');
     var wrapper = document.getElementById('chart-wrapper');
     if (wrapper && window.D2T && D2T.chart) {
-      var w = wrapper.offsetWidth, h = wrapper.offsetHeight;
+      // chart-panel 너비로 resize — 호가창/사이드바 침범 방지
+      var w = panel ? panel.clientWidth : wrapper.offsetWidth;
+      var h = wrapper.offsetHeight;
       if (w > 0 && h > 0) D2T.chart.resize(w, h);
     }
     if (typeof window.syncCanvas === 'function') window.syncCanvas();
