@@ -16,9 +16,8 @@
   var _ws             = null;
   var _ticker         = null;   // 현재 구독 중인 티커
   var _market         = null;   // 'KR' | 'US'
-  var _rtCandle       = null;   // 실시간 캔들 {time,open,high,low,close,volume}
+  var _rtCandle       = null;   // 실시간 캔들 (가격 패널/오버레이용, 차트는 candle_update가 담당)
   var _prevClose      = null;   // 구독 시점의 직전 종가 (% 계산용)
-  var _candleBaseVol  = null;   // 현재 캔들 시작 시점 누적거래량 (KR 분봉 거래량 계산용)
   var _retryDelay     = 3000;
   var _retryTimer     = null;
   var _intentionalClose = false;
@@ -81,19 +80,24 @@
     _ws = new WebSocket(WS_URL);
 
     _ws.onopen = function () {
+      console.log('[RT] WS 연결 성공, ticker=' + _ticker + ', market=' + _market);
       _retryDelay = 3000;
       _setLive(false);
       if (_ticker && _market) {
         _send('subscribe', _ticker, _market);
+        console.log('[RT] subscribe 전송:', _ticker, _market);
       }
     };
 
     _ws.onmessage = function (e) {
       try {
         var msg = JSON.parse(e.data);
-        if (msg.type === 'tick')   _onTick(msg);
+        if (msg.type === 'candle_update') _onCandleUpdate(msg);
+        else if (msg.type === 'tick')   _onTick(msg);
         else if (msg.type === 'asking' && window._onAsking) _onAsking(msg);
-      } catch (_) {}
+      } catch (msgErr) {
+        console.warn('[RT] WS message 처리 오류:', msgErr);
+      }
     };
 
     _ws.onclose = function () {
@@ -117,9 +121,50 @@
     _ws.send(JSON.stringify(msg));
   }
 
-  // ── 틱 처리 ──────────────────────────────────────────────────────────────
+  // ── 서버사이드 캔들 업데이트 (연산 제로 — 렌더링만) ─────────────────────
+
+  function _onCandleUpdate(msg) {
+    if (!window.D2T || !D2T.series) return;
+    if (msg.ticker !== _ticker) return;
+
+    // 서버가 병합한 캔들을 그대로 차트에 반영
+    var candle = {
+      time:   msg.time,
+      open:   msg.open,
+      high:   msg.high,
+      low:    msg.low,
+      close:  msg.close,
+      volume: msg.volume || 0,
+    };
+
+    try {
+      D2T.series.update(candle);
+    } catch (err) {
+      console.error('[RT] candle_update series.update 실패:', err, candle);
+      return;
+    }
+
+    if (D2T.volumeSeries) {
+      try {
+        D2T.volumeSeries.update({
+          time:  candle.time,
+          value: candle.volume,
+          color: (candle.close >= candle.open)
+            ? 'rgba(38,166,154,0.45)'
+            : 'rgba(239,83,80,0.45)',
+        });
+      } catch (_) {}
+    }
+
+    _autoScrollToLatest();
+    _setLive(true);
+  }
+
+  // ── 틱 처리 (체결 내역 + 가격 패널 업데이트용, 캔들 연산은 서버가 담당) ──
 
   var _lastCandleTs = 0;  // 마지막 캔들의 Unix timestamp (4시간 갭 감지용)
+
+  var _tickCount = 0;  // 디버깅: 수신 틱 카운터
 
   function _onTick(tick) {
     if (!window.D2T || !D2T.series) return;
@@ -134,14 +179,16 @@
     if (window._markRealtimeActive) window._markRealtimeActive();
 
     // ── 데이터 파싱 방어 (NXT 데이터 null/undefined 대응) ──
-    var price, rawVol, cvol, timeStr;
+    var price, cvol, timeStr;
     try {
       price   = parseFloat(tick.price)  || 0;
-      rawVol  = parseInt(tick.volume, 10) || 0;
       cvol    = parseInt(tick.cvol, 10)   || 0;
       if (!tick.date || !tick.time || price <= 0) return;
       timeStr = _candleTime(tick.date, tick.time);
-    } catch (_e) { return; }
+    } catch (_e) {
+      console.warn('[RT] tick 파싱 오류:', _e, tick);
+      return;
+    }
 
     // ── 4시간 이상 갭 감지 → 새 캔들 강제 생성 (일직선 방지) ──
     var GAP_SEC = 4 * 3600;
@@ -154,53 +201,29 @@
     var forceNew = (_rtCandle && _lastCandleTs > 0 && curTs > 0
                     && Math.abs(curTs - _lastCandleTs) > GAP_SEC);
 
+    // 로컬 캔들 추적 (가격 패널/오버레이 표시용 — 차트 렌더링은 candle_update가 담당)
     if (!_rtCandle || _rtCandle.time !== timeStr || forceNew) {
-      // 새 캔들 시작
-      _candleBaseVol = rawVol;
       _lastCandleTs  = curTs;
       _rtCandle = {
-        time:   timeStr,
-        open:   price,
-        high:   price,
-        low:    price,
-        close:  price,
+        time: timeStr, open: price, high: price, low: price, close: price,
         volume: cvol || 0,
       };
     } else {
-      // 기존 캔들 업데이트 — 매 틱마다 즉시 반영
-      _lastCandleTs  = curTs;
+      _lastCandleTs   = curTs;
       _rtCandle.close = price;
       _rtCandle.high  = Math.max(_rtCandle.high, price);
       _rtCandle.low   = Math.min(_rtCandle.low,  price);
-      // 거래량: KR은 cvol 누적, fallback으로 누적거래량 차이 사용
-      if (_market === 'KR') {
-        if (cvol > 0) {
-          _rtCandle.volume = (_rtCandle.volume || 0) + cvol;
-        } else if (_candleBaseVol !== null) {
-          _rtCandle.volume = Math.max(0, rawVol - _candleBaseVol);
-        }
-      } else if (rawVol) {
-        _rtCandle.volume = rawVol;
-      }
+      if (cvol > 0) _rtCandle.volume = (_rtCandle.volume || 0) + cvol;
     }
 
-    // NaN 방어
-    _rtCandle.volume = _rtCandle.volume || 0;
+    // 차트 series.update는 candle_update 메시지에서 처리 (서버사이드 병합)
+    // 여기서는 가격 패널 + 체결 내역 + 오버레이만 업데이트
 
-    // 즉시 가격 캔들 업데이트 → 직후 거래량 업데이트 (순서 보장)
-    D2T.series.update(_rtCandle);
-
-    if (D2T.volumeSeries) {
-      D2T.volumeSeries.update({
-        time:  _rtCandle.time,
-        value: _rtCandle.volume || 0,
-        color: (_rtCandle.close >= _rtCandle.open)
-          ? 'rgba(38,166,154,0.45)'
-          : 'rgba(239,83,80,0.45)',
-      });
+    _tickCount++;
+    if (_tickCount <= 5) {
+      console.log('[RT] tick #' + _tickCount, 'price=' + price);
     }
 
-    _autoScrollToLatest();
     _setLive(true);
     _updateOverlay(price);
     _updatePricePanel(tick);
@@ -304,6 +327,7 @@
    * 이전 구독 해제 → 새 구독 등록.
    */
   window._onChartLoaded = function (ticker, market) {
+    console.log('[RT] _onChartLoaded:', ticker, market, 'tf=' + (D2T.timeframe || '?'));
     // 이전 구독 해제
     if (_ticker && _ws && _ws.readyState === WebSocket.OPEN) {
       _send('unsubscribe', _ticker, _market);
@@ -311,7 +335,8 @@
     _ticker        = ticker;
     _market        = market;
     _rtCandle      = null;
-    _candleBaseVol = null;
+    _tickCount     = 0;
+    _lastCandleTs  = 0;
     _setLive(false);
     // 헤더바 초기화
     var thbPrice = document.getElementById('thb-price');
@@ -371,9 +396,9 @@
     var hm = now.getHours() * 100 + now.getMinutes();
     if (hm >= 1800 || hm < 800)  return 'nxt_night';
     if (hm >= 800 && hm < 850)   return 'nxt_pre';
-    if (hm >= 900 && hm < 1530)  return 'regular';
-    if (hm >= 1540 && hm < 1800) return 'overtime';
-    return 'transition';  // 08:50~09:00, 15:30~15:40
+    if (hm >= 850 && hm < 1530)  return 'regular';   // 08:50부터 정규장 (전환 갭 제거)
+    if (hm >= 1530 && hm < 1800) return 'overtime';   // 15:30부터 시간외 (전환 갭 제거)
+    return 'regular';  // fallback
   }
 
   /** 세션 전환 시 WS 강제 재연결 + 호가/체결 초기화 */
@@ -393,7 +418,6 @@
     if (window._clearTradeList) window._clearTradeList();
     // rtCandle 리셋
     _rtCandle = null;
-    _candleBaseVol = null;
     _lastTickTime = Date.now();
 
     // WS 끊고 재연결

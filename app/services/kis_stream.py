@@ -2,7 +2,7 @@
 한국투자증권 KIS WebSocket 실시간 스트림.
 
 - 단일 WS 연결 유지, 종목 구독/해지 동적 관리
-- 수신 데이터 파싱 후 broadcast_hub.hub.broadcast() 호출
+- 수신 데이터 파싱 후 서버사이드 캔들 병합 → 스로틀링 브로드캐스트
 - FastAPI lifespan에서 asyncio.create_task(connect_loop()) 로 시작
 
 KIS WebSocket 주소:
@@ -19,9 +19,12 @@ TR 코드:
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
+import calendar
 import json
 import logging
 import os
+import time as _time_mod
+from datetime import datetime as _dt, timezone as _tz, timedelta as _td
 from pathlib import Path
 from typing import Optional
 
@@ -35,6 +38,110 @@ from app.services.kis_client import get_credentials, is_configured
 
 logger = logging.getLogger(__name__)
 
+# ── 서버사이드 캔들 병합 + 스로틀링 ──────────────────────────────────────────
+# 틱을 서버에서 1분봉 캔들로 병합하고, 500ms마다 candle_update 메시지를 브로드캐스트.
+# 프론트엔드는 candle_update만 받아서 series.update()하면 됨.
+
+_KST = _tz(_td(hours=9))
+_CANDLE_INTERVAL = 60  # 1분봉 (초)
+_THROTTLE_MS = 500     # 브로드캐스트 간격 (ms)
+
+# ticker → 현재 병합 중인 캔들 dict
+_rt_candles: dict[str, dict] = {}
+# ticker → 마지막 브로드캐스트 시각 (monotonic ms)
+_rt_last_broadcast: dict[str, float] = {}
+# ticker → 브로드캐스트 예약 asyncio.Task (스로틀 지연용)
+_rt_scheduled: dict[str, asyncio.Task] = {}
+
+
+def _tick_to_bucket_ts(date_str: str, time_str: str) -> int:
+    """틱의 date/time → 1분봉 버킷 Unix timestamp ("fake UTC" — KST를 UTC로 표기)."""
+    try:
+        dt = _dt(
+            int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]),
+            int(time_str[:2]), int(time_str[2:4]), 0,
+        )
+        ts = int(calendar.timegm(dt.timetuple()))
+        return (ts // _CANDLE_INTERVAL) * _CANDLE_INTERVAL
+    except (ValueError, IndexError):
+        return 0
+
+
+def _merge_tick_to_candle(tick: dict) -> Optional[dict]:
+    """틱을 서버사이드 캔들에 병합. 반환값: 업데이트된 캔들 dict."""
+    ticker = tick.get("ticker", "")
+    if not ticker:
+        return None
+
+    price = float(tick.get("price", 0))
+    cvol = int(tick.get("cvol", 0))
+    if price <= 0:
+        return None
+
+    bucket_ts = _tick_to_bucket_ts(tick.get("date", ""), tick.get("time", ""))
+    if bucket_ts == 0:
+        return None
+
+    candle = _rt_candles.get(ticker)
+    if candle is None or candle["time"] != bucket_ts:
+        # 새 캔들 시작
+        _rt_candles[ticker] = {
+            "time":   bucket_ts,
+            "open":   price,
+            "high":   price,
+            "low":    price,
+            "close":  price,
+            "volume": cvol,
+        }
+    else:
+        candle["close"] = price
+        candle["high"] = max(candle["high"], price)
+        candle["low"] = min(candle["low"], price)
+        candle["volume"] += cvol
+
+    return _rt_candles[ticker]
+
+
+async def _broadcast_candle(ticker: str) -> None:
+    """candle_update 메시지를 구독자에게 브로드캐스트."""
+    candle = _rt_candles.get(ticker)
+    if not candle:
+        return
+    msg = {
+        "type":   "candle_update",
+        "market": "KR",
+        "ticker": ticker,
+        **candle,
+    }
+    await _hub.hub.broadcast(ticker, msg)
+
+
+async def _throttled_broadcast(ticker: str) -> None:
+    """스로틀링: 마지막 브로드캐스트로부터 500ms 이내면 지연 예약."""
+    now_ms = _time_mod.monotonic() * 1000
+    last_ms = _rt_last_broadcast.get(ticker, 0)
+    elapsed = now_ms - last_ms
+
+    # 이전 예약 취소
+    prev_task = _rt_scheduled.pop(ticker, None)
+    if prev_task and not prev_task.done():
+        prev_task.cancel()
+
+    if elapsed >= _THROTTLE_MS:
+        # 충분한 시간 경과 → 즉시 브로드캐스트
+        _rt_last_broadcast[ticker] = now_ms
+        await _broadcast_candle(ticker)
+    else:
+        # 지연 후 브로드캐스트 예약
+        delay_sec = (_THROTTLE_MS - elapsed) / 1000
+
+        async def _delayed():
+            await asyncio.sleep(delay_sec)
+            _rt_last_broadcast[ticker] = _time_mod.monotonic() * 1000
+            await _broadcast_candle(ticker)
+
+        _rt_scheduled[ticker] = asyncio.create_task(_delayed())
+
 # ── 최근 틱 캐시 (종목별 최대 50건, 디스크 영속화) ───────────────────────────
 _tick_cache: dict[str, deque] = {}   # ticker → deque of tick dicts
 _TICK_CACHE_MAX = 50
@@ -44,7 +151,7 @@ _save_counters: dict[str, int] = {}  # ticker → 미저장 카운터
 
 
 def _cache_tick(tick: dict) -> None:
-    """틱 데이터를 메모리 캐시 + 디스크에 저장."""
+    """틱 데이터를 메모리 캐시 + 디스크에 비동기 저장."""
     ticker = tick.get("ticker", "")
     if not ticker:
         return
@@ -56,16 +163,16 @@ def _cache_tick(tick: dict) -> None:
     _save_counters[ticker] = _save_counters.get(ticker, 0) + 1
     if _save_counters[ticker] >= _SAVE_INTERVAL:
         _save_counters[ticker] = 0
-        _persist_ticks(ticker)
+        # 비동기 디스크 I/O — 이벤트 루프 블로킹 방지
+        asyncio.create_task(_persist_ticks_async(ticker))
 
 
-def _persist_ticks(ticker: str) -> None:
-    """메모리 캐시 → 디스크 JSON 저장."""
+def _persist_ticks_sync(ticker: str) -> None:
+    """메모리 캐시 → 디스크 JSON 저장 (동기, 스레드풀에서 실행)."""
     try:
         _TICK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         path = _TICK_CACHE_DIR / f"{ticker}.json"
         ticks = list(_tick_cache.get(ticker, []))
-        # 직렬화 가능한 필드만 저장
         data = []
         for t in ticks:
             data.append({
@@ -83,6 +190,14 @@ def _persist_ticks(ticker: str) -> None:
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     except Exception as e:
         logger.debug("틱 캐시 저장 실패 (%s): %s", ticker, e)
+
+
+async def _persist_ticks_async(ticker: str) -> None:
+    """asyncio.to_thread()로 디스크 I/O를 스레드풀에서 실행."""
+    try:
+        await asyncio.to_thread(_persist_ticks_sync, ticker)
+    except Exception as e:
+        logger.debug("틱 캐시 비동기 저장 실패 (%s): %s", ticker, e)
 
 
 def _load_ticks_from_disk(ticker: str) -> list[dict]:
@@ -452,12 +567,18 @@ async def _on_message(msg: str) -> None:
         tick = _parse_kr(raw)
         if tick:
             _cache_tick(tick)
+            # 원본 틱도 브로드캐스트 (체결 내역 표시용)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+            # 서버사이드 캔들 병합 + 스로틀 브로드캐스트
+            _merge_tick_to_candle(tick)
+            asyncio.create_task(_throttled_broadcast(tick["ticker"]))
     elif tr_id == "H0STCVT0":
         tick = _parse_kr_overtime(raw)
         if tick:
             _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+            _merge_tick_to_candle(tick)
+            asyncio.create_task(_throttled_broadcast(tick["ticker"]))
     elif tr_id == "H0STASP0":
         asking = _parse_kr_asking(raw)
         if asking:
@@ -471,6 +592,8 @@ async def _on_message(msg: str) -> None:
         if tick:
             _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+            _merge_tick_to_candle(tick)
+            asyncio.create_task(_throttled_broadcast(tick["ticker"]))
     elif tr_id == "H0NMASP0":
         asking = _parse_nxt_asking(raw)
         if asking:

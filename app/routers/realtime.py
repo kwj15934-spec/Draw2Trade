@@ -34,18 +34,22 @@ _KST = timezone(timedelta(hours=9))
 
 
 def _kr_session_now() -> str:
-    """KST 기준 현재 세션 반환: 'nxt_pre' | 'regular' | 'overtime' | 'nxt_night' | 'closed'"""
+    """KST 기준 현재 세션 반환: 'nxt_pre' | 'regular' | 'overtime' | 'nxt_night'"""
     now = datetime.now(_KST)
     hm = now.hour * 100 + now.minute
     if 800 <= hm < 850:
         return "nxt_pre"
+    if 850 <= hm < 900:
+        return "regular"     # 장 시작 직전: 정규장 TR 미리 구독
     if 900 <= hm < 1530:
         return "regular"
+    if 1530 <= hm < 1540:
+        return "overtime"    # 장 마감 직후: 시간외 TR 미리 구독
     if 1540 <= hm < 1800:
         return "overtime"
-    if hm >= 1800 or hm < 700:
+    if hm >= 1800 or hm < 800:
         return "nxt_night"
-    return "closed"
+    return "regular"         # fallback: 정규장
 
 
 @router.websocket("/ws/realtime")

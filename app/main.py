@@ -61,6 +61,12 @@ async def lifespan(app: FastAPI):
         start_token_refresh_loop()   # KIS 토큰 자동 갱신 루프 (API 키 미설정 시 무시)
     except Exception as e:
         logger.error("KIS 토큰 루프 시작 실패: %s", e)
+    # Redis 캐시 연결
+    from app.services.redis_cache import rcache
+    if await rcache.ensure_connected():
+        logger.info("Redis 캐시 활성화")
+    else:
+        logger.warning("Redis 미연결 — 인메모리/디스크 캐시만 사용")
     # KIS 실시간 WebSocket 스트림 (KIS 미설정 시 connect_loop가 즉시 반환)
     asyncio.create_task(kis_stream.connect_loop())
     try:
@@ -100,6 +106,7 @@ async def lifespan(app: FastAPI):
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()
     await kis_stream.stop()
+    await rcache.close()
     logger.info("Draw2Trade 종료.")
 
 

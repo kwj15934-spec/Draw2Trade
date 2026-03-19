@@ -29,8 +29,15 @@ from app.services.kis_client import (
     is_configured,
 )
 from app.services.kis_stream import get_cached_ticks
+from app.services.redis_cache import rcache
 
 import calendar
+
+# Redis 캐시 TTL (초) — 분봉별
+_REDIS_CANDLE_TTL = {
+    "1m": 30, "5m": 60, "15m": 120, "30m": 180, "60m": 300, "240m": 600,
+    "daily": 300, "weekly": 600, "monthly": 1800,
+}
 
 
 def _ticks_to_candles(ticks: list[dict], interval_min: int) -> list[dict]:
@@ -155,6 +162,17 @@ async def chart_data(
     _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
     if tf in _INTRADAY:
         interval_min = int(tf.rstrip("m"))
+
+        # Redis 캐시 히트 시 즉시 반환 (KIS API 호출 완전 생략)
+        cached_resp = await rcache.get_candles(ticker, tf)
+        if cached_resp is not None and poll:
+            return {
+                "ticker":    ticker,
+                "name":      data_service.get_company_name(ticker),
+                "candles":   cached_resp,
+                "timeframe": tf,
+            }
+
         candles = data_service.get_kr_intraday(ticker, interval_min, poll_only=bool(poll))
         if not candles:
             candles = []
@@ -224,6 +242,11 @@ async def chart_data(
 
         if not candles:
             raise HTTPException(status_code=404, detail=f"분봉 데이터 없음: {ticker}")
+
+        # Redis에 캐싱 (다음 poll 요청에서 즉시 반환)
+        ttl = _REDIS_CANDLE_TTL.get(tf, 60)
+        await rcache.set_candles(ticker, tf, candles, ttl=ttl)
+
         return {
             "ticker":    ticker,
             "name":      data_service.get_company_name(ticker),
@@ -234,6 +257,16 @@ async def chart_data(
     # ── 일봉 / 주봉 / 월봉 ───────────────────────────────────────────────────
     if tf not in ("monthly", "weekly", "daily"):
         tf = "monthly"
+
+    # Redis 캐시 히트
+    cached_long = await rcache.get_candles(ticker, tf)
+    if cached_long is not None:
+        return {
+            "ticker":    ticker,
+            "name":      data_service.get_company_name(ticker),
+            "candles":   cached_long,
+            "timeframe": tf,
+        }
 
     years = max(1, (months // 12) + 1)
     if tf == "daily":
@@ -295,6 +328,10 @@ async def chart_data(
                     })
             except (ValueError, TypeError):
                 pass
+
+    # Redis에 캐싱
+    ttl = _REDIS_CANDLE_TTL.get(tf, 300)
+    await rcache.set_candles(ticker, tf, candles, ttl=ttl)
 
     return {
         "ticker": ticker,
