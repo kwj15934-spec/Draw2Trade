@@ -213,6 +213,7 @@
     if (!container) return;
 
     D2T.chart = LightweightCharts.createChart(container, {
+      autoSize: true,
       localization: {
         dateFormat: 'yyyy년 MM월 dd일',
         timeFormatter: function (time) {
