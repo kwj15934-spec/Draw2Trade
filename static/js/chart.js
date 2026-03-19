@@ -546,20 +546,7 @@
           autoScale:    true,
           scaleMargins: { top: 0.05, bottom: 0.25 },
         });
-        // autoscaleInfoProvider: 매칭 구간 가격 범위를 Y축에 강제 포함
-        var _mpd = D2T.matchPeriodData;
-        D2T.series.applyOptions({
-          autoscaleInfoProvider: (_mpd && _mpd.priceMin != null)
-            ? function (original) {
-                var res = original();
-                if (res && res.priceRange) {
-                  res.priceRange.minValue = Math.min(res.priceRange.minValue, _mpd.priceMin);
-                  res.priceRange.maxValue = Math.max(res.priceRange.maxValue, _mpd.priceMax);
-                }
-                return res;
-              }
-            : undefined,
-        });
+        D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
         setVolumeData(displayCandles);
