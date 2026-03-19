@@ -159,37 +159,47 @@ async def chart_data(
         if not candles:
             candles = []
 
-        # Flatline 필터: 거래 시간(KST 08:00~15:30) 외 캔들 제거
-        # 분봉 time은 "fake UTC" timestamp → KST 시/분으로 변환 후 필터
+        # ── 스마트 필터링: Flatline(일직선) 차단 ───────────────────────────
+        # "fake UTC" timestamp → KST 시/분으로 변환 후 필터
+        # 08:00~15:30: 모두 유지
+        # 15:30~18:00 (시간외 단일가): volume > 0인 진짜 체결만 유지
+        # 18:00~24:00 (NXT 야간): 모두 유지
+        # 그 외(00:00~08:00 새벽 공백): 삭제
         if candles:
+            import time as _tm
             _filtered = []
             for c in candles:
                 try:
-                    import time as _tm
                     _gm = _tm.gmtime(c["time"])
                     _hm = _gm.tm_hour * 100 + _gm.tm_min
-                    if 800 <= _hm <= 1530:
-                        _filtered.append(c)
+                    if 800 <= _hm < 1530:
+                        _filtered.append(c)          # 장전+정규장: 무조건 유지
+                    elif 1530 <= _hm < 1800:
+                        if c.get("volume", 0) > 0:
+                            _filtered.append(c)      # 시간외 단일가: 거래량>0만
+                    elif _hm >= 1800:
+                        _filtered.append(c)          # NXT 야간: 무조건 유지
+                    # 00:00~08:00 새벽: 삭제
                 except Exception:
                     _filtered.append(c)  # 파싱 실패 시 유지
             candles = _filtered
 
-        # NXT/시간외: 캐시 틱 → 캔들 + NXT 현재가 fallback
+        # ── 시간외/NXT 캐시 틱 → 캔들 병합 ─────────────────────────────────
+        # 정규장 이후 또는 장 시작 전: 캐시된 틱 데이터를 캔들로 변환해 이어붙임
         now = _now_kst()
         hm = now.hour * 100 + now.minute
         if hm < 900 or hm >= 1530:
-            # 1) 캐시 틱 → 분봉 캔들
             cached = get_cached_ticks(ticker)
-            nxt_candles = _ticks_to_candles(cached, interval_min)
-            if nxt_candles:
+            extra_candles = _ticks_to_candles(cached, interval_min)
+            if extra_candles:
                 existing_times = {c["time"] for c in candles} if candles else set()
-                for nc in nxt_candles:
+                for nc in extra_candles:
                     if nc["time"] not in existing_times:
                         candles.append(nc)
                 candles.sort(key=lambda c: c["time"])
 
-            # 2) NXT 현재가 API → 최소 1개 캔들 보장
-            if not nxt_candles and is_configured():
+            # NXT 현재가 API → 최소 1개 캔들 보장
+            if not extra_candles and is_configured():
                 nxt_data = fetch_nxt_price(ticker)
                 if not nxt_data:
                     nxt_data = fetch_kr_price(ticker)

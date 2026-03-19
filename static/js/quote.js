@@ -13,6 +13,8 @@
   'use strict';
 
   var MAX_TRADES = 50;
+  var _lastTradePrice = 0;  // 직전 체결가 (매수/매도 fallback용)
+  var _lastCvolDir = true;  // 직전 체결량 방향 (동가 시 유지용)
 
   // ── 호가창 렌더링 ──────────────────────────────────────────────────────────
 
@@ -89,16 +91,28 @@
     var timeDisp = time.length >= 6
       ? time.slice(0,2) + ':' + time.slice(2,4) + ':' + time.slice(4,6) : '';
 
-    // 매수/매도 구분
+    // ── 행 방향 (등락률 기반): 체결가·등락률 색상 결정 ──
+    var isBuy = (chgPct !== null) ? parseFloat(chgPct) >= 0 : true;
+
+    // ── 체결량 색상 (bs 기반): 매수/매도 독립 결정 ──
     var bs = tick.bs || '';
-    var isBuy;
+    var cvolIsBuy;
     if (bs === '1') {
-      isBuy = true;
+      cvolIsBuy = true;       // 매수 체결
     } else if (bs === '5') {
-      isBuy = false;
+      cvolIsBuy = false;      // 매도 체결
+    } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
+      // fallback: 직전 체결가 비교
+      cvolIsBuy = (price > _lastTradePrice);
     } else {
-      isBuy = (chgPct !== null && parseFloat(chgPct) >= 0);
+      // 동가 or 첫 틱: 직전 방향 유지
+      cvolIsBuy = _lastCvolDir;
     }
+    _lastTradePrice = price;
+    _lastCvolDir = cvolIsBuy;
+
+    // 체결량 색상: 매수=빨강, 매도=파랑
+    var cvolColor = cvolIsBuy ? '#ef5350' : '#42a5f5';
 
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
@@ -123,7 +137,7 @@
 
     row.insertAdjacentHTML('afterbegin',
       '<span class="tl-price">' + price.toLocaleString() + '</span>' +
-      '<span class="tl-vol">'   + cvol.toLocaleString() + '</span>' +
+      '<span class="tl-vol" style="color:' + cvolColor + '">' + cvol.toLocaleString() + '</span>' +
       '<span class="tl-chg">'   + chgStr + '</span>' +
       '<span class="tl-accvol">' + (accvol > 0 ? _fmtVol(accvol) : '') + '</span>' +
       '<span class="tl-time">'  + timeDisp + sessionBadge + '</span>');
@@ -143,6 +157,8 @@
   // ── 체결 목록 초기화 ───────────────────────────────────────────────────────
 
   window._clearTradeList = function () {
+    _lastTradePrice = 0;
+    _lastCvolDir = true;
     var list = document.getElementById('trade-list');
     if (list) {
       list.innerHTML = '<div class="tl-empty">체결 데이터 대기 중...</div>';

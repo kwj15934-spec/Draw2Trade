@@ -415,7 +415,7 @@
   function _checkStaleConnection() {
     if (!_ticker || !_ws) return;
     var session = _getCurrentSession();
-    if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night') return;
+    if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night' && session !== 'overtime') return;
     var elapsed = Date.now() - _lastTickTime;
 
     // 10초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신

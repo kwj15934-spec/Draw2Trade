@@ -81,17 +81,18 @@ async def ws_realtime(ws: WebSocket):
                         session = _kr_session_now()
                         logger.info("WS sub: %s (KR, session=%s)", ticker, session)
                         if session == "nxt_pre" or session == "nxt_night":
-                            # NXT 장전/야간 → NXT 체결+호가만
+                            # NXT 장전/야간 → NXT 체결+호가
                             await kis_stream.subscribe_nxt(ticker)
                             await kis_stream.subscribe_nxt_asking(ticker)
                         elif session == "regular":
-                            # 정규장 → 정규 체결+호가만
+                            # 정규장 → 정규 체결+호가
                             await kis_stream.subscribe_kr(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
                         elif session == "overtime":
-                            # 시간외 단일가 → 시간외 체결+호가
+                            # 시간외 단일가 → 시간외 체결+호가 + 정규 호가(fallback)
                             await kis_stream.subscribe_kr_overtime(ticker)
                             await kis_stream.subscribe_kr_asking_overtime(ticker)
+                            await kis_stream.subscribe_kr_asking(ticker)
                         else:
                             # closed/transition → 정규장 기본 구독 (장 시작 대비)
                             await kis_stream.subscribe_kr(ticker)

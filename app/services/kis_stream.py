@@ -189,20 +189,31 @@ def _parse_kr(raw: str) -> Optional[dict]:
     try:
         from datetime import datetime as _dt, timezone as _tz, timedelta as _td
         _KST = _tz(_td(hours=9))
-        # 매수/매도 구분
-        bs_raw = f[20] if len(f) > 20 else ''
+        # 매수/매도 구분 — f[20]: 1=매도, 5=매수 (KIS 기준)
+        # NXT 데이터는 필드 수가 적을 수 있으므로 안전하게 추출
+        bs_raw = ''
+        if len(f) > 20 and f[20] in ('1', '5'):
+            bs_raw = f[20]
         # 날짜: f[34]가 있으면 사용, 없으면 오늘(KST)
         date_str = f[34] if len(f) > 34 and f[34] else _dt.now(_KST).strftime("%Y%m%d")
+        price = float(f[2])
+        # bs_raw가 없으면 전일대비부호(f[3])로 fallback: 2=상승→매수, 5=하락→매도
+        if not bs_raw and len(f) > 3:
+            sign_code = f[3]
+            if sign_code in ('1', '2'):  # 상한/상승 → 매수
+                bs_raw = '1'
+            elif sign_code in ('4', '5'):  # 하한/하락 → 매도
+                bs_raw = '5'
         return {
             "type":    "tick",
             "market":  "KR",
             "ticker":  f[0],
             "date":    date_str,
             "time":    f[1],
-            "price":   float(f[2]),
-            "open":    float(f[7]) if len(f) > 7 and f[7] else float(f[2]),
-            "high":    float(f[8]) if len(f) > 8 and f[8] else float(f[2]),
-            "low":     float(f[9]) if len(f) > 9 and f[9] else float(f[2]),
+            "price":   price,
+            "open":    float(f[7]) if len(f) > 7 and f[7] else price,
+            "high":    float(f[8]) if len(f) > 8 and f[8] else price,
+            "low":     float(f[9]) if len(f) > 9 and f[9] else price,
             "cvol":    int(f[12]),    # 건별 체결량
             "volume":  int(f[13]),    # 누적거래량
             "bs":      bs_raw,        # '1'=매수, '5'=매도
