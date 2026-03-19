@@ -103,8 +103,23 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
 
     # 분봉/시간봉 → 검색은 일봉 이상만 지원, 시장별 기본 타임프레임으로 폴백
     _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
+    _INTRADAY_MIN = {"1m":1, "5m":5, "15m":15, "30m":30, "60m":60, "240m":240}
+    original_tf = tf
     if tf in _INTRADAY:
         tf = "daily" if market == "US" else "monthly"
+        # 분봉 lookback_bars → 일봉/월봉 단위로 환산 (또는 무시하고 기본값 사용)
+        if body.lookback_bars is not None:
+            orig_bars = body.lookback_bars
+            minutes_per_bar = _INTRADAY_MIN.get(original_tf, 1)
+            total_minutes = orig_bars * minutes_per_bar
+            if market == "US":
+                # 분봉 → 일봉: 하루 390분 (6.5시간 거래)
+                body.lookback_bars = max(2, round(total_minutes / 390))
+            else:
+                # 분봉 → 월봉: 하루 360분 × 22일 = 7920분/월
+                body.lookback_bars = max(2, round(total_minutes / 7920))
+            logger.info("분봉→%s 변환: %s %d봉 → %s %d봉",
+                        tf, original_tf, orig_bars, tf, body.lookback_bars)
 
     if market == "US":
         from app.services.us_data_service import (
@@ -120,7 +135,7 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
         # US 데이터는 일봉 기준. 타임프레임에 따라 일봉 수로 환산
         if body.lookback_bars is not None:
             tf_to_days = {"monthly": 22, "weekly": 5, "daily": 1}
-            effective_lookback = body.lookback_bars * tf_to_days.get(tf, 1)
+            effective_lookback = min(2520, body.lookback_bars * tf_to_days.get(tf, 1))  # 최대 ~10년
         else:
             effective_lookback = body.lookback_months * 22
     else:
@@ -130,7 +145,7 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
         # KR 데이터는 월봉 기준. 타임프레임에 따라 월 수로 환산
         if body.lookback_bars is not None:
             tf_to_months = {"monthly": 1.0, "weekly": 1 / 4.33, "daily": 1 / 22.0}
-            effective_lookback = max(2, round(body.lookback_bars * tf_to_months.get(tf, 1.0)))
+            effective_lookback = max(2, min(120, round(body.lookback_bars * tf_to_months.get(tf, 1.0))))
         else:
             effective_lookback = body.lookback_months
         logger.info("KR 검색: tf=%s, lookback_bars=%s → effective_months=%d",

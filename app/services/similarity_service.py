@@ -167,6 +167,10 @@ def search_similar(
     names = names_cache if names_cache is not None else all_names()
     results: list[dict] = []
 
+    logger.info("search_similar: 종목 %d개, lookback=%d, anchor_today=%s, date_range=%s",
+                len(cache), lookback_months, anchor_today, use_date_range)
+
+    skipped_short = 0
     for ticker, ohlcv in cache.items():
         dates = ohlcv.get("dates", [])
         close = ohlcv.get("close", [])
@@ -214,6 +218,7 @@ def search_similar(
 
         n = len(arr)
         if n < win:
+            skipped_short += 1
             continue
 
         # ── 끝=오늘 고정, 시작 가변 모드 ─────────────────────────────────
@@ -353,6 +358,10 @@ def search_similar(
         })
 
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
+    if skipped_short > 0:
+        logger.warning("search_similar: %d개 종목 데이터 부족 (win=%d 필요, 데이터 짧음)",
+                       skipped_short, lookback_months)
+    logger.info("search_similar: 결과 %d개 반환 (top_n=%d)", min(len(results), top_n), top_n)
     return results[:top_n]
 
 
