@@ -326,54 +326,38 @@
           throw new Error('유효한 캔들 데이터 없음');
         }
 
-        // ── 시리즈 완전 재생성 (이전 차트의 Y축 범위 잔류 완벽 제거) ──
-        // LW Charts는 autoScale 토글로 내부 캐시를 리셋하지 않으므로
-        // 시리즈를 제거 → 재생성하여 가격 스케일을 완전 초기화
-        D2T.chart.removeSeries(D2T.series);
-        D2T.chart.removeSeries(D2T.volumeSeries);
-
-        D2T.series = D2T.chart.addCandlestickSeries({
-          upColor: '#26a69a', downColor: '#ef5350',
-          borderVisible: false,
-          wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-          priceScaleId: 'right',
-        });
-        D2T.chart.priceScale('right').applyOptions({
-          autoScale:    true,
-          scaleMargins: { top: 0.15, bottom: 0.28 },
-        });
-        D2T.volumeSeries = D2T.chart.addHistogramSeries({
-          priceFormat: { type: 'volume' },
-          priceScaleId: 'vol',
-        });
-        D2T.chart.priceScale('vol').applyOptions({
-          scaleMargins: { top: 0.80, bottom: 0.0 },
-        });
-
         // ── timeScale 설정 전환 + X축 우측 여백 ─────────────────────
         D2T.chart.applyOptions({
           timeScale: { timeVisible: isIntraday, secondsVisible: false, rightOffset: 5 },
         });
 
-        D2T.series.setData(validCandles);
-        D2T.candles = validCandles;
-        setVolumeData(validCandles);
-        D2T.ticker = ticker;
+        // ── 매칭 구간 캔들 추출 + 전후 여백 포함 ─────────────────────
+        var displayCandles = validCandles;
+        var filtered = [];
 
-        var tfLabel = TF_LABELS[resultTf] || resultTf;
-        var periodLabel = periodFrom && periodTo ? ('  |  매칭: ' + periodFrom + ' ~ ' + periodTo) : '';
-        if (label) {
-          label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + periodLabel;
-        }
-        setTickerOverlay(ticker, data.name, tfLabel, validCandles);
-
-        // 매칭 구간으로 줌 + 마커
         if (periodFrom && periodTo) {
           var tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
           var tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
 
-          var filtered = validCandles.filter(function (c) { return c.time >= tf && c.time <= tt; });
+          // 매칭 구간 인덱스 범위 계산
+          var fromIdx = -1, toIdx = -1;
+          for (var bi = 0; bi < validCandles.length; bi++) {
+            if (fromIdx < 0 && validCandles[bi].time >= tf) fromIdx = bi;
+            if (validCandles[bi].time <= tt) toIdx = bi;
+          }
+          if (fromIdx < 0) fromIdx = 0;
+          if (toIdx < 0) toIdx = validCandles.length - 1;
+
+          filtered = validCandles.slice(fromIdx, toIdx + 1);
+
           if (filtered.length > 0) {
+            // 매칭 구간 전후로 15% 여백 캔들 포함 (컨텍스트 표시)
+            var matchLen = toIdx - fromIdx + 1;
+            var pad = Math.max(2, Math.round(matchLen * 0.15));
+            var sliceFrom = Math.max(0, fromIdx - pad);
+            var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
+            displayCandles = validCandles.slice(sliceFrom, sliceTo);
+
             var closes = filtered.map(function (c) { return c.close; });
             var pMin   = Math.min.apply(null, closes);
             var pMax   = Math.max.apply(null, closes);
@@ -384,45 +368,42 @@
               priceMax: pMax + pRange * 0.10,
             };
           }
+        }
 
-          var fromBar = 0, toBar = validCandles.length - 1;
-          for (var bi = 0; bi < validCandles.length; bi++) {
-            if (validCandles[bi].time < tf) fromBar = bi + 1;
-            if (validCandles[bi].time <= tt) toBar = bi;
-          }
-          fromBar = Math.max(0, fromBar);
-          toBar   = Math.min(validCandles.length - 1, toBar);
-          var pad = Math.max(3, Math.round((toBar - fromBar) * 0.15));
+        // ── 매칭 구간(+여백) 캔들만 setData → Y축이 자동으로 이 범위에 맞춤
+        D2T.chart.priceScale('right').applyOptions({
+          autoScale:    true,
+          scaleMargins: { top: 0.15, bottom: 0.28 },
+        });
+        D2T.series.setData(displayCandles);
+        D2T.candles = displayCandles;
+        setVolumeData(displayCandles);
+        D2T.ticker = ticker;
 
-          if (filtered.length > 0) {
-            D2T.series.setMarkers([
-              { time: filtered[0].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
-              { time: filtered[filtered.length - 1].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
-            ]);
-          }
+        var tfLabel = TF_LABELS[resultTf] || resultTf;
+        var periodLabel = periodFrom && periodTo ? ('  |  매칭: ' + periodFrom + ' ~ ' + periodTo) : '';
+        if (label) {
+          label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + periodLabel;
+        }
+        setTickerOverlay(ticker, data.name, tfLabel, displayCandles);
 
-          // setTimeout: 브라우저 레이아웃 + LW Charts 내부 렌더 완료 대기
-          setTimeout(function () {
-            D2T.chart.timeScale().fitContent();
-            requestAnimationFrame(function () {
-              D2T.chart.timeScale().setVisibleLogicalRange({
-                from: fromBar - pad,
-                to:   toBar   + pad + 5,
-              });
-              requestAnimationFrame(function () {
-                if (typeof redraw === 'function') redraw();
-              });
-            });
-          }, 50);
+        // 마커 + fitContent
+        if (filtered.length > 0) {
+          D2T.series.setMarkers([
+            { time: filtered[0].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
+            { time: filtered[filtered.length - 1].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
+          ]);
+        }
 
-        } else {
-          setTimeout(function () {
-            D2T.chart.timeScale().fitContent();
+        // setTimeout: 브라우저 레이아웃 완료 대기 후 fitContent + redraw
+        setTimeout(function () {
+          D2T.chart.timeScale().fitContent();
+          requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();
             });
-          }, 50);
-        }
+          });
+        }, 50);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
@@ -444,27 +425,11 @@
     D2T.chart.applyOptions({
       timeScale: { timeVisible: wasIntraday, secondsVisible: false, rightOffset: 2 },
     });
-    // 시리즈 재생성으로 Y축 완전 초기화 (일반 차트 여백으로 복원)
-    D2T.chart.removeSeries(D2T.series);
-    D2T.chart.removeSeries(D2T.volumeSeries);
-    D2T.series = D2T.chart.addCandlestickSeries({
-      upColor: '#26a69a', downColor: '#ef5350',
-      borderVisible: false,
-      wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-      priceScaleId: 'right',
-    });
+    // 일반 차트 여백으로 복원
     D2T.chart.priceScale('right').applyOptions({
-      autoScale: true,
+      autoScale:    true,
       scaleMargins: { top: 0.05, bottom: 0.25 },
     });
-    D2T.volumeSeries = D2T.chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'vol',
-    });
-    D2T.chart.priceScale('vol').applyOptions({
-      scaleMargins: { top: 0.80, bottom: 0.0 },
-    });
-
     D2T.series.setData(o.candles);
     D2T.candles   = o.candles;
     D2T.ticker    = o.ticker;
