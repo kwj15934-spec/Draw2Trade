@@ -519,15 +519,11 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            // 전체 데이터 유지 — 과거 차트 보존, 해당 구간으로 zoom만 적용
-            displayCandles = validCandles;
-
-            // 줌 범위: time 기반 (logical index는 내부적으로 변할 수 있어 불안정)
+            // 매칭 구간 + 앞뒤 여백만 잘라서 표시 (줌 불필요, 데이터로 해결)
             var pad = 15;
-            var zoomStartIdx = Math.max(0, fromIdx - pad);
-            var zoomEndIdx   = Math.min(validCandles.length - 1, toIdx + pad);
-            var zoomStartTime = validCandles[zoomStartIdx].time;
-            var zoomEndTime   = validCandles[zoomEndIdx].time;
+            var sliceFrom = Math.max(0, fromIdx - pad);
+            var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
+            displayCandles = validCandles.slice(sliceFrom, sliceTo);
 
             var closes = filtered.map(function (c) { return c.close; });
             var pMin = Math.min.apply(null, closes);
@@ -607,36 +603,16 @@
           _hidePatternMiniChart();
         }
 
-        // ── 강제 줌: 패턴 구간으로 카메라 이동 (time 기반) ─────────
-        D2T.chart.timeScale().applyOptions({
-          shiftVisibleRangeOnNewBar: false,
-          rightOffset: 2,
+        // ── 데이터가 이미 매칭 구간으로 잘려있으므로 fitContent만 ──
+        D2T.chart.priceScale('right').applyOptions({
+          autoScale: true,
+          scaleMargins: { top: 0.1, bottom: 0.2 },
         });
-
-        function applyForceZoom() {
-          if (!D2T.chart) return;
-          if (typeof zoomStartTime !== 'undefined' && typeof zoomEndTime !== 'undefined') {
-            D2T.chart.timeScale().setVisibleRange({
-              from: zoomStartTime,
-              to:   zoomEndTime,
-            });
-          }
-          D2T.chart.priceScale('right').applyOptions({
-            autoScale: true,
-            scaleMargins: { top: 0.1, bottom: 0.2 },
-          });
-        }
-
-        // 즉시 + 150ms + 500ms 3단 실행
-        applyForceZoom();
+        D2T.chart.timeScale().fitContent();
         setTimeout(function () {
-          applyForceZoom();
+          D2T.chart.timeScale().fitContent();
           if (typeof redraw === 'function') redraw();
-        }, 150);
-        setTimeout(function () {
-          applyForceZoom();
-          if (typeof redraw === 'function') redraw();
-        }, 500);
+        }, 50);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
