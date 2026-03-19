@@ -603,25 +603,21 @@
         }
 
         // ── X축 줌인 (매칭 구간 + 여백) ────────────────────────────
-        function applyZoom() {
+        // fitContent로 전체 레이아웃 확정 후 → zoom 적용 (Y축 autoScale이 visible 범위에 맞춤)
+        D2T.chart.timeScale().fitContent();
+        setTimeout(function () {
           if (D2T.matchPeriodData && D2T.matchPeriodData.zoomFrom !== undefined) {
             D2T.chart.timeScale().setVisibleLogicalRange({
               from: D2T.matchPeriodData.zoomFrom,
               to:   D2T.matchPeriodData.zoomTo,
             });
-          } else {
-            D2T.chart.timeScale().fitContent();
           }
-        }
-        applyZoom();
-        setTimeout(function () {
-          applyZoom();
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();
             });
           });
-        }, 50);
+        }, 80);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
