@@ -166,9 +166,9 @@
     var empty = list.querySelector('.tl-empty');
     if (empty) empty.remove();
 
-    // DocumentFragment로 한 번에 삽입
+    // DocumentFragment로 한 번에 삽입 (역순: 최신 틱이 최상단)
     var frag = document.createDocumentFragment();
-    for (var i = 0; i < rows.length; i++) {
+    for (var i = rows.length - 1; i >= 0; i--) {
       var r = rows[i];
       var row = document.createElement('div');
       row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');

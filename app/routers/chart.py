@@ -423,38 +423,43 @@ async def tick_history(ticker: str):
         logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw) if nxt_raw else 0)
         _parse_raw_ticks(nxt_raw, "nxt")
 
-    # 정규장 체결도 항상 시도 (NXT가 비었거나 정규장 시간)
-    if not ticks:
-        _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
+    # 정규장 체결도 항상 시도 (NXT/시간외와 병합)
+    _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
 
-    # KIS REST 빈 배열 → 서버 캐시(메모리+디스크) 에서 가져오기
-    if not ticks:
-        cached = get_cached_ticks(ticker)
-        for t in cached:
-            if t.get("type") != "tick":
-                continue
-            cvol = int(t.get("cvol", 0))
-            if cvol <= 0:
-                continue
-            price = float(t.get("price", 0))
-            volume = int(t.get("volume", 0))
-            # 등락률: 현재가 시세에서 전일 종가 사용
-            if prev_close and prev_close > 0:
-                chg_rate = round((price - prev_close) / prev_close * 100, 2)
-            else:
-                chg_rate = 0
-            chg_sign = "2" if chg_rate >= 0 else "5"
-            tick_time = t.get("time", "")
-            s_tag = t.get("session", "")
-            ticks.append({
-                "time":    tick_time,
-                "price":   int(price),
-                "cvol":    cvol,
-                "accvol":  volume,
-                "chgRate": str(chg_rate),
-                "chgSign": chg_sign,
-                "session": s_tag,
-                "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
-            })
+    # 서버 캐시(메모리+디스크) 무조건 병합 — 시간외 단일가 데이터 확보
+    existing_times = {t["time"] for t in ticks}
+    cached = get_cached_ticks(ticker)
+    for t in cached:
+        if t.get("type") != "tick":
+            continue
+        cvol = int(t.get("cvol", 0))
+        if cvol <= 0:
+            continue
+        tick_time = t.get("time", "")
+        if tick_time in existing_times:
+            continue
+        existing_times.add(tick_time)
+        price = float(t.get("price", 0))
+        volume = int(t.get("volume", 0))
+        if prev_close and prev_close > 0:
+            chg_rate = round((price - prev_close) / prev_close * 100, 2)
+        else:
+            chg_rate = 0
+        chg_sign = "2" if chg_rate >= 0 else "5"
+        s_tag = t.get("session", "")
+        ticks.append({
+            "time":    tick_time,
+            "price":   int(price),
+            "cvol":    cvol,
+            "accvol":  volume,
+            "chgRate": str(chg_rate),
+            "chgSign": chg_sign,
+            "session": s_tag,
+            "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
+        })
+
+    # 시간순 내림차순 정렬 후 최신 30건만 반환
+    ticks.sort(key=lambda x: x["time"], reverse=True)
+    ticks = ticks[:30]
 
     return {"ticker": ticker, "ticks": ticks, "quote": quote}

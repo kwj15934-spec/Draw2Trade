@@ -507,8 +507,9 @@
     if (elapsed > 20000 && !_restPollTimer) {
       _startRestPolling();
     }
-    // 3분 이상 틱 미수신 → WS 강제 재연결
-    if (elapsed > 180000) {
+    // 시간외 단일가(10분 간격)는 12분, 그 외는 3분 타임아웃
+    var staleLimit = (session === 'overtime') ? 720000 : 180000;
+    if (elapsed > staleLimit) {
       _stopRestPolling();
       _forceReconnect('스테일 감지: ' + Math.round(elapsed / 1000) + '초');
     }

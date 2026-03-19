@@ -382,6 +382,8 @@
         D2T.chart.priceScale('right').applyOptions({
           scaleMargins: { top: 0.05, bottom: 0.25 },
         });
+        // 유사종목 비교 시 설정된 autoscaleInfoProvider 초기화
+        D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(data.candles);
         D2T.candles = data.candles;
         setVolumeData(data.candles);
@@ -526,14 +528,15 @@
             var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
             displayCandles = validCandles.slice(sliceFrom, sliceTo);
 
-            var closes = filtered.map(function (c) { return c.close; });
-            var pMin   = Math.min.apply(null, closes);
-            var pMax   = Math.max.apply(null, closes);
+            var lows  = filtered.map(function (c) { return c.low  != null ? c.low  : c.close; });
+            var highs = filtered.map(function (c) { return c.high != null ? c.high : c.close; });
+            var pMin   = Math.min.apply(null, lows);
+            var pMax   = Math.max.apply(null, highs);
             var pRange = pMax - pMin || pMax * 0.01;
             D2T.matchPeriodData = {
               candles:  filtered,
-              priceMin: pMin - pRange * 0.10,
-              priceMax: pMax + pRange * 0.10,
+              priceMin: pMin - pRange * 0.15,
+              priceMax: pMax + pRange * 0.15,
             };
           }
         }
@@ -542,6 +545,20 @@
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
           scaleMargins: { top: 0.05, bottom: 0.25 },
+        });
+        // autoscaleInfoProvider: 매칭 구간 가격 범위를 Y축에 강제 포함
+        var _mpd = D2T.matchPeriodData;
+        D2T.series.applyOptions({
+          autoscaleInfoProvider: (_mpd && _mpd.priceMin != null)
+            ? function (original) {
+                var res = original();
+                if (res && res.priceRange) {
+                  res.priceRange.minValue = Math.min(res.priceRange.minValue, _mpd.priceMin);
+                  res.priceRange.maxValue = Math.max(res.priceRange.maxValue, _mpd.priceMax);
+                }
+                return res;
+              }
+            : undefined,
         });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
@@ -639,6 +656,7 @@
       autoScale:    true,
       scaleMargins: { top: 0.05, bottom: 0.25 },
     });
+    D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
     D2T.series.setData(o.candles);
     D2T.candles   = o.candles;
     D2T.ticker    = o.ticker;
