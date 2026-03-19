@@ -417,8 +417,8 @@ async def tick_history(ticker: str):
             except (ValueError, TypeError):
                 continue
 
-    # NXT 시간대 (08:00~08:50, 18:00~24:00) → NXT 체결 우선
-    if (800 <= hm < 850) or (hm >= 1800):
+    # NXT 시간대 (08:00~08:50, 15:30~24:00) → NXT 체결 우선
+    if (800 <= hm < 850) or (hm >= 1530):
         nxt_raw = fetch_nxt_tick_history(ticker)
         logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw) if nxt_raw else 0)
         _parse_raw_ticks(nxt_raw, "nxt")

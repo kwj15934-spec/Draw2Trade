@@ -101,10 +101,12 @@ async def ws_realtime(ws: WebSocket):
                             await kis_stream.subscribe_nxt_asking(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
                         elif session == "overtime":
-                            # 시간외 단일가 → 시간외 체결+호가 + 정규 호가(fallback)
+                            # 시간외 단일가 + NXT 야간 → 끊김 없는 실시간 체결
                             await kis_stream.subscribe_kr_overtime(ticker)
                             await kis_stream.subscribe_kr_asking_overtime(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
+                            await kis_stream.subscribe_nxt(ticker)
+                            await kis_stream.subscribe_nxt_asking(ticker)
                         else:
                             # 정규장/closed/transition → 체결+시간외체결+호가 모두 구독
                             # 정규장 중 구독해도 15:30 이후 시간외 단일가까지 끊김 없이 수신
