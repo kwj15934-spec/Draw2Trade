@@ -519,11 +519,12 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            // 매칭 구간 + 앞뒤 여백만 잘라서 표시 (줌 불필요, 데이터로 해결)
-            var pad = 15;
-            var sliceFrom = Math.max(0, fromIdx - pad);
-            var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
-            displayCandles = validCandles.slice(sliceFrom, sliceTo);
+            // 전체 데이터 유지 (스크롤 가능), scrollToPosition으로 이동
+            displayCandles = validCandles;
+
+            // 매칭 구간 중앙에서 오른쪽 끝까지의 거리 (scrollToPosition용)
+            var matchCenter = Math.round((fromIdx + toIdx) / 2);
+            var scrollOffset = -(validCandles.length - 1 - matchCenter);
 
             var closes = filtered.map(function (c) { return c.close; });
             var pMin = Math.min.apply(null, closes);
@@ -533,6 +534,7 @@
               candles:  filtered,
               priceMin: pMin,
               priceMax: pMax,
+              scrollOffset: scrollOffset,
             };
           }
         }
@@ -603,16 +605,21 @@
           _hidePatternMiniChart();
         }
 
-        // ── 데이터가 이미 매칭 구간으로 잘려있으므로 fitContent만 ──
+        // ── 패턴 구간으로 스크롤 ─────────────────────────────────
         D2T.chart.priceScale('right').applyOptions({
           autoScale: true,
           scaleMargins: { top: 0.1, bottom: 0.2 },
         });
-        D2T.chart.timeScale().fitContent();
-        setTimeout(function () {
+        if (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null) {
+          // scrollToPosition: 오른쪽 끝 기준 음수로 과거 방향 이동
+          D2T.chart.timeScale().scrollToPosition(D2T.matchPeriodData.scrollOffset, false);
+          setTimeout(function () {
+            D2T.chart.timeScale().scrollToPosition(D2T.matchPeriodData.scrollOffset, false);
+            if (typeof redraw === 'function') redraw();
+          }, 100);
+        } else {
           D2T.chart.timeScale().fitContent();
-          if (typeof redraw === 'function') redraw();
-        }, 50);
+        }
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
