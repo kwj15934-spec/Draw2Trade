@@ -323,9 +323,10 @@ def get_monthly_ohlcv(ticker: str, years: int = 10) -> dict[str, Any] | None:
     current_month = now.strftime("%Y-%m")
 
     # 날짜가 바뀌면 메모리 캐시 전체 무효화 (장이 열리는 매일 최신 데이터 반영)
+    # 단, 프리로드 데이터를 보존: clear 대신 날짜만 갱신하고 개별 요청 시 갱신
     if _mem_ohlcv_date != today_str and now.weekday() < 5:  # 평일만
-        _mem_ohlcv.clear()
         _mem_ohlcv_date = today_str
+        # 개별 종목은 디스크 캐시 freshness 체크 후 온디맨드 갱신
 
     # 1) 메모리 캐시
     if ticker in _mem_ohlcv:
@@ -656,11 +657,16 @@ def build_cache() -> None:
     1단계: 디스크 캐시를 날짜 무관하게 전부 메모리에 올림 (즉시 검색 가능)
     2단계: 미캐시 종목은 백그라운드에서 pykrx로 천천히 채움
     """
+    global _mem_ohlcv_date
+
     tickers = get_kospi_tickers()
     total = len(tickers)
     _preload_status["phase"] = "disk"
     _preload_status["total"] = total
     _preload_status["loaded"] = 0
+
+    # 프리로드 날짜를 오늘로 설정 → get_monthly_ohlcv의 .clear() 방지
+    _mem_ohlcv_date = datetime.now().strftime("%Y-%m-%d")
 
     logger.info("캐시 빌드 시작: KOSPI %d 종목 (1단계: 디스크 캐시 로드)", total)
 
