@@ -537,11 +537,8 @@
           }
         }
 
-        // ── Y축: autoScale이 보이는 범위 캔들에 맞춰 자동 조절 ─────
-        D2T.chart.priceScale('right').applyOptions({
-          autoScale:    true,
-          scaleMargins: { top: 0.1, bottom: 0.2 },
-        });
+        // ── 1단계: 데이터 주입 + 카메라 이동 중 Y축 요동 방지 ────────
+        D2T.chart.priceScale('right').applyOptions({ autoScale: false });
         D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
@@ -607,25 +604,24 @@
           _hidePatternMiniChart();
         }
 
-        // ── 패턴 구간으로 즉시 스크롤 + Y축 오토스케일 ────────────
-        function syncView() {
-          if (D2T.chart && typeof finalRange !== 'undefined') {
+        // ── 2단계: 카메라를 패턴 구간으로 강제 스크롤 ────────────
+        function forceScroll() {
+          if (!D2T.chart) return;
+          if (typeof finalRange !== 'undefined') {
             D2T.chart.timeScale().setVisibleLogicalRange(finalRange);
           }
-          D2T.chart.priceScale('right').applyOptions({
-            autoScale: true,
-            scaleMargins: { top: 0.1, bottom: 0.2 },
-          });
-        }
-        syncView();
-        setTimeout(function () {
-          syncView();
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              if (typeof redraw === 'function') redraw();
+          // 3단계: 카메라 이동 완료 후 Y축 오토스케일 다시 켜기
+          setTimeout(function () {
+            D2T.chart.priceScale('right').applyOptions({
+              autoScale: true,
+              scaleMargins: { top: 0.1, bottom: 0.2 },
             });
-          });
-        }, 100);
+            if (typeof redraw === 'function') redraw();
+          }, 100);
+        }
+        requestAnimationFrame(forceScroll);
+        setTimeout(forceScroll, 100);
+        setTimeout(forceScroll, 500);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
