@@ -279,11 +279,11 @@
       var x0  = D2T.chart.timeScale().timeToCoordinate(c0.time);
       var x1  = D2T.chart.timeScale().timeToCoordinate(cN.time);
 
-      // Y축 영역(오른쪽 90px) 침범 방지: 클립 영역을 캔버스 너비 - 90px로 제한
-      var clipRight = canvas.width - 90;
+      // Y축(범례) 침범 방지: timeScale.width()로 실제 차트 콘텐츠 너비를 읽어 클립
+      var timeScaleWidth = D2T.chart.timeScale().width();
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, clipRight, canvas.height);
+      ctx.rect(0, 0, timeScaleWidth, canvas.height);
       ctx.clip();
 
       // ① 매칭 구간 배경 하이라이트 (닮은 부분 = 이 구간)

@@ -534,15 +534,15 @@
               : 30;
             var scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
 
-            var closes = filtered.map(function (c) { return c.close; });
-            var pMin = Math.min.apply(null, closes);
-            var pMax = Math.max.apply(null, closes);
+            // 매칭 구간 고가/저가 기반으로 pMin/pMax 결정 (캔들과 1:1 수직 정렬)
+            var highs = filtered.map(function (c) { return c.high; });
+            var lows  = filtered.map(function (c) { return c.low; });
+            var pMin = Math.min.apply(null, lows);
+            var pMax = Math.max.apply(null, highs);
             if (!isFinite(pMin) || !isFinite(pMax)) { pMin = 0; pMax = 100; }
-            // 패턴 선 가격 범위: padding 5% 추가, 음수 방지
-            var pRange = pMax - pMin || 1;
-            var pPad = pRange * 0.05;
-            var finalMin = Math.max(0, pMin - pPad);
-            var finalMax = pMax + pPad;
+            var finalMin = pMin;
+            var finalMax = pMax;
+            if (finalMin < 0) finalMin = 0;
             D2T.matchPeriodData = {
               candles:  filtered,
               priceMin: finalMin,
