@@ -301,7 +301,7 @@ def get_token() -> Optional[str]:
             data=payload,
             headers={"Content-Type": "application/json"},
         )
-        with _req.urlopen(req, timeout=15) as resp:
+        with _req.urlopen(req, timeout=3) as resp:
             result = json.loads(resp.read().decode("utf-8"))
 
         token = result.get("access_token")
@@ -361,7 +361,7 @@ def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, An
             "Content-Type": "application/json; charset=utf-8",
         }
         req = _req.Request(url, headers=headers)
-        with _req.urlopen(req, timeout=15) as resp:
+        with _req.urlopen(req, timeout=3) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         logger.warning("KIS GET 실패 (%s): %s", path, e)

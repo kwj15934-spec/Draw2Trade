@@ -419,12 +419,18 @@ async def tick_history(ticker: str):
 
     # NXT 시간대 (08:00~08:50, 15:30~24:00) → NXT 체결 우선
     if (800 <= hm < 850) or (hm >= 1530):
-        nxt_raw = fetch_nxt_tick_history(ticker)
-        logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw) if nxt_raw else 0)
-        _parse_raw_ticks(nxt_raw, "nxt")
+        try:
+            nxt_raw = fetch_nxt_tick_history(ticker)
+            logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw or []))
+            _parse_raw_ticks(nxt_raw, "nxt")
+        except Exception as e:
+            logger.warning("NXT tick API 실패 (%s), 캐시로 대체: %s", ticker, e)
 
     # 정규장 체결도 항상 시도 (NXT/시간외와 병합)
-    _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
+    try:
+        _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
+    except Exception as e:
+        logger.warning("KR tick API 실패 (%s), 캐시로 대체: %s", ticker, e)
 
     # 서버 캐시(메모리+디스크) 무조건 병합 — 시간외 단일가 데이터 확보
     existing_times = {t["time"] for t in ticks}
