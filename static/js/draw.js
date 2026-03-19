@@ -279,10 +279,6 @@
       }
       // ② 두 곡선 사이 영역 (얇을수록 유사, 두꺼울수록 다른 부분)
       drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.30)');
-      // ③ 유사 종목 매칭 구간 가상선 (청록 점선)
-      drawNormCurve(matchPoints,   '#26a69a', 'rgba(38,166,154,0.85)', 3.5, true);
-      // ④ 내 패턴 가상선 (주황 실선)
-      drawNormCurve(drawNormalized, DRAW_COLOR, 'rgba(255,107,53,0.85)',  4.5, false);
 
     } else {
       // 차트 좌표 없을 때: 정규화 캔버스 좌표 (폴백)

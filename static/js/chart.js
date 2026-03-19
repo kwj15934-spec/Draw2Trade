@@ -57,23 +57,20 @@
     } catch (e) { /* 이미 제거됨 */ }
   }
 
-  /** 정규화 배열(0~1) + 매칭 캔들 → {time, value} 배열 (LW Charts LineSeries용) */
-  function _normToTimeSeries(normArr, candles) {
+  /** 정규화 배열(0~1) → 실제 가격으로 환산한 {time, value} 배열 (캔들과 동일 Y축) */
+  function _normToPriceSeries(normArr, candles, pMin, pMax) {
     if (!normArr || !candles || candles.length < 2 || normArr.length < 2) return [];
     var result = [];
+    var pRange = pMax - pMin;
     for (var i = 0; i < normArr.length; i++) {
       var ci = Math.min(candles.length - 1, Math.round(i / (normArr.length - 1) * (candles.length - 1)));
-      result.push({ time: candles[ci].time, value: normArr[i] * 100 }); // 0~100% 스케일
+      var priceVal = pMin + normArr[i] * pRange;
+      result.push({ time: candles[ci].time, value: priceVal });
     }
-    // LW Charts는 동일 time에 중복 데이터를 허용하지 않으므로 dedup
-    var seen = {};
-    var deduped = [];
+    var seen = {}, deduped = [];
     for (var j = 0; j < result.length; j++) {
       var t = result[j].time;
-      if (!seen[t]) {
-        seen[t] = true;
-        deduped.push(result[j]);
-      }
+      if (!seen[t]) { seen[t] = true; deduped.push(result[j]); }
     }
     return deduped;
   }
@@ -567,14 +564,33 @@
           ]);
         }
 
-        // ── 메인 차트에서 패턴 오버레이 제거 (깨끗한 캔들만 표시) ──
+        // ── 패턴 비교 LineSeries (실제 가격 스케일, right 축 공유) ──
         _removePatternSeries();
 
-        // ── 미니 패턴 비교 패널 렌더링 ─────────────────────────────
         if (filtered.length >= 2 && window._getMatchPoints && window._getDrawNormalized) {
           var matchNorm = window._getMatchPoints();
           var drawNorm  = window._getDrawNormalized();
+
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
+            var mpd = D2T.matchPeriodData;
+            var drawData  = _normToPriceSeries(drawNorm,  filtered, mpd.priceMin, mpd.priceMax);
+            var matchData = _normToPriceSeries(matchNorm, filtered, mpd.priceMin, mpd.priceMax);
+
+            _patternDrawSeries = D2T.chart.addLineSeries({
+              color: DRAW_COLOR || '#ff6b35', lineWidth: 3, lineStyle: 0,
+              priceScaleId: 'right',
+              lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+            });
+            _patternMatchSeries = D2T.chart.addLineSeries({
+              color: '#26a69a', lineWidth: 2, lineStyle: 2,
+              priceScaleId: 'right',
+              lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+            });
+
+            _patternDrawSeries.setData(drawData);
+            _patternMatchSeries.setData(matchData);
+
+            // 미니 비교 패널도 표시
             _renderPatternMiniChart(drawNorm, matchNorm);
           } else {
             _hidePatternMiniChart();
