@@ -680,7 +680,7 @@
         var panels = ['results','favorites','drawings'];
         panels.forEach(function(p) {
           var el = document.getElementById('sidebar-panel-' + p);
-          if (el) el.style.display = (p === tab) ? 'block' : 'none';
+          if (el) el.style.display = (p === tab) ? 'flex' : 'none';
         });
       });
     });

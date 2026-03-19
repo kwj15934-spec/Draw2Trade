@@ -610,13 +610,20 @@
           autoScale: true,
           scaleMargins: { top: 0.1, bottom: 0.2 },
         });
-        if (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null) {
-          // scrollToPosition: 오른쪽 끝 기준 음수로 과거 방향 이동
-          D2T.chart.timeScale().scrollToPosition(D2T.matchPeriodData.scrollOffset, false);
-          setTimeout(function () {
-            D2T.chart.timeScale().scrollToPosition(D2T.matchPeriodData.scrollOffset, false);
-            if (typeof redraw === 'function') redraw();
-          }, 100);
+        var _offset = (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null)
+          ? D2T.matchPeriodData.scrollOffset : null;
+        if (_offset != null) {
+          // setData 후 차트가 자동으로 최신 바로 스크롤하는 것을 막기 위해
+          // rightOffset을 크게 설정한 후 scrollToPosition 적용
+          D2T.chart.timeScale().applyOptions({ rightOffset: 999, shiftVisibleRangeOnNewBar: false });
+          requestAnimationFrame(function () {
+            D2T.chart.timeScale().scrollToPosition(_offset, false);
+            D2T.chart.timeScale().applyOptions({ rightOffset: 5 });
+            setTimeout(function () {
+              D2T.chart.timeScale().scrollToPosition(_offset, false);
+              if (typeof redraw === 'function') redraw();
+            }, 150);
+          });
         } else {
           D2T.chart.timeScale().fitContent();
         }
