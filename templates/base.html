@@ -760,7 +760,8 @@
     .result-card {
       display: flex;
       align-items: center;
-      padding: 9px 14px;
+      gap: 6px;
+      padding: 7px 10px;
       border-bottom: 1px solid #1e1e21;
       cursor: pointer;
       transition: background 0.12s;
@@ -768,8 +769,8 @@
     .result-card:hover { background: #1e1e21; }
 
     .result-rank {
-      width: 36px;
-      font-size: 13px;
+      width: 24px;
+      font-size: 12px;
       font-weight: 700;
       color: #555;
       flex-shrink: 0;
@@ -780,7 +781,7 @@
       min-width: 0;
     }
     .result-name {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       color: #d1d4dc;
       white-space: nowrap;
@@ -788,24 +789,24 @@
       text-overflow: ellipsis;
     }
     .result-ticker {
-      font-size: 11px;
+      font-size: 10px;
       color: #555;
       margin-top: 1px;
     }
 
     /* 유사도 바 */
     .result-score-wrap {
-      width: 80px;
+      width: 68px;
       flex-shrink: 0;
     }
     .result-score-pct {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       line-height: 1;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .result-score-bar {
-      height: 4px;
+      height: 3px;
       background: #2d2d30;
       border-radius: 2px;
       overflow: hidden;
@@ -1323,7 +1324,7 @@
     /* 헤더 */
     .tl-header {
       display: grid;
-      grid-template-columns: 2fr 1fr 1.2fr 1.6fr 1.4fr;
+      grid-template-columns: 2fr 1fr 1.2fr 1.4fr 2fr;
       padding: 4px 6px;
       font-size: 10px;
       font-weight: 700;
@@ -1361,7 +1362,7 @@
     /* 행 — 슬라이드인 애니메이션 */
     .tl-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1.2fr 1.6fr 1.4fr;
+      grid-template-columns: 2fr 1fr 1.2fr 1.4fr 2fr;
       align-items: center;
       padding: 3px 4px 3px 4px;
       border-bottom: 1px solid rgba(255,255,255,0.028);
@@ -1417,8 +1418,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 2px;
-      overflow: hidden;
+      gap: 3px;
     }
 
     /* 일별 날짜 */

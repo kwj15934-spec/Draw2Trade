@@ -279,6 +279,13 @@
       var x0  = D2T.chart.timeScale().timeToCoordinate(c0.time);
       var x1  = D2T.chart.timeScale().timeToCoordinate(cN.time);
 
+      // Y축 영역(오른쪽 90px) 침범 방지: 클립 영역을 캔버스 너비 - 90px로 제한
+      var clipRight = canvas.width - 90;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, clipRight, canvas.height);
+      ctx.clip();
+
       // ① 매칭 구간 배경 하이라이트 (닮은 부분 = 이 구간)
       if (x0 != null && x1 != null) {
         ctx.fillStyle = 'rgba(38,166,154,0.20)';
@@ -286,6 +293,8 @@
       }
       // ② 두 곡선 사이 영역 (얇을수록 유사, 두꺼울수록 다른 부분)
       drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.30)');
+
+      ctx.restore();
 
     } else {
       // 차트 좌표 없을 때: 정규화 캔버스 좌표 (폴백)

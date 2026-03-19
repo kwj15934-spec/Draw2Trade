@@ -231,7 +231,7 @@
       layout: {
         background: { color: '#121214' },
         textColor: '#d1d4dc',
-        padding: { right: 10 },
+        padding: { right: 10, bottom: 35 },
       },
       grid: {
         vertLines: { color: '#1e2130' },
@@ -538,10 +538,15 @@
             var pMin = Math.min.apply(null, closes);
             var pMax = Math.max.apply(null, closes);
             if (!isFinite(pMin) || !isFinite(pMax)) { pMin = 0; pMax = 100; }
+            // 패턴 선 가격 범위: padding 5% 추가, 음수 방지
+            var pRange = pMax - pMin || 1;
+            var pPad = pRange * 0.05;
+            var finalMin = Math.max(0, pMin - pPad);
+            var finalMax = pMax + pPad;
             D2T.matchPeriodData = {
               candles:  filtered,
-              priceMin: pMin,
-              priceMax: pMax,
+              priceMin: finalMin,
+              priceMax: finalMax,
               scrollOffset: scrollOffset,
             };
           }
@@ -579,17 +584,21 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            var pRange = pMax - pMin;
+            // matchPeriodData와 동일한 finalMin/finalMax 사용 → 캔들과 1:1 수직 정렬
+            var _mpd = D2T.matchPeriodData;
+            var _pMin = _mpd ? _mpd.priceMin : Math.max(0, pMin);
+            var _pMax = _mpd ? _mpd.priceMax : pMax;
+            var _pRange = _pMax - _pMin || 1;
 
             for (var i = 0; i < filtered.length; i++) {
               var normIdx = Math.round((i / Math.max(1, filtered.length - 1)) * (drawNorm.length - 1));
               safeDrawData.push({
                 time: filtered[i].time,
-                value: pMin + (drawNorm[normIdx] * pRange),
+                value: _pMin + (drawNorm[normIdx] * _pRange),
               });
               safeMatchData.push({
                 time: filtered[i].time,
-                value: pMin + (matchNorm[normIdx] * pRange),
+                value: _pMin + (matchNorm[normIdx] * _pRange),
               });
             }
 
