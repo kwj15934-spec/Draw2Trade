@@ -111,8 +111,8 @@
     _lastTradePrice = price;
     _lastCvolDir = cvolIsBuy;
 
-    // 체결량 색상: 매수=빨강, 매도=파랑
-    var cvolColor = cvolIsBuy ? '#ef5350' : '#42a5f5';
+    // 체결량 색상: 매수=빨강, 매도=파랑 (한국 UX 기준)
+    var cvolColor = cvolIsBuy ? '#ef5350' : '#2962ff';
 
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 

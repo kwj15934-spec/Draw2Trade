@@ -216,14 +216,32 @@
       if (cvol > 0) _rtCandle.volume = (_rtCandle.volume || 0) + cvol;
     }
 
-    // 차트 series.update는 candle_update 메시지에서 처리 (서버사이드 병합)
-    // 여기서는 가격 패널 + 체결 내역 + 오버레이만 업데이트
+    // ── 매 틱마다 즉시 차트 캔들 업데이트 (토스증권 스타일 "숨 쉬는" 캔들) ──
+    // candle_update 메시지도 오지만, 틱마다 즉시 반영해야 0.5초 이내 움직임 보장
+    try {
+      D2T.series.update(_rtCandle);
+    } catch (seriesErr) {
+      console.error('[RT] series.update 실패:', seriesErr, _rtCandle);
+    }
+
+    if (D2T.volumeSeries) {
+      try {
+        D2T.volumeSeries.update({
+          time:  _rtCandle.time,
+          value: _rtCandle.volume || 0,
+          color: (_rtCandle.close >= _rtCandle.open)
+            ? 'rgba(38,166,154,0.45)'
+            : 'rgba(239,83,80,0.45)',
+        });
+      } catch (_) {}
+    }
 
     _tickCount++;
     if (_tickCount <= 5) {
-      console.log('[RT] tick #' + _tickCount, 'price=' + price);
+      console.log('[RT] tick #' + _tickCount, 'price=' + price, 'candle=', JSON.stringify(_rtCandle));
     }
 
+    _autoScrollToLatest();
     _setLive(true);
     _updateOverlay(price);
     _updatePricePanel(tick);

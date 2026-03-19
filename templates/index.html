@@ -673,13 +673,14 @@
 // ── 호가 패널 드래그 리사이즈 ──────────────────────────────
 (function () {
   var STORAGE_KEY = 'd2t_quote_panel_width';
-  var MIN_W = 160, MAX_W = 340;
+  var MIN_W = 160, MAX_W = 380;
 
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
   function applyWidth(w) {
-    var panel = document.getElementById('quote-panel');
-    if (panel) panel.style.width = w + 'px';
+    // CSS Grid custom property로 호가 패널 폭 설정 (차트와 완전 독립)
+    var main = document.querySelector('.d2t-main');
+    if (main) main.style.setProperty('--quote-w', w + 'px');
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -705,7 +706,6 @@
 
     document.addEventListener('mousemove', function (e) {
       if (!handle.classList.contains('dragging')) return;
-      // 핸들이 패널 왼쪽에 있으므로 오른쪽으로 드래그 = 패널 넓어짐
       var delta = startX - e.clientX;
       var newW = clamp(startW + delta, MIN_W, MAX_W);
       applyWidth(newW);
@@ -718,12 +718,19 @@
       document.body.style.userSelect = '';
       var panel = document.getElementById('quote-panel');
       if (panel) localStorage.setItem(STORAGE_KEY, panel.offsetWidth);
+      // 차트 리사이즈 트리거 (LW Charts가 새 폭에 맞게 재렌더링)
+      if (window.D2T && D2T.chart) {
+        try { D2T.chart.resize(0, 0); D2T.chart.applyOptions({}); } catch (_) {}
+      }
     });
 
     // 더블클릭 → 기본 너비로 리셋
     handle.addEventListener('dblclick', function () {
       applyWidth(220);
       localStorage.setItem(STORAGE_KEY, 220);
+      if (window.D2T && D2T.chart) {
+        try { D2T.chart.resize(0, 0); D2T.chart.applyOptions({}); } catch (_) {}
+      }
     });
   });
 })();
