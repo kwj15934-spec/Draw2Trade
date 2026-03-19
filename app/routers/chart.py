@@ -165,7 +165,7 @@ async def chart_data(
 
         # Redis 캐시 히트 시 즉시 반환 (KIS API 호출 완전 생략)
         cached_resp = await rcache.get_candles(ticker, tf)
-        if cached_resp is not None and poll:
+        if cached_resp is not None:
             return {
                 "ticker":    ticker,
                 "name":      data_service.get_company_name(ticker),
@@ -382,20 +382,37 @@ async def tick_history(ticker: str):
 
     ticks = []
 
+    def _session_type_from_time(tick_time: str, session_tag: str) -> str:
+        """체결시간(HHMMSS) + session_tag로 세션 타입 판별."""
+        if session_tag == "nxt":
+            return "NXT"
+        hhmm = int(tick_time[:4]) if len(tick_time) >= 4 else 0
+        if 830 <= hhmm <= 840:
+            return "PRE_MARKET"
+        if 900 <= hhmm <= 1530:
+            return "REGULAR"
+        if 1540 <= hhmm <= 1600:
+            return "POST_MARKET"
+        if 1600 < hhmm <= 1800:
+            return "AFTER_HOURS"
+        return "UNKNOWN"
+
     def _parse_raw_ticks(raw_list: list, session_tag: str) -> None:
         for r in (raw_list or []):
             try:
                 cvol = int(r.get("cntg_vol", "0").replace(",", ""))
                 if cvol <= 0:
                     continue
+                tick_time = r.get("stck_cntg_hour", "")
                 ticks.append({
-                    "time":    r.get("stck_cntg_hour", ""),
+                    "time":    tick_time,
                     "price":   int(r.get("stck_prpr", "0").replace(",", "")),
                     "cvol":    cvol,
                     "accvol":  int(r.get("acml_vol", "0").replace(",", "")),
                     "chgRate": r.get("prdy_ctrt", "0"),
                     "chgSign": r.get("prdy_vrss_sign", "3"),
                     "session": session_tag,
+                    "session_type": _session_type_from_time(tick_time, session_tag),
                 })
             except (ValueError, TypeError):
                 continue
@@ -427,14 +444,17 @@ async def tick_history(ticker: str):
             else:
                 chg_rate = 0
             chg_sign = "2" if chg_rate >= 0 else "5"
+            tick_time = t.get("time", "")
+            s_tag = t.get("session", "")
             ticks.append({
-                "time":    t.get("time", ""),
+                "time":    tick_time,
                 "price":   int(price),
                 "cvol":    cvol,
                 "accvol":  volume,
                 "chgRate": str(chg_rate),
                 "chgSign": chg_sign,
-                "session": t.get("session", ""),
+                "session": s_tag,
+                "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
             })
 
     return {"ticker": ticker, "ticks": ticks, "quote": quote}

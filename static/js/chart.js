@@ -78,6 +78,130 @@
     return deduped;
   }
 
+  // ── 미니 패턴 비교 패널 ─────────────────────────────────────────────────────
+  var _miniChart = null;
+  var _miniDrawSeries = null;
+  var _miniMatchSeries = null;
+
+  function _renderPatternMiniChart(drawNorm, matchNorm) {
+    var panel = document.getElementById('pattern-compare-panel');
+    var container = document.getElementById('pattern-compare-container');
+    if (!panel || !container) return;
+
+    // 패널 표시
+    panel.style.display = '';
+
+    // 기존 미니 차트 제거 후 재생성 (깨끗한 상태 보장)
+    if (_miniChart) {
+      try { _miniChart.remove(); } catch (e) { /* ignore */ }
+      _miniChart = null;
+      _miniDrawSeries = null;
+      _miniMatchSeries = null;
+    }
+    container.innerHTML = '';
+
+    // 정규화값 → 인덱스 기반 {time, value} (실제 시간이 아닌 순서 인덱스)
+    var len = Math.max(drawNorm.length, matchNorm.length);
+    var drawData = [], matchData = [];
+    for (var i = 0; i < len; i++) {
+      // time을 1970-01-02부터 일단위 시퀀스로 사용 (LW Charts string format)
+      var day = i + 1;
+      var timeStr = '1970-01-' + String(day + 1).padStart(2, '0');
+      if (day + 1 > 28) {
+        // 28일 초과 시 월 넘김 처리
+        var m = Math.floor(day / 28) + 1;
+        var d = (day % 28) + 1;
+        timeStr = '1970-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      }
+      if (i < drawNorm.length) {
+        drawData.push({ time: timeStr, value: drawNorm[i] * 100 });
+      }
+      if (i < matchNorm.length) {
+        matchData.push({ time: timeStr, value: matchNorm[i] * 100 });
+      }
+    }
+
+    _miniChart = LightweightCharts.createChart(container, {
+      width: container.offsetWidth,
+      height: container.offsetHeight,
+      layout: {
+        background: { type: 'solid', color: '#1a1a1e' },
+        textColor: '#7a8499',
+        fontSize: 10,
+      },
+      grid: {
+        vertLines: { color: 'rgba(255,255,255,0.03)' },
+        horzLines: { color: 'rgba(255,255,255,0.03)' },
+      },
+      rightPriceScale: {
+        visible: false,
+      },
+      leftPriceScale: {
+        visible: false,
+      },
+      timeScale: {
+        visible: false,
+        rightOffset: 0,
+        barSpacing: Math.max(3, container.offsetWidth / len),
+      },
+      crosshair: {
+        mode: 0,
+        vertLine: { visible: false },
+        horzLine: { visible: false },
+      },
+      handleScroll: false,
+      handleScale: false,
+    });
+
+    _miniDrawSeries = _miniChart.addLineSeries({
+      color: DRAW_COLOR || '#ff6b35',
+      lineWidth: 2,
+      lineStyle: 0,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      crosshairMarkerVisible: false,
+    });
+    _miniMatchSeries = _miniChart.addLineSeries({
+      color: '#26a69a',
+      lineWidth: 2,
+      lineStyle: 2,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    _miniDrawSeries.setData(drawData);
+    _miniMatchSeries.setData(matchData);
+    _miniChart.timeScale().fitContent();
+
+    // ResizeObserver로 패널 리사이즈 대응
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () {
+        if (_miniChart && container.offsetWidth > 0) {
+          _miniChart.resize(container.offsetWidth, container.offsetHeight);
+          _miniChart.timeScale().fitContent();
+        }
+      });
+      ro.observe(container);
+    }
+  }
+
+  function _hidePatternMiniChart() {
+    var panel = document.getElementById('pattern-compare-panel');
+    if (panel) panel.style.display = 'none';
+    if (_miniChart) {
+      try { _miniChart.remove(); } catch (e) { /* ignore */ }
+      _miniChart = null;
+      _miniDrawSeries = null;
+      _miniMatchSeries = null;
+    }
+    var container = document.getElementById('pattern-compare-container');
+    if (container) container.innerHTML = '';
+  }
+
+  // 외부 접근용
+  D2T._hidePatternMiniChart = _hidePatternMiniChart;
+
   // ── 헬퍼: 시장별 API 경로 ─────────────────────────────────────────────────
   function chartUrl(ticker, tf) {
     if (D2T.market === 'US') {
@@ -211,6 +335,11 @@
   }
 
   // ── 차트 데이터 로딩 ──────────────────────────────────────────────────────
+  function _showChartSpinner(show) {
+    var el = document.getElementById('chart-loading-spinner');
+    if (el) el.style.display = show ? 'flex' : 'none';
+  }
+
   function loadChart(ticker, timeframe) {
     if (!ticker) return;
     if (D2T.loading) return;
@@ -222,9 +351,12 @@
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = ticker + ' 로딩 중...';
 
+    _showChartSpinner(true);
+
     if (D2T.series) D2T.series.setMarkers([]);
     D2T.matchPeriodData = null;
     _removePatternSeries();
+    _hidePatternMiniChart();
 
     fetch(chartUrl(ticker, tf))
       .then(function (r) {
@@ -286,6 +418,7 @@
       })
       .finally(function () {
         D2T.loading = false;
+        _showChartSpinner(false);
       });
   }
 
@@ -328,6 +461,7 @@
 
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = ticker + ' 로딩 중...';
+    _showChartSpinner(true);
 
     D2T.matchPeriodData = null;
 
@@ -404,10 +538,10 @@
           }
         }
 
-        // ── 캔들 세팅 ────────────────────────────────────────────────
+        // ── Y축 완전 리셋 후 캔들 세팅 ────────────────────────────────
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.15, bottom: 0.28 },
+          scaleMargins: { top: 0.05, bottom: 0.25 },
         });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
@@ -429,53 +563,25 @@
           ]);
         }
 
-        // ── 패턴 비교 LineSeries 생성 (정규화 % 기반) ────────────────
-        // 이전 패턴 시리즈 제거
+        // ── 메인 차트에서 패턴 오버레이 제거 (깨끗한 캔들만 표시) ──
         _removePatternSeries();
 
+        // ── 미니 패턴 비교 패널 렌더링 ─────────────────────────────
         if (filtered.length >= 2 && window._getMatchPoints && window._getDrawNormalized) {
           var matchNorm = window._getMatchPoints();
           var drawNorm  = window._getDrawNormalized();
-
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            // 정규화값(0~1)을 매칭 구간 캔들의 time에 매핑 → % 변환
-            // 별도 priceScale 'pattern'에 렌더하여 캔들 Y축과 독립
-            _patternDrawSeries = D2T.chart.addLineSeries({
-              color: DRAW_COLOR || '#ff6b35',
-              lineWidth: 3,
-              lineStyle: 0, // Solid
-              priceScaleId: 'pattern',
-              lastValueVisible: false,
-              priceLineVisible: false,
-              crosshairMarkerVisible: false,
-            });
-            _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a',
-              lineWidth: 2,
-              lineStyle: 2, // Dashed
-              priceScaleId: 'pattern',
-              lastValueVisible: false,
-              priceLineVisible: false,
-              crosshairMarkerVisible: false,
-            });
-
-            // pattern priceScale: 좌측에 숨김 (% 값이므로 표시 불필요)
-            D2T.chart.priceScale('pattern').applyOptions({
-              visible:      false,
-              autoScale:    true,
-              scaleMargins: { top: 0.10, bottom: 0.25 },
-            });
-
-            // 정규화값 → {time, value} 배열 (매칭 캔들의 시간축에 매핑)
-            var drawData  = _normToTimeSeries(drawNorm,  filtered);
-            var matchData = _normToTimeSeries(matchNorm, filtered);
-
-            _patternDrawSeries.setData(drawData);
-            _patternMatchSeries.setData(matchData);
+            _renderPatternMiniChart(drawNorm, matchNorm);
+          } else {
+            _hidePatternMiniChart();
           }
+        } else {
+          _hidePatternMiniChart();
         }
 
-        // fitContent + redraw
+        // ── X축 피팅 ───────────────────────────────────────────────
+        // 즉시 fitContent + 지연 fitContent (LW Charts 내부 레이아웃 완료 보장)
+        D2T.chart.timeScale().fitContent();
         setTimeout(function () {
           D2T.chart.timeScale().fitContent();
           requestAnimationFrame(function () {
@@ -487,12 +593,33 @@
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
+
+        // ── 앱 전체 종목 동기화 ────────────────────────────────────
+        // 1) 헤더바 종목명 업데이트
+        var thbName = document.getElementById('thb-name');
+        if (thbName) thbName.textContent = data.name ? data.name + ' (' + ticker + ')' : ticker;
+
+        // 2) 검색 인풋 placeholder를 새 종목으로 업데이트
+        var searchInp = document.getElementById('ticker-search');
+        if (searchInp) {
+          searchInp.placeholder = ticker + (data.name ? '  ' + data.name : '');
+          searchInp.value = '';
+        }
+
+        // 3) 헤더바 마지막 캔들 종가/등락률 즉시 표시
+        _initHeaderBar(displayCandles);
+
+        // 4) 웹소켓 재구독 + 체결/호가창 초기화 + REST 초기 데이터 로드
+        if (typeof window._onChartLoaded === 'function') {
+          window._onChartLoaded(ticker, D2T.market || 'KR');
+        }
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);
       })
       .finally(function () {
         D2T.loading = false;
+        _showChartSpinner(false);
       });
   }
 
@@ -505,8 +632,9 @@
     D2T.chart.applyOptions({
       timeScale: { timeVisible: wasIntraday, secondsVisible: false, rightOffset: 2 },
     });
-    // 패턴 비교 시리즈 제거 + 일반 차트 여백 복원
+    // 패턴 비교 제거 + 일반 차트 여백 복원
     _removePatternSeries();
+    _hidePatternMiniChart();
     D2T.chart.priceScale('right').applyOptions({
       autoScale:    true,
       scaleMargins: { top: 0.05, bottom: 0.25 },
@@ -524,6 +652,12 @@
     D2T.originState = null;
     var backBtn = document.getElementById('btn-back-to-origin');
     if (backBtn) backBtn.style.display = 'none';
+
+    // 웹소켓 재구독 + 체결/호가창 원본 종목으로 동기화
+    if (typeof window._onChartLoaded === 'function') {
+      window._onChartLoaded(o.ticker, D2T.market || 'KR');
+    }
+
     // fitContent() 후 차트 렌더링이 완료된 다음 프레임에서 redraw 호출
     // (즉시 호출 시 timeToCoordinate가 아직 갱신되지 않아 그림이 깨짐)
     if (typeof window.redraw === 'function') {

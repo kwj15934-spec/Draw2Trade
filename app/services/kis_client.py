@@ -117,28 +117,60 @@ def _persist_bucket(bucket: int, count: int) -> None:
         pass
 
 
-# DB 초기화 + 오늘 버킷 로드
+# DB 초기화 + 오늘 버킷 로드 + 동기화 스레드 시작
 try:
     _init_bucket_db()
     _load_buckets_from_db()
+    _ensure_bucket_sync()
 except Exception as e:
     logger.warning("KIS 버킷 DB 초기화 실패: %s", e)
 
 
 def _record_call() -> None:
-    """현재 분 버킷에 호출 1건 기록. 1시간 이상 지난 버킷은 정리."""
-    global _api_call_count, _api_minute_buckets
+    """현재 분 버킷에 호출 1건 기록 (메모리만, DB 영속화는 _bucket_sync_loop가 담당)."""
+    global _api_call_count
     _api_call_count += 1
     bucket = int(time.time()) // 60
     with _BUCKET_LOCK:
         _api_minute_buckets[bucket] = _api_minute_buckets.get(bucket, 0) + 1
-        count = _api_minute_buckets[bucket]
         # 오래된 버킷 정리 (2시간 이상, 메모리만)
         cutoff = bucket - 120
         for k in [k for k in _api_minute_buckets if k < cutoff]:
             del _api_minute_buckets[k]
-    # DB 영속화 (별도 스레드 — 느린 I/O 비차단)
-    threading.Thread(target=_persist_bucket, args=(bucket, count), daemon=True).start()
+
+
+# ── 백그라운드 DB 동기화 (단일 데몬 스레드) ────────────────────────────────────
+_bucket_sync_started = False
+
+
+def _bucket_sync_loop() -> None:
+    """10초마다 메모리 버킷 → SQLite 일괄 동기화. 스레드 1개만 사용."""
+    while True:
+        time.sleep(10)
+        try:
+            with _BUCKET_LOCK:
+                snapshot = dict(_api_minute_buckets)
+            if not snapshot:
+                continue
+            now_bucket = int(time.time()) // 60
+            cutoff = now_bucket - 60 * 24 * 3  # 3일 이전 삭제
+            with _bucket_conn() as con:
+                con.executemany(
+                    "INSERT INTO kis_minute_buckets (bucket, calls) VALUES (?, ?) "
+                    "ON CONFLICT(bucket) DO UPDATE SET calls=excluded.calls",
+                    list(snapshot.items()),
+                )
+                con.execute("DELETE FROM kis_minute_buckets WHERE bucket < ?", (cutoff,))
+        except Exception:
+            pass
+
+
+def _ensure_bucket_sync() -> None:
+    global _bucket_sync_started
+    if _bucket_sync_started:
+        return
+    _bucket_sync_started = True
+    threading.Thread(target=_bucket_sync_loop, daemon=True, name="kis-bucket-sync").start()
 
 
 def get_api_usage() -> dict:
@@ -635,7 +667,9 @@ def fetch_kr_minute_paginated(
     # 페이지당 30건 × interval_min분 = 한 페이지 커버 시간(분)
     page_span_min = 30 * interval_min
 
-    for _ in range(days * 14 + 2):   # 최대 페이지 수
+    # 페이지당 30건, 하루 정규장 390분 → 1분봉 기준 하루 13페이지
+    max_pages = max(2, (days * 390 // (30 * interval_min)) + 2)
+    for _ in range(max_pages):
         recs = fetch_kr_minute(ticker, start_time, pw_data_yn="Y", interval=interval_str)
         if not recs:
             break

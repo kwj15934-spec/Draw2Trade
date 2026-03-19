@@ -149,6 +149,13 @@
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
+      <!-- 차트 로딩 스피너 -->
+      <div id="chart-loading-spinner" style="display:none; position:absolute; inset:0; z-index:20; background:rgba(18,18,20,0.7); align-items:center; justify-content:center;">
+        <div style="text-align:center;">
+          <div style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.15); border-top-color:#26a69a; border-radius:50%; animation:d2t-spin .7s linear infinite; margin:0 auto 10px;"></div>
+          <div style="color:#d4d8e2; font-size:13px;">차트 로딩 중...</div>
+        </div>
+      </div>
 
       <div id="auto-ruler-overlay" style="display:none; position:absolute; inset:0; z-index:15; cursor:col-resize;">
         <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #26a69a; pointer-events:none; transition:left .03s;"></div>
@@ -167,6 +174,19 @@
         <div id="ticker-overlay-name"></div>
         <div id="ticker-overlay-meta"></div>
       </div>
+    </div>
+
+    <!-- ── 패턴 비교 미니 패널 ──────────────── -->
+    <div id="pattern-compare-panel" style="display:none; height:120px; background:#1a1a1e; border-top:1px solid #2d2d30; position:relative;">
+      <div id="pattern-compare-header" style="position:absolute; top:4px; left:10px; z-index:2; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:11px; color:#7a8499;">패턴 비교</span>
+        <span style="font-size:10px; color:#ff6b35;">━</span><span style="font-size:10px; color:#7a8499;">내 패턴</span>
+        <span style="font-size:10px; color:#26a69a;">╌</span><span style="font-size:10px; color:#7a8499;">매칭 패턴</span>
+        <span id="pattern-compare-score" style="font-size:10px; font-weight:700; color:#26a69a; margin-left:4px;"></span>
+      </div>
+      <button onclick="D2T._hidePatternMiniChart&&D2T._hidePatternMiniChart()"
+        style="position:absolute; top:4px; right:8px; z-index:2; background:none; border:none; color:#7a8499; cursor:pointer; font-size:14px; line-height:1;" title="닫기">&times;</button>
+      <div id="pattern-compare-container" style="width:100%; height:100%;"></div>
     </div>
 
     <div class="d2t-chart-footer">

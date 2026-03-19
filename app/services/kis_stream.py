@@ -223,6 +223,34 @@ def get_cached_ticks(ticker: str) -> list[dict]:
         return disk_ticks
     return []
 
+# ── 비활성 종목 메모리 정리 (GC) ──────────────────────────────────────────────
+
+async def _cleanup_inactive_tickers() -> None:
+    """1분마다 구독자 없는 종목의 캐시를 정리하여 메모리 누수 방지."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            # 현재 캐시된 모든 종목 수집
+            all_tickers = set(_tick_cache.keys()) | set(_rt_candles.keys()) | set(_save_counters.keys())
+            for ticker in all_tickers:
+                if _hub.hub.subscriber_count(ticker) == 0:
+                    _tick_cache.pop(ticker, None)
+                    _rt_candles.pop(ticker, None)
+                    _rt_last_broadcast.pop(ticker, None)
+                    _save_counters.pop(ticker, None)
+                    # 예약된 브로드캐스트 태스크 취소
+                    task = _rt_scheduled.pop(ticker, None)
+                    if task and not task.done():
+                        task.cancel()
+            if all_tickers:
+                active = len(all_tickers) - sum(
+                    1 for t in all_tickers if _hub.hub.subscriber_count(t) == 0
+                )
+                logger.debug("[GC] 캐시 정리: %d종목 중 %d개 활성", len(all_tickers), active)
+        except Exception as e:
+            logger.debug("[GC] 정리 오류: %s", e)
+
+
 _REAL_WS  = "ws://ops.koreainvestment.com:21000"
 _MOCK_WS  = "ws://openvts.koreainvestment.com:31000"
 
@@ -324,6 +352,19 @@ def _parse_kr(raw: str) -> Optional[dict]:
         # 날짜: f[33]가 영업일자, 없으면 오늘(KST)
         date_str = f[33] if len(f) > 33 and f[33] else _dt.now(_KST).strftime("%Y%m%d")
         price = float(f[2])
+        # ── 체결시간 기반 세션 판별 ──
+        tick_time = f[1]  # HHMMSS
+        hhmm = int(tick_time[:4]) if len(tick_time) >= 4 else 0
+        if 830 <= hhmm <= 840:
+            session_type = "PRE_MARKET"
+        elif 900 <= hhmm <= 1530:
+            session_type = "REGULAR"
+        elif 1540 <= hhmm <= 1600:
+            session_type = "POST_MARKET"
+        elif 1600 < hhmm <= 1800:
+            session_type = "AFTER_HOURS"
+        else:
+            session_type = "UNKNOWN"
         return {
             "type":    "tick",
             "market":  "KR",
@@ -338,6 +379,7 @@ def _parse_kr(raw: str) -> Optional[dict]:
             "volume":  int(f[13]),    # 누적거래량
             "bs":      bs_raw,        # '1'=매수, '5'=매도 (KIS CCLD_DVSN)
             "session": "",
+            "session_type": session_type,
         }
     except (ValueError, IndexError) as e:
         logger.debug("KR tick 파싱 오류: %s (fields=%d)", e, len(f))
@@ -375,6 +417,7 @@ def _parse_kr_overtime(raw: str) -> Optional[dict]:
     tick = _parse_kr(raw)
     if tick:
         tick["session"] = "2"   # 시간외 단일가 고정
+        tick["session_type"] = "AFTER_HOURS"
     return tick
 
 
@@ -391,6 +434,7 @@ def _parse_nxt(raw: str) -> Optional[dict]:
     tick = _parse_kr(raw)
     if tick:
         tick["session"] = "nxt"
+        tick["session_type"] = "NXT"
     return tick
 
 
@@ -625,6 +669,9 @@ async def connect_loop() -> None:
     _running = True
     RETRY = [5, 10, 30, 60]
     attempt = 0
+
+    # 비활성 종목 메모리 정리 태스크 시작
+    asyncio.create_task(_cleanup_inactive_tickers())
 
     while _running:
         try:

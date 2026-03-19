@@ -121,17 +121,22 @@
     var cvolColor = cvolIsBuy ? '#ef5350' : '#2962ff';
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
-    // 시간외 배지
+    // 세션 배지 (session_type 우선, 없으면 session 폴백)
+    var sType = tick.session_type || '';
     var session = tick.session || '';
     var sessionBadge = '';
-    if (session === 'nxt') {
-      sessionBadge = '<span class="tr-session nxt">NXT</span>';
-    } else if (session === '5') {
+    if (sType === 'PRE_MARKET') {
       sessionBadge = '<span class="tr-session pre">장전</span>';
-    } else if (session === '2') {
+    } else if (sType === 'POST_MARKET') {
+      sessionBadge = '<span class="tr-session post">장후</span>';
+    } else if (sType === 'AFTER_HOURS') {
       sessionBadge = '<span class="tr-session after">단일가</span>';
-    } else if (session === '7' || (session !== '' && session !== '1' && session !== 'nxt')) {
-      sessionBadge = '<span class="tr-session after">시외</span>';
+    } else if (sType === 'NXT' || session === 'nxt') {
+      sessionBadge = '<span class="tr-session nxt">NXT</span>';
+    } else if (!sType && session === '5') {
+      sessionBadge = '<span class="tr-session pre">장전</span>';
+    } else if (!sType && session === '2') {
+      sessionBadge = '<span class="tr-session after">단일가</span>';
     }
 
     var isBig = cvol >= 500;
@@ -335,7 +340,8 @@
         cvol: t.cvol,
         time: t.time,
         bs: bs,
-        session: t.session || ''
+        session: t.session || '',
+        session_type: t.session_type || ''
       };
       window._addTradeRow(tick, t.chgRate, sign, color);
     }
