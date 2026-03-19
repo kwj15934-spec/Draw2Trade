@@ -525,15 +525,14 @@
             var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
             displayCandles = validCandles.slice(sliceFrom, sliceTo);
 
-            var lows  = filtered.map(function (c) { return c.low  != null ? c.low  : c.close; });
-            var highs = filtered.map(function (c) { return c.high != null ? c.high : c.close; });
-            var pMin   = Math.min.apply(null, lows);
-            var pMax   = Math.max.apply(null, highs);
-            var pRange = pMax - pMin || pMax * 0.01;
+            var closes = filtered.map(function (c) { return c.close; });
+            var pMin = Math.min.apply(null, closes);
+            var pMax = Math.max.apply(null, closes);
+            if (!isFinite(pMin) || !isFinite(pMax)) { pMin = 0; pMax = 100; }
             D2T.matchPeriodData = {
               candles:  filtered,
-              priceMin: pMin - pRange * 0.15,
-              priceMax: pMax + pRange * 0.15,
+              priceMin: pMin,
+              priceMax: pMax,
             };
           }
         }
