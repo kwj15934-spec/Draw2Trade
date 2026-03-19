@@ -331,13 +331,24 @@
           timeScale: { timeVisible: isIntraday, secondsVisible: false },
         });
 
-        // ── Y축 autoScale 강제 리셋 (기존 가격 범위 잔류 방지) ─────
-        D2T.chart.priceScale('right').applyOptions({ autoScale: true });
+        // ── Y축 autoScale 강제 리셋 + 수동 스케일 잔류 제거 ─────
+        // 이전 차트의 가격 범위가 남아 있으면 새 데이터가 화면 바닥/이탈
+        // autoScale 해제 후 재설정하여 내부 캐시된 범위를 완전 초기화
+        D2T.chart.priceScale('right').applyOptions({
+          autoScale: false,
+        });
+        D2T.chart.priceScale('right').applyOptions({
+          autoScale:    true,
+          scaleMargins: { top: 0.05, bottom: 0.25 },
+        });
 
         D2T.series.setData(validCandles);
         D2T.candles = validCandles;
         setVolumeData(validCandles);
         D2T.ticker = ticker;
+
+        // fitContent를 setData 직후 즉시 호출 — Y축이 새 데이터에 맞게 재계산
+        D2T.chart.timeScale().fitContent();
 
         var tfLabel = TF_LABELS[resultTf] || resultTf;
         var periodLabel = periodFrom && periodTo ? ('  |  매칭: ' + periodFrom + ' ~ ' + periodTo) : '';
@@ -366,9 +377,6 @@
             };
           }
 
-          // fitContent로 전체 데이터를 화면에 맞추고, 매칭 구간으로 줌
-          D2T.chart.timeScale().fitContent();
-
           var fromBar = 0, toBar = validCandles.length - 1;
           for (var bi = 0; bi < validCandles.length; bi++) {
             if (validCandles[bi].time < tf) fromBar = bi + 1;
@@ -378,20 +386,28 @@
           toBar   = Math.min(validCandles.length - 1, toBar);
           var pad = Math.max(2, Math.round((toBar - fromBar) * 0.1));
 
+          // rAF 1: 차트가 fitContent + setData 렌더링 완료 후 매칭 구간 줌
           requestAnimationFrame(function () {
             D2T.chart.timeScale().setVisibleLogicalRange({
               from: fromBar - pad,
               to:   toBar   + pad,
             });
-            // autoScale 한 번 더 강제 적용 (visible range 변경 후)
-            D2T.chart.priceScale('right').applyOptions({ autoScale: true });
+            // rAF 2: visible range 변경 후 Y축 재계산 대기
             requestAnimationFrame(function () {
-              if (typeof redraw === 'function') redraw();
+              // autoScale 재강제 — visible range 변경 후 Y축이 매칭 구간에 맞게 스케일링
+              D2T.chart.priceScale('right').applyOptions({ autoScale: false });
+              D2T.chart.priceScale('right').applyOptions({
+                autoScale: true,
+                scaleMargins: { top: 0.05, bottom: 0.25 },
+              });
+              // rAF 3: Y축 재계산 완료 후 드로잉 캔버스 렌더
+              requestAnimationFrame(function () {
+                if (typeof redraw === 'function') redraw();
+              });
             });
           });
 
           // 마커 시간은 실제 캔들 time과 정확히 일치해야 함
-          // 매칭 구간의 첫/마지막 캔들 time 사용 (안전)
           if (filtered.length > 0) {
             var markerStart = filtered[0].time;
             var markerEnd   = filtered[filtered.length - 1].time;
@@ -401,7 +417,6 @@
             ]);
           }
         } else {
-          D2T.chart.timeScale().fitContent();
           requestAnimationFrame(function () {
             if (typeof redraw === 'function') redraw();
           });
@@ -426,6 +441,12 @@
     var wasIntraday = !!INTRADAY_TF[o.timeframe];
     D2T.chart.applyOptions({
       timeScale: { timeVisible: wasIntraday, secondsVisible: false },
+    });
+    // Y축 autoScale 리셋 (패턴 비교 차트의 가격 범위 잔류 제거)
+    D2T.chart.priceScale('right').applyOptions({ autoScale: false });
+    D2T.chart.priceScale('right').applyOptions({
+      autoScale: true,
+      scaleMargins: { top: 0.05, bottom: 0.25 },
     });
     D2T.series.setData(o.candles);
     D2T.candles   = o.candles;
