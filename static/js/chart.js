@@ -519,11 +519,15 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            var pad = 15;
-            var finalRange = { from: fromIdx - pad, to: toIdx + pad };
-
             // 전체 데이터 유지 — 과거 차트 보존, 해당 구간으로 zoom만 적용
             displayCandles = validCandles;
+
+            // 줌 범위: time 기반 (logical index는 내부적으로 변할 수 있어 불안정)
+            var pad = 15;
+            var zoomStartIdx = Math.max(0, fromIdx - pad);
+            var zoomEndIdx   = Math.min(validCandles.length - 1, toIdx + pad);
+            var zoomStartTime = validCandles[zoomStartIdx].time;
+            var zoomEndTime   = validCandles[zoomEndIdx].time;
 
             var closes = filtered.map(function (c) { return c.close; });
             var pMin = Math.min.apply(null, closes);
@@ -603,36 +607,36 @@
           _hidePatternMiniChart();
         }
 
-        // ── 강제 줌: 패턴 구간으로 카메라 이동 ──────────────────────
-        // shiftVisibleRangeOnNewBar 끄기 — 새 바가 카메라를 밀어내는 것 방지
-        D2T.chart.timeScale().applyOptions({ shiftVisibleRangeOnNewBar: false });
-        // autoScale 잠시 끄기 — 카메라 이동 중 Y축 요동 방지
-        D2T.chart.priceScale('right').applyOptions({ autoScale: false });
-
-        var targetRange = (typeof finalRange !== 'undefined') ? finalRange : null;
+        // ── 강제 줌: 패턴 구간으로 카메라 이동 (time 기반) ─────────
+        D2T.chart.timeScale().applyOptions({
+          shiftVisibleRangeOnNewBar: false,
+          rightOffset: 2,
+        });
 
         function applyForceZoom() {
-          if (!D2T.chart || !targetRange) return;
-          D2T.chart.timeScale().setVisibleLogicalRange(targetRange);
+          if (!D2T.chart) return;
+          if (typeof zoomStartTime !== 'undefined' && typeof zoomEndTime !== 'undefined') {
+            D2T.chart.timeScale().setVisibleRange({
+              from: zoomStartTime,
+              to:   zoomEndTime,
+            });
+          }
+          D2T.chart.priceScale('right').applyOptions({
+            autoScale: true,
+            scaleMargins: { top: 0.1, bottom: 0.2 },
+          });
         }
 
-        // 3단 쐐기: rAF → 200ms → 500ms
-        requestAnimationFrame(function () {
+        // 즉시 + 150ms + 500ms 3단 실행
+        applyForceZoom();
+        setTimeout(function () {
           applyForceZoom();
-          setTimeout(function () {
-            applyForceZoom();
-            // 카메라 이동 완료 후 Y축 오토스케일 다시 켜기
-            D2T.chart.priceScale('right').applyOptions({
-              autoScale: true,
-              scaleMargins: { top: 0.1, bottom: 0.2 },
-            });
-            if (typeof redraw === 'function') redraw();
-          }, 200);
-          setTimeout(function () {
-            applyForceZoom();
-            if (typeof redraw === 'function') redraw();
-          }, 500);
-        });
+          if (typeof redraw === 'function') redraw();
+        }, 150);
+        setTimeout(function () {
+          applyForceZoom();
+          if (typeof redraw === 'function') redraw();
+        }, 500);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
