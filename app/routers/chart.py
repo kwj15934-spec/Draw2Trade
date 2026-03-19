@@ -195,9 +195,9 @@ async def chart_data(
                     elif 1530 <= _hm < 1800:
                         if c.get("volume", 0) > 0:
                             _filtered.append(c)      # 시간외 단일가: 거래량>0만
-                    elif _hm >= 1800:
-                        _filtered.append(c)          # NXT 야간: 무조건 유지
-                    # 00:00~08:00 새벽: 삭제
+                    elif 1800 <= _hm < 2000:
+                        _filtered.append(c)          # NXT 야간(~19:59): 유지
+                    # 20:00 이후 및 00:00~08:00 새벽: 삭제
                 except Exception:
                     _filtered.append(c)  # 파싱 실패 시 유지
             candles = _filtered

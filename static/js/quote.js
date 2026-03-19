@@ -100,25 +100,26 @@
     var timeDisp = time.length >= 6
       ? time.slice(0,2) + ':' + time.slice(2,4) + ':' + time.slice(4,6) : '';
 
-    // 행 방향 (등락률 기반)
-    var isBuy = (chgPct !== null) ? parseFloat(chgPct) >= 0 : true;
-
-    // 체결량 색상 (bs 기반): KIS f[21] CCLD_DVSN '1'=매수(+), '5'=매도(-)
+    // 매수/매도 방향 판별 — bs(CCLD_DVSN) 우선, 없으면 직전가 비교 fallback
     var bs = tick.bs || '';
     var cvolIsBuy;
     if (bs === '1') {
-      cvolIsBuy = true;       // 매수 체결
+      cvolIsBuy = true;                                  // 매수 체결
     } else if (bs === '5') {
-      cvolIsBuy = false;      // 매도 체결
+      cvolIsBuy = false;                                 // 매도 체결
     } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
-      cvolIsBuy = (price > _lastTradePrice);
+      cvolIsBuy = (price > _lastTradePrice);             // 직전가보다 높으면 매수
     } else {
-      cvolIsBuy = _lastCvolDir;
+      cvolIsBuy = _lastCvolDir;                          // 동가: 직전 방향 유지
     }
     _lastTradePrice = price;
     _lastCvolDir = cvolIsBuy;
 
-    var cvolColor = cvolIsBuy ? '#ef5350' : '#2962ff';
+    // 행 테두리(isBuy) = 매수/매도 방향 기반 (등락률과 무관)
+    var isBuy = cvolIsBuy;
+
+    // 체결량 색상: 매수=빨강, 매도=파랑
+    var cvolColor = cvolIsBuy ? '#ef5350' : '#2196f3';
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
     // 세션 배지 결정
