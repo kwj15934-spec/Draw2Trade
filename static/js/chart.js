@@ -541,12 +541,16 @@
           }
         }
 
-        // ── Y축 완전 리셋 후 캔들 세팅 ────────────────────────────────
+        // ── Y축: 하단 0 고정, 상단은 autoScale ──────────────────────
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.05, bottom: 0.25 },
+          scaleMargins: { top: 0.05, bottom: 0.05 },
         });
-        D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
+        D2T.series.applyOptions({
+          autoscaleInfoProvider: function () {
+            return { priceRange: { minValue: 0, maxValue: null } };
+          },
+        });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
         setVolumeData(displayCandles);
