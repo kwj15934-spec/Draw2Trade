@@ -71,15 +71,22 @@ def save_inquiry(name: str, email: str, message: str) -> int:
         return cur.lastrowid
 
 
-def get_inquiries() -> list[dict]:
+def get_inquiries(limit: int = 100) -> list[dict]:
     with _conn() as con:
         rows = con.execute(
-            "SELECT id, name, email, message, replied, created_at FROM inquiries ORDER BY created_at DESC"
+            "SELECT id, name, email, message, replied, created_at FROM inquiries ORDER BY created_at DESC LIMIT ?",
+            (limit,),
         ).fetchall()
     return [
         {"id": r[0], "name": r[1], "email": r[2], "message": r[3], "replied": bool(r[4]), "created_at": r[5]}
         for r in rows
     ]
+
+
+def delete_inquiry(inquiry_id: int) -> bool:
+    with _conn() as con:
+        cur = con.execute("DELETE FROM inquiries WHERE id=?", (inquiry_id,))
+        return cur.rowcount > 0
 
 
 def set_replied(inquiry_id: int, replied: bool) -> None:
@@ -101,10 +108,11 @@ def save_pro_request(uid: str, name: str, email: str, memo: str = "") -> int:
         return cur.lastrowid
 
 
-def get_pro_requests() -> list[dict]:
+def get_pro_requests(limit: int = 100) -> list[dict]:
     with _conn() as con:
         rows = con.execute(
-            "SELECT id, uid, name, email, memo, status, created_at FROM pro_requests ORDER BY created_at DESC"
+            "SELECT id, uid, name, email, memo, status, created_at FROM pro_requests ORDER BY created_at DESC LIMIT ?",
+            (limit,),
         ).fetchall()
     return [
         {"id": r[0], "uid": r[1], "name": r[2], "email": r[3],

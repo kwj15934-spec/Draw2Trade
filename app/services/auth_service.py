@@ -198,4 +198,4 @@ def set_user_plan(uid: str, plan: str, pro_expires_at: str | None = None) -> boo
 
 def get_all_users() -> list:
     users = _load_users()
-    return sorted(users.values(), key=lambda u: u.get("created_at", ""), reverse=True)
+    return sorted(users.values(), key=lambda u: u.get("created_at", ""), reverse=True)[:200]

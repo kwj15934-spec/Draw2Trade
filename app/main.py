@@ -411,14 +411,33 @@ async def admin_inquiries(request: Request):
 
 @app.post("/api/admin/inquiries/{inquiry_id}/replied")
 async def toggle_replied(inquiry_id: int, request: Request):
-    import os
-    user = get_optional_user(request)
-    admin_uid = os.getenv("ADMIN_UID", "")
-    if not user or not admin_uid or user.get("uid") != admin_uid:
+    if not _is_admin(request):
         return JSONResponse({"error": "unauthorized"}, status_code=403)
     body = await request.json()
     inquiry_service.set_replied(inquiry_id, bool(body.get("replied", True)))
     return JSONResponse({"ok": True})
+
+
+@app.delete("/api/admin/inquiries/{inquiry_id}")
+async def delete_inquiry(inquiry_id: int, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    deleted = inquiry_service.delete_inquiry(inquiry_id)
+    return JSONResponse({"ok": deleted})
+
+
+@app.post("/api/admin/clear-cache")
+async def clear_cache(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    from app.services.redis_cache import rcache
+    try:
+        if rcache._pool:
+            await rcache._pool.flushdb()
+            return JSONResponse({"ok": True, "message": "Redis 캐시 초기화 완료"})
+        return JSONResponse({"ok": False, "message": "Redis 미연결"}, status_code=503)
+    except Exception as e:
+        return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
 
 
 # ── 미정의 경로 처리 (catch-all) ─────────────────────────────────────────────

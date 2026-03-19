@@ -577,6 +577,9 @@
       <button id="btn-rebuild-us" class="filter-btn" style="background:#1e1e21;border:1px solid #2d2d30;padding:6px 18px;border-radius:6px;cursor:pointer;font-size:13px;">
         🔄 US 티커 재빌드
       </button>
+      <button id="btn-clear-cache" style="background:#3a1c1c;border:1px solid #ef5350;color:#ef5350;padding:6px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
+        🚨 차트 캐시 강제 초기화
+      </button>
       <span id="rebuild-status" style="font-size:12px;color:#26a69a;display:none;"></span>
     </div>
 
@@ -1116,6 +1119,31 @@
       btn.textContent = '🔄 US 티커 재빌드';
     });
 
+    document.getElementById('btn-clear-cache').addEventListener('click', async function() {
+      if (!confirm('Redis 차트 캐시를 전부 초기화합니다. 계속하시겠습니까?')) return;
+      var btn = this;
+      var statusEl = document.getElementById('rebuild-status');
+      btn.disabled = true;
+      btn.textContent = '초기화 중...';
+      statusEl.style.display = 'inline';
+      try {
+        var res = await fetch('/api/admin/clear-cache', { method: 'POST' });
+        var d = await res.json();
+        if (d.ok) {
+          statusEl.style.color = '#26a69a';
+          statusEl.textContent = d.message;
+        } else {
+          statusEl.style.color = '#ef5350';
+          statusEl.textContent = '실패: ' + d.message;
+        }
+      } catch(e) {
+        statusEl.style.color = '#ef5350';
+        statusEl.textContent = '오류: ' + e.message;
+      }
+      btn.disabled = false;
+      btn.textContent = '🚨 차트 캐시 강제 초기화';
+    });
+
     loadUsers();
 
     async function loadProRequests() {
@@ -1252,7 +1280,10 @@
               '<div class="inquiry-email">' + q.email + '</div></div>' +
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">' +
                 '<div class="inquiry-date">' + date + '</div>' +
-                '<button class="' + repliedClass + '" onclick="toggleReplied(' + q.id + ',' + (q.replied ? 'true' : 'false') + ',this)">' + repliedLabel + '</button>' +
+                '<div style="display:flex;gap:6px;">' +
+                  '<button class="' + repliedClass + '" onclick="toggleReplied(' + q.id + ',' + (q.replied ? 'true' : 'false') + ',this)">' + repliedLabel + '</button>' +
+                  '<button style="background:#3a1c1c;border:1px solid #ef5350;color:#ef5350;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:11px;" onclick="deleteInquiry(' + q.id + ')">삭제</button>' +
+                '</div>' +
               '</div>' +
             '</div>' +
             '<div class="inquiry-msg">' + q.message.replace(/</g,'&lt;') + '</div>' +
@@ -1273,6 +1304,17 @@
         btn.textContent = next ? '✓ 답변 완료' : '답변 전';
         btn.classList.toggle('replied', next);
         btn.setAttribute('onclick', 'toggleReplied(' + id + ',' + next + ',this)');
+      }
+    };
+
+    window.deleteInquiry = async function(id) {
+      if (!confirm('이 문의를 삭제하시겠습니까?')) return;
+      var res = await fetch('/api/admin/inquiries/' + id, { method: 'DELETE' });
+      if (res.ok) {
+        var card = document.getElementById('inq-' + id);
+        if (card) card.remove();
+      } else {
+        alert('삭제 실패');
       }
     };
 
