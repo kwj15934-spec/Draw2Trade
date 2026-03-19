@@ -520,7 +520,7 @@
 
           if (filtered.length > 0) {
             var matchLen = toIdx - fromIdx + 1;
-            var pad = Math.max(10, Math.round(matchLen * 0.5));
+            var pad = Math.max(3, Math.round(matchLen * 0.1));
             var sliceFrom = Math.max(0, fromIdx - pad);
             var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
 
@@ -544,7 +544,7 @@
         // ── Y축: autoScale이 보이는 범위 캔들에 맞춰 자동 조절 ─────
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.05, bottom: 0.25 },
+          scaleMargins: { top: 0.1, bottom: 0.2 },
         });
         D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
@@ -620,7 +620,7 @@
           }
           D2T.chart.priceScale('right').applyOptions({
             autoScale: true,
-            scaleMargins: { top: 0.1, bottom: 0.25 },
+            scaleMargins: { top: 0.1, bottom: 0.2 },
           });
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
