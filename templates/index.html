@@ -123,6 +123,7 @@
 
     <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
     <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
+    <button id="btn-back-to-origin" class="btn-d2t" style="display:none; color:#26a69a; border-color:#26a69a; font-weight:600;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
     <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
     <div id="advanced-options">
       <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
@@ -191,7 +192,6 @@
 
     <div class="d2t-chart-footer">
       <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
-      <button id="btn-back-to-origin" class="btn-d2t" style="display:none; margin-left:8px; color:#26a69a; border-color:#26a69a;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
       <span class="ticker-label" style="margin-left: auto;">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
