@@ -208,7 +208,11 @@
         // intraday ↔ daily 전환 시 timeScale 설정 변경
         var isIntraday = !!INTRADAY_TF[data.timeframe || tf];
         D2T.chart.applyOptions({
-          timeScale: { timeVisible: isIntraday, secondsVisible: false },
+          timeScale: { timeVisible: isIntraday, secondsVisible: false, rightOffset: 2 },
+        });
+        // 일반 차트 여백 복원 (패턴 비교 차트에서 변경되었을 수 있음)
+        D2T.chart.priceScale('right').applyOptions({
+          scaleMargins: { top: 0.05, bottom: 0.25 },
         });
         D2T.series.setData(data.candles);
         D2T.candles = data.candles;
@@ -289,7 +293,6 @@
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = ticker + ' 로딩 중...';
 
-    if (D2T.series) D2T.series.setMarkers([]);
     D2T.matchPeriodData = null;
 
     fetch(chartUrl(ticker, resultTf))
@@ -307,12 +310,9 @@
         var validCandles = data.candles.filter(function (c) {
           if (c.time == null || c.time === '') return false;
           if (isIntraday) {
-            // 분봉: unix timestamp(숫자)만 허용
             if (typeof c.time !== 'number') return false;
           } else {
-            // 일/주/월봉: "YYYY-MM-DD" 문자열만 허용
             if (typeof c.time === 'number') {
-              // unix timestamp → YYYY-MM-DD 변환
               var d = new Date(c.time * 1000);
               c.time = d.getUTCFullYear() + '-'
                 + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
@@ -326,22 +326,33 @@
           throw new Error('유효한 캔들 데이터 없음');
         }
 
-        // ── timeScale 설정 전환 (intraday ↔ daily/monthly) ──────────
-        D2T.chart.applyOptions({
-          timeScale: { timeVisible: isIntraday, secondsVisible: false },
-        });
+        // ── 시리즈 완전 재생성 (이전 차트의 Y축 범위 잔류 완벽 제거) ──
+        // LW Charts는 autoScale 토글로 내부 캐시를 리셋하지 않으므로
+        // 시리즈를 제거 → 재생성하여 가격 스케일을 완전 초기화
+        D2T.chart.removeSeries(D2T.series);
+        D2T.chart.removeSeries(D2T.volumeSeries);
 
-        // ── Y축 autoScale 강제 리셋 + 패턴 비교용 여백 확보 ─────
-        // autoScale off→on 토글로 내부 캐시된 범위 완전 초기화
-        // scaleMargins: 상단 20% + 하단 28% 여백 (하단은 거래량 오버레이 공간 포함)
-        D2T.chart.priceScale('right').applyOptions({ autoScale: false });
+        D2T.series = D2T.chart.addCandlestickSeries({
+          upColor: '#26a69a', downColor: '#ef5350',
+          borderVisible: false,
+          wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+          priceScaleId: 'right',
+        });
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.20, bottom: 0.28 },
+          scaleMargins: { top: 0.15, bottom: 0.28 },
         });
-        // X축 우측 여백 확보 (캔들이 화면 끝에 달라붙지 않도록)
+        D2T.volumeSeries = D2T.chart.addHistogramSeries({
+          priceFormat: { type: 'volume' },
+          priceScaleId: 'vol',
+        });
+        D2T.chart.priceScale('vol').applyOptions({
+          scaleMargins: { top: 0.80, bottom: 0.0 },
+        });
+
+        // ── timeScale 설정 전환 + X축 우측 여백 ─────────────────────
         D2T.chart.applyOptions({
-          timeScale: { rightOffset: 5 },
+          timeScale: { timeVisible: isIntraday, secondsVisible: false, rightOffset: 5 },
         });
 
         D2T.series.setData(validCandles);
@@ -381,10 +392,8 @@
           }
           fromBar = Math.max(0, fromBar);
           toBar   = Math.min(validCandles.length - 1, toBar);
-          // 좌우 여백: 매칭 구간 길이의 15% + 우측 5봉 추가
           var pad = Math.max(3, Math.round((toBar - fromBar) * 0.15));
 
-          // 마커 설정 (비동기 전에 동기적으로 처리)
           if (filtered.length > 0) {
             D2T.series.setMarkers([
               { time: filtered[0].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
@@ -392,30 +401,16 @@
             ]);
           }
 
-          // setTimeout으로 브라우저 레이아웃 완료 대기 후 스케일링
+          // setTimeout: 브라우저 레이아웃 + LW Charts 내부 렌더 완료 대기
           setTimeout(function () {
-            // fitContent로 전체 데이터 기준 레이아웃 초기화
             D2T.chart.timeScale().fitContent();
-
-            // rAF 1: fitContent 렌더 완료 → 매칭 구간으로 줌
             requestAnimationFrame(function () {
               D2T.chart.timeScale().setVisibleLogicalRange({
                 from: fromBar - pad,
                 to:   toBar   + pad + 5,
               });
-
-              // rAF 2: visible range 적용 완료 → Y축 재계산
               requestAnimationFrame(function () {
-                D2T.chart.priceScale('right').applyOptions({ autoScale: false });
-                D2T.chart.priceScale('right').applyOptions({
-                  autoScale:    true,
-                  scaleMargins: { top: 0.20, bottom: 0.28 },
-                });
-
-                // rAF 3: Y축 재계산 완료 → 드로잉 캔버스 렌더
-                requestAnimationFrame(function () {
-                  if (typeof redraw === 'function') redraw();
-                });
+                if (typeof redraw === 'function') redraw();
               });
             });
           }, 50);
@@ -449,12 +444,27 @@
     D2T.chart.applyOptions({
       timeScale: { timeVisible: wasIntraday, secondsVisible: false, rightOffset: 2 },
     });
-    // Y축 autoScale 리셋 + 일반 차트 여백으로 복원
-    D2T.chart.priceScale('right').applyOptions({ autoScale: false });
+    // 시리즈 재생성으로 Y축 완전 초기화 (일반 차트 여백으로 복원)
+    D2T.chart.removeSeries(D2T.series);
+    D2T.chart.removeSeries(D2T.volumeSeries);
+    D2T.series = D2T.chart.addCandlestickSeries({
+      upColor: '#26a69a', downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+      priceScaleId: 'right',
+    });
     D2T.chart.priceScale('right').applyOptions({
       autoScale: true,
       scaleMargins: { top: 0.05, bottom: 0.25 },
     });
+    D2T.volumeSeries = D2T.chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'vol',
+    });
+    D2T.chart.priceScale('vol').applyOptions({
+      scaleMargins: { top: 0.80, bottom: 0.0 },
+    });
+
     D2T.series.setData(o.candles);
     D2T.candles   = o.candles;
     D2T.ticker    = o.ticker;
@@ -462,7 +472,6 @@
     setVolumeData(o.candles);
     D2T.chart.timeScale().fitContent();
     D2T.matchPeriodData = null;
-    if (D2T.series) D2T.series.setMarkers([]);
     setTickerOverlay(o.ticker, '', TF_LABELS[o.timeframe] || o.timeframe, o.candles);
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = o.labelText;
