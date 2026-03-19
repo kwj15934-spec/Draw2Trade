@@ -541,16 +541,12 @@
           }
         }
 
-        // ── Y축: 하단 0 고정, 상단은 autoScale ──────────────────────
+        // ── Y축: autoScale이 보이는 범위 캔들에 맞춰 자동 조절 ─────
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.05, bottom: 0.05 },
+          scaleMargins: { top: 0.05, bottom: 0.25 },
         });
-        D2T.series.applyOptions({
-          autoscaleInfoProvider: function () {
-            return { priceRange: { minValue: 0, maxValue: null } };
-          },
-        });
+        D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
         setVolumeData(displayCandles);
