@@ -542,7 +542,7 @@
             if (!isFinite(pMin) || !isFinite(pMax)) { pMin = 0; pMax = 100; }
             var finalMin = pMin;
             var finalMax = pMax;
-            if (finalMin < 0) finalMin = 0;
+            if (finalMin < 0) finalMin = 0;  // 주가는 0 미만 불가
             D2T.matchPeriodData = {
               candles:  filtered,
               priceMin: finalMin,

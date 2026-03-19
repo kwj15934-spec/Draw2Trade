@@ -187,22 +187,17 @@
     var mpd = D2T && D2T.matchPeriodData;
     if (!mpd || !mpd.candles || mpd.candles.length === 0) return null;
 
-    // X축: 소수점 보간으로 수직 꺾임/계단 현상 완벽 방지
+    // X축: 캔들 인덱스에 정확히 매칭 (지시대로 Math.round 사용)
     var exactCi = (ptIdx / (total - 1)) * (mpd.candles.length - 1);
-    var ciFloor = Math.floor(exactCi);
-    var ciCeil  = Math.min(mpd.candles.length - 1, Math.ceil(exactCi));
-    var fraction = exactCi - ciFloor;
+    var ci = Math.round(exactCi);
+    var x = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ci].time);
+    if (x == null) return null;
 
-    var xFloor = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ciFloor].time);
-    var xCeil  = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ciCeil].time);
-    if (xFloor == null || xCeil == null) return null;
-    var x = xFloor + fraction * (xCeil - xFloor);
-
-    // Y축: 캔들 몸통 기준 가격 환산
-    var price = mpd.priceMin + normVal * (mpd.priceMax - mpd.priceMin);
-    var y     = D2T.series.priceToCoordinate(price);
-
+    // Y축: matchPeriodData의 priceMin/priceMax(고가/저가 기반)로 1:1 가격 환산
+    var price = mpd.priceMin + (normVal * (mpd.priceMax - mpd.priceMin));
+    var y = D2T.series.priceToCoordinate(price);
     if (y == null) return null;
+
     return { x: x, y: y };
   }
 
@@ -226,6 +221,7 @@
 
   /** 두 곡선 사이 영역을 반투명으로 채워서 '닮은 부분' 시각화 (얇을수록 유사) */
   function drawCurveFill(arr1, arr2, fillStyle) {
+    if (!D2T || !D2T.chart) return;
     var len = Math.min(arr1.length, arr2.length);
     if (len < 2) return;
     var pts1 = [], pts2 = [];
@@ -236,12 +232,22 @@
       if (p2) pts2.push(p2);
     }
     if (pts1.length < 2 || pts2.length < 2) return;
+
+    // [물리적 차단] timeScale.width() = 가격 축 제외 실제 차트 콘텐츠 너비
+    var chartWidth = D2T.chart.timeScale().width();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, chartWidth, canvas.height);
+    ctx.clip();
+
     ctx.fillStyle = fillStyle;
     ctx.beginPath();
     for (var j = 0; j < pts1.length; j++) ctx.lineTo(pts1[j].x, pts1[j].y);
     for (var k = pts2.length - 1; k >= 0; k--) ctx.lineTo(pts2[k].x, pts2[k].y);
     ctx.closePath();
     ctx.fill();
+
+    ctx.restore();
   }
 
   // ── 캔버스 다시 그리기 ────────────────────────────────────────────────────
@@ -279,20 +285,24 @@
       var x0  = D2T.chart.timeScale().timeToCoordinate(c0.time);
       var x1  = D2T.chart.timeScale().timeToCoordinate(cN.time);
 
-      // Y축(범례) 침범 방지: timeScale.width()로 실제 차트 콘텐츠 너비를 읽어 클립
-      var timeScaleWidth = D2T.chart.timeScale().width();
+      // [물리적 차단] timeScale.width() = 가격 축(범례) 제외 실제 차트 영역 너비
+      var chartWidth = D2T.chart.timeScale().width();
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, timeScaleWidth, canvas.height);
+      ctx.rect(0, 0, chartWidth, canvas.height);
       ctx.clip();
 
-      // ① 매칭 구간 배경 하이라이트 (닮은 부분 = 이 구간)
+      // ① 매칭 구간 배경 하이라이트
       if (x0 != null && x1 != null) {
-        ctx.fillStyle = 'rgba(38,166,154,0.20)';
-        ctx.fillRect(Math.min(x0,x1), 0, Math.abs(x1 - x0), canvas.height);
+        ctx.fillStyle = 'rgba(38,166,154,0.15)';
+        ctx.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), canvas.height);
       }
-      // ② 두 곡선 사이 영역 (얇을수록 유사, 두꺼울수록 다른 부분)
-      drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.30)');
+      // ② 두 곡선 사이 채움 (drawCurveFill 내부에도 clip 있음 — 이중 보호)
+      drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.25)');
+      // ③ 매칭 패턴 선 (청록 점선)
+      drawNormCurve(matchPoints,  '#26a69a', null, 2.5, true);
+      // ④ 내 패턴 선 (주황 실선)
+      drawNormCurve(drawNormalized, DRAW_COLOR, null, 3, false);
 
       ctx.restore();
 
