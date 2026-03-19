@@ -331,24 +331,23 @@
           timeScale: { timeVisible: isIntraday, secondsVisible: false },
         });
 
-        // ── Y축 autoScale 강제 리셋 + 수동 스케일 잔류 제거 ─────
-        // 이전 차트의 가격 범위가 남아 있으면 새 데이터가 화면 바닥/이탈
-        // autoScale 해제 후 재설정하여 내부 캐시된 범위를 완전 초기화
-        D2T.chart.priceScale('right').applyOptions({
-          autoScale: false,
-        });
+        // ── Y축 autoScale 강제 리셋 + 패턴 비교용 여백 확보 ─────
+        // autoScale off→on 토글로 내부 캐시된 범위 완전 초기화
+        // scaleMargins: 상단 20% + 하단 28% 여백 (하단은 거래량 오버레이 공간 포함)
+        D2T.chart.priceScale('right').applyOptions({ autoScale: false });
         D2T.chart.priceScale('right').applyOptions({
           autoScale:    true,
-          scaleMargins: { top: 0.05, bottom: 0.25 },
+          scaleMargins: { top: 0.20, bottom: 0.28 },
+        });
+        // X축 우측 여백 확보 (캔들이 화면 끝에 달라붙지 않도록)
+        D2T.chart.applyOptions({
+          timeScale: { rightOffset: 5 },
         });
 
         D2T.series.setData(validCandles);
         D2T.candles = validCandles;
         setVolumeData(validCandles);
         D2T.ticker = ticker;
-
-        // fitContent를 setData 직후 즉시 호출 — Y축이 새 데이터에 맞게 재계산
-        D2T.chart.timeScale().fitContent();
 
         var tfLabel = TF_LABELS[resultTf] || resultTf;
         var periodLabel = periodFrom && periodTo ? ('  |  매칭: ' + periodFrom + ' ~ ' + periodTo) : '';
@@ -359,8 +358,6 @@
 
         // 매칭 구간으로 줌 + 마커
         if (periodFrom && periodTo) {
-          // period_from/period_to는 서버에서 항상 "YYYY-MM-DD"로 정제되어 옴
-          // 안전장치: 혹시 "YYYY-MM"이면 "-01" 붙이기
           var tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
           var tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
 
@@ -372,8 +369,8 @@
             var pRange = pMax - pMin || pMax * 0.01;
             D2T.matchPeriodData = {
               candles:  filtered,
-              priceMin: pMin - pRange * 0.05,
-              priceMax: pMax + pRange * 0.05,
+              priceMin: pMin - pRange * 0.10,
+              priceMax: pMax + pRange * 0.10,
             };
           }
 
@@ -384,42 +381,52 @@
           }
           fromBar = Math.max(0, fromBar);
           toBar   = Math.min(validCandles.length - 1, toBar);
-          var pad = Math.max(2, Math.round((toBar - fromBar) * 0.1));
+          // 좌우 여백: 매칭 구간 길이의 15% + 우측 5봉 추가
+          var pad = Math.max(3, Math.round((toBar - fromBar) * 0.15));
 
-          // rAF 1: 차트가 fitContent + setData 렌더링 완료 후 매칭 구간 줌
-          requestAnimationFrame(function () {
-            D2T.chart.timeScale().setVisibleLogicalRange({
-              from: fromBar - pad,
-              to:   toBar   + pad,
-            });
-            // rAF 2: visible range 변경 후 Y축 재계산 대기
-            requestAnimationFrame(function () {
-              // autoScale 재강제 — visible range 변경 후 Y축이 매칭 구간에 맞게 스케일링
-              D2T.chart.priceScale('right').applyOptions({ autoScale: false });
-              D2T.chart.priceScale('right').applyOptions({
-                autoScale: true,
-                scaleMargins: { top: 0.05, bottom: 0.25 },
-              });
-              // rAF 3: Y축 재계산 완료 후 드로잉 캔버스 렌더
-              requestAnimationFrame(function () {
-                if (typeof redraw === 'function') redraw();
-              });
-            });
-          });
-
-          // 마커 시간은 실제 캔들 time과 정확히 일치해야 함
+          // 마커 설정 (비동기 전에 동기적으로 처리)
           if (filtered.length > 0) {
-            var markerStart = filtered[0].time;
-            var markerEnd   = filtered[filtered.length - 1].time;
             D2T.series.setMarkers([
-              { time: markerStart, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
-              { time: markerEnd,   position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
+              { time: filtered[0].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
+              { time: filtered[filtered.length - 1].time, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
             ]);
           }
+
+          // setTimeout으로 브라우저 레이아웃 완료 대기 후 스케일링
+          setTimeout(function () {
+            // fitContent로 전체 데이터 기준 레이아웃 초기화
+            D2T.chart.timeScale().fitContent();
+
+            // rAF 1: fitContent 렌더 완료 → 매칭 구간으로 줌
+            requestAnimationFrame(function () {
+              D2T.chart.timeScale().setVisibleLogicalRange({
+                from: fromBar - pad,
+                to:   toBar   + pad + 5,
+              });
+
+              // rAF 2: visible range 적용 완료 → Y축 재계산
+              requestAnimationFrame(function () {
+                D2T.chart.priceScale('right').applyOptions({ autoScale: false });
+                D2T.chart.priceScale('right').applyOptions({
+                  autoScale:    true,
+                  scaleMargins: { top: 0.20, bottom: 0.28 },
+                });
+
+                // rAF 3: Y축 재계산 완료 → 드로잉 캔버스 렌더
+                requestAnimationFrame(function () {
+                  if (typeof redraw === 'function') redraw();
+                });
+              });
+            });
+          }, 50);
+
         } else {
-          requestAnimationFrame(function () {
-            if (typeof redraw === 'function') redraw();
-          });
+          setTimeout(function () {
+            D2T.chart.timeScale().fitContent();
+            requestAnimationFrame(function () {
+              if (typeof redraw === 'function') redraw();
+            });
+          }, 50);
         }
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
@@ -440,9 +447,9 @@
     // timeScale 설정 복원 (분봉 ↔ 일/월봉 전환 대응)
     var wasIntraday = !!INTRADAY_TF[o.timeframe];
     D2T.chart.applyOptions({
-      timeScale: { timeVisible: wasIntraday, secondsVisible: false },
+      timeScale: { timeVisible: wasIntraday, secondsVisible: false, rightOffset: 2 },
     });
-    // Y축 autoScale 리셋 (패턴 비교 차트의 가격 범위 잔류 제거)
+    // Y축 autoScale 리셋 + 일반 차트 여백으로 복원
     D2T.chart.priceScale('right').applyOptions({ autoScale: false });
     D2T.chart.priceScale('right').applyOptions({
       autoScale: true,
