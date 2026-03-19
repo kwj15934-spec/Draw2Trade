@@ -520,10 +520,12 @@
 
           if (filtered.length > 0) {
             var matchLen = toIdx - fromIdx + 1;
-            var pad = Math.max(2, Math.round(matchLen * 0.15));
+            var pad = Math.max(10, Math.round(matchLen * 0.5));
             var sliceFrom = Math.max(0, fromIdx - pad);
             var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
-            displayCandles = validCandles.slice(sliceFrom, sliceTo);
+
+            // 전체 데이터 유지 — 과거 차트 보존, 해당 구간으로 zoom만 적용
+            displayCandles = validCandles;
 
             var closes = filtered.map(function (c) { return c.close; });
             var pMin = Math.min.apply(null, closes);
@@ -533,6 +535,8 @@
               candles:  filtered,
               priceMin: pMin,
               priceMax: pMax,
+              zoomFrom: sliceFrom,
+              zoomTo:   sliceTo - 1,
             };
           }
         }
@@ -598,11 +602,20 @@
           _hidePatternMiniChart();
         }
 
-        // ── X축 피팅 ───────────────────────────────────────────────
-        // 즉시 fitContent + 지연 fitContent (LW Charts 내부 레이아웃 완료 보장)
-        D2T.chart.timeScale().fitContent();
+        // ── X축 줌인 (매칭 구간 + 여백) ────────────────────────────
+        function applyZoom() {
+          if (D2T.matchPeriodData && D2T.matchPeriodData.zoomFrom !== undefined) {
+            D2T.chart.timeScale().setVisibleLogicalRange({
+              from: D2T.matchPeriodData.zoomFrom,
+              to:   D2T.matchPeriodData.zoomTo,
+            });
+          } else {
+            D2T.chart.timeScale().fitContent();
+          }
+        }
+        applyZoom();
         setTimeout(function () {
-          D2T.chart.timeScale().fitContent();
+          applyZoom();
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();

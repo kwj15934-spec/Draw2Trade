@@ -187,15 +187,22 @@
     var mpd = D2T && D2T.matchPeriodData;
     if (!mpd || !mpd.candles || mpd.candles.length === 0) return null;
 
-    // x: 포인트 인덱스 → 매칭 캔들 날짜 → 픽셀
-    var ci   = Math.min(mpd.candles.length - 1, Math.round(ptIdx / (total - 1) * (mpd.candles.length - 1)));
-    var x    = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ci].time);
+    // X축: 소수점 보간으로 수직 꺾임/계단 현상 완벽 방지
+    var exactCi = (ptIdx / (total - 1)) * (mpd.candles.length - 1);
+    var ciFloor = Math.floor(exactCi);
+    var ciCeil  = Math.min(mpd.candles.length - 1, Math.ceil(exactCi));
+    var fraction = exactCi - ciFloor;
 
-    // y: 정규화값 → 가격 → 픽셀  (두 곡선 모두 동일 priceMin/priceMax 사용)
+    var xFloor = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ciFloor].time);
+    var xCeil  = D2T.chart.timeScale().timeToCoordinate(mpd.candles[ciCeil].time);
+    if (xFloor == null || xCeil == null) return null;
+    var x = xFloor + fraction * (xCeil - xFloor);
+
+    // Y축: 캔들 몸통 기준 가격 환산
     var price = mpd.priceMin + normVal * (mpd.priceMax - mpd.priceMin);
     var y     = D2T.series.priceToCoordinate(price);
 
-    if (x == null || y == null) return null;
+    if (y == null) return null;
     return { x: x, y: y };
   }
 
