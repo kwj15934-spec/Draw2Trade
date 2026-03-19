@@ -22,6 +22,49 @@
   var _retryTimer     = null;
   var _intentionalClose = false;
 
+  // ── rAF 배치 렌더링 시스템 ─────────────────────────────────────────────────
+  // DOM 업데이트를 requestAnimationFrame으로 모아서 한 번에 처리
+
+  var _pendingPriceUpdate = null;   // 최신 가격 패널 데이터
+  var _pendingOverlay     = null;   // 최신 오버레이 가격
+  var _pendingChartUpdate = null;   // 최신 차트 캔들 데이터
+  var _pendingVolUpdate   = null;   // 최신 볼륨 데이터
+  var _rafScheduled       = false;
+
+  function _scheduleRaf() {
+    if (_rafScheduled) return;
+    _rafScheduled = true;
+    requestAnimationFrame(_flushRaf);
+  }
+
+  function _flushRaf() {
+    _rafScheduled = false;
+
+    // 차트 캔들 업데이트
+    if (_pendingChartUpdate && window.D2T && D2T.series) {
+      try { D2T.series.update(_pendingChartUpdate); } catch (_) {}
+      _pendingChartUpdate = null;
+    }
+
+    // 볼륨 업데이트
+    if (_pendingVolUpdate && window.D2T && D2T.volumeSeries) {
+      try { D2T.volumeSeries.update(_pendingVolUpdate); } catch (_) {}
+      _pendingVolUpdate = null;
+    }
+
+    // 가격 패널 DOM 업데이트
+    if (_pendingPriceUpdate) {
+      _flushPricePanel(_pendingPriceUpdate);
+      _pendingPriceUpdate = null;
+    }
+
+    // 오버레이 업데이트
+    if (_pendingOverlay !== null) {
+      _flushOverlay(_pendingOverlay);
+      _pendingOverlay = null;
+    }
+  }
+
   // ── 날짜 변환 헬퍼 ────────────────────────────────────────────────────────
 
   /** YYYYMMDD → YYYY-MM-DD */
@@ -94,7 +137,7 @@
         var msg = JSON.parse(e.data);
         if (msg.type === 'candle_update') _onCandleUpdate(msg);
         else if (msg.type === 'tick')   _onTick(msg);
-        else if (msg.type === 'asking' && window._onAsking) _onAsking(msg);
+        else if (msg.type === 'asking' && window._onAsking) window._onAsking(msg);
       } catch (msgErr) {
         console.warn('[RT] WS message 처리 오류:', msgErr);
       }
@@ -121,13 +164,16 @@
     _ws.send(JSON.stringify(msg));
   }
 
-  // ── 서버사이드 캔들 업데이트 (연산 제로 — 렌더링만) ─────────────────────
+  // ── 서버사이드 캔들 업데이트 (연산 제로 — rAF로 렌더링) ─────────────────────
 
   function _onCandleUpdate(msg) {
     if (!window.D2T || !D2T.series) return;
     if (msg.ticker !== _ticker) return;
 
-    // 서버가 병합한 캔들을 그대로 차트에 반영
+    // 마지막 틱 수신 시각 갱신 (candle_update도 데이터 수신으로 인정)
+    _lastTickTime = Date.now();
+
+    // 서버가 병합한 캔들을 rAF로 한 번에 반영
     var candle = {
       time:   msg.time,
       open:   msg.open,
@@ -137,24 +183,15 @@
       volume: msg.volume || 0,
     };
 
-    try {
-      D2T.series.update(candle);
-    } catch (err) {
-      console.error('[RT] candle_update series.update 실패:', err, candle);
-      return;
-    }
-
-    if (D2T.volumeSeries) {
-      try {
-        D2T.volumeSeries.update({
-          time:  candle.time,
-          value: candle.volume,
-          color: (candle.close >= candle.open)
-            ? 'rgba(38,166,154,0.45)'
-            : 'rgba(239,83,80,0.45)',
-        });
-      } catch (_) {}
-    }
+    _pendingChartUpdate = candle;
+    _pendingVolUpdate = {
+      time:  candle.time,
+      value: candle.volume,
+      color: (candle.close >= candle.open)
+        ? 'rgba(38,166,154,0.45)'
+        : 'rgba(239,83,80,0.45)',
+    };
+    _scheduleRaf();
 
     _autoScrollToLatest();
     _setLive(true);
@@ -163,7 +200,6 @@
   // ── 틱 처리 (체결 내역 + 가격 패널 업데이트용, 캔들 연산은 서버가 담당) ──
 
   var _lastCandleTs = 0;  // 마지막 캔들의 Unix timestamp (4시간 갭 감지용)
-
   var _tickCount = 0;  // 디버깅: 수신 틱 카운터
 
   function _onTick(tick) {
@@ -216,35 +252,31 @@
       if (cvol > 0) _rtCandle.volume = (_rtCandle.volume || 0) + cvol;
     }
 
-    // ── 매 틱마다 즉시 차트 캔들 업데이트 (토스증권 스타일 "숨 쉬는" 캔들) ──
-    // candle_update 메시지도 오지만, 틱마다 즉시 반영해야 0.5초 이내 움직임 보장
-    try {
-      D2T.series.update(_rtCandle);
-    } catch (seriesErr) {
-      console.error('[RT] series.update 실패:', seriesErr, _rtCandle);
-    }
-
-    if (D2T.volumeSeries) {
-      try {
-        D2T.volumeSeries.update({
-          time:  _rtCandle.time,
-          value: _rtCandle.volume || 0,
-          color: (_rtCandle.close >= _rtCandle.open)
-            ? 'rgba(38,166,154,0.45)'
-            : 'rgba(239,83,80,0.45)',
-        });
-      } catch (_) {}
-    }
+    // ── rAF 배치: 차트 캔들 + 볼륨 업데이트 예약 ──
+    _pendingChartUpdate = {
+      time: _rtCandle.time, open: _rtCandle.open,
+      high: _rtCandle.high, low: _rtCandle.low, close: _rtCandle.close,
+    };
+    _pendingVolUpdate = {
+      time:  _rtCandle.time,
+      value: _rtCandle.volume || 0,
+      color: (_rtCandle.close >= _rtCandle.open)
+        ? 'rgba(38,166,154,0.45)'
+        : 'rgba(239,83,80,0.45)',
+    };
 
     _tickCount++;
-    if (_tickCount <= 5) {
+    if (_tickCount <= 3) {
       console.log('[RT] tick #' + _tickCount, 'price=' + price, 'candle=', JSON.stringify(_rtCandle));
     }
 
+    // rAF 배치: 가격 패널 + 오버레이도 예약
+    _pendingPriceUpdate = tick;
+    _pendingOverlay = price;
+    _scheduleRaf();
+
     _autoScrollToLatest();
     _setLive(true);
-    _updateOverlay(price);
-    _updatePricePanel(tick);
   }
 
   // 마지막 캔들이 화면 오른쪽에 보이도록 유지.
@@ -255,20 +287,16 @@
       var ts   = D2T.chart.timeScale();
       var range = ts.getVisibleLogicalRange();
       if (!range) return;
-      // 시리즈 전체 bar 수
-      var barsInfo = D2T.series.barsInLogicalRange(range);
-      // 마지막 bar 인덱스 (D2T.candles 기준 + 실시간 캔들 1개)
       var totalBars = (D2T.candles ? D2T.candles.length : 0);
-      // range.to 가 총 bar 수 근처(±2)면 최신 상태로 간주 → scrollToRealTime
       if (range.to >= totalBars - 2) {
         ts.scrollToRealTime();
       }
     } catch (_) {}
   }
 
-  // ── 현재가 패널 업데이트 ─────────────────────────────────────────────────
+  // ── 현재가 패널 업데이트 (rAF에서 호출) ────────────────────────────────────
 
-  function _updatePricePanel(tick) {
+  function _flushPricePanel(tick) {
     var price   = tick.price;
     var vol     = _rtCandle ? _rtCandle.volume : 0;
     var timeStr = tick.time || '';
@@ -304,9 +332,9 @@
     if (window._addTradeRow) window._addTradeRow(tick, chgPct, sign, color);
   }
 
-  // ── 오버레이 업데이트 ─────────────────────────────────────────────────────
+  // ── 오버레이 업데이트 (rAF에서 호출) ───────────────────────────────────────
 
-  function _updateOverlay(price) {
+  function _flushOverlay(price) {
     var metaEl = document.getElementById('ticker-overlay-meta');
     if (!metaEl || !window.D2T) return;
 
@@ -397,14 +425,6 @@
 
   // ── 시장 세션 전환 감지 + 자동 재구독 ──────────────────────────────────────
 
-  // 세션 경계 시각 (KST): 08:00, 09:00, 15:30, 15:40, 18:00
-  var _SESSION_BOUNDARIES = [
-    { h: 8,  m: 0  },   // NXT 장전 시작
-    { h: 9,  m: 0  },   // 정규장 시작
-    { h: 15, m: 30 },   // 정규장 종료
-    { h: 15, m: 40 },   // 시간외 단일가 시작
-    { h: 18, m: 0  },   // NXT 야간 시작
-  ];
   var _lastSession = '';
   var _lastTickTime = 0;    // 마지막 틱 수신 시각 (Date.now())
 
@@ -414,16 +434,15 @@
     var hm = now.getHours() * 100 + now.getMinutes();
     if (hm >= 1800 || hm < 800)  return 'nxt_night';
     if (hm >= 800 && hm < 850)   return 'nxt_pre';
-    if (hm >= 850 && hm < 1530)  return 'regular';   // 08:50부터 정규장 (전환 갭 제거)
-    if (hm >= 1530 && hm < 1800) return 'overtime';   // 15:30부터 시간외 (전환 갭 제거)
-    return 'regular';  // fallback
+    if (hm >= 850 && hm < 1530)  return 'regular';
+    if (hm >= 1530 && hm < 1800) return 'overtime';
+    return 'regular';
   }
 
   /** 세션 전환 시 WS 강제 재연결 + 호가/체결 초기화 */
   function _checkSessionChange() {
     var current = _getCurrentSession();
     if (_lastSession && _lastSession !== current && current !== 'transition') {
-      // 세션 전환 → 완전 재연결 (가장 확실한 방법)
       _forceReconnect('세션 전환: ' + _lastSession + ' → ' + current);
     }
     _lastSession = current;
@@ -432,6 +451,7 @@
   /** WS 강제 재연결 + UI 초기화 */
   function _forceReconnect(reason) {
     if (!_ticker) return;
+    console.log('[RT] 재연결:', reason);
     // 호가/체결 UI 초기화
     if (window._clearTradeList) window._clearTradeList();
     // rtCandle 리셋
@@ -451,7 +471,7 @@
     }, 1000);
   }
 
-  /** 데이터 안 들어올 때: 10초 REST polling → 2분 WS 재연결 */
+  /** 데이터 안 들어올 때: 20초 REST polling → 3분 WS 재연결 */
   var _restPollTimer = null;
 
   function _checkStaleConnection() {
@@ -460,33 +480,35 @@
     if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night' && session !== 'overtime') return;
     var elapsed = Date.now() - _lastTickTime;
 
-    // 10초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신
-    if (elapsed > 10000 && !_restPollTimer) {
+    // 20초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신
+    if (elapsed > 20000 && !_restPollTimer) {
       _startRestPolling();
     }
-    // 2분 이상 틱 미수신 → WS 강제 재연결
-    if (elapsed > 120000) {
+    // 3분 이상 틱 미수신 → WS 강제 재연결
+    if (elapsed > 180000) {
       _stopRestPolling();
       _forceReconnect('스테일 감지: ' + Math.round(elapsed / 1000) + '초');
     }
   }
 
-  /** REST polling: /api/ticks로 10초마다 데이터 갱신 (WS 실패 시 세이프가드) */
+  /** REST polling: /api/ticks로 20초마다 데이터 갱신 (WS 실패 시 세이프가드) */
   function _startRestPolling() {
     if (_restPollTimer) return;
+    console.log('[RT] REST polling 시작');
     _restPollTimer = setInterval(function () {
       if (!_ticker) { _stopRestPolling(); return; }
       // 실시간 틱이 들어오면 polling 중단
-      if (Date.now() - _lastTickTime < 10000) { _stopRestPolling(); return; }
+      if (Date.now() - _lastTickTime < 20000) { _stopRestPolling(); return; }
       // REST로 틱 데이터 가져와서 초기 데이터 갱신
       if (window._loadInitialTrades) window._loadInitialTrades();
-    }, 10000);
+    }, 20000);
   }
 
   function _stopRestPolling() {
     if (_restPollTimer) {
       clearInterval(_restPollTimer);
       _restPollTimer = null;
+      console.log('[RT] REST polling 중단');
     }
   }
 

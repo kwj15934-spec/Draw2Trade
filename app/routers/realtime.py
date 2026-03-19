@@ -15,10 +15,16 @@ GET /ws/realtime
    "price": 0.0, "open": 0.0, "high": 0.0, "low": 0.0, "volume": 0}
   {"type": "pong"}
   {"type": "error", "message": "..."}
+
+전송 스로틀링:
+  - tick:          100ms 간격 (부드러운 체결 흐름)
+  - asking:        100ms 간격 (호가 갱신)
+  - candle_update: 500ms 간격 (서버사이드 캔들 병합)
 """
 import asyncio
 import json
 import logging
+import time as _time
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -31,6 +37,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _KST = timezone(timedelta(hours=9))
+
+# 전송 스로틀 간격 (초)
+_THROTTLE_TICK_SEC = 0.1      # tick: 100ms
+_THROTTLE_ASKING_SEC = 0.1    # asking: 100ms
+_THROTTLE_CANDLE_SEC = 0.5    # candle_update: 500ms
 
 
 def _kr_session_now() -> str:
@@ -56,8 +67,8 @@ def _kr_session_now() -> str:
 async def ws_realtime(ws: WebSocket):
     await ws.accept()
 
-    # 이 연결의 단일 수신 큐 (작게 유지해 오래된 틱 누적 방지)
-    q: asyncio.Queue = asyncio.Queue(maxsize=30)
+    # 이 연결의 단일 수신 큐 (넉넉하게 — 스로틀러가 제어)
+    q: asyncio.Queue = asyncio.Queue(maxsize=60)
 
     # ticker → (market, excd)
     subs: dict[str, tuple[str, str]] = {}
@@ -129,12 +140,64 @@ async def ws_realtime(ws: WebSocket):
         except Exception as e:
             logger.error("WS receiver 오류: %s", e)
 
-    # ── 송신 루프 ────────────────────────────────────────────────────────────
+    # ── 송신 루프 (타입별 스로틀링) ────────────────────────────────────────────
     async def sender():
+        # 타입별 마지막 전송 시각 + 최신 보류 데이터
+        last_sent = {"tick": 0.0, "asking": 0.0, "candle_update": 0.0}
+        throttle = {
+            "tick": _THROTTLE_TICK_SEC,
+            "asking": _THROTTLE_ASKING_SEC,
+            "candle_update": _THROTTLE_CANDLE_SEC,
+        }
+        pending: dict[str, dict] = {}  # 타입별 최신 보류 메시지
+        flush_task: asyncio.Task | None = None
+
+        async def _flush_pending():
+            """보류된 메시지를 스로틀 간격 후에 전송."""
+            try:
+                await asyncio.sleep(0.05)  # 최소 50ms 대기 후 체크
+                while pending:
+                    now = _time.monotonic()
+                    next_flush = None
+                    keys = list(pending.keys())
+                    for msg_type in keys:
+                        interval = throttle.get(msg_type, 0.1)
+                        elapsed = now - last_sent.get(msg_type, 0.0)
+                        if elapsed >= interval:
+                            # 전송 가능
+                            data = pending.pop(msg_type)
+                            last_sent[msg_type] = now
+                            await ws.send_text(json.dumps(data, ensure_ascii=False))
+                        else:
+                            # 아직 대기 필요
+                            wait = interval - elapsed
+                            if next_flush is None or wait < next_flush:
+                                next_flush = wait
+                    if pending and next_flush:
+                        await asyncio.sleep(next_flush)
+                    elif not pending:
+                        break
+            except (WebSocketDisconnect, Exception):
+                pass
+
         try:
             while True:
                 data = await q.get()
-                await ws.send_text(json.dumps(data, ensure_ascii=False))
+                msg_type = data.get("type", "")
+                interval = throttle.get(msg_type, 0.0)
+                now = _time.monotonic()
+                elapsed = now - last_sent.get(msg_type, 0.0)
+
+                if interval <= 0 or elapsed >= interval:
+                    # 스로틀 간격 경과 → 즉시 전송
+                    last_sent[msg_type] = now
+                    await ws.send_text(json.dumps(data, ensure_ascii=False))
+                else:
+                    # 스로틀 내 → 최신 건으로 교체 보류 (덮어씀)
+                    pending[msg_type] = data
+                    if flush_task is None or flush_task.done():
+                        flush_task = asyncio.create_task(_flush_pending())
+
         except WebSocketDisconnect:
             pass
         except Exception as e:
