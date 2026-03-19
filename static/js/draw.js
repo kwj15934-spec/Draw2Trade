@@ -16,6 +16,7 @@
   'use strict';
 
   var PATTERN_LEN = 150;
+  var DRAW_COLOR  = '#ff6b35';  // Draw2Trade 브랜드 주황색 (사용자 드로잉)
 
   // ── 상태 ──────────────────────────────────────────────────────────────────
   var drawPoints      = [];   // 완성된 [{x,y}] — 패턴 검색에 사용 (픽셀 좌표)
@@ -281,7 +282,7 @@
       // ③ 유사 종목 매칭 구간 가상선 (청록 점선)
       drawNormCurve(matchPoints,   '#26a69a', 'rgba(38,166,154,0.85)', 3.5, true);
       // ④ 내 패턴 가상선 (주황 실선)
-      drawNormCurve(drawNormalized, '#26a69a', 'rgba(38,166,154,0.85)',  4.5, false);
+      drawNormCurve(drawNormalized, DRAW_COLOR, 'rgba(255,107,53,0.85)',  4.5, false);
 
     } else {
       // 차트 좌표 없을 때: 정규화 캔버스 좌표 (폴백)
@@ -302,7 +303,7 @@
       }
 
       if (hasMatch && hasDraw) {
-        ctx.strokeStyle = '#26a69a';
+        ctx.strokeStyle = DRAW_COLOR;
         ctx.lineWidth   = 4.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
@@ -318,7 +319,7 @@
         // 차트 좌표 기반 렌더링 (스크롤/줌에 따라 자동 추적)
         var chartPts = chartCoordsToPixels(_drawChartCoords);
         var ptsToRender = (chartPts && chartPts.length >= 2) ? chartPts : drawPoints;
-        ctx.strokeStyle = '#26a69a';
+        ctx.strokeStyle = DRAW_COLOR;
         ctx.lineWidth   = 2.5;
         ctx.lineCap     = 'round';
         ctx.lineJoin    = 'round';
@@ -332,7 +333,7 @@
         [ptsToRender[0], ptsToRender[ptsToRender.length - 1]].forEach(function (p) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = '#26a69a';
+          ctx.fillStyle = DRAW_COLOR;
           ctx.fill();
         });
       }
@@ -474,7 +475,7 @@
       ctx.textBaseline = 'middle';
       var lx = 10, ly = 10, lineH = 22, boxW = 220;
       ctx.fillStyle = 'rgba(10,12,18,0.96)';
-      ctx.strokeStyle = '#26a69a';
+      ctx.strokeStyle = DRAW_COLOR;
       ctx.lineWidth = 1.5;
       ctx.fillRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
       ctx.strokeRect(lx - 6, ly - 8, boxW, lineH * 3 + 16);
@@ -483,7 +484,7 @@
       ctx.fillText('가상선 비교 — 두 선이 가까울수록 유사', lx + 2, ly + 4);
       ly += lineH;
       ctx.setLineDash([]);
-      ctx.fillStyle = '#26a69a';
+      ctx.fillStyle = DRAW_COLOR;
       ctx.fillRect(lx, ly + 1, 18, 4);
       ctx.fillStyle = '#e8eaed';
       ctx.font = '12px "Segoe UI", sans-serif';
@@ -811,8 +812,31 @@
   };
 
   function doSearch() {
+    // auth 상태 로딩 중이면 완료 후 재시도
+    if (window._userPlan === undefined) {
+      showStatus('인증 확인 중…', 'info');
+      if (window._authReady) {
+        window._authReady.then(function() { doSearch(); });
+      } else {
+        // fallback: 직접 확인
+        fetch('/api/auth/me')
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .then(function(data) {
+            window._isLoggedIn = !!(data && data.authenticated);
+            window._userPlan = (data && data.authenticated && data.user && data.user.plan === 'pro') ? 'pro' : 'free';
+            doSearch();
+          })
+          .catch(function() {
+            window._isLoggedIn = false;
+            window._userPlan = 'free';
+            doSearch();
+          });
+      }
+      return;
+    }
+
     // 비로그인 차단
-    if (window._userPlan === undefined || !window._isLoggedIn) {
+    if (!window._isLoggedIn) {
       var placeholder = document.getElementById('results-placeholder');
       if (placeholder) {
         placeholder.style.display = 'block';
@@ -1471,7 +1495,7 @@
     loadDrawingsList();
 
     // 플랜 확인 → Pro 아닌 경우(비로그인 포함) 자동 분석 잠금
-    fetch('/api/auth/me')
+    window._authReady = fetch('/api/auth/me')
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         var isPro = data && data.authenticated && data.user && data.user.plan === 'pro';
