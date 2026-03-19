@@ -414,15 +414,8 @@
     _tickCount     = 0;
     _lastCandleTs  = 0;
     _setLive(false);
-    // 헤더바 초기화
-    var thbPrice = document.getElementById('thb-price');
-    if (thbPrice) { thbPrice.textContent = '—'; thbPrice.style.color = '#fff'; }
-    var thbChg = document.getElementById('thb-chg');
-    if (thbChg) thbChg.textContent = '—';
-    var thbVol = document.getElementById('thb-vol');
-    if (thbVol) thbVol.textContent = '거래량 —';
-    var thbTime = document.getElementById('thb-time');
-    if (thbTime) thbTime.textContent = '—';
+    // 헤더바: _initHeaderBar(candles)에서 이미 마지막 캔들 기준 값을 설정했으므로
+    // '—'으로 초기화하지 않음 → 실시간 틱이 들어오면 자연스럽게 덮어씀
     // 체결 내역 초기화 → 마지막 체결 데이터 로드 (장 마감 후에도 표시)
     if (window._clearTradeList) window._clearTradeList();
     // 약간의 지연 후 초기 데이터 로드 (D2T.ticker/market 설정 완료 대기)

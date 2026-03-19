@@ -331,6 +331,9 @@
           timeScale: { timeVisible: isIntraday, secondsVisible: false },
         });
 
+        // ── Y축 autoScale 강제 리셋 (기존 가격 범위 잔류 방지) ─────
+        D2T.chart.priceScale('right').applyOptions({ autoScale: true });
+
         D2T.series.setData(validCandles);
         D2T.candles = validCandles;
         setVolumeData(validCandles);
@@ -363,6 +366,9 @@
             };
           }
 
+          // fitContent로 전체 데이터를 화면에 맞추고, 매칭 구간으로 줌
+          D2T.chart.timeScale().fitContent();
+
           var fromBar = 0, toBar = validCandles.length - 1;
           for (var bi = 0; bi < validCandles.length; bi++) {
             if (validCandles[bi].time < tf) fromBar = bi + 1;
@@ -377,6 +383,8 @@
               from: fromBar - pad,
               to:   toBar   + pad,
             });
+            // autoScale 한 번 더 강제 적용 (visible range 변경 후)
+            D2T.chart.priceScale('right').applyOptions({ autoScale: true });
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();
             });
