@@ -284,17 +284,21 @@ async def _get_approval_key() -> Optional[str]:
 
 def _parse_kr(raw: str) -> Optional[dict]:
     """H0STCNT0 / H0NMCNT0 / H0STCVT0 체결 데이터 파싱. '^' 구분 필드.
-    f[0]=STCK_SHRN_ISCD  종목코드
-    f[1]=STCK_CNTG_HOUR  체결시간 HHMMSS
-    f[2]=STCK_PRPR       현재가
-    f[7]=STCK_OPRC       시가
-    f[8]=STCK_HGPR       고가
-    f[9]=STCK_LWPR       저가
-    f[12]=CNTG_VOL       체결량 (건별)
-    f[13]=ACML_VOL       누적거래량
-    f[20]=매수매도구분코드 (1=매수, 5=매도)
-    f[21]=체결구분 (1=장중, 2=시간외단일가, 5=장전, 7=시간외종가)
-    f[34]=BSOP_DATE      영업일자 YYYYMMDD (NXT는 없을 수 있음)
+    KIS 공식 필드 순서 (0-indexed):
+    f[0] =STCK_SHRN_ISCD           종목코드
+    f[1] =STCK_CNTG_HOUR           체결시간 HHMMSS
+    f[2] =STCK_PRPR                현재가
+    f[3] =PRDY_VRSS_SIGN           전일대비부호 (1:상한,2:상승,3:보합,4:하한,5:하락)
+    f[7] =STCK_OPRC                시가
+    f[8] =STCK_HGPR                고가
+    f[9] =STCK_LWPR                저가
+    f[12]=CNTG_VOL                 체결량 (건별)
+    f[13]=ACML_VOL                 누적거래량
+    f[19]=SELN_CNTG_SMTN           총매도수량
+    f[20]=SHNU_CNTG_SMTN           총매수수량
+    f[21]=CCLD_DVSN                체결구분 (1:매수(+), 3:장전, 5:매도(-))
+    f[33]=BSOP_DATE                영업일자 YYYYMMDD
+    f[34]=NEW_MKOP_CLS_CODE        신장운영구분코드
     """
     f = raw.split("^")
     # 최소 14개 필드만 있으면 파싱 가능 (f[0]~f[13])
@@ -304,23 +308,22 @@ def _parse_kr(raw: str) -> Optional[dict]:
     try:
         from datetime import datetime as _dt, timezone as _tz, timedelta as _td
         _KST = _tz(_td(hours=9))
-        # 매수/매도 구분 — f[20]: 1=매도, 5=매수 (KIS 기준)
-        # NXT 데이터는 필드 수가 적을 수 있으므로 안전하게 추출
+        # ── 매수/매도 구분 ──
+        # f[21]=CCLD_DVSN 체결구분: '1'=매수(+), '5'=매도(-)  (KIS 공식)
         bs_raw = ''
-        if len(f) > 20 and f[20] in ('1', '5'):
-            bs_raw = f[20]
-        # 날짜: f[34]가 있으면 사용, 없으면 오늘(KST)
-        date_str = f[34] if len(f) > 34 and f[34] else _dt.now(_KST).strftime("%Y%m%d")
-        price = float(f[2])
-        # bs_raw가 없으면 전일대비부호(f[3])로 fallback
-        # KIS 기준: f[20] '1'=매도, '5'=매수
-        # 상승 체결 → 매수('5'), 하락 체결 → 매도('1')
+        if len(f) > 21 and f[21] in ('1', '5'):
+            bs_raw = f[21]
+        # f[21]이 없거나 매칭 안 되면 전일대비부호(f[3])로 fallback
+        # 상승 체결 → 매수('1'), 하락 체결 → 매도('5')
         if not bs_raw and len(f) > 3:
             sign_code = f[3]
             if sign_code in ('1', '2'):  # 상한/상승 → 매수
-                bs_raw = '5'
-            elif sign_code in ('4', '5'):  # 하한/하락 → 매도
                 bs_raw = '1'
+            elif sign_code in ('4', '5'):  # 하한/하락 → 매도
+                bs_raw = '5'
+        # 날짜: f[33]가 영업일자, 없으면 오늘(KST)
+        date_str = f[33] if len(f) > 33 and f[33] else _dt.now(_KST).strftime("%Y%m%d")
+        price = float(f[2])
         return {
             "type":    "tick",
             "market":  "KR",
@@ -333,8 +336,8 @@ def _parse_kr(raw: str) -> Optional[dict]:
             "low":     float(f[9]) if len(f) > 9 and f[9] else price,
             "cvol":    int(f[12]),    # 건별 체결량
             "volume":  int(f[13]),    # 누적거래량
-            "bs":      bs_raw,        # '1'=매도, '5'=매수 (KIS 기준)
-            "session": f[21] if len(f) > 21 else "",
+            "bs":      bs_raw,        # '1'=매수, '5'=매도 (KIS CCLD_DVSN)
+            "session": "",
         }
     except (ValueError, IndexError) as e:
         logger.debug("KR tick 파싱 오류: %s (fields=%d)", e, len(f))

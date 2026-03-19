@@ -103,13 +103,13 @@
     // 행 방향 (등락률 기반)
     var isBuy = (chgPct !== null) ? parseFloat(chgPct) >= 0 : true;
 
-    // 체결량 색상 (bs 기반): KIS f[20] '1'=매도, '5'=매수
+    // 체결량 색상 (bs 기반): KIS f[21] CCLD_DVSN '1'=매수(+), '5'=매도(-)
     var bs = tick.bs || '';
     var cvolIsBuy;
-    if (bs === '5') {
-      cvolIsBuy = true;
-    } else if (bs === '1') {
-      cvolIsBuy = false;
+    if (bs === '1') {
+      cvolIsBuy = true;       // 매수 체결
+    } else if (bs === '5') {
+      cvolIsBuy = false;      // 매도 체결
     } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
       cvolIsBuy = (price > _lastTradePrice);
     } else {
