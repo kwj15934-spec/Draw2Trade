@@ -519,10 +519,8 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            var matchLen = toIdx - fromIdx + 1;
-            var pad = Math.max(3, Math.round(matchLen * 0.1));
-            var sliceFrom = Math.max(0, fromIdx - pad);
-            var sliceTo   = Math.min(validCandles.length, toIdx + pad + 1);
+            var pad = 15;
+            var finalRange = { from: fromIdx - pad, to: toIdx + pad };
 
             // 전체 데이터 유지 — 과거 차트 보존, 해당 구간으로 zoom만 적용
             displayCandles = validCandles;
@@ -535,8 +533,6 @@
               candles:  filtered,
               priceMin: pMin,
               priceMax: pMax,
-              zoomFrom: sliceFrom,
-              zoomTo:   sliceTo - 1,
             };
           }
         }
@@ -611,23 +607,25 @@
           _hidePatternMiniChart();
         }
 
-        // ── 줌인 + Y축 오토스케일 강제 갱신 ──────────────────────────
-        setTimeout(function () {
-          if (typeof sliceFrom !== 'undefined' && typeof sliceTo !== 'undefined') {
-            D2T.chart.timeScale().setVisibleLogicalRange({ from: sliceFrom, to: sliceTo });
-          } else {
-            D2T.chart.timeScale().fitContent();
+        // ── 패턴 구간으로 즉시 스크롤 + Y축 오토스케일 ────────────
+        function syncView() {
+          if (D2T.chart && typeof finalRange !== 'undefined') {
+            D2T.chart.timeScale().setVisibleLogicalRange(finalRange);
           }
           D2T.chart.priceScale('right').applyOptions({
             autoScale: true,
             scaleMargins: { top: 0.1, bottom: 0.2 },
           });
+        }
+        syncView();
+        setTimeout(function () {
+          syncView();
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               if (typeof redraw === 'function') redraw();
             });
           });
-        }, 50);
+        }, 100);
         // 원본으로 돌아가기 버튼 표시
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn && D2T.originState) backBtn.style.display = '';
