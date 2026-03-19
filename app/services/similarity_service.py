@@ -19,7 +19,7 @@ from typing import Sequence
 
 import numpy as np
 
-from app.services.data_service import all_names, all_ohlcv
+from app.services.data_service import all_names, all_ohlcv, get_preload_status
 
 logger = logging.getLogger(__name__)
 

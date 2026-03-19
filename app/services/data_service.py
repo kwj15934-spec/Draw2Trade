@@ -618,7 +618,7 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
 def _load_disk_cache_only(ticker: str) -> dict[str, Any] | None:
     """
     디스크 캐시에서만 OHLCV 로드 (API 호출 없음).
-    장 중 build_cache 시 사용.
+    날짜 무관하게 데이터가 있으면 무조건 메모리에 올림.
     """
     if ticker in _mem_ohlcv:
         return _mem_ohlcv[ticker]
@@ -635,45 +635,114 @@ def _load_disk_cache_only(ticker: str) -> dict[str, Any] | None:
     return None
 
 
+# ── 프리로드 상태 추적 ─────────────────────────────────────────────────────
+_preload_status = {
+    "phase": "idle",       # "idle" | "disk" | "network" | "done"
+    "total": 0,
+    "loaded": 0,
+    "network_done": 0,
+}
+
+
+def get_preload_status() -> dict:
+    """프리로드 진행 상태 반환."""
+    return dict(_preload_status)
+
+
 def build_cache() -> None:
     """
     KOSPI 전 종목 월봉 데이터를 메모리에 선로드.
 
-    장 중 서버 시작 시:
-      - 디스크 캐시만 로드, KIS/pykrx API 호출 건너뜀
-      - 미캐시 종목은 사용자 첫 요청 시 온디맨드 로드
-    장 마감 후:
-      - 디스크 캐시 확인 후 누락 종목 API로 보완
+    1단계: 디스크 캐시를 날짜 무관하게 전부 메모리에 올림 (즉시 검색 가능)
+    2단계: 미캐시 종목은 백그라운드에서 pykrx로 천천히 채움
     """
     tickers = get_kospi_tickers()
     total = len(tickers)
+    _preload_status["phase"] = "disk"
+    _preload_status["total"] = total
+    _preload_status["loaded"] = 0
 
-    in_market = kis_client.is_market_hours()
-    if in_market:
-        logger.info(
-            "장 중 서버 시작 — 디스크 캐시만 로드 (KIS/pykrx 대량 호출 건너뜀). KOSPI %d 종목", total
-        )
-    else:
-        logger.info("캐시 빌드 시작: KOSPI %d 종목", total)
+    logger.info("캐시 빌드 시작: KOSPI %d 종목 (1단계: 디스크 캐시 로드)", total)
 
+    # ── 1단계: 디스크 캐시 전량 로드 (날짜 무관) ──────────────────────────
     loaded = 0
+    missing_tickers: list[str] = []
     for i, ticker in enumerate(tickers):
         get_company_name(ticker)
-        if in_market:
-            ohlcv = _load_disk_cache_only(ticker)
-        else:
-            ohlcv = get_monthly_ohlcv(ticker)
+        ohlcv = _load_disk_cache_only(ticker)
         if ohlcv:
             loaded += 1
-        if (i + 1) % 50 == 0:
-            logger.info("  %d / %d 완료...", i + 1, total)
+        else:
+            missing_tickers.append(ticker)
+        if (i + 1) % 100 == 0:
+            logger.info("  디스크 로드: %d / %d ...", i + 1, total)
+    _preload_status["loaded"] = loaded
 
     # 이름 정보 디스크에도 저장
     _save_ticker_cache(tickers, datetime.now().strftime("%Y-%m-%d"))
-    if in_market:
-        logger.info("캐시 완료(장 중): 디스크 %d / %d 종목 로드됨. 나머지는 온디맨드.", loaded, total)
+    logger.info("1단계 완료: 디스크 %d / %d 종목 로드. 미캐시 %d개",
+                loaded, total, len(missing_tickers))
+
+    # ── 2단계: 미캐시 종목 백그라운드 로드 (pykrx 우선, KIS 미사용) ────────
+    if missing_tickers:
+        _preload_status["phase"] = "network"
+        import threading
+        threading.Thread(
+            target=_background_fill_missing,
+            args=(missing_tickers,),
+            daemon=True,
+            name="kr-ohlcv-preload",
+        ).start()
     else:
-        logger.info("캐시 완료: %d / %d 종목 OHLCV 로드됨.", loaded, total)
+        _preload_status["phase"] = "done"
+
+
+def _background_fill_missing(tickers: list[str]) -> None:
+    """
+    백그라운드 스레드: pykrx로 미캐시 종목 OHLCV를 채움.
+    KIS API를 사용하지 않아 Rate Limit 걱정 없음.
+    """
+    _ensure_dirs()
+    filled = 0
+    total = len(tickers)
+    logger.info("백그라운드 프리로드 시작: pykrx로 %d 종목 로드", total)
+
+    for i, ticker in enumerate(tickers):
+        if ticker in _mem_ohlcv:
+            filled += 1
+            continue
+        try:
+            # pykrx 직접 호출 (KIS API 우회 — Rate Limit 안전)
+            result = _get_ohlcv_from_pykrx(ticker, "m", years=10)
+            if result and result.get("dates"):
+                result["last_month"] = result["dates"][-1]
+                _mem_ohlcv[ticker] = result
+                # 디스크에도 저장 (다음 서버 시작 시 즉시 로드)
+                cp = _OHLCV_DIR / f"{ticker}.json"
+                try:
+                    cp.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+                except Exception:
+                    pass
+                filled += 1
+        except Exception as e:
+            logger.debug("pykrx 로드 실패 (%s): %s", ticker, e)
+
+        _preload_status["loaded"] = _preload_status.get("loaded", 0) + (1 if ticker in _mem_ohlcv else 0)
+        _preload_status["network_done"] = i + 1
+
+        # pykrx도 과도한 호출 방지: 0.1초 간격
+        if (i + 1) % 10 == 0:
+            time.sleep(1.0)  # 10종목마다 1초 대기
+        else:
+            time.sleep(0.1)
+
+        if (i + 1) % 50 == 0:
+            logger.info("  백그라운드 프리로드: %d / %d (성공 %d)", i + 1, total, filled)
+
+    _preload_status["phase"] = "done"
+    _preload_status["loaded"] = len(_mem_ohlcv)
+    logger.info("백그라운드 프리로드 완료: %d / %d 종목 로드됨 (전체 메모리: %d)",
+                filled, total, len(_mem_ohlcv))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

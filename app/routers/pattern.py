@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.dependencies.auth import require_user
 from app.services.inquiry_service import log_pro_usage
+from app.services.data_service import get_preload_status
 from app.services.similarity_service import search_similar
 
 logger = logging.getLogger(__name__)
@@ -158,6 +159,18 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
         max_search_bars = 1260 if market == "US" else 240
     else:
         max_search_bars = None
+
+    # ── KR 데이터 프리로드 상태 확인 ─────────────────────────────────────────
+    if market == "KR":
+        status = get_preload_status()
+        if status["phase"] in ("idle", "disk") and status["loaded"] < 10:
+            return {
+                "results": [],
+                "plan": "free",
+                "status": "loading",
+                "message": "데이터를 준비 중입니다. 잠시 후 다시 시도해주세요. "
+                           f"({status['loaded']}/{status['total']} 로드됨)",
+            }
 
     # 무료 플랜: Top 1~10 숨김 (11위부터 표시)
     is_pro = user.get("plan") == "pro"

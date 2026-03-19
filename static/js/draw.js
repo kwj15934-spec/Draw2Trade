@@ -1012,6 +1012,21 @@
         return r.json();
       })
       .then(function (data) {
+        // 서버 데이터 프리로드 중 → 재시도 안내
+        if (data.status === 'loading') {
+          showStatus(data.message || '데이터 준비 중...', 'info');
+          var placeholder = document.getElementById('results-placeholder');
+          if (placeholder) {
+            placeholder.style.display = 'block';
+            placeholder.innerHTML = '<div style="padding:40px 16px;text-align:center;">'
+              + '<div class="d2t-spinner" style="margin:0 auto 16px"></div>'
+              + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">'
+              + (data.message || '데이터를 준비 중입니다') + '</div>'
+              + '<div style="font-size:12px;color:#888;">잠시 후 다시 검색해주세요.</div>'
+              + '</div>';
+          }
+          return;
+        }
         _lastResults = data.results || [];
         var rankOffset = (data.plan === 'free') ? 10 : 0;
         renderResults(_lastResults, rankOffset);
