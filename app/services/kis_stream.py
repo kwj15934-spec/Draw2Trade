@@ -312,13 +312,15 @@ def _parse_kr(raw: str) -> Optional[dict]:
         # 날짜: f[34]가 있으면 사용, 없으면 오늘(KST)
         date_str = f[34] if len(f) > 34 and f[34] else _dt.now(_KST).strftime("%Y%m%d")
         price = float(f[2])
-        # bs_raw가 없으면 전일대비부호(f[3])로 fallback: 2=상승→매수, 5=하락→매도
+        # bs_raw가 없으면 전일대비부호(f[3])로 fallback
+        # KIS 기준: f[20] '1'=매도, '5'=매수
+        # 상승 체결 → 매수('5'), 하락 체결 → 매도('1')
         if not bs_raw and len(f) > 3:
             sign_code = f[3]
             if sign_code in ('1', '2'):  # 상한/상승 → 매수
-                bs_raw = '1'
-            elif sign_code in ('4', '5'):  # 하한/하락 → 매도
                 bs_raw = '5'
+            elif sign_code in ('4', '5'):  # 하한/하락 → 매도
+                bs_raw = '1'
         return {
             "type":    "tick",
             "market":  "KR",
@@ -331,7 +333,7 @@ def _parse_kr(raw: str) -> Optional[dict]:
             "low":     float(f[9]) if len(f) > 9 and f[9] else price,
             "cvol":    int(f[12]),    # 건별 체결량
             "volume":  int(f[13]),    # 누적거래량
-            "bs":      bs_raw,        # '1'=매수, '5'=매도
+            "bs":      bs_raw,        # '1'=매도, '5'=매수 (KIS 기준)
             "session": f[21] if len(f) > 21 else "",
         }
     except (ValueError, IndexError) as e:

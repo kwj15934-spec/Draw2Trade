@@ -95,12 +95,13 @@
     var isBuy = (chgPct !== null) ? parseFloat(chgPct) >= 0 : true;
 
     // ── 체결량 색상 (bs 기반): 매수/매도 독립 결정 ──
+    // KIS 기준: f[20] '1'=매도, '5'=매수
     var bs = tick.bs || '';
     var cvolIsBuy;
-    if (bs === '1') {
-      cvolIsBuy = true;       // 매수 체결
-    } else if (bs === '5') {
-      cvolIsBuy = false;      // 매도 체결
+    if (bs === '5') {
+      cvolIsBuy = true;       // 매수 체결 (KIS f[20]=5)
+    } else if (bs === '1') {
+      cvolIsBuy = false;      // 매도 체결 (KIS f[20]=1)
     } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
       // fallback: 직전 체결가 비교
       cvolIsBuy = (price > _lastTradePrice);
