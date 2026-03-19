@@ -243,6 +243,7 @@
         borderColor: '#2a2e39',
         fontSize: window.innerWidth <= 640 ? 9 : 12,
         autoScale: true,
+        width: 80,
       },
       timeScale: {
         borderColor: '#2a2e39',
