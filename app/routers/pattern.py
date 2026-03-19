@@ -101,6 +101,11 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
     market = body.market.upper()
     tf = body.timeframe.lower()  # 'monthly' | 'weekly' | 'daily'
 
+    # 분봉/시간봉 → 검색은 일봉 이상만 지원, 시장별 기본 타임프레임으로 폴백
+    _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
+    if tf in _INTRADAY:
+        tf = "daily" if market == "US" else "monthly"
+
     if market == "US":
         from app.services.us_data_service import (
             all_us_names,
@@ -185,4 +190,19 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
     else:
         log_pro_usage(user["uid"], "pattern_search_top10", f"market={market} tf={tf}")
 
-    return {"results": results, "plan": "free" if not is_pro else "pro"}
+    # period_from / period_to 를 Lightweight Charts 호환 포맷으로 정제
+    # KR 월봉: "YYYY-MM" → "YYYY-MM-01" (일봉/주봉 string 포맷 통일)
+    # US 일봉: "YYYY-MM-DD" → 그대로
+    # 캐시 원본을 변경하지 않도록 복사본에서 변환
+    out = []
+    for r in results:
+        r2 = dict(r)
+        pf = r2.get("period_from", "")
+        pt = r2.get("period_to", "")
+        if pf and len(pf) == 7:  # "YYYY-MM" → "YYYY-MM-01"
+            r2["period_from"] = pf + "-01"
+        if pt and len(pt) == 7:
+            r2["period_to"] = pt + "-01"
+        out.append(r2)
+
+    return {"results": out, "plan": "free" if not is_pro else "pro"}

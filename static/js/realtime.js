@@ -39,28 +39,36 @@
 
   function _flushRaf() {
     _rafScheduled = false;
+    try {
+      // 차트 캔들 업데이트
+      if (_pendingChartUpdate && window.D2T && D2T.series) {
+        try { D2T.series.update(_pendingChartUpdate); } catch (_) {}
+        _pendingChartUpdate = null;
+      }
 
-    // 차트 캔들 업데이트
-    if (_pendingChartUpdate && window.D2T && D2T.series) {
-      try { D2T.series.update(_pendingChartUpdate); } catch (_) {}
+      // 볼륨 업데이트
+      if (_pendingVolUpdate && window.D2T && D2T.volumeSeries) {
+        try { D2T.volumeSeries.update(_pendingVolUpdate); } catch (_) {}
+        _pendingVolUpdate = null;
+      }
+
+      // 가격 패널 DOM 업데이트
+      if (_pendingPriceUpdate) {
+        try { _flushPricePanel(_pendingPriceUpdate); } catch (_) {}
+        _pendingPriceUpdate = null;
+      }
+
+      // 오버레이 업데이트
+      if (_pendingOverlay !== null) {
+        try { _flushOverlay(_pendingOverlay); } catch (_) {}
+        _pendingOverlay = null;
+      }
+    } catch (rafErr) {
+      // 렌더링 에러가 발생해도 다음 rAF 루프는 정상 동작
+      console.warn('[RT] rAF flush 오류:', rafErr);
       _pendingChartUpdate = null;
-    }
-
-    // 볼륨 업데이트
-    if (_pendingVolUpdate && window.D2T && D2T.volumeSeries) {
-      try { D2T.volumeSeries.update(_pendingVolUpdate); } catch (_) {}
       _pendingVolUpdate = null;
-    }
-
-    // 가격 패널 DOM 업데이트
-    if (_pendingPriceUpdate) {
-      _flushPricePanel(_pendingPriceUpdate);
       _pendingPriceUpdate = null;
-    }
-
-    // 오버레이 업데이트
-    if (_pendingOverlay !== null) {
-      _flushOverlay(_pendingOverlay);
       _pendingOverlay = null;
     }
   }
@@ -133,6 +141,9 @@
     };
 
     _ws.onmessage = function (e) {
+      // 메시지 수신 즉시 _lastTickTime 갱신 (렌더링 전, 파싱 전)
+      // → _checkStaleConnection이 서버 alive 상태를 정확히 감지
+      _lastTickTime = Date.now();
       try {
         var msg = JSON.parse(e.data);
         if (msg.type === 'candle_update') _onCandleUpdate(msg);
@@ -167,6 +178,7 @@
   // ── 서버사이드 캔들 업데이트 (연산 제로 — rAF로 렌더링) ─────────────────────
 
   function _onCandleUpdate(msg) {
+    if (!_ticker) return;  // 빈 캔버스 등 구독 해제 상태 → 무시
     if (!window.D2T || !D2T.series) return;
     if (msg.ticker !== _ticker) return;
 
@@ -203,6 +215,7 @@
   var _tickCount = 0;  // 디버깅: 수신 틱 카운터
 
   function _onTick(tick) {
+    if (!_ticker) return;  // 빈 캔버스 등 구독 해제 상태 → 무시
     if (!window.D2T || !D2T.series) return;
     if (tick.ticker !== _ticker) return;
 
@@ -365,6 +378,23 @@
     if (!badge) return;
     badge.style.display = on ? 'inline-flex' : 'none';
   }
+
+  // ── 빈 캔버스 전환 시 WS 구독 해제 ──────────────────────────────────────
+  window._onBlankCanvas = function () {
+    console.log('[RT] 빈 캔버스 전환: WS 구독 해제');
+    // 현재 구독 해제
+    if (_ticker && _ws && _ws.readyState === WebSocket.OPEN) {
+      _send('unsubscribe', _ticker, _market);
+    }
+    _ticker    = null;
+    _market    = null;
+    _rtCandle  = null;
+    _prevClose = null;
+    _tickCount = 0;
+    _lastCandleTs = 0;
+    _setLive(false);
+    _stopRestPolling();
+  };
 
   // ── chart.js 훅 등록 ─────────────────────────────────────────────────────
 

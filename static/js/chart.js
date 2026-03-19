@@ -301,9 +301,39 @@
         if (!data.candles || data.candles.length === 0) {
           throw new Error('캔들 데이터 없음');
         }
-        D2T.series.setData(data.candles);
-        D2T.candles = data.candles;
-        setVolumeData(data.candles);
+
+        // ── 캔들 time 포맷 검증 + 정제 ──────────────────────────────
+        var isIntraday = !!INTRADAY_TF[resultTf];
+        var validCandles = data.candles.filter(function (c) {
+          if (c.time == null || c.time === '') return false;
+          if (isIntraday) {
+            // 분봉: unix timestamp(숫자)만 허용
+            if (typeof c.time !== 'number') return false;
+          } else {
+            // 일/주/월봉: "YYYY-MM-DD" 문자열만 허용
+            if (typeof c.time === 'number') {
+              // unix timestamp → YYYY-MM-DD 변환
+              var d = new Date(c.time * 1000);
+              c.time = d.getUTCFullYear() + '-'
+                + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
+                + String(d.getUTCDate()).padStart(2, '0');
+            }
+            if (typeof c.time !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(c.time)) return false;
+          }
+          return c.close != null && !isNaN(c.close);
+        });
+        if (validCandles.length === 0) {
+          throw new Error('유효한 캔들 데이터 없음');
+        }
+
+        // ── timeScale 설정 전환 (intraday ↔ daily/monthly) ──────────
+        D2T.chart.applyOptions({
+          timeScale: { timeVisible: isIntraday, secondsVisible: false },
+        });
+
+        D2T.series.setData(validCandles);
+        D2T.candles = validCandles;
+        setVolumeData(validCandles);
         D2T.ticker = ticker;
 
         var tfLabel = TF_LABELS[resultTf] || resultTf;
@@ -311,23 +341,16 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + periodLabel;
         }
-        setTickerOverlay(ticker, data.name, tfLabel, data.candles);
+        setTickerOverlay(ticker, data.name, tfLabel, validCandles);
 
         // 매칭 구간으로 줌 + 마커
         if (periodFrom && periodTo) {
-          // 타임프레임별 마커 시간 변환
-          // 월봉: "YYYY-MM" → "YYYY-MM-01"
-          // 주봉/일봉: "YYYY-MM-DD" → 그대로
-          var tf, tt;
-          if (resultTf === 'monthly') {
-            tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
-            tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
-          } else {
-            tf = periodFrom;
-            tt = periodTo;
-          }
+          // period_from/period_to는 서버에서 항상 "YYYY-MM-DD"로 정제되어 옴
+          // 안전장치: 혹시 "YYYY-MM"이면 "-01" 붙이기
+          var tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
+          var tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
 
-          var filtered = data.candles.filter(function (c) { return c.time >= tf && c.time <= tt; });
+          var filtered = validCandles.filter(function (c) { return c.time >= tf && c.time <= tt; });
           if (filtered.length > 0) {
             var closes = filtered.map(function (c) { return c.close; });
             var pMin   = Math.min.apply(null, closes);
@@ -340,13 +363,13 @@
             };
           }
 
-          var fromBar = 0, toBar = data.candles.length - 1;
-          for (var bi = 0; bi < data.candles.length; bi++) {
-            if (data.candles[bi].time < tf) fromBar = bi + 1;
-            if (data.candles[bi].time <= tt) toBar = bi;
+          var fromBar = 0, toBar = validCandles.length - 1;
+          for (var bi = 0; bi < validCandles.length; bi++) {
+            if (validCandles[bi].time < tf) fromBar = bi + 1;
+            if (validCandles[bi].time <= tt) toBar = bi;
           }
           fromBar = Math.max(0, fromBar);
-          toBar   = Math.min(data.candles.length - 1, toBar);
+          toBar   = Math.min(validCandles.length - 1, toBar);
           var pad = Math.max(2, Math.round((toBar - fromBar) * 0.1));
 
           requestAnimationFrame(function () {
@@ -359,10 +382,16 @@
             });
           });
 
-          D2T.series.setMarkers([
-            { time: tf, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
-            { time: tt, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
-          ]);
+          // 마커 시간은 실제 캔들 time과 정확히 일치해야 함
+          // 매칭 구간의 첫/마지막 캔들 time 사용 (안전)
+          if (filtered.length > 0) {
+            var markerStart = filtered[0].time;
+            var markerEnd   = filtered[filtered.length - 1].time;
+            D2T.series.setMarkers([
+              { time: markerStart, position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '시작' },
+              { time: markerEnd,   position: 'aboveBar', color: '#26a69a', shape: 'arrowDown', text: '종료' },
+            ]);
+          }
         } else {
           D2T.chart.timeScale().fitContent();
           requestAnimationFrame(function () {
@@ -385,6 +414,11 @@
   D2T.backToOrigin = function() {
     var o = D2T.originState;
     if (!o || !o.candles) return;
+    // timeScale 설정 복원 (분봉 ↔ 일/월봉 전환 대응)
+    var wasIntraday = !!INTRADAY_TF[o.timeframe];
+    D2T.chart.applyOptions({
+      timeScale: { timeVisible: wasIntraday, secondsVisible: false },
+    });
     D2T.series.setData(o.candles);
     D2T.candles   = o.candles;
     D2T.ticker    = o.ticker;
@@ -689,9 +723,45 @@
       wrapper.classList.toggle('blank-mode', blankMode);
       this.classList.toggle('active', blankMode);
       this.textContent = blankMode ? '📈 차트 모드' : '✏️ 빈 캔버스';
-      if (!blankMode && D2T.chart) {
-        D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
+
+      if (blankMode) {
+        // ── 빈 캔버스 진입: 완벽한 초기화 ──────────────────────────
+        // ① 차트 시리즈 데이터 삭제
+        if (D2T.series) try { D2T.series.setData([]); } catch (_) {}
+        if (D2T.volumeSeries) try { D2T.volumeSeries.setData([]); } catch (_) {}
+        if (D2T.series) try { D2T.series.setMarkers([]); } catch (_) {}
+        D2T.matchPeriodData = null;
+
+        // ② 드로잉 초기화 (지우기 버튼 동작과 동일)
+        if (typeof window.clearDraw === 'function') window.clearDraw();
+
+        // ③ 헤더/가격 패널 DOM 초기화
+        var thbPrice = document.getElementById('thb-price');
+        if (thbPrice) { thbPrice.textContent = '—'; thbPrice.style.color = '#fff'; }
+        var thbName = document.getElementById('thb-name');
+        if (thbName) thbName.textContent = '';
+        var thbChg = document.getElementById('thb-chg');
+        if (thbChg) thbChg.textContent = '';
+        var thbVol = document.getElementById('thb-vol');
+        if (thbVol) thbVol.textContent = '';
+        var thbTime = document.getElementById('thb-time');
+        if (thbTime) thbTime.textContent = '';
+        var chartLabel = document.getElementById('chart-ticker-label');
+        if (chartLabel) chartLabel.textContent = '빈 캔버스 모드';
+        var overlayMeta = document.getElementById('ticker-overlay-meta');
+        if (overlayMeta) overlayMeta.textContent = '';
+        var overlayName = document.getElementById('ticker-overlay-name');
+        if (overlayName) overlayName.textContent = '';
+
+        // ④ 실시간 웹소켓 구독 해제
+        if (typeof window._onBlankCanvas === 'function') window._onBlankCanvas();
+      } else {
+        // 차트 모드 복귀
+        if (D2T.chart) {
+          D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
+        }
       }
+
       if (typeof window.syncCanvas === 'function') window.syncCanvas();
       if (typeof window.updatePeriodUI === 'function') window.updatePeriodUI(blankMode);
     });
