@@ -525,9 +525,16 @@
             // 전체 데이터 유지 (스크롤 가능), scrollToPosition으로 이동
             displayCandles = validCandles;
 
-            // 매칭 구간 중앙에서 오른쪽 끝까지의 거리 (scrollToPosition용)
+            // 매칭 구간 중앙을 화면 중앙에 위치시키는 scrollToPosition 값 계산
+            // scrollToPosition(pos): 오른쪽 끝 기준, 음수=왼쪽이동
+            // pos = -(전체 - 1 - 매치중앙) + 화면절반
             var matchCenter = Math.round((fromIdx + toIdx) / 2);
-            var scrollOffset = -(validCandles.length - 1 - matchCenter);
+            var wrapper = document.getElementById('chart-wrapper');
+            var approxBarSpacing = 10; // px, 기본 barSpacing 근사치
+            var halfVisible = wrapper
+              ? Math.round(wrapper.offsetWidth / approxBarSpacing / 2)
+              : 30;
+            var scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
 
             var closes = filtered.map(function (c) { return c.close; });
             var pMin = Math.min.apply(null, closes);
@@ -616,14 +623,33 @@
         var _offset = (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null)
           ? D2T.matchPeriodData.scrollOffset : null;
         if (_offset != null) {
-          // setData 후 차트가 자동으로 최신 바로 스크롤하는 것을 막기 위해
-          // rightOffset을 크게 설정한 후 scrollToPosition 적용
-          D2T.chart.timeScale().applyOptions({ rightOffset: 999, shiftVisibleRangeOnNewBar: false });
+          // setVisibleLogicalRange로 패턴 구간 중앙을 화면 중앙에 위치
+          // logical index = 전체 캔들 배열 인덱스 (0부터)
+          var _wrapper2 = document.getElementById('chart-wrapper');
+          // LW Charts에서 실제 가시 범위를 읽어 halfVisible 계산
+          var _halfVis = 30;
+          try {
+            var _visRange = D2T.chart.timeScale().getVisibleLogicalRange();
+            if (_visRange) _halfVis = Math.round((_visRange.to - _visRange.from) / 2);
+          } catch (e) {
+            if (_wrapper2) _halfVis = Math.round(_wrapper2.offsetWidth / 10 / 2);
+          }
+          var _matchCenterIdx = Math.round((fromIdx + toIdx) / 2);
+          var _from = _matchCenterIdx - _halfVis;
+          var _to   = _matchCenterIdx + _halfVis;
+          D2T.chart.timeScale().applyOptions({ rightOffset: 5, shiftVisibleRangeOnNewBar: false });
           requestAnimationFrame(function () {
-            D2T.chart.timeScale().scrollToPosition(_offset, false);
-            D2T.chart.timeScale().applyOptions({ rightOffset: 5 });
-            setTimeout(function () {
+            try {
+              D2T.chart.timeScale().setVisibleLogicalRange({ from: _from, to: _to });
+            } catch (e) {
               D2T.chart.timeScale().scrollToPosition(_offset, false);
+            }
+            setTimeout(function () {
+              try {
+                D2T.chart.timeScale().setVisibleLogicalRange({ from: _from, to: _to });
+              } catch (e) {
+                D2T.chart.timeScale().scrollToPosition(_offset, false);
+              }
               if (typeof redraw === 'function') redraw();
             }, 150);
           });
