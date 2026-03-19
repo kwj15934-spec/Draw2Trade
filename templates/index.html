@@ -672,6 +672,14 @@
 
   // 사이드바 탭 전환
   document.addEventListener('DOMContentLoaded', function() {
+    // 초기 활성 탭(results) 패널을 flex로 열기
+    var activeBtn = document.querySelector('.sidebar-tab-btn.active');
+    var activeTab = activeBtn ? activeBtn.dataset.tab : 'results';
+    ['results','favorites','drawings'].forEach(function(p) {
+      var el = document.getElementById('sidebar-panel-' + p);
+      if (el) el.style.display = (p === activeTab) ? 'flex' : 'none';
+    });
+
     document.querySelectorAll('.sidebar-tab-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var tab = this.dataset.tab;
@@ -704,12 +712,11 @@
 
   /** 차트 캔버스를 부모 wrapper 크기에 동기화 */
   function _syncChartSize() {
-    var panel = document.querySelector('.d2t-chart-panel');
-    var wrapper = document.getElementById('chart-wrapper');
-    if (wrapper && window.D2T && D2T.chart) {
-      // chart-panel 너비로 resize — 호가창/사이드바 침범 방지
-      var w = panel ? panel.clientWidth : wrapper.offsetWidth;
-      var h = wrapper.offsetHeight;
+    var container = document.getElementById('chart-container');
+    var wrapper   = document.getElementById('chart-wrapper');
+    if (container && wrapper && window.D2T && D2T.chart) {
+      var w = container.clientWidth;
+      var h = wrapper.clientHeight;
       if (w > 0 && h > 0) D2T.chart.resize(w, h);
     }
     if (typeof window.syncCanvas === 'function') window.syncCanvas();

@@ -231,6 +231,7 @@
       layout: {
         background: { color: '#121214' },
         textColor: '#d1d4dc',
+        padding: { right: 10 },
       },
       grid: {
         vertLines: { color: '#1e2130' },
@@ -241,6 +242,7 @@
       },
       rightPriceScale: {
         borderColor: '#2a2e39',
+        borderVisible: false,
         fontSize: window.innerWidth <= 640 ? 9 : 12,
         autoScale: true,
         width: 80,
