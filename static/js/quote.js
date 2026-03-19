@@ -121,21 +121,24 @@
     var cvolColor = cvolIsBuy ? '#ef5350' : '#2962ff';
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
-    // 세션 배지 (session_type 우선, 없으면 session 폴백)
+    // 세션 배지 결정
     var sType = tick.session_type || '';
     var session = tick.session || '';
+    // session_type 미설정 시 시간대로 자동 판별 (16:00~19:59 = NXT)
+    if (!sType && tick.time && tick.time.length >= 4) {
+      var _hhmm = parseInt(tick.time.slice(0, 4), 10);
+      if (_hhmm >= 1600 && _hhmm < 2000) sType = 'NXT';
+      else if (_hhmm >= 1531 && _hhmm < 1600) sType = 'POST_MARKET';
+      else if (_hhmm >= 830 && _hhmm <= 840) sType = 'PRE_MARKET';
+    }
     var sessionBadge = '';
-    if (sType === 'PRE_MARKET') {
+    if (sType === 'NXT' || session === 'nxt') {
+      sessionBadge = '<span class="tr-session nxt">NXT</span>';
+    } else if (sType === 'PRE_MARKET' || session === '5') {
       sessionBadge = '<span class="tr-session pre">장전</span>';
     } else if (sType === 'POST_MARKET') {
       sessionBadge = '<span class="tr-session post">장후</span>';
-    } else if (sType === 'AFTER_HOURS') {
-      sessionBadge = '<span class="tr-session after">단일가</span>';
-    } else if (sType === 'NXT' || session === 'nxt') {
-      sessionBadge = '<span class="tr-session nxt">NXT</span>';
-    } else if (!sType && session === '5') {
-      sessionBadge = '<span class="tr-session pre">장전</span>';
-    } else if (!sType && session === '2') {
+    } else if (sType === 'AFTER_HOURS' || session === '2') {
       sessionBadge = '<span class="tr-session after">단일가</span>';
     }
 
@@ -330,9 +333,20 @@
       var sign = chgRate >= 0 ? '+' : '';
       var color = chgRate >= 0 ? '#26a69a' : '#ef5350';
 
-      var bs = '';
-      if (t.chgSign === '1' || t.chgSign === '2') bs = '1';
-      else if (t.chgSign === '4' || t.chgSign === '5') bs = '5';
+      // bs 우선순위: REST bs 필드 → chgSign fallback
+      var bs = t.bs || '';
+      if (!bs) {
+        if (t.chgSign === '1' || t.chgSign === '2') bs = '1';
+        else if (t.chgSign === '4' || t.chgSign === '5') bs = '5';
+      }
+
+      // session_type 보강: 시간대(HHMM)로 NXT 판별
+      var sType = t.session_type || '';
+      if (!sType && t.time && t.time.length >= 4) {
+        var hhmm = parseInt(t.time.slice(0, 4), 10);
+        if (hhmm >= 1600 && hhmm < 2000) sType = 'NXT';
+        else if (hhmm >= 1531 && hhmm < 1600) sType = 'POST_MARKET';
+      }
 
       var tick = {
         price: t.price,
@@ -341,7 +355,7 @@
         time: t.time,
         bs: bs,
         session: t.session || '',
-        session_type: t.session_type || ''
+        session_type: sType
       };
       window._addTradeRow(tick, t.chgRate, sign, color);
     }

@@ -391,10 +391,10 @@ async def tick_history(ticker: str):
             return "PRE_MARKET"
         if 900 <= hhmm <= 1530:
             return "REGULAR"
-        if 1540 <= hhmm <= 1600:
+        if 1531 <= hhmm <= 1559:
             return "POST_MARKET"
-        if 1600 < hhmm <= 1800:
-            return "AFTER_HOURS"
+        if 1600 <= hhmm < 2000:
+            return "NXT"  # 16:00~19:59 = NXT 야간장
         return "UNKNOWN"
 
     def _parse_raw_ticks(raw_list: list, session_tag: str) -> None:
@@ -404,6 +404,18 @@ async def tick_history(ticker: str):
                 if cvol <= 0:
                     continue
                 tick_time = r.get("stck_cntg_hour", "")
+                # 매수/매도 구분: CCLD_DVSN '1'=매수,'5'=매도 → 없으면 부호로 fallback
+                ccld = r.get("ccld_dvsn", "")
+                if ccld in ("1", "5"):
+                    bs_val = ccld
+                else:
+                    sign_code = r.get("prdy_vrss_sign", "3")
+                    if sign_code in ("1", "2"):
+                        bs_val = "1"
+                    elif sign_code in ("4", "5"):
+                        bs_val = "5"
+                    else:
+                        bs_val = ""
                 ticks.append({
                     "time":    tick_time,
                     "price":   int(r.get("stck_prpr", "0").replace(",", "")),
@@ -411,6 +423,7 @@ async def tick_history(ticker: str):
                     "accvol":  int(r.get("acml_vol", "0").replace(",", "")),
                     "chgRate": r.get("prdy_ctrt", "0"),
                     "chgSign": r.get("prdy_vrss_sign", "3"),
+                    "bs":      bs_val,
                     "session": session_tag,
                     "session_type": _session_type_from_time(tick_time, session_tag),
                 })
