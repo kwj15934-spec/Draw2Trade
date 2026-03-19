@@ -269,6 +269,7 @@
       },
       handleScroll: true,
       handleScale: true,
+      autoSize: true,
     });
 
     // 캔들 시리즈: 상단 75% 영역 사용 (하단 25%는 거래량)
@@ -312,9 +313,7 @@
       var ro = new ResizeObserver(function () {
         clearTimeout(_resizeTimer);
         _resizeTimer = setTimeout(function () {
-          if (D2T.chart) {
-            D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
-          }
+          // autoSize:true 이므로 LW Charts가 자동 리사이즈 — syncCanvas만 호출
           if (typeof syncCanvas === 'function') syncCanvas();
         }, 100);
       });
@@ -457,7 +456,6 @@
       wrapper.classList.remove('blank-mode');
       btnBlank.classList.remove('active');
       btnBlank.textContent = '✏️ 빈 캔버스';
-      if (D2T.chart) D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
       if (typeof window.syncCanvas === 'function') window.syncCanvas();
     }
 
@@ -1048,10 +1046,7 @@
         // ④ 실시간 웹소켓 구독 해제
         if (typeof window._onBlankCanvas === 'function') window._onBlankCanvas();
       } else {
-        // 차트 모드 복귀
-        if (D2T.chart) {
-          D2T.chart.resize(wrapper.offsetWidth, wrapper.offsetHeight);
-        }
+        // 차트 모드 복귀 — autoSize:true 이므로 별도 resize 불필요
       }
 
       if (typeof window.syncCanvas === 'function') window.syncCanvas();
