@@ -39,50 +39,64 @@
     onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">← 메인</a>
 </div>
 
-<!-- ── 상단 종목 헤더 바 ───────────────────────────────── -->
+<!-- ── 상단 종목 헤더 바 (2행) ───────────────────────── -->
 <div id="ticker-header-bar">
-  <!-- 좌측: 종목 검색/선택 -->
-  <div class="thb-left">
-    <div id="category-group" class="tb-pill-group" style="display:none;">
-      <select id="category-select" class="tb-pill-select" title="섹터/업종 필터">
-        <option value="">전체 섹터</option>
-      </select>
-    </div>
-    <div id="exchange-group" class="tb-pill-group" style="display:none;">
-      <div class="tb-btn-group">
-        <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
-        <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
-        <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
-        <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
-      </div>
-    </div>
-    <div class="tb-pill-group tb-ticker-group">
-      <div class="ticker-search-wrap" id="ticker-search-wrap">
-        <input type="text" id="ticker-search" placeholder="종목명 / 티커 검색" title="검색 후 클릭하여 선택" autocomplete="off">
-        <div id="ticker-search-dropdown"></div>
-        <select id="ticker-select" style="display:none;">
-          <option value="">—</option>
+
+  <!-- 1행: 검색 · 현재가 · 거래시간 -->
+  <div class="thb-row thb-row1">
+    <!-- 좌: 종목 검색/선택 -->
+    <div class="thb-left">
+      <div id="category-group" class="tb-pill-group" style="display:none;">
+        <select id="category-select" class="tb-pill-select" title="섹터/업종 필터">
+          <option value="">전체 섹터</option>
         </select>
       </div>
+      <div id="exchange-group" class="tb-pill-group" style="display:none;">
+        <div class="tb-btn-group">
+          <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
+          <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
+          <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
+          <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
+        </div>
+      </div>
+      <div class="tb-pill-group tb-ticker-group">
+        <div class="ticker-search-wrap" id="ticker-search-wrap">
+          <input type="text" id="ticker-search" placeholder="종목명 / 티커 검색" title="검색 후 클릭하여 선택" autocomplete="off">
+          <div id="ticker-search-dropdown"></div>
+          <select id="ticker-select" style="display:none;">
+            <option value="">—</option>
+          </select>
+        </div>
+      </div>
+      <button id="btn-load" class="btn-d2t btn-load-chart">차트 로드</button>
+      <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
     </div>
-    <button id="btn-load" class="btn-d2t btn-load-chart">차트 로드</button>
-    <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
+
+    <!-- 중: 현재가 -->
+    <div class="thb-center" id="thb-price-area">
+      <span id="thb-name" class="thb-name">—</span>
+      <span id="thb-price" class="thb-price">—</span>
+      <span id="thb-chg" class="thb-chg">—</span>
+      <span id="thb-time" class="thb-time">—</span>
+      <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+      </span>
+    </div>
+
+    <!-- 우: 거래시간 · 공지 -->
+    <div class="thb-right">
+      <div id="market-hours-chip2" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
+      <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499;">
+        거래소·카테고리 미선택 시 S&amp;P 500만 표시
+      </span>
+      <div id="toolbar-notice-banner" style="display:none; flex-shrink:0; max-width:240px;">
+        <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- 중앙: 현재가 정보 -->
-  <div class="thb-center" id="thb-price-area">
-    <span id="thb-name" class="thb-name">—</span>
-    <span id="thb-price" class="thb-price">—</span>
-    <span id="thb-chg" class="thb-chg">—</span>
-    <span id="thb-time" class="thb-time">—</span>
-    <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
-      <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
-    </span>
-  </div>
-
-  <!-- 우측: 타임프레임 -->
-  <div class="thb-right">
-    <div id="market-hours-chip2" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
+  <!-- 2행: 타임프레임 -->
+  <div class="thb-row thb-row2">
     <div class="tb-btn-group tb-tf-group">
       <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
       <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
@@ -93,13 +107,8 @@
       <button class="btn-d2t timeframe-btn" data-tf="5m"   title="5분봉">5m</button>
       <button class="btn-d2t timeframe-btn" data-tf="1m"   title="1분봉">1m</button>
     </div>
-    <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499; margin-left:4px;">
-      거래소·카테고리 미선택 시 S&amp;P 500만 표시
-    </span>
-    <div id="toolbar-notice-banner" style="display:none; flex-shrink:0; max-width:240px;">
-      <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
-    </div>
   </div>
+
 </div>
 
 <!-- ── 드로잉 툴바 ────────────────────────────────────── -->
@@ -117,6 +126,7 @@
         title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">⟺ 평행선</button>
       <button id="btn-clear"     class="btn-d2t btn-d2t-danger"
         title="드로잉 지우기 (Delete)">🗑 지우기</button>
+      <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환">✏ 빈 캔버스</button>
       <button id="btn-save-draw" class="btn-d2t"
         title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
     </div>
@@ -136,7 +146,6 @@
       </select>
     </div>
     <span id="search-status" class="search-status"></span>
-    <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환" style="margin-left:auto;">✏ 빈 캔버스</button>
   </div>
 </div>
 
