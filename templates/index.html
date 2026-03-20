@@ -49,20 +49,22 @@
   <!-- ── 1행: 상태 표시창 ───────────────────────────── -->
   <div class="thb-row thb-row1">
 
-    <!-- 현재가 블록: 종목명 | 가격 + 등락률 -->
-    <div class="thb-center" id="thb-price-area">
+    <!-- 좌: 종목 아이덴티티 -->
+    <div class="thb-identity">
       <span id="thb-name" class="thb-name">—</span>
-      <div class="thb-price-block">
-        <span id="thb-price" class="thb-price">—</span>
-        <span id="thb-chg"   class="thb-chg">—</span>
-      </div>
     </div>
 
-    <!-- 우: 거래시간 칩 + LIVE 배지 + 공지 -->
+    <!-- 중: 현재가 + 등락률 -->
+    <div class="thb-center" id="thb-price-area">
+      <span id="thb-price" class="thb-price">—</span>
+      <span id="thb-chg"   class="thb-chg">—</span>
+    </div>
+
+    <!-- 우: 시장 상태 + LIVE + 공지 -->
     <div class="thb-status">
-      <div id="market-hours-chip2" style="font-size:11px;color:#7a8499;white-space:nowrap;"></div>
-      <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
-        <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+      <div id="market-hours-chip2" class="thb-market-chip"></div>
+      <span id="rt-live-badge" class="thb-live-badge" style="display:none;">
+        <span class="thb-live-dot"></span>LIVE
       </span>
       <div id="toolbar-notice-banner" style="display:none;flex-shrink:0;max-width:200px;">
         <div id="toolbar-notice-list" style="display:flex;flex-direction:column;gap:2px;"></div>
@@ -107,8 +109,9 @@
       </span>
     </div>
 
-    <!-- 우: 타임프레임 버튼 -->
+    <!-- 우: 타임프레임 -->
     <div class="thb-tf">
+      <span class="thb-tf-label">타임프레임</span>
       <div class="tb-btn-group tb-tf-group">
         <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
         <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
