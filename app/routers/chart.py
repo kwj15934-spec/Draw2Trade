@@ -521,3 +521,24 @@ async def tick_history(ticker: str, market: str = Query("KR")):
     ticks = ticks[:30]
 
     return {"ticker": ticker, "ticks": ticks, "quote": quote}
+
+
+@router.post("/admin/refresh-ticker-cache")
+async def refresh_ticker_cache():
+    """티커 캐시 강제 초기화 후 KRX API 재수집 (배포 서버 갱신용)."""
+    import os
+    from pathlib import Path
+    cache_file = Path(__file__).resolve().parent.parent.parent / "cache" / "tickers.json"
+    if cache_file.exists():
+        cache_file.unlink()
+    data_service._mem_tickers = []
+    data_service._mem_markets = {}
+    data_service._mem_names = {}
+    data_service._load_or_fetch_tickers()
+    kosdaq_count = sum(1 for t in data_service._mem_tickers if data_service._mem_markets.get(t) == "KOSDAQ")
+    return {
+        "ok": True,
+        "total": len(data_service._mem_tickers),
+        "kosdaq": kosdaq_count,
+        "kospi": len(data_service._mem_tickers) - kosdaq_count,
+    }
