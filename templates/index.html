@@ -378,55 +378,66 @@
 {% block scripts %}
 <script>
 (function () {
-  var HOURS = {
-    KR: { label: '09:00~15:30 KST', tz: 'Asia/Seoul',    open: [9,  0], close: [15, 30] },
-    US: { tz: 'America/New_York', open: [9, 30], close: [16, 0] },
-  };
+  var KR = { label: '09:00~15:30 KST', tz: 'Asia/Seoul', open: [9, 0], close: [15, 30] };
 
-  function _etToKst(h, m) {
+  /** 서머타임(DST) 여부 판별 — 미국 EDT: 3월 둘째 일요일 ~ 11월 첫 번째 일요일 */
+  function _isEdtNow() {
     var now = new Date();
-    var etParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now);
-    var krParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now);
-    var getV = function (parts, t) { return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10); };
-    var etH = getV(etParts, 'hour'), etM = getV(etParts, 'minute');
-    var krH = getV(krParts, 'hour'), krM = getV(krParts, 'minute');
-    var offsetMin = (krH * 60 + krM) - (etH * 60 + etM);
-    if (offsetMin < 0) offsetMin += 1440;
-    var totalMin = (h * 60 + m + offsetMin) % 1440;
-    var rh = Math.floor(totalMin / 60), rm = totalMin % 60;
-    return (rh < 10 ? '0' + rh : rh) + ':' + (rm < 10 ? '0' + rm : rm);
+    var y = now.getUTCFullYear();
+
+    // 3월 둘째 일요일 02:00 ET = UTC 07:00 (EST+5) or 06:00 (EDT+4) → 보수적으로 UTC 07:00 사용
+    var mar = new Date(Date.UTC(y, 2, 1));
+    var dow = mar.getUTCDay(); // 0=Sun
+    var dstStart = new Date(Date.UTC(y, 2, (dow === 0 ? 8 : 15 - dow), 7)); // 3월 둘째 Sun 07:00 UTC
+
+    // 11월 첫 번째 일요일 02:00 ET = UTC 06:00 (EDT+4)
+    var nov = new Date(Date.UTC(y, 10, 1));
+    var dow2 = nov.getUTCDay();
+    var dstEnd = new Date(Date.UTC(y, 10, (dow2 === 0 ? 1 : 8 - dow2), 6)); // 11월 첫째 Sun 06:00 UTC
+
+    return now >= dstStart && now < dstEnd;
   }
 
+  /** ET→KST 고정 오프셋: EDT +13h, EST +14h */
   function _usLabel() {
-    try { return _etToKst(9, 30) + '~' + _etToKst(16, 0) + ' KST'; }
-    catch (e) { return '22:30~05:00 KST'; }
+    if (_isEdtNow()) return '22:30~05:00 KST (EDT)';
+    return '23:30~06:00 KST (EST)';
   }
 
   function isOpen(market) {
-    var h = HOURS[market];
     try {
       var now = new Date();
-      var parts = new Intl.DateTimeFormat('en-US', { timeZone: h.tz, hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false }).formatToParts(now);
-      var get = function (t) { return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10); };
+      var tz = (market === 'US') ? 'America/New_York' : 'Asia/Seoul';
+      var openH  = (market === 'US') ? 9  : 9;
+      var openM  = (market === 'US') ? 30 : 0;
+      var closeH = (market === 'US') ? 16 : 15;
+      var closeM = (market === 'US') ? 0  : 30;
+
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour: 'numeric', minute: 'numeric',
+        weekday: 'short', hour12: false
+      }).formatToParts(now);
+      var get = function (t) {
+        return parseInt((parts.find(function (p) { return p.type === t; }) || {}).value || 0, 10);
+      };
       var weekday = (parts.find(function (p) { return p.type === 'weekday'; }) || {}).value || '';
-      var isWd = ['Mon','Tue','Wed','Thu','Fri'].indexOf(weekday) >= 0;
-      if (!isWd) return false;
-      var hh = get('hour'), mm = get('minute');
-      var cur = hh * 60 + mm;
-      return cur >= (h.open[0] * 60 + h.open[1]) && cur < (h.close[0] * 60 + h.close[1]);
+      if (['Mon','Tue','Wed','Thu','Fri'].indexOf(weekday) < 0) return false;
+      var cur = get('hour') * 60 + get('minute');
+      return cur >= openH * 60 + openM && cur < closeH * 60 + closeM;
     } catch (e) { return false; }
   }
 
   window.updateMarketHoursChip = function (market) {
-    ['market-hours-chip', 'market-hours-chip2'].forEach(function(id) {
+    ['market-hours-chip', 'market-hours-chip2'].forEach(function (id) {
       var chip = document.getElementById(id);
       if (!chip) return;
-      var h = HOURS[market];
-      if (!h) { chip.innerHTML = ''; return; }
-      var label = market === 'US' ? _usLabel() : h.label;
+      var label = (market === 'US') ? _usLabel() : KR.label;
       var on = isOpen(market);
-      var dot = '<span style="width:7px;height:7px;border-radius:50%;background:' + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
-      var status = on ? '<span style="color:#26a69a;font-weight:700;">개장</span>' : '<span style="color:#555;">마감</span>';
+      var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
+        + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
+      var status = on
+        ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
+        : '<span style="color:#555;">마감</span>';
       chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
     });
   };
