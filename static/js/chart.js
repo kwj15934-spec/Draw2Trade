@@ -971,10 +971,12 @@
     initChart();
 
 
-    // 카테고리/검색 UI 초기 표시
+    // 카테고리/검색 UI 초기 표시 (기본 KR)
     var catGroup = document.getElementById('category-group');
+    var krMktGroup = document.getElementById('kr-market-group');
     var searchInp = document.getElementById('ticker-search');
     if (catGroup) catGroup.style.display = 'flex';
+    if (krMktGroup) krMktGroup.style.display = 'flex';
     if (searchInp) searchInp.placeholder = '종목명/티커 검색 (KR)';
     // 초기 차트를 종목 목록 응답 전에 즉시 병렬 로드
     var _initTicker = new URLSearchParams(window.location.search).get('ticker')
