@@ -328,7 +328,7 @@
       border-radius: 6px;
       padding: 0 10px;
       height: 30px;
-      width: 220px;
+      width: 160px;
       font-size: 13px;
       outline: none;
       transition: border-color .15s;
@@ -1095,7 +1095,7 @@
       display: none;
     }
 
-    /* ── 종목 헤더 바 (토스증권 스타일) ─────────────────── */
+    /* ══ 종목 헤더 바 — 2행 구조 ═══════════════════════════ */
     #ticker-header-bar {
       display: flex;
       flex-direction: column;
@@ -1105,54 +1105,75 @@
       overflow: visible;
     }
 
-    /* 1행: 검색 · 현재가 · 거래시간 */
-    .thb-row1 {
+    /* 공통 행 */
+    .thb-row {
       display: flex;
       align-items: center;
-      padding: 6px 12px;
+      padding: 0 14px;
       gap: 10px;
-      min-height: 48px;
+    }
+
+    /* 1행: 상태창 — 종목명 | 현재가 | 시장상태 */
+    .thb-row1 {
+      min-height: 50px;
       border-bottom: 1px solid #232327;
+      gap: 12px;
     }
 
-    /* 2행: 타임프레임 버튼 */
+    /* 2행: 조작창 — 종목 선택 컨트롤 | 타임프레임 */
     .thb-row2 {
-      display: flex;
-      align-items: center;
-      padding: 4px 12px;
-      gap: 6px;
-      min-height: 36px;
+      min-height: 38px;
+      gap: 8px;
     }
 
-    .thb-left {
+    /* 1행 — 종목 아이덴티티(좌) */
+    .thb-identity {
       display: flex;
       align-items: center;
-      gap: 6px;
       flex-shrink: 0;
+      min-width: 100px;
     }
 
+    /* 1행 — 현재가 영역(중) */
     .thb-center {
       display: flex;
       align-items: baseline;
       gap: 10px;
       flex: 1;
       min-width: 0;
-      overflow: hidden;
     }
 
-    .thb-right {
+    /* 1행 — 시장 상태(우) */
+    .thb-status {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
     }
 
+    /* 2행 — 종목 선택 컨트롤(좌) */
+    .thb-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    /* 2행 — 타임프레임(우) */
+    .thb-tf {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* 텍스트 요소 */
     .thb-name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: #d1d4dc;
       white-space: nowrap;
-      flex-shrink: 0;
     }
 
     .thb-price {
@@ -1179,6 +1200,22 @@
     .thb-time {
       font-size: 10px;
       color: #555;
+      flex-shrink: 0;
+    }
+
+    /* 드로잉 툴바 — 캔버스 버튼 묶음 */
+    .toolbar-canvas-btns {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 드로잉 툴바 — 세로 구분선 */
+    .d2t-toolbar-sep {
+      width: 1px;
+      height: 22px;
+      background: #2d2d30;
+      margin: 0 6px;
       flex-shrink: 0;
     }
 
@@ -1517,21 +1554,23 @@
 
     /* ── 모바일 헤더바 ───────────────────────────────────── */
     @media (max-width: 768px) {
-      .thb-row1 { padding: 5px 8px; min-height: 44px; gap: 8px; }
-      .thb-row2 { padding: 3px 8px; min-height: 32px; }
+      .thb-row1 { padding: 0 8px; min-height: 44px; gap: 8px; }
+      .thb-row2 { padding: 0 8px; min-height: 34px; gap: 5px; }
       .thb-price { font-size: 20px; }
-      .thb-name  { font-size: 12px; }
+      .thb-name  { font-size: 12px; min-width: 60px; }
       .thb-vol, .thb-time { display: none; }
       #market-hours-chip2 { display: none !important; }
+      #ticker-search { width: 110px; }
     }
 
     @media (max-width: 640px) {
-      .thb-row1 { padding: 4px 8px; min-height: 40px; gap: 6px; }
-      .thb-row2 { padding: 2px 8px; min-height: 30px; }
-      .thb-center { gap: 6px; }
+      .thb-row1 { min-height: 40px; gap: 6px; }
+      .thb-row2 { min-height: 30px; gap: 4px; flex-wrap: wrap; }
       .thb-price { font-size: 17px; }
       .thb-chg   { font-size: 11px; }
-      .thb-name  { display: none; }
+      .thb-identity { display: none; }
+      .thb-tf { display: none; }
+      #ticker-search { width: 90px; }
     }
 
     {% block extra_styles %}{% endblock %}

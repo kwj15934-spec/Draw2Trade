@@ -39,81 +39,100 @@
     onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">← 메인</a>
 </div>
 
-<!-- ── 상단 종목 헤더 바 (2행) ───────────────────────── -->
+<!-- ════════════════════════════════════════════════════
+     상단 헤더 바 (2행)
+     1행: 종목명 + 현재가/등락/거래량 + 시장상태/LIVE
+     2행: 종목 선택(드롭다운+검색) + 카테고리 + 로드 + 즐겨찾기 || 타임프레임
+     ════════════════════════════════════════════════════ -->
 <div id="ticker-header-bar">
 
-  <!-- 1행: 검색 · 현재가 · 거래시간 -->
+  <!-- ── 1행: 상태 표시창 ───────────────────────────── -->
   <div class="thb-row thb-row1">
-    <!-- 좌: 종목 검색/선택 -->
-    <div class="thb-left">
+
+    <!-- 좌: 종목명 (티커) -->
+    <div class="thb-identity">
+      <span id="thb-name" class="thb-name">—</span>
+    </div>
+
+    <!-- 중: 현재가 · 등락 · 거래량 · 시각 -->
+    <div class="thb-center" id="thb-price-area">
+      <span id="thb-price" class="thb-price">—</span>
+      <span id="thb-chg"   class="thb-chg">—</span>
+      <span id="thb-vol"   class="thb-vol"></span>
+      <span id="thb-time"  class="thb-time">—</span>
+    </div>
+
+    <!-- 우: 거래시간 칩 + LIVE 배지 + 공지 -->
+    <div class="thb-status">
+      <div id="market-hours-chip2" style="font-size:11px;color:#7a8499;white-space:nowrap;"></div>
+      <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+      </span>
+      <div id="toolbar-notice-banner" style="display:none;flex-shrink:0;max-width:200px;">
+        <div id="toolbar-notice-list" style="display:flex;flex-direction:column;gap:2px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2행: 조작창 ────────────────────────────────── -->
+  <div class="thb-row thb-row2">
+
+    <!-- 좌: 종목 선택 컨트롤 묶음 -->
+    <div class="thb-controls">
+      <!-- 카테고리 (KR/US 공통, JS가 show/hide) -->
       <div id="category-group" class="tb-pill-group" style="display:none;">
         <select id="category-select" class="tb-pill-select" title="섹터/업종 필터">
           <option value="">전체 섹터</option>
         </select>
       </div>
+      <!-- US 거래소 필터 -->
       <div id="exchange-group" class="tb-pill-group" style="display:none;">
         <div class="tb-btn-group">
           <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
-          <button class="btn-d2t exchange-btn" data-excd="NAS">NASDAQ</button>
-          <button class="btn-d2t exchange-btn" data-excd="NYS">NYSE</button>
-          <button class="btn-d2t exchange-btn" data-excd="AMS">AMEX</button>
+          <button class="btn-d2t exchange-btn" data-excd="NAS">NAS</button>
+          <button class="btn-d2t exchange-btn" data-excd="NYS">NYS</button>
+          <button class="btn-d2t exchange-btn" data-excd="AMS">AMS</button>
         </div>
       </div>
-      <div class="tb-pill-group tb-ticker-group">
-        <div class="ticker-search-wrap" id="ticker-search-wrap">
-          <input type="text" id="ticker-search" placeholder="종목명 / 티커 검색" title="검색 후 클릭하여 선택" autocomplete="off">
-          <div id="ticker-search-dropdown"></div>
-          <select id="ticker-select" style="display:none;">
-            <option value="">—</option>
-          </select>
-        </div>
+      <!-- 종목 드롭다운 (JS가 populate) -->
+      <select id="ticker-select" class="tb-pill-select tb-ticker-select" title="종목 선택">
+        <option value="">종목 선택</option>
+      </select>
+      <!-- 검색 인풋 + 드롭다운 -->
+      <div class="ticker-search-wrap" id="ticker-search-wrap">
+        <input type="text" id="ticker-search" placeholder="검색" title="종목명/티커 입력 후 선택" autocomplete="off">
+        <div id="ticker-search-dropdown"></div>
       </div>
-      <button id="btn-load" class="btn-d2t btn-load-chart">차트 로드</button>
+      <!-- 차트 로드 + 즐겨찾기 -->
+      <button id="btn-load"       class="btn-d2t btn-load-chart">차트 로드</button>
       <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
-    </div>
-
-    <!-- 중: 현재가 -->
-    <div class="thb-center" id="thb-price-area">
-      <span id="thb-name" class="thb-name">—</span>
-      <span id="thb-price" class="thb-price">—</span>
-      <span id="thb-chg" class="thb-chg">—</span>
-      <span id="thb-time" class="thb-time">—</span>
-      <span id="rt-live-badge" style="display:none;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#26a69a;letter-spacing:.5px;">
-        <span style="width:6px;height:6px;border-radius:50%;background:#26a69a;animation:rt-blink 1.2s infinite;"></span>LIVE
+      <span id="us-list-hint" style="display:none;font-size:11px;color:#7a8499;white-space:nowrap;">
+        거래소 미선택 시 S&amp;P 500
       </span>
     </div>
 
-    <!-- 우: 거래시간 · 공지 -->
-    <div class="thb-right">
-      <div id="market-hours-chip2" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
-      <span id="us-list-hint" style="display:none; font-size:11px; color:#7a8499;">
-        거래소·카테고리 미선택 시 S&amp;P 500만 표시
-      </span>
-      <div id="toolbar-notice-banner" style="display:none; flex-shrink:0; max-width:240px;">
-        <div id="toolbar-notice-list" style="display:flex; flex-direction:column; gap:2px;"></div>
+    <!-- 우: 타임프레임 버튼 -->
+    <div class="thb-tf">
+      <div class="tb-btn-group tb-tf-group">
+        <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
+        <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
+        <button id="tf-daily"   class="btn-d2t timeframe-btn"        data-tf="daily"   title="일봉">일</button>
+        <button class="btn-d2t timeframe-btn" data-tf="60m"  title="1시간봉">1H</button>
+        <button class="btn-d2t timeframe-btn" data-tf="30m"  title="30분봉">30m</button>
+        <button class="btn-d2t timeframe-btn" data-tf="15m"  title="15분봉">15m</button>
+        <button class="btn-d2t timeframe-btn" data-tf="5m"   title="5분봉">5m</button>
+        <button class="btn-d2t timeframe-btn" data-tf="1m"   title="1분봉">1m</button>
       </div>
     </div>
-  </div>
 
-  <!-- 2행: 타임프레임 -->
-  <div class="thb-row thb-row2">
-    <div class="tb-btn-group tb-tf-group">
-      <button id="tf-monthly" class="btn-d2t timeframe-btn active" data-tf="monthly" title="월봉">월</button>
-      <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
-      <button id="tf-daily"   class="btn-d2t timeframe-btn"        data-tf="daily"   title="일봉">일</button>
-      <button class="btn-d2t timeframe-btn" data-tf="60m"  title="1시간봉">1H</button>
-      <button class="btn-d2t timeframe-btn" data-tf="30m"  title="30분봉">30m</button>
-      <button class="btn-d2t timeframe-btn" data-tf="15m"  title="15분봉">15m</button>
-      <button class="btn-d2t timeframe-btn" data-tf="5m"   title="5분봉">5m</button>
-      <button class="btn-d2t timeframe-btn" data-tf="1m"   title="1분봉">1m</button>
-    </div>
   </div>
-
 </div>
 
 <!-- ── 드로잉 툴바 ────────────────────────────────────── -->
 <div class="d2t-toolbar">
   <div class="toolbar-row">
+
+    <!-- 드로잉 도구 -->
     <label>드로잉</label>
     <div class="draw-tool-grid">
       <button id="tool-pen"      class="btn-d2t draw-tool-btn" data-tool="pen"
@@ -124,20 +143,32 @@
         title="직선 (L): 시작점 클릭 → 끝점 클릭">− 직선</button>
       <button id="tool-parallel" class="btn-d2t draw-tool-btn" data-tool="parallel"
         title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">⟺ 평행선</button>
+    </div>
+
+    <!-- 캔버스 관리: 지우기 · 빈캔버스 · 저장 -->
+    <div class="toolbar-canvas-btns">
       <button id="btn-clear"     class="btn-d2t btn-d2t-danger"
         title="드로잉 지우기 (Delete)">🗑 지우기</button>
-      <button id="btn-blank" class="btn-d2t btn-blank-canvas" title="빈 캔버스 모드 전환">✏ 빈 캔버스</button>
+      <button id="btn-blank"     class="btn-d2t btn-blank-canvas"
+        title="빈 캔버스 모드 전환">✏ 빈 캔버스</button>
       <button id="btn-save-draw" class="btn-d2t"
         title="현재 그림 저장" onclick="showSaveModal()">💾 저장</button>
     </div>
 
-    <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
-    <button id="btn-search" class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
-    <button id="btn-back-to-origin" class="btn-d2t" style="display:none; color:#26a69a; border-color:#26a69a; font-weight:600;" onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
-    <button id="btn-advanced" class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
+    <!-- 구분선 -->
+    <div class="d2t-toolbar-sep"></div>
+
+    <!-- 검색 액션 -->
+    <button id="btn-auto-pattern" class="btn-d2t" onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()"
+      title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">📐 자동 분석</button>
+    <button id="btn-search"        class="btn-d2t btn-d2t-primary">🔍 유사 종목 검색</button>
+    <button id="btn-back-to-origin" class="btn-d2t" style="display:none;color:#26a69a;border-color:#26a69a;font-weight:600;"
+      onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()" title="내 그림이 있는 원본 차트로 돌아가기">← 내 차트로</button>
+    <button id="btn-advanced"      class="btn-d2t" title="고급 검색 옵션">⚙ 고급</button>
     <div id="advanced-options">
       <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
-      <select id="top-n-select" title="검색 결과 최대 개수" style="height:28px;font-size:12px;padding:0 4px;background:#1e1e21;color:#d1d4dc;border:1px solid #2d2d30;border-radius:4px;min-width:auto;">
+      <select id="top-n-select" title="검색 결과 최대 개수"
+        style="height:28px;font-size:12px;padding:0 4px;background:#1e1e21;color:#d1d4dc;border:1px solid #2d2d30;border-radius:4px;min-width:auto;">
         <option value="10">Top 10</option>
         <option value="20" selected>Top 20</option>
         <option value="30">Top 30</option>
@@ -146,6 +177,7 @@
       </select>
     </div>
     <span id="search-status" class="search-status"></span>
+
   </div>
 </div>
 
