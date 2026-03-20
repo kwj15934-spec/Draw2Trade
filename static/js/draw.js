@@ -1158,7 +1158,7 @@
         return (
           '<div class="result-card" ' +
             'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\')" ' +
-            'title="클릭: 차트 로드 후 내 패턴과 유사 구간이 레이어드(겹쳐서) 비교 표시됩니다">' +
+            'title="클릭: 패턴 유사도 기반 수학적 검색 결과입니다. 투자 권유가 아닙니다.">' +
             '<div class="result-rank">' + (idx + 1 + rankOffset) + '</div>' +
             '<div class="result-info">' +
               '<div class="result-name">' + nm + '</div>' +

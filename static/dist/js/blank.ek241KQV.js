@@ -1,0 +1,1 @@
+import"./draw.CQ6DhJZY.js";(function(){window.D2T={loadChart:function(n){window.location.href="/?ticker="+encodeURIComponent(n)}},document.addEventListener("DOMContentLoaded",function(){var n=document.getElementById("blank-wrapper");if(n&&window.ResizeObserver){var e=new ResizeObserver(function(){typeof window.syncCanvas=="function"&&window.syncCanvas()});e.observe(n)}})})();
