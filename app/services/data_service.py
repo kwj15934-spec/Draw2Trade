@@ -124,12 +124,14 @@ def _load_or_fetch_tickers() -> None:
     _ensure_dirs()
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # 디스크 캐시 확인 (당일 유효)
+    # 디스크 캐시 확인 (당일 유효 + market 필드 존재)
     if _TICKERS_FILE.exists():
         try:
             data = json.loads(_TICKERS_FILE.read_text(encoding="utf-8"))
-            if data.get("date") == today_str and data.get("tickers"):
-                for item in data.get("ticker_names", []):
+            items = data.get("ticker_names", [])
+            has_market = any(item.get("market") for item in items)
+            if data.get("date") == today_str and data.get("tickers") and has_market:
+                for item in items:
                     if item.get("name"):
                         _mem_names[item["ticker"]] = item["name"]
                     if item.get("market"):
