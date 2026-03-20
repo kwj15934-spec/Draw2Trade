@@ -44,7 +44,8 @@ _mem_ohlcv_date: str = ""               # 캐시가 로드된 날짜 (YYYY-MM-DD
 _mem_ohlcv_wd: dict[str, dict] = {}    # ticker → {w: ..., d: ...} 주봉/일봉 캐시
 _mem_ohlcv_wd_date: str = ""           # 주봉/일봉 캐시 날짜
 _mem_names: dict[str, str] = {}        # ticker → 회사명
-_mem_tickers: list[str] = []           # 메모리 티커 리스트
+_mem_tickers: list[str] = []           # 메모리 티커 리스트 (전체)
+_mem_markets: dict[str, str] = {}      # ticker → "KOSPI" | "KOSDAQ"
 _sectors_cache: list[dict] | None = None  # sectors.json 1회 로드 후 재사용
 
 
@@ -74,28 +75,52 @@ class _KrxStockFinder(KrxWebIo):
         return DataFrame(result.get("block1", []))
 
 
-def _fetch_kospi_tickers_and_names() -> list[tuple[str, str]]:
-    """KRX finder API로 KOSPI 전 종목 (ticker, name) 반환."""
+def _fetch_kr_tickers_and_names() -> list[tuple[str, str, str]]:
+    """KRX finder API로 KOSPI+KOSDAQ 전 종목 (ticker, name, market) 반환."""
     try:
-        df = _KrxStockFinder().fetch(mktsel="STK")
+        df = _KrxStockFinder().fetch(mktsel="ALL")
         if df.empty:
             raise ValueError("finder_stkisu returned empty")
-        return [(row["short_code"], row["codeName"]) for _, row in df.iterrows()]
+        results = []
+        for _, row in df.iterrows():
+            mkt_code = str(row.get("marketCode", "")).upper()
+            if mkt_code == "KSQ":
+                market = "KOSDAQ"
+            else:
+                market = "KOSPI"
+            results.append((row["short_code"], row["codeName"], market))
+        return results
     except Exception as e:
-        logger.error("_fetch_kospi_tickers_and_names 실패: %s", e)
+        logger.error("_fetch_kr_tickers_and_names 실패: %s", e)
         return []
+
+
+# 하위 호환 alias
+def _fetch_kospi_tickers_and_names() -> list[tuple[str, str]]:
+    return [(t, n) for t, n, _ in _fetch_kr_tickers_and_names()]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 종목 리스트
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_kospi_tickers() -> list[str]:
-    """KOSPI 전 종목 티커 반환. 메모리 캐시 → 디스크 캐시 → KRX API 순서로 조회."""
+def get_kospi_tickers(market: str | None = None) -> list[str]:
+    """KR 전 종목 티커 반환. market=None(전체)|'KOSPI'|'KOSDAQ'.
+    메모리 캐시 → 디스크 캐시 → KRX API 순서로 조회."""
     global _mem_tickers
-    if _mem_tickers:
-        return _mem_tickers
+    if not _mem_tickers:
+        _load_or_fetch_tickers()
 
+    if market == "KOSPI":
+        return [t for t in _mem_tickers if _mem_markets.get(t) != "KOSDAQ"]
+    if market == "KOSDAQ":
+        return [t for t in _mem_tickers if _mem_markets.get(t) == "KOSDAQ"]
+    return _mem_tickers
+
+
+def _load_or_fetch_tickers() -> None:
+    """메모리 캐시에 티커/이름/시장 정보 로드. 내부 전용."""
+    global _mem_tickers
     _ensure_dirs()
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -107,15 +132,17 @@ def get_kospi_tickers() -> list[str]:
                 for item in data.get("ticker_names", []):
                     if item.get("name"):
                         _mem_names[item["ticker"]] = item["name"]
+                    if item.get("market"):
+                        _mem_markets[item["ticker"]] = item["market"]
                 _mem_tickers = data["tickers"]
                 logger.info("티커 캐시 로드: %d개", len(_mem_tickers))
-                return _mem_tickers
+                return
         except Exception:
             pass
 
     # KRX finder API로 수집
-    pairs = _fetch_kospi_tickers_and_names()
-    if not pairs:
+    triples = _fetch_kr_tickers_and_names()
+    if not triples:
         # 캐시라도 있으면 날짜 무관하게 사용
         if _TICKERS_FILE.exists():
             try:
@@ -126,26 +153,31 @@ def get_kospi_tickers() -> list[str]:
                     for item in data.get("ticker_names", []):
                         if item.get("name"):
                             _mem_names[item["ticker"]] = item["name"]
+                        if item.get("market"):
+                            _mem_markets[item["ticker"]] = item["market"]
                     _mem_tickers = tickers
-                    return _mem_tickers
+                    return
             except Exception:
                 pass
         logger.error("티커 수집 완전 실패")
-        return []
+        return
 
-    tickers = [t for t, _ in pairs]
-    for t, n in pairs:
+    tickers = [t for t, _, _ in triples]
+    for t, n, m in triples:
         _mem_names[t] = n
+        _mem_markets[t] = m
 
     _mem_tickers = tickers
     _save_ticker_cache(tickers, today_str)
     logger.info("KRX finder API로 티커 수집: %d개", len(tickers))
-    return _mem_tickers
 
 
 def _save_ticker_cache(tickers: list[str], date_str: str) -> None:
     _ensure_dirs()
-    ticker_names = [{"ticker": t, "name": _mem_names.get(t, "")} for t in tickers]
+    ticker_names = [
+        {"ticker": t, "name": _mem_names.get(t, ""), "market": _mem_markets.get(t, "KOSPI")}
+        for t in tickers
+    ]
     _TICKERS_FILE.write_text(
         json.dumps(
             {"date": date_str, "tickers": tickers, "ticker_names": ticker_names},

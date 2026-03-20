@@ -26,6 +26,7 @@
     timeframe:       'monthly',   // 'monthly' | 'weekly' | 'daily'
     market:          'KR',        // 'KR' | 'US'
     exchange:        '',          // '' | 'NAS' | 'NYS' | 'AMS'  (US only)
+    krMarket:        '',          // '' | 'KOSPI' | 'KOSDAQ'  (KR only)
     matchPeriodData: null,
   };
 
@@ -759,8 +760,11 @@
       if (D2T.exchange) params.push('exchange=' + encodeURIComponent(D2T.exchange));
       if (category)    params.push('category=' + encodeURIComponent(category));
       if (params.length) endpoint += '?' + params.join('&');
-    } else if (category) {
-      endpoint += '?category=' + encodeURIComponent(category);
+    } else {
+      var params = [];
+      if (category)      params.push('category=' + encodeURIComponent(category));
+      if (D2T.krMarket) params.push('market=' + encodeURIComponent(D2T.krMarket));
+      if (params.length) endpoint += '?' + params.join('&');
     }
 
     fetch(endpoint)
@@ -910,16 +914,22 @@
 
     // 카테고리/검색 UI: KR·US 모두 표시
     var catGroup = document.getElementById('category-group');
+    var krMktGroup = document.getElementById('kr-market-group');
     var exchGroup = document.getElementById('exchange-group');
     var searchInp = document.getElementById('ticker-search');
     var searchWrap = document.getElementById('ticker-search-wrap');
     if (catGroup) catGroup.style.display = 'flex';
+    if (krMktGroup) krMktGroup.style.display = market === 'KR' ? 'flex' : 'none';
     if (exchGroup) exchGroup.style.display = market === 'US' ? 'flex' : 'none';
     if (searchInp) searchInp.placeholder = market === 'US' ? '종목명/티커 검색 (US)' : '종목명/티커 검색 (KR)';
-    // 거래소 필터 초기화
+    // 거래소/시장 필터 초기화
     D2T.exchange = '';
+    D2T.krMarket = '';
     document.querySelectorAll('.exchange-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.excd === '');
+    });
+    document.querySelectorAll('.kr-market-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.krmarket === '');
     });
     // 카테고리 초기화 후 재로드
     var catSel = document.getElementById('category-select');
@@ -1081,6 +1091,18 @@
         D2T.exchange = this.dataset.excd || '';
         document.querySelectorAll('.exchange-btn').forEach(function (b) {
           b.classList.toggle('active', b.dataset.excd === D2T.exchange);
+        });
+        var catSel = document.getElementById('category-select');
+        loadTickerList(catSel ? catSel.value : '');
+      });
+    });
+
+    // KR 시장 필터 버튼 (KOSPI / KOSDAQ)
+    document.querySelectorAll('.kr-market-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        D2T.krMarket = this.dataset.krmarket || '';
+        document.querySelectorAll('.kr-market-btn').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.krmarket === D2T.krMarket);
         });
         var catSel = document.getElementById('category-select');
         loadTickerList(catSel ? catSel.value : '');

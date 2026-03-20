@@ -96,9 +96,12 @@ router = APIRouter(prefix="/api")
 
 
 @router.get("/kospi/list")
-async def kospi_list(category: str | None = Query(None, alias="category")):
+async def kospi_list(
+    category: str | None = Query(None, alias="category"),
+    market: str | None = Query(None),
+):
     """
-    KOSPI 종목 리스트. category 지정 시 해당 섹터만 반환.
+    KR 종목 리스트. category 지정 시 해당 섹터만, market=KOSPI|KOSDAQ 필터 지원.
 
     Response:
         {"tickers": [{"ticker": "005930", "name": "삼성전자"}, ...]}
@@ -107,7 +110,7 @@ async def kospi_list(category: str | None = Query(None, alias="category")):
         items = data_service.get_tickers_by_sector(category)
         return {"tickers": [{"ticker": t["ticker"], "name": t["name"]} for t in items]}
     names = data_service.all_names()
-    tickers = data_service.get_kospi_tickers()
+    tickers = data_service.get_kospi_tickers(market=market)
     return {
         "tickers": [
             {"ticker": t, "name": names.get(t, t)}
