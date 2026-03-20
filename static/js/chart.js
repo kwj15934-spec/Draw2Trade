@@ -397,7 +397,9 @@
         }
         // 헤더바 종목명 업데이트
         var thbName = document.getElementById('thb-name');
-        if (thbName) thbName.textContent = data.name ? data.name + ' (' + ticker + ')' : ticker;
+        if (thbName) thbName.textContent = ticker;
+        var thbFullname = document.getElementById('thb-fullname');
+        if (thbFullname) thbFullname.textContent = data.name || '';
         setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         // 헤더바 마지막 캔들 종가/등락률 표시 (실시간 틱 전까지 유지)
         _initHeaderBar(data.candles);
@@ -670,7 +672,9 @@
         // ── 앱 전체 종목 동기화 ────────────────────────────────────
         // 1) 헤더바 종목명 업데이트
         var thbName = document.getElementById('thb-name');
-        if (thbName) thbName.textContent = data.name ? data.name + ' (' + ticker + ')' : ticker;
+        if (thbName) thbName.textContent = ticker;
+        var thbFullname2 = document.getElementById('thb-fullname');
+        if (thbFullname2) thbFullname2.textContent = data.name || '';
 
         // 2) 검색 인풋 placeholder를 새 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
