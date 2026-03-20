@@ -1,0 +1,30 @@
+{
+  "_draw.DZbBO9dp.js": {
+    "file": "js/draw.DZbBO9dp.js",
+    "name": "draw"
+  },
+  "static/js/entries/app.js": {
+    "file": "js/app.BvXPt2lY.js",
+    "name": "app",
+    "src": "static/js/entries/app.js",
+    "isEntry": true,
+    "imports": [
+      "_draw.DZbBO9dp.js"
+    ]
+  },
+  "static/js/entries/blank.js": {
+    "file": "js/blank.D8yCCtPF.js",
+    "name": "blank",
+    "src": "static/js/entries/blank.js",
+    "isEntry": true,
+    "imports": [
+      "_draw.DZbBO9dp.js"
+    ]
+  },
+  "static/js/entries/login.js": {
+    "file": "js/login.Dk7iIbeA.js",
+    "name": "login",
+    "src": "static/js/entries/login.js",
+    "isEntry": true
+  }
+}

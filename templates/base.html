@@ -316,72 +316,78 @@
     .ticker-search-wrap {
       position: relative;
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      align-items: center;
     }
 
-    .ticker-search-wrap.kr-mode {
-      flex-direction: column;
-    }
-
-    .ticker-search-wrap.kr-mode #ticker-search {
-      min-width: 180px;
-    }
-
-    .ticker-search-wrap:not(.kr-mode) #ticker-search {
-      display: none !important;
-    }
-
-    .ticker-search-wrap input {
+    #ticker-search {
       background: #232326;
       color: #d1d4dc;
       border: 1px solid #27272a;
-      border-radius: 4px;
-      padding: 3px 8px;
+      border-radius: 6px;
+      padding: 0 10px;
       height: 30px;
-      min-width: 180px;
-      max-width: 220px;
+      width: 220px;
       font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
     }
 
-    .ticker-search-wrap input:focus {
-      outline: none;
+    #ticker-search:focus {
       border-color: #26a69a;
     }
 
-    .ticker-search-wrap input::placeholder {
+    #ticker-search::placeholder {
       color: #555;
     }
 
     #ticker-search-dropdown {
+      display: none;
       position: absolute;
-      top: 100%;
+      top: calc(100% + 4px);
       left: 0;
-      right: 0;
-      max-height: 240px;
+      width: 280px;
+      max-height: 300px;
       overflow-y: auto;
-      background: #232326;
-      border: 1px solid #27272a;
-      border-radius: 4px;
-      margin-top: 2px;
-      z-index: 100;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      background: #1e1e21;
+      border: 1px solid #2d2d30;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
 
     #ticker-search-dropdown .search-item {
-      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
       cursor: pointer;
       font-size: 13px;
-      border-bottom: 1px solid #1e1e21;
+      border-bottom: 1px solid #27272a;
+      transition: background .1s;
+    }
+
+    #ticker-search-dropdown .search-item:last-child {
+      border-bottom: none;
     }
 
     #ticker-search-dropdown .search-item:hover {
       background: #2d2d30;
     }
 
+    #ticker-search-dropdown .search-item .search-name {
+      color: #d1d4dc;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     #ticker-search-dropdown .search-item .search-ticker {
-      color: #888;
+      color: #26a69a;
       font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+      flex-shrink: 0;
     }
 
     /* #category-select → .tb-pill-select로 처리됨 */
@@ -1097,7 +1103,7 @@
       height: 52px;
       gap: 12px;
       flex-shrink: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .thb-left {
@@ -1532,8 +1538,7 @@
       .tb-pill-select { height: 28px; font-size: 12px; }
       .tb-ticker-select { min-width: 140px; max-width: 180px; }
       .tb-btn-group .btn-d2t { height: 22px; padding: 0 7px; font-size: 11px; }
-      .ticker-search-wrap input,
-      .ticker-search-wrap.kr-mode #ticker-search { min-width: 130px; max-width: 160px; height: 28px; font-size: 12px; }
+      #ticker-search { width: 160px; height: 28px; font-size: 12px; }
       .btn-d2t { height: 28px; padding: 0 8px; font-size: 12px; }
       .timeframe-btn { padding: 0 6px; font-size: 11px; height: 26px; }
       .market-selector { gap: 3px; }
@@ -1570,9 +1575,8 @@
       #category-group { display: none !important; }
       #exchange-group { display: none !important; }
       #btn-blank { display: none !important; }
-      /* 모바일: select 대신 검색 input 사용 */
       #ticker-select { display: none !important; }
-      #ticker-search { display: block !important; width: 140px !important; max-width: 160px !important; min-width: 0 !important; }
+      #ticker-search { width: 140px; }
       #btn-load { display: none !important; }
       #us-list-hint { display: none !important; }
       #toolbar-notice-banner { display: none !important; }
@@ -1594,8 +1598,7 @@
       .btn-d2t { height: 30px; padding: 0 10px; font-size: 12px; flex-shrink: 0; }
       .draw-tool-btn { padding: 0 8px; }
       .d2t-toolbar select { min-width: 0; width: auto; max-width: 150px; height: 30px; font-size: 12px; flex-shrink: 0; }
-      .ticker-search-wrap input,
-      .ticker-search-wrap.kr-mode #ticker-search { min-width: 0; width: 120px; height: 30px; font-size: 12px; flex-shrink: 1; }
+      #ticker-search { width: 130px; height: 30px; font-size: 12px; }
       #btn-search { flex-shrink: 0; }
 
       /* ── body: 스크롤 허용 ── */
@@ -1679,8 +1682,7 @@
       .market-btn { height: 26px; padding: 0 8px; font-size: 11px; }
       .btn-d2t { height: 28px; padding: 0 8px; font-size: 11px; }
       .d2t-toolbar select { font-size: 11px; height: 28px; }
-      .ticker-search-wrap input,
-      .ticker-search-wrap.kr-mode #ticker-search { width: 110px; font-size: 11px; height: 28px; }
+      #ticker-search { width: 110px; font-size: 11px; height: 28px; }
       /* 직선도 숨겨서 자유곡선만 남김 */
       #tool-line { display: none !important; }
       /* 사이드바 높이 확대 */

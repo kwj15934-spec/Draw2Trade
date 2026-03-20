@@ -828,32 +828,31 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var results = data.results || [];
+          var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
           if (results.length === 0) {
-            dd.innerHTML = '<div class="search-item" style="color:#666;">검색 결과 없음</div>';
+            dd.innerHTML = '<div class="search-item"><span class="search-name" style="color:#555;">검색 결과 없음</span></div>';
           } else {
-            // 이벤트 위임 방식: innerHTML 한 번만 대입 후 부모에 클릭 핸들러 1개
             dd.innerHTML = results.map(function (r) {
-              var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
               return '<div class="search-item" data-ticker="' + esc(r.ticker) + '" data-name="' + esc(r.name || '') + '">'
-                + '<span>' + esc(r.name || r.ticker) + '</span>'
-                + ' <span class="search-ticker">' + esc(r.ticker) + '</span>'
+                + '<span class="search-name">' + esc(r.name || r.ticker) + '</span>'
+                + '<span class="search-ticker">' + esc(r.ticker) + '</span>'
                 + '</div>';
             }).join('');
-            // 클릭 이벤트는 부모 1개에 위임 (매번 새로 등록 방지)
             dd.onclick = function (e) {
               var item = e.target.closest('.search-item');
-              if (!item) return;
+              if (!item || !item.dataset.ticker) return;
               var t = item.dataset.ticker;
-              var name = item.dataset.name;
+              // hidden select 동기화 (다른 코드가 sel.value를 참조하는 경우 대비)
               var sel = document.getElementById('ticker-select');
-              var hasOpt = Array.prototype.find.call(sel.options, function (o) { return o.value === t; });
-              if (!hasOpt) {
-                var opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t + '  ' + name;
-                sel.appendChild(opt);
+              if (sel) {
+                var hasOpt = Array.prototype.some.call(sel.options, function (o) { return o.value === t; });
+                if (!hasOpt) {
+                  var opt = document.createElement('option');
+                  opt.value = t;
+                  sel.appendChild(opt);
+                }
+                sel.value = t;
               }
-              sel.value = t;
               inp.value = '';
               dd.style.display = 'none';
               dd.innerHTML = '';
@@ -863,7 +862,7 @@
           dd.style.display = 'block';
         })
         .catch(function () {
-          dd.innerHTML = '<div class="search-item" style="color:#888;">검색 실패</div>';
+          dd.innerHTML = '<div class="search-item"><span class="search-name" style="color:#888;">검색 실패</span></div>';
           dd.style.display = 'block';
         });
     }, 250);
@@ -912,9 +911,6 @@
     var searchWrap = document.getElementById('ticker-search-wrap');
     if (catGroup) catGroup.style.display = 'flex';
     if (exchGroup) exchGroup.style.display = market === 'US' ? 'flex' : 'none';
-    if (searchInp) searchInp.style.display = 'block';
-    if (searchWrap) searchWrap.classList.add('kr-mode');
-    // 카테고리/검색 placeholder 텍스트 변경
     if (searchInp) searchInp.placeholder = market === 'US' ? '종목명/티커 검색 (US)' : '종목명/티커 검색 (KR)';
     // 거래소 필터 초기화
     D2T.exchange = '';
@@ -961,13 +957,11 @@
     initChart();
 
 
-    // 카테고리/검색 UI 초기 표시 (KR·US 모두)
+    // 카테고리/검색 UI 초기 표시
     var catGroup = document.getElementById('category-group');
     var searchInp = document.getElementById('ticker-search');
-    var searchWrap = document.getElementById('ticker-search-wrap');
     if (catGroup) catGroup.style.display = 'flex';
-    if (searchInp) { searchInp.style.display = 'block'; searchInp.placeholder = '종목명/티커 검색 (KR)'; }
-    if (searchWrap) searchWrap.classList.add('kr-mode');
+    if (searchInp) searchInp.placeholder = '종목명/티커 검색 (KR)';
     // 초기 차트를 종목 목록 응답 전에 즉시 병렬 로드
     var _initTicker = new URLSearchParams(window.location.search).get('ticker')
       || (D2T.market === 'US' ? 'AAPL' : '005930');
