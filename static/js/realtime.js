@@ -25,11 +25,12 @@
   // ── rAF 배치 렌더링 시스템 ─────────────────────────────────────────────────
   // DOM 업데이트를 requestAnimationFrame으로 모아서 한 번에 처리
 
-  var _pendingPriceUpdate = null;   // 최신 가격 패널 데이터
-  var _pendingOverlay     = null;   // 최신 오버레이 가격
-  var _pendingChartUpdate = null;   // 최신 차트 캔들 데이터
-  var _pendingVolUpdate   = null;   // 최신 볼륨 데이터
-  var _rafScheduled       = false;
+  var _pendingPriceUpdate  = null;   // 최신 가격 패널 데이터 (tick 기반)
+  var _pendingCandlePrice  = null;   // candle_update 기반 가격 (tick 없을 때 헤더바용)
+  var _pendingOverlay      = null;   // 최신 오버레이 가격
+  var _pendingChartUpdate  = null;   // 최신 차트 캔들 데이터
+  var _pendingVolUpdate    = null;   // 최신 볼륨 데이터
+  var _rafScheduled        = false;
 
   function _scheduleRaf() {
     if (_rafScheduled) return;
@@ -52,10 +53,16 @@
         _pendingVolUpdate = null;
       }
 
-      // 가격 패널 DOM 업데이트
+      // 가격 패널 DOM 업데이트 (tick 기반 — tick이 있으면 candle 가격 무시)
       if (_pendingPriceUpdate) {
         try { _flushPricePanel(_pendingPriceUpdate); } catch (_) {}
         _pendingPriceUpdate = null;
+        _pendingCandlePrice = null;  // tick이 처리됐으므로 candle 가격은 불필요
+      } else if (_pendingCandlePrice !== null) {
+        // candle_update만 오고 tick이 없는 경우 (단일가·NXT 등)
+        // _prevClose 기준으로 헤더바와 오버레이를 직접 업데이트
+        try { _flushHeaderFromCandle(_pendingCandlePrice); } catch (_) {}
+        _pendingCandlePrice = null;
       }
 
       // 오버레이 업데이트
@@ -69,6 +76,7 @@
       _pendingChartUpdate = null;
       _pendingVolUpdate = null;
       _pendingPriceUpdate = null;
+      _pendingCandlePrice = null;
       _pendingOverlay = null;
     }
   }
@@ -203,8 +211,12 @@
         ? 'rgba(38,166,154,0.45)'
         : 'rgba(239,83,80,0.45)',
     };
-    _scheduleRaf();
 
+    // candle_update만 오고 tick이 없는 경우(단일가·NXT)에도 헤더바 갱신
+    // _prevClose 기준 등락률 계산 → _flushPricePanel 대신 직접 DOM 업데이트
+    _pendingCandlePrice = msg.close;
+
+    _scheduleRaf();
     _autoScrollToLatest();
     _setLive(true);
   }
@@ -305,6 +317,29 @@
         ts.scrollToRealTime();
       }
     } catch (_) {}
+  }
+
+  // ── candle_update 전용 헤더바 업데이트 (tick 없이 캔들만 올 때) ─────────────
+
+  function _flushHeaderFromCandle(price) {
+    var dispPrice = price >= 1000 ? price.toLocaleString() : price;
+    var thbPrice = document.getElementById('thb-price');
+
+    var chgPct = null, chgAmt = null, color = '#888', sign = '';
+    if (_prevClose) {
+      chgPct = ((price - _prevClose) / _prevClose * 100).toFixed(2);
+      chgAmt = (price - _prevClose).toFixed(price >= 1000 ? 0 : 2);
+      sign   = chgPct >= 0 ? '+' : '';
+      color  = chgPct >= 0 ? '#26a69a' : '#ef5350';
+    }
+
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    var thbChg = document.getElementById('thb-chg');
+    if (thbChg && chgPct !== null) {
+      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+    }
+    _flushOverlay(price);
   }
 
   // ── 현재가 패널 업데이트 (rAF에서 호출) ────────────────────────────────────

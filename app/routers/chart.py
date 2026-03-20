@@ -342,9 +342,10 @@ async def chart_data(
 
 
 @router.get("/ticks/{ticker}")
-async def tick_history(ticker: str):
+async def tick_history(ticker: str, market: str = Query("KR")):
     """
     당일 체결 내역 (틱 단위, 최신→과거 순 최대 30건).
+    market: KR (기본) | US
 
     Response:
         {"ticker": "005930", "ticks": [
@@ -355,6 +356,41 @@ async def tick_history(ticker: str):
     """
     if not is_configured():
         raise HTTPException(status_code=503, detail="KIS API 미설정")
+
+    market = market.upper()
+
+    # ── US 시장: WS 캐시에서만 틱 반환 (REST tick history API 없음) ──────────
+    if market == "US":
+        cached = get_cached_ticks(ticker)
+        ticks = []
+        prev_price = 0.0
+        for t in cached:
+            if t.get("type") != "tick":
+                continue
+            cvol = int(t.get("cvol", 0))
+            if cvol <= 0:
+                continue
+            price = float(t.get("price", 0))
+            # bs 없으면 price direction으로 fallback
+            bs_val = t.get("bs", "")
+            if not bs_val and prev_price > 0:
+                bs_val = "1" if price >= prev_price else "5"
+            prev_price = price
+            ticks.append({
+                "time":         t.get("time", ""),
+                "price":        price,
+                "cvol":         cvol,
+                "accvol":       int(t.get("volume", 0)),
+                "chgRate":      "0",
+                "chgSign":      "3",
+                "bs":           bs_val,
+                "session":      t.get("session", ""),
+                "session_type": t.get("session_type", "REGULAR"),
+            })
+        ticks.sort(key=lambda x: x["time"], reverse=True)
+        return {"ticker": ticker, "ticks": ticks[:30], "quote": None}
+
+    # ── KR 시장 ──────────────────────────────────────────────────────────────
 
     # 현재가 시세 먼저 조회 (등락률 계산에 필요한 전일 종가 포함)
     quote = None

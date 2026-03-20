@@ -52,6 +52,8 @@ _rt_candles: dict[str, dict] = {}
 _rt_last_broadcast: dict[str, float] = {}
 # ticker → 브로드캐스트 예약 asyncio.Task (스로틀 지연용)
 _rt_scheduled: dict[str, asyncio.Task] = {}
+# ticker → 시장 구분 ("KR" | "US")
+_rt_market: dict[str, str] = {}
 
 
 def _tick_to_bucket_ts(date_str: str, time_str: str) -> int:
@@ -82,6 +84,9 @@ def _merge_tick_to_candle(tick: dict) -> Optional[dict]:
     if bucket_ts == 0:
         return None
 
+    # 시장 구분 기록 (candle_update broadcast에서 사용)
+    _rt_market[ticker] = tick.get("market", "KR")
+
     candle = _rt_candles.get(ticker)
     if candle is None or candle["time"] != bucket_ts:
         # 새 캔들 시작
@@ -109,7 +114,7 @@ async def _broadcast_candle(ticker: str) -> None:
         return
     msg = {
         "type":   "candle_update",
-        "market": "KR",
+        "market": _rt_market.get(ticker, "KR"),
         "ticker": ticker,
         **candle,
     }
@@ -237,6 +242,7 @@ async def _cleanup_inactive_tickers() -> None:
                     _tick_cache.pop(ticker, None)
                     _rt_candles.pop(ticker, None)
                     _rt_last_broadcast.pop(ticker, None)
+                    _rt_market.pop(ticker, None)
                     _save_counters.pop(ticker, None)
                     # 예약된 브로드캐스트 태스크 취소
                     task = _rt_scheduled.pop(ticker, None)
@@ -456,17 +462,23 @@ def _parse_us(raw: str) -> Optional[dict]:
     if len(f) < 20:
         return None
     try:
+        cvol = int(f[18])   # EVOL 건별 체결량
+        tvol = int(f[19])   # TVOL 누적거래량
         return {
-            "type":   "tick",
-            "market": "US",
-            "ticker": f[1],           # SYMB (종목코드만)
-            "date":   f[4],           # XYMD 현지일자 YYYYMMDD
-            "time":   f[5],           # XHMS 현지시간 HHMMSS
-            "open":   float(f[8]),    # OPEN
-            "high":   float(f[9]),    # HIGH
-            "low":    float(f[10]),   # LOW
-            "price":  float(f[11]),   # LAST (현재가)
-            "volume": int(f[18]),     # EVOL 체결량
+            "type":    "tick",
+            "market":  "US",
+            "ticker":  f[1],           # SYMB (종목코드만)
+            "date":    f[4],           # XYMD 현지일자 YYYYMMDD
+            "time":    f[5],           # XHMS 현지시간 HHMMSS
+            "open":    float(f[8]),    # OPEN
+            "high":    float(f[9]),    # HIGH
+            "low":     float(f[10]),   # LOW
+            "price":   float(f[11]),   # LAST (현재가)
+            "cvol":    cvol,           # 건별 체결량 (quote.js _addTradeRow용)
+            "volume":  tvol,           # 누적거래량
+            "bs":      "",             # HDFSCNT0은 매수/매도 구분 없음 → price-direction fallback
+            "session": "",
+            "session_type": "REGULAR",
         }
     except (ValueError, IndexError):
         return None
@@ -651,7 +663,10 @@ async def _on_message(msg: str) -> None:
     elif tr_id == "HDFSCNT0":
         tick = _parse_us(raw)
         if tick:
+            _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+            _merge_tick_to_candle(tick)
+            asyncio.create_task(_throttled_broadcast(tick["ticker"]))
 
 
 # ── 연결 루프 (lifespan에서 create_task) ─────────────────────────────────────

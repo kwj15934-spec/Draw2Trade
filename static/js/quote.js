@@ -307,18 +307,18 @@
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
-    if (market === 'KR') {
-      fetch('/api/ticks/' + encodeURIComponent(ticker))
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (data) {
-          if (!data) return;
-          if (data.quote) _updateHeaderFromQuote(data.quote);
-          if (data.ticks && data.ticks.length) {
-            _renderTickHistory(data.ticks);
-          }
-        })
-        .catch(function () { /* silent */ });
-    }
+    var tickUrl = '/api/ticks/' + encodeURIComponent(ticker) +
+                  (market === 'US' ? '?market=US' : '');
+    fetch(tickUrl)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        if (data.quote) _updateHeaderFromQuote(data.quote);
+        if (data.ticks && data.ticks.length) {
+          _renderTickHistory(data.ticks);
+        }
+      })
+      .catch(function () { /* silent */ });
   };
 
   /** 틱 체결 내역 → 체결 리스트 렌더링 */
