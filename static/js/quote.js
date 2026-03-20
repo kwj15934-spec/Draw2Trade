@@ -19,6 +19,41 @@
   var _lastTradePrice = 0;  // 직전 체결가 (매수/매도 fallback용)
   var _lastCvolDir = true;  // 직전 체결량 방향 (동가 시 유지용)
 
+  // ── US 체결 시각 KST 변환 ───────────────────────────────────────────────────
+  // KIS HDFSCNT0 tick.time = 현지 ET 시간 HHMMSS (EDT or EST)
+  // EDT(3월 둘째 일 ~ 11월 첫째 일): ET+13h = KST
+  // EST(그 외): ET+14h = KST
+
+  function _isEDT() {
+    // 현재 UTC 기준, 올해 3월 둘째 일요일과 11월 첫째 일요일 UTC 계산
+    var now = new Date();
+    var yr = now.getUTCFullYear();
+    // 3월 둘째 일요일 (07:00 UTC = 02:00 EST)
+    var mar = new Date(Date.UTC(yr, 2, 1));
+    var marDay = mar.getUTCDay();                   // 0=Sun
+    var marDst = Date.UTC(yr, 2, (7 - marDay) % 7 + 8, 7);   // 2nd Sunday 07:00 UTC
+    // 11월 첫째 일요일 (06:00 UTC = 02:00 EDT)
+    var nov = new Date(Date.UTC(yr, 10, 1));
+    var novDay = nov.getUTCDay();
+    var novDst = Date.UTC(yr, 10, (7 - novDay) % 7 + 1, 6);  // 1st Sunday 06:00 UTC
+    var nowMs = now.getTime();
+    return nowMs >= marDst && nowMs < novDst;
+  }
+
+  /** ET 시각 HHMMSS → KST HHMMSS (문자열 반환) */
+  function _etToKst(hhmmss) {
+    if (!hhmmss || hhmmss.length < 6) return hhmmss;
+    var offset = _isEDT() ? 13 : 14;  // KST - ET 시간차
+    var hh = parseInt(hhmmss.slice(0, 2), 10);
+    var mm = parseInt(hhmmss.slice(2, 4), 10);
+    var ss = parseInt(hhmmss.slice(4, 6), 10);
+    var totalMin = hh * 60 + mm + offset * 60;
+    totalMin = ((totalMin % 1440) + 1440) % 1440;  // 0~1439 범위 정규화
+    var kh = Math.floor(totalMin / 60);
+    var km = totalMin % 60;
+    return String(kh).padStart(2, '0') + String(km).padStart(2, '0') + String(ss).padStart(2, '0');
+  }
+
   // ── rAF 배치: 호가창 ────────────────────────────────────────────────────────
 
   var _pendingAsking = null;
@@ -97,8 +132,11 @@
     if (cvol <= 0) return;
 
     var time    = tick.time || '';
-    var timeDisp = time.length >= 6
-      ? time.slice(0,2) + ':' + time.slice(2,4) + ':' + time.slice(4,6) : '';
+    // US 시장이면 ET → KST 변환
+    var market = window.D2T && window.D2T.market;
+    var dispTime = (market === 'US') ? _etToKst(time) : time;
+    var timeDisp = dispTime.length >= 6
+      ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6) : '';
 
     // 매수/매도 방향 판별 — bs(CCLD_DVSN) 우선, 없으면 직전가 비교 fallback
     var bs = tick.bs || '';
@@ -388,8 +426,10 @@
     if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(t.accvol);
     var thbTime = document.getElementById('thb-time');
     var timeStr = t.time || '';
-    if (thbTime && timeStr.length >= 6) {
-      thbTime.textContent = timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6);
+    var market2 = window.D2T && window.D2T.market;
+    var dispT = (market2 === 'US') ? _etToKst(timeStr) : timeStr;
+    if (thbTime && dispT.length >= 6) {
+      thbTime.textContent = dispT.slice(0,2) + ':' + dispT.slice(2,4) + ':' + dispT.slice(4,6) + ' KST';
     }
   }
 

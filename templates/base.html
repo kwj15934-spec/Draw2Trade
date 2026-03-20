@@ -57,8 +57,10 @@
       display: flex;
       align-items: center;
       padding: 0 16px;
-      gap: 12px;
+      gap: 8px;
       flex-shrink: 0;
+      overflow: visible;
+      min-width: 0;
     }
 
     .d2t-brand {
@@ -1097,11 +1099,13 @@
     #ticker-header-bar {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       background: #1a1a1d;
       border-bottom: 1px solid #27272a;
-      padding: 0 12px;
-      height: 52px;
-      gap: 12px;
+      padding: 6px 12px;
+      min-height: 52px;
+      height: auto;
+      gap: 8px 12px;
       flex-shrink: 0;
       overflow: visible;
     }
@@ -1138,8 +1142,8 @@
     }
 
     .thb-price {
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 26px;
+      font-weight: 800;
       color: #fff;
       letter-spacing: -0.5px;
       line-height: 1;
@@ -1499,17 +1503,17 @@
 
     /* ── 모바일 헤더바 ───────────────────────────────────── */
     @media (max-width: 768px) {
-      #ticker-header-bar { height: 46px; padding: 0 8px; gap: 8px; }
-      .thb-price { font-size: 18px; }
+      #ticker-header-bar { min-height: 46px; height: auto; padding: 5px 8px; gap: 6px 8px; }
+      .thb-price { font-size: 20px; }
       .thb-name  { font-size: 12px; }
       .thb-vol, .thb-time { display: none; }
       #market-hours-chip2 { display: none !important; }
     }
 
     @media (max-width: 640px) {
-      #ticker-header-bar { height: 42px; }
+      #ticker-header-bar { min-height: 40px; height: auto; padding: 4px 8px; }
       .thb-center { gap: 6px; }
-      .thb-price { font-size: 15px; }
+      .thb-price { font-size: 17px; }
       .thb-chg   { font-size: 11px; }
       .thb-name  { display: none; }
       .thb-left .tb-tf-group { display: none; }

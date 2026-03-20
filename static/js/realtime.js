@@ -81,6 +81,32 @@
     }
   }
 
+  // ── ET → KST 시각 변환 헬퍼 ──────────────────────────────────────────────
+
+  function _isEDT() {
+    var now = new Date();
+    var yr = now.getUTCFullYear();
+    var mar = new Date(Date.UTC(yr, 2, 1));
+    var marDst = Date.UTC(yr, 2, (7 - mar.getUTCDay()) % 7 + 8, 7);
+    var nov = new Date(Date.UTC(yr, 10, 1));
+    var novDst = Date.UTC(yr, 10, (7 - nov.getUTCDay()) % 7 + 1, 6);
+    return now.getTime() >= marDst && now.getTime() < novDst;
+  }
+
+  /** ET 시각 HHMMSS → KST HHMMSS */
+  function _etHhmmssToKst(hhmmss) {
+    if (!hhmmss || hhmmss.length < 6) return hhmmss;
+    var offset = _isEDT() ? 13 : 14;
+    var hh = parseInt(hhmmss.slice(0, 2), 10);
+    var mm = parseInt(hhmmss.slice(2, 4), 10);
+    var ss = parseInt(hhmmss.slice(4, 6), 10);
+    var totalMin = hh * 60 + mm + offset * 60;
+    totalMin = ((totalMin % 1440) + 1440) % 1440;
+    var kh = Math.floor(totalMin / 60);
+    var km = totalMin % 60;
+    return String(kh).padStart(2, '0') + String(km).padStart(2, '0') + String(ss).padStart(2, '0');
+  }
+
   // ── 날짜 변환 헬퍼 ────────────────────────────────────────────────────────
 
   /** YYYYMMDD → YYYY-MM-DD */
@@ -350,8 +376,12 @@
     var timeStr = tick.time || '';
     var dispPrice = price >= 1000 ? price.toLocaleString() : price;
     var volStr = vol >= 10000 ? (vol / 10000).toFixed(1) + '만' : vol.toLocaleString();
-    var timeDisp = timeStr.length >= 6
-      ? timeStr.slice(0,2) + ':' + timeStr.slice(2,4) + ':' + timeStr.slice(4,6) : '';
+    // US 시장이면 ET → KST 변환
+    var _isUSMkt = _market === 'US';
+    var _dispTime = _isUSMkt ? _etHhmmssToKst(timeStr) : timeStr;
+    var _kstSuffix = _isUSMkt && _dispTime.length >= 6 ? ' KST' : '';
+    var timeDisp = _dispTime.length >= 6
+      ? _dispTime.slice(0,2) + ':' + _dispTime.slice(2,4) + ':' + _dispTime.slice(4,6) + _kstSuffix : '';
 
     var chgPct = null, chgAmt = null, color = '#888', sign = '';
     if (_prevClose) {
