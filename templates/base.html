@@ -1126,21 +1126,20 @@
       gap: 8px;
     }
 
-    /* 1행 — 종목 아이덴티티(좌) */
-    .thb-identity {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      min-width: 100px;
-    }
-
-    /* 1행 — 현재가 영역(중) */
+    /* 1행 — 현재가 영역 전체 */
     .thb-center {
       display: flex;
-      align-items: baseline;
-      gap: 10px;
+      align-items: center;
+      gap: 14px;
       flex: 1;
       min-width: 0;
+    }
+
+    /* 가격 + 등락률 세로 묶음 */
+    .thb-price-block {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
 
     /* 1행 — 시장 상태(우) */
@@ -1170,25 +1169,26 @@
 
     /* 텍스트 요소 */
     .thb-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: #d1d4dc;
+      font-size: 12px;
+      font-weight: 600;
+      color: #7a8499;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .thb-price {
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       color: #fff;
       letter-spacing: -0.5px;
-      line-height: 1;
-      flex-shrink: 0;
+      line-height: 1.1;
     }
 
     .thb-chg {
-      font-size: 13px;
-      font-weight: 600;
-      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: #7a8499;
+      line-height: 1.2;
     }
 
     .thb-vol {
@@ -1568,7 +1568,7 @@
       .thb-row2 { min-height: 30px; gap: 4px; flex-wrap: wrap; }
       .thb-price { font-size: 17px; }
       .thb-chg   { font-size: 11px; }
-      .thb-identity { display: none; }
+      .thb-name  { display: none; }
       .thb-tf { display: none; }
       #ticker-search { width: 90px; }
     }
