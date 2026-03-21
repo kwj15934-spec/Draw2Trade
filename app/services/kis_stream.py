@@ -358,17 +358,15 @@ def _parse_kr(raw: str) -> Optional[dict]:
         # 날짜: f[33]가 영업일자, 없으면 오늘(KST)
         date_str = f[33] if len(f) > 33 and f[33] else _dt.now(_KST).strftime("%Y%m%d")
         price = float(f[2])
-        # ── 체결시간 기반 세션 판별 ──
+        # ── 체결시간 기반 세션 판별 (HHMMSS 6자리 기준) ──
         tick_time = f[1]  # HHMMSS
-        hhmm = int(tick_time[:4]) if len(tick_time) >= 4 else 0
-        if 830 <= hhmm <= 840:
+        hhmmss = int(tick_time[:6]) if len(tick_time) >= 6 else int(tick_time[:4]) * 100 if len(tick_time) >= 4 else 0
+        if 83000 <= hhmmss <= 84000:
             session_type = "PRE_MARKET"
-        elif 900 <= hhmm <= 1530:
+        elif 90000 <= hhmmss <= 153000:
             session_type = "REGULAR"
-        elif 1531 <= hhmm <= 1559:
-            session_type = "POST_MARKET"
-        elif 1530 <= hhmm <= 2000:
-            # 15:30~20:00 = NXT 야간장 (시간외 단일가 + 야간 거래소)
+        elif 153001 <= hhmmss <= 200100:
+            # 15:30:01~20:01:00 = NXT 야간장 (시간외 단일가 + 야간 거래소)
             session_type = "NXT"
         else:
             session_type = "UNKNOWN"

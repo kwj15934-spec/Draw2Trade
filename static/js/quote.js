@@ -163,11 +163,12 @@
     // 세션 배지 결정
     var sType = tick.session_type || '';
     var session = tick.session || '';
-    // session_type 미설정 시 시간대로 자동 판별 (15:30~20:00 = NXT 야간)
-    if (!sType && tick.time && tick.time.length >= 4) {
-      var _hhmm = parseInt(tick.time.slice(0, 4), 10);
-      if (_hhmm >= 1530 && _hhmm <= 2000) sType = 'NXT';
-      else if (_hhmm >= 830 && _hhmm <= 840) sType = 'PRE_MARKET';
+    // session_type 미설정 시 HHMMSS 6자리 기준 자동 판별
+    if (!sType && tick.time && tick.time.length >= 6) {
+      var _hhmmss = parseInt(tick.time.slice(0, 6), 10);
+      if (_hhmmss >= 153001 && _hhmmss <= 200100) sType = 'NXT';
+      else if (_hhmmss >= 83000 && _hhmmss <= 84000) sType = 'PRE_MARKET';
+      else if (_hhmmss >= 90000 && _hhmmss <= 153000) sType = 'REGULAR';
     }
     var sessionBadge = '';
     if (sType === 'NXT' || session === 'nxt') {
@@ -380,9 +381,9 @@
 
       // session_type 보강: 시간대(HHMM)로 NXT 판별
       var sType = t.session_type || '';
-      if (!sType && t.time && t.time.length >= 4) {
-        var hhmm = parseInt(t.time.slice(0, 4), 10);
-        if (hhmm >= 1530 && hhmm <= 2000) sType = 'NXT';
+      if (!sType && t.time && t.time.length >= 6) {
+        var hhmmss = parseInt(t.time.slice(0, 6), 10);
+        if (hhmmss >= 153001 && hhmmss <= 200100) sType = 'NXT';
       }
 
       var tick = {

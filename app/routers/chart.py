@@ -426,15 +426,13 @@ async def tick_history(ticker: str, market: str = Query("KR")):
         """체결시간(HHMMSS) + session_tag로 세션 타입 판별."""
         if session_tag == "nxt":
             return "NXT"
-        hhmm = int(tick_time[:4]) if len(tick_time) >= 4 else 0
-        if 830 <= hhmm <= 840:
+        hhmmss = int(tick_time[:6]) if len(tick_time) >= 6 else int(tick_time[:4]) * 100 if len(tick_time) >= 4 else 0
+        if 83000 <= hhmmss <= 84000:
             return "PRE_MARKET"
-        if 900 <= hhmm <= 1530:
+        if 90000 <= hhmmss <= 153000:
             return "REGULAR"
-        if 1531 <= hhmm <= 1559:
-            return "POST_MARKET"
-        if 1600 <= hhmm < 2000:
-            return "NXT"  # 16:00~19:59 = NXT 야간장
+        if 153001 <= hhmmss <= 200100:
+            return "NXT"  # 15:30:01~20:01:00 = NXT 야간장
         return "UNKNOWN"
 
     def _parse_raw_ticks(raw_list: list, session_tag: str) -> None:
@@ -470,16 +468,15 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             except (ValueError, TypeError):
                 continue
 
-    # ── 소스 1: NXT 야간 체결 (15:30~20:00, 08:00~08:50)
-    if (800 <= hm < 850) or (1530 <= hm < 2001):
-        try:
-            nxt_raw = fetch_nxt_tick_history(ticker)
-            logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw or []))
-            _parse_raw_ticks(nxt_raw, "nxt")
-        except Exception as e:
-            logger.warning("NXT tick API 실패 (%s): %s", ticker, e)
+    # ── 소스 1: NXT 야간 체결 (항상 호출 — API가 빈 결과 반환 시 무해)
+    try:
+        nxt_raw = fetch_nxt_tick_history(ticker)
+        logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw or []))
+        _parse_raw_ticks(nxt_raw, "nxt")
+    except Exception as e:
+        logger.warning("NXT tick API 실패 (%s): %s", ticker, e)
 
-    # ── 소스 2: 정규장 체결 (항상 시도)
+    # ── 소스 2: 정규장 체결 (항상 호출)
     try:
         _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
     except Exception as e:
