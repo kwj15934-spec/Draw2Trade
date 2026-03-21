@@ -401,7 +401,6 @@
         if (thbName) thbName.textContent = ticker;
         var thbFullname = document.getElementById('thb-fullname');
         if (thbFullname) thbFullname.textContent = data.name || '';
-        setTickerOverlay(ticker, data.name, tfLabel, data.candles);
         // 헤더바 마지막 캔들 종가/등락률 표시 (실시간 틱 전까지 유지)
         _initHeaderBar(data.candles);
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
@@ -567,8 +566,6 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + periodLabel;
         }
-        setTickerOverlay(ticker, data.name, tfLabel, displayCandles);
-
         // 마커
         if (filtered.length > 0) {
           D2T.series.setMarkers([
@@ -725,7 +722,6 @@
     setVolumeData(o.candles);
     D2T.chart.timeScale().fitContent();
     D2T.matchPeriodData = null;
-    setTickerOverlay(o.ticker, '', TF_LABELS[o.timeframe] || o.timeframe, o.candles);
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = o.labelText;
     D2T.originState = null;
@@ -1060,10 +1056,6 @@
         if (thbTime) thbTime.textContent = '';
         var chartLabel = document.getElementById('chart-ticker-label');
         if (chartLabel) chartLabel.textContent = '빈 캔버스 모드';
-        var overlayMeta = document.getElementById('ticker-overlay-meta');
-        if (overlayMeta) overlayMeta.textContent = '';
-        var overlayName = document.getElementById('ticker-overlay-name');
-        if (overlayName) overlayName.textContent = '';
 
         // ④ 실시간 웹소켓 구독 해제
         if (typeof window._onBlankCanvas === 'function') window._onBlankCanvas();
@@ -1140,8 +1132,22 @@
     if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
     var thbChg = document.getElementById('thb-chg');
     if (thbChg && chgPct !== '') {
-      thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
+      // 실시간 등락 (전봉 대비)
+      var html = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
         + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+
+      // 타임프레임 전체 기간 등락 (첫 봉 → 마지막 봉)
+      if (candles.length > 1) {
+        var first = candles[0];
+        if (first.close) {
+          var tfPct = ((close - first.close) / first.close * 100).toFixed(2);
+          var tfSign = tfPct >= 0 ? '+' : '';
+          var tfLabel = TF_LABELS[D2T.timeframe] || D2T.timeframe;
+          html += '&ensp;<span style="font-size:11px;color:#888;">'
+            + tfLabel + '&nbsp;' + tfSign + tfPct + '%</span>';
+        }
+      }
+      thbChg.innerHTML = html;
     }
     var thbVol = document.getElementById('thb-vol');
     if (thbVol) thbVol.textContent = '거래량 ' + volStr;
@@ -1149,31 +1155,6 @@
     if (thbTime) thbTime.textContent = typeof last.time === 'string' ? last.time : '';
   }
 
-  function setTickerOverlay(ticker, name, tfLabel, candles) {
-    var overlay = document.getElementById('ticker-overlay');
-    if (!overlay) return;
-    var lastCandle = candles && candles.length ? candles[candles.length - 1] : null;
-    var prevCandle = candles && candles.length > 1 ? candles[candles.length - 2] : null;
-    var symEl  = document.getElementById('ticker-overlay-symbol');
-    var nameEl = document.getElementById('ticker-overlay-name');
-    var metaEl = document.getElementById('ticker-overlay-meta');
-    if (symEl)  symEl.textContent  = ticker;
-    if (nameEl) nameEl.textContent = name || '';
-    var metaParts = [tfLabel];
-    if (lastCandle) {
-      var close = lastCandle.close;
-      metaParts.push('종가 ' + (close >= 1000 ? close.toLocaleString() : close));
-      if (prevCandle && prevCandle.close) {
-        var chg = ((close - prevCandle.close) / prevCandle.close * 100).toFixed(2);
-        var sign = chg >= 0 ? '+' : '';
-        metaParts.push(sign + chg + '%');
-      }
-    }
-    if (metaEl) metaEl.textContent = metaParts.join('  ·  ');
-    overlay.dataset.loaded = '1';
-    overlay.style.display = 'block';
-
-  }
 
   // ── 분봉 자동 폴링 (실시간 캔들 갱신) ────────────────────────────────────
   var _pollTimer = null;
