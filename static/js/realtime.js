@@ -536,24 +536,22 @@
     _lastSession = current;
   }
 
-  /** WS 강제 재연결 + UI 초기화 */
+  /** WS 강제 재연결 — 체결 리스트 유지, 새 틱만 추가 */
   function _forceReconnect(reason) {
     if (!_ticker) return;
     console.log('[RT] 재연결:', reason);
-    // 호가/체결 UI 초기화
-    if (window._clearTradeList) window._clearTradeList();
-    // rtCandle 리셋
+    // _clearTradeList 호출 금지: 기존 리스트 유지하여 깜빡임 방지
+    // rtCandle만 리셋
     _rtCandle = null;
     _lastTickTime = Date.now();
 
-    // WS 끊고 재연결
     _intentionalClose = false;
     if (_ws) {
       _ws.close();  // onclose → 자동 재연결 → onopen → 자동 구독
     } else {
       connect();
     }
-    // 초기 틱 데이터 재로드
+    // 재연결 후 미표시 틱만 추가 (_isLoading 락으로 중복 fetch 방지)
     setTimeout(function () {
       if (window._loadInitialTrades) window._loadInitialTrades();
     }, 1000);

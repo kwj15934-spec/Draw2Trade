@@ -151,8 +151,15 @@
     var empty = list.querySelector('.tl-empty');
     if (empty) empty.remove();
 
+    // DOM 레벨 중복 방어: 같은 data-tick-id가 이미 있으면 삽입 생략
+    if (r.tickId) {
+      var list2 = document.getElementById('trade-list');
+      if (list2 && list2.querySelector('[data-tick-id="' + r.tickId + '"]')) return;
+    }
+
     var row = document.createElement('div');
     row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');
+    if (r.tickId) row.setAttribute('data-tick-id', r.tickId);
     row.innerHTML =
       '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
       '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
@@ -248,6 +255,7 @@
       isBuy: cvolIsBuy, isBig: cvol >= 500, cvolColor: cvolColor,
       price: price, cvol: cvol, accvol: accvol,
       chgStr: chgStr, timeDisp: timeDisp, sessionBadge: sessionBadge,
+      tickId: tick._key || '',   // data-tick-id용
     });
 
     _startWorker();
@@ -258,7 +266,7 @@
   window._clearTradeList = function () {
     _lastTradePrice = 0;
     _lastCvolDir = true;
-    _initialLoaded = false;
+    _isLoading     = false;
     _currentTicker = '';
     _renderedKeys  = {};
     _stopWorker();
@@ -360,9 +368,10 @@
 
   // ── 초기 틱 데이터 로드 (오직 /api/ticks API만 사용) ──────────────────────
 
-  var _initialLoaded = false;
+  var _isLoading     = false;       // 로딩 락: 중복 fetch 방지
   var _currentTicker = '';          // 현재 로드된 종목
-  var _renderedKeys  = {};          // 중복 체크용: "time|price|cvol" → true
+  var _renderedKeys  = {};          // 중복 방어: "time|price|cvol" → true
+  // DOM에 data-tick-id 속성도 함께 기록해 이중 보호
 
   /** time 문자열 → 6자리 HHMMSS 보정 */
   function _normalizeTime(t) {
@@ -373,78 +382,96 @@
     return t;
   }
 
+  /**
+   * 종목 변경 시 완전 초기화.
+   * realtime.js의 _clearTradeList 호출과 분리하여,
+   * quote.js 내부 상태를 안전하게 리셋.
+   */
+  function _resetForTicker(ticker) {
+    _currentTicker  = ticker;
+    _renderedKeys   = {};
+    _isLoading      = false;
+    _lastTradePrice = 0;
+    _lastCvolDir    = true;
+    _stopWorker();
+    var tl = document.getElementById('trade-list');
+    if (tl) tl.innerHTML = '<div class="tl-empty">체결 데이터 불러오는 중...</div>';
+  }
+
   window._loadInitialTrades = function () {
     var ticker = window.D2T && window.D2T.ticker;
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
-    // 종목이 바뀌면 완전 초기화 — 리스트를 비운 채 새 데이터가 하나씩 채워지는 연출
+    // 종목 변경 → 완전 초기화
     if (ticker !== _currentTicker) {
-      _currentTicker = ticker;
-      _renderedKeys  = {};
-      _initialLoaded = false;
-      _lastTradePrice = 0;
-      _lastCvolDir = true;
-      _stopWorker();
-      var _tl = document.getElementById('trade-list');
-      if (_tl) _tl.innerHTML = '<div class="tl-empty">체결 데이터 불러오는 중...</div>';
+      _resetForTicker(ticker);
     }
+
+    // 이미 로딩 중이면 중복 실행 차단
+    if (_isLoading) return;
+    _isLoading = true;
 
     var tickUrl = '/api/ticks/' + encodeURIComponent(ticker) +
                   (market === 'US' ? '?market=US' : '');
     fetch(tickUrl)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
+        _isLoading = false;
         if (!data) return;
         if (data.quote) _updateHeaderFromQuote(data.quote);
         if (data.ticks && data.ticks.length) {
-          _renderTickHistory(data.ticks);
+          _mergeTickHistory(data.ticks);
         }
       })
-      .catch(function () { /* silent */ });
+      .catch(function () { _isLoading = false; });
   };
 
   /**
-   * 틱 배열 → renderingQueue에 적재.
+   * 틱 배열을 받아 미표시 건만 renderingQueue에 추가.
    *
    * 서버 응답: [최신(index 0), ..., 오래된(index N-1)]  ← time 내림차순
    *
-   * 목표: 워커가 shift()+insertBefore(firstChild)로 꺼낼 때
-   *       오래된 것이 먼저 들어가고 최신이 마지막에 맨 위에 남아야 함.
+   * - 이미 _renderedKeys에 있는 틱은 건너뜀 (중복 방어)
+   * - 큐에는 [오래된→최신] 순으로 push
+   *   → shift()+insertBefore(firstChild) 시 최신이 맨 위에 남음
    *
-   * 따라서 큐에는 [오래된, ..., 최신] 순으로 push해야 함.
-   * → 서버 배열을 역순(index N-1 → 0)으로 순회하며 push.
+   * 최초 로드: 최대 MAX_TRADES 건 모두 큐에 적재
+   * 재호출(REST polling): 서버 응답 중 새 건만 큐에 prepend
    */
-  function _renderTickHistory(ticks) {
-    if (_initialLoaded) return;
-    _initialLoaded = true;
-
+  function _mergeTickHistory(ticks) {
     if (ticks.length > 0) {
       _updateHeaderFromTick(ticks[0]);
     }
 
-    // 역순 순회: 오래된(끝) → 최신(앞) 순으로 큐에 push
+    var newItems = [];   // 이번에 추가할 미표시 틱 (서버 순서: 최신→오래된)
     var limit = Math.min(ticks.length, MAX_TRADES);
-    for (var i = limit - 1; i >= 0; i--) {
+    for (var i = 0; i < limit; i++) {
       var t = ticks[i];
-
-      // 시간 6자리 보정
       var rawTime = _normalizeTime(t.time);
       var key = rawTime + '|' + t.price + '|' + t.cvol;
-      if (_renderedKeys[key]) continue;
+      if (_renderedKeys[key]) continue;   // 이미 표시된 틱 스킵
       _renderedKeys[key] = true;
+      newItems.push({ t: t, rawTime: rawTime });
+    }
 
-      // bs 보강
-      var bs = t.bs || '';
+    if (!newItems.length) return;   // 새 데이터 없으면 아무것도 안 함
+
+    // 역순(오래된→최신) 순으로 큐에 push
+    for (var j = newItems.length - 1; j >= 0; j--) {
+      var item = newItems[j];
+      var t2   = item.t;
+      var rt   = item.rawTime;
+
+      var bs = t2.bs || '';
       if (!bs) {
-        if (t.chgSign === '1' || t.chgSign === '2') bs = '1';
-        else if (t.chgSign === '4' || t.chgSign === '5') bs = '5';
+        if (t2.chgSign === '1' || t2.chgSign === '2') bs = '1';
+        else if (t2.chgSign === '4' || t2.chgSign === '5') bs = '5';
       }
 
-      // session_type 보강
-      var sType = t.session_type || '';
-      if (!sType && rawTime.length >= 6) {
-        var h6 = parseInt(rawTime, 10);
+      var sType = t2.session_type || '';
+      if (!sType) {
+        var h6 = parseInt(rt, 10);
         if      (h6 >= 83000  && h6 <= 84000)  sType = 'PRE_MARKET';
         else if (h6 >= 90000  && h6 <= 153000) sType = 'REGULAR';
         else if (h6 >= 153001 && h6 <= 160000) sType = 'POST_MARKET';
@@ -453,14 +480,10 @@
       }
 
       window._addTradeRow({
-        price:        t.price,
-        volume:       t.accvol,
-        cvol:         t.cvol,
-        time:         rawTime,
-        bs:           bs,
-        session:      t.session || '',
-        session_type: sType,
-      }, t.chgRate, t.chgRate >= 0 ? '+' : '', t.chgRate >= 0 ? '#26a69a' : '#ef5350');
+        price: t2.price, volume: t2.accvol, cvol: t2.cvol,
+        time: rt, bs: bs, session: t2.session || '', session_type: sType,
+        _key: rt + '|' + t2.price + '|' + t2.cvol,   // DOM data-tick-id용
+      }, t2.chgRate, t2.chgRate >= 0 ? '+' : '', t2.chgRate >= 0 ? '#26a69a' : '#ef5350');
     }
   }
 
