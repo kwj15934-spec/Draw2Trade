@@ -107,7 +107,7 @@ async def kospi_list(
         {"tickers": [{"ticker": "005930", "name": "삼성전자"}, ...]}
     """
     if category:
-        items = data_service.get_tickers_by_sector(category)
+        items = data_service.get_tickers_by_sector(category, market=market)
         return {"tickers": [{"ticker": t["ticker"], "name": t["name"]} for t in items]}
     names = data_service.all_names()
     tickers = data_service.get_kospi_tickers(market=market)
@@ -132,14 +132,15 @@ async def kospi_search(q: str = Query(..., min_length=1), limit: int = Query(50,
 
 
 @router.get("/kospi/categories")
-async def kospi_categories():
+async def kospi_categories(market: str | None = Query(None)):
     """
     카테고리(섹터) 목록 + 각 섹터별 종목 수.
+    market=KOSPI|KOSDAQ 로 필터 가능.
 
     Response:
         {"categories": [{"id": "bio", "name": "바이오/제약", "count": 15}, ...]}
     """
-    categories = data_service.get_sectors_with_counts()
+    categories = data_service.get_sectors_with_counts(market=market)
     return {"categories": categories}
 
 

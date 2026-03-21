@@ -798,6 +798,9 @@
     if (!catSel) return;
 
     var endpoint = D2T.market === 'US' ? '/api/us/categories' : '/api/kospi/categories';
+    if (D2T.market === 'KR' && D2T.krMarket) {
+      endpoint += '?market=' + encodeURIComponent(D2T.krMarket);
+    }
     fetch(endpoint)
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -1106,8 +1109,11 @@
         document.querySelectorAll('.kr-market-btn').forEach(function (b) {
           b.classList.toggle('active', b.dataset.krmarket === D2T.krMarket);
         });
+        // 카테고리 + 종목 목록 모두 재로드
         var catSel = document.getElementById('category-select');
-        loadTickerList(catSel ? catSel.value : '');
+        if (catSel) catSel.innerHTML = '<option value="">전체</option>';
+        loadCategoryList();
+        loadTickerList('');
       });
     });
   });

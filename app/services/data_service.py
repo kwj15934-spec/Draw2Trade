@@ -852,11 +852,11 @@ def search_tickers(q: str, limit: int = 50) -> list[dict[str, Any]]:
     return results
 
 
-def get_sectors_with_counts() -> list[dict[str, Any]]:
-    """카테고리(섹터) 목록 + 각 섹터별 종목 수 반환."""
+def get_sectors_with_counts(market: str | None = None) -> list[dict[str, Any]]:
+    """카테고리(섹터) 목록 + 각 섹터별 종목 수 반환. market=None|'KOSPI'|'KOSDAQ'"""
     sectors = _load_sectors_config()
     names = all_names()
-    tickers = get_kospi_tickers()
+    tickers = get_kospi_tickers(market=market)
     counts: dict[str, int] = {s["id"]: 0 for s in sectors}
     counts["_other"] = 0
 
@@ -880,12 +880,12 @@ def get_sectors_with_counts() -> list[dict[str, Any]]:
     return out
 
 
-def get_tickers_by_sector(sector_id: str) -> list[dict[str, Any]]:
-    """특정 카테고리(섹터)에 속한 종목 목록."""
+def get_tickers_by_sector(sector_id: str, market: str | None = None) -> list[dict[str, Any]]:
+    """특정 카테고리(섹터)에 속한 종목 목록. market=None|'KOSPI'|'KOSDAQ'"""
     if not sector_id:
         return []
     names = all_names()
-    tickers = get_kospi_tickers()
+    tickers = get_kospi_tickers(market=market)
     results: list[dict[str, Any]] = []
     for t in tickers:
         name = names.get(t, t)
