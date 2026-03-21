@@ -166,9 +166,11 @@
     // session_type 미설정 시 HHMMSS 6자리 기준 자동 판별
     if (!sType && tick.time && tick.time.length >= 6) {
       var _hhmmss = parseInt(tick.time.slice(0, 6), 10);
-      if (_hhmmss >= 153001 && _hhmmss <= 200100) sType = 'NXT';
-      else if (_hhmmss >= 83000 && _hhmmss <= 84000) sType = 'PRE_MARKET';
+      if (_hhmmss >= 83000 && _hhmmss <= 84000)       sType = 'PRE_MARKET';
       else if (_hhmmss >= 90000 && _hhmmss <= 153000) sType = 'REGULAR';
+      else if (_hhmmss >= 153001 && _hhmmss <= 160000) sType = 'POST_MARKET';
+      else if (_hhmmss >= 160001 && _hhmmss <= 180000) sType = 'AFTER_HOURS';
+      else if (_hhmmss >= 180001 && _hhmmss <= 200100) sType = 'NXT';
     }
     var sessionBadge = '';
     if (sType === 'NXT' || session === 'nxt') {
@@ -383,7 +385,9 @@
       var sType = t.session_type || '';
       if (!sType && t.time && t.time.length >= 6) {
         var hhmmss = parseInt(t.time.slice(0, 6), 10);
-        if (hhmmss >= 153001 && hhmmss <= 200100) sType = 'NXT';
+        if (hhmmss >= 153001 && hhmmss <= 160000)      sType = 'POST_MARKET';
+        else if (hhmmss >= 160001 && hhmmss <= 180000) sType = 'AFTER_HOURS';
+        else if (hhmmss >= 180001 && hhmmss <= 200100) sType = 'NXT';
       }
 
       var tick = {

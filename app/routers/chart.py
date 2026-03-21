@@ -431,8 +431,12 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             return "PRE_MARKET"
         if 90000 <= hhmmss <= 153000:
             return "REGULAR"
-        if 153001 <= hhmmss <= 200100:
-            return "NXT"  # 15:30:01~20:01:00 = NXT 야간장
+        if 153001 <= hhmmss <= 160000:
+            return "POST_MARKET"   # 15:30~16:00 장후
+        if 160001 <= hhmmss <= 180000:
+            return "AFTER_HOURS"   # 16:00~18:00 시간외 단일가
+        if 180001 <= hhmmss <= 200100:
+            return "NXT"           # 18:00~20:01 NXT 야간거래소
         return "UNKNOWN"
 
     def _parse_raw_ticks(raw_list: list, session_tag: str) -> None:
