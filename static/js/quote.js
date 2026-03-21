@@ -220,7 +220,7 @@
         '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
         '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
         '<span class="tl-chg">'   + r.chgStr + '</span>' +
-        '<span class="tl-accvol">' + (r.accvol > 0 ? _fmtVol(r.accvol) : '') + '</span>' +
+        '<span class="tl-accvol">' + (r.accvol > 0 ? r.accvol.toLocaleString() : '') + '</span>' +
         '<span class="tl-time">'  + r.timeDisp + r.sessionBadge + '</span>';
       row.classList.add('tl-row--visible');
       frag.appendChild(row);
