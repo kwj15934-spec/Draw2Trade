@@ -470,8 +470,8 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             except (ValueError, TypeError):
                 continue
 
-    # NXT 시간대 (08:00~08:50, 15:30~24:00) → NXT 체결 우선
-    if (800 <= hm < 850) or (hm >= 1530):
+    # NXT 시간대 (08:00~08:50, 15:30~20:00) → NXT 체결 우선
+    if (800 <= hm < 850) or (1530 <= hm < 2001):
         try:
             nxt_raw = fetch_nxt_tick_history(ticker)
             logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw or []))
@@ -513,6 +513,7 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             "accvol":  volume,
             "chgRate": str(chg_rate),
             "chgSign": chg_sign,
+            "bs":      t.get("bs", ""),
             "session": s_tag,
             "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
         })

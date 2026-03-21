@@ -367,8 +367,8 @@ def _parse_kr(raw: str) -> Optional[dict]:
             session_type = "REGULAR"
         elif 1531 <= hhmm <= 1559:
             session_type = "POST_MARKET"
-        elif 1600 <= hhmm < 2000:
-            # 16:00~19:59 = NXT 야간장 (단일가 포함)
+        elif 1600 <= hhmm <= 2000:
+            # 16:00~20:00 = NXT 야간장 (단일가 포함)
             session_type = "NXT"
         else:
             session_type = "UNKNOWN"

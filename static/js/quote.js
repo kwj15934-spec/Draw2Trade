@@ -163,16 +163,16 @@
     // 세션 배지 결정
     var sType = tick.session_type || '';
     var session = tick.session || '';
-    // session_type 미설정 시 시간대로 자동 판별 (16:00~19:59 = NXT)
+    // session_type 미설정 시 시간대로 자동 판별 (16:00~20:00 = NXT)
     if (!sType && tick.time && tick.time.length >= 4) {
       var _hhmm = parseInt(tick.time.slice(0, 4), 10);
-      if (_hhmm >= 1600 && _hhmm < 2000) sType = 'NXT';
+      if (_hhmm >= 1600 && _hhmm <= 2000) sType = 'NXT';
       else if (_hhmm >= 1531 && _hhmm < 1600) sType = 'POST_MARKET';
       else if (_hhmm >= 830 && _hhmm <= 840) sType = 'PRE_MARKET';
     }
     var sessionBadge = '';
     if (sType === 'NXT' || session === 'nxt') {
-      sessionBadge = '<span class="tr-session nxt">NXT</span>';
+      sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
     } else if (sType === 'PRE_MARKET' || session === '5') {
       sessionBadge = '<span class="tr-session pre">장전</span>';
     } else if (sType === 'POST_MARKET') {
@@ -383,7 +383,7 @@
       var sType = t.session_type || '';
       if (!sType && t.time && t.time.length >= 4) {
         var hhmm = parseInt(t.time.slice(0, 4), 10);
-        if (hhmm >= 1600 && hhmm < 2000) sType = 'NXT';
+        if (hhmm >= 1600 && hhmm <= 2000) sType = 'NXT';
         else if (hhmm >= 1531 && hhmm < 1600) sType = 'POST_MARKET';
       }
 
