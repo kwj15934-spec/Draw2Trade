@@ -118,6 +118,51 @@
   var _pendingTradeRows = [];   // 틱 사이에 모인 체결 행 데이터
   var _tradeRafScheduled = false;
 
+  // 순차 렌더링 큐
+  var _renderQueue = [];        // 삽입 대기 중인 행 객체 배열
+  var _renderTimer = null;      // setTimeout 핸들
+
+  /** 큐에서 1건씩 꺼내 DOM에 삽입하는 반복 함수 */
+  function _drainRenderQueue() {
+    _renderTimer = null;
+    if (!_renderQueue.length) return;
+
+    // 밀림 방지: 10건 이상 쌓이면 지연을 줄여 빠르게 소화
+    var delay = _renderQueue.length >= 10 ? 30 : 100;
+
+    var r = _renderQueue.shift();
+    var list = document.getElementById('trade-list');
+    if (list) {
+      var empty = list.querySelector('.tl-empty');
+      if (empty) empty.remove();
+
+      var row = document.createElement('div');
+      row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');
+      row.innerHTML =
+        '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
+        '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
+        '<span class="tl-chg">'   + r.chgStr + '</span>' +
+        '<span class="tl-accvol">' + (r.accvol > 0 ? r.accvol.toLocaleString() : '') + '</span>' +
+        '<span class="tl-time">'  + r.timeDisp + r.sessionBadge + '</span>';
+
+      list.insertBefore(row, list.firstChild);
+
+      // 다음 프레임에 visible 클래스 추가 (트랜지션 트리거)
+      requestAnimationFrame(function () {
+        row.classList.add('tl-row--visible');
+      });
+
+      // 초과 행 제거
+      while (list.children.length > MAX_TRADES) {
+        list.removeChild(list.lastChild);
+      }
+    }
+
+    if (_renderQueue.length) {
+      _renderTimer = setTimeout(_drainRenderQueue, delay);
+    }
+  }
+
   window._markRealtimeActive = function () { _initialLoaded = true; };
 
   /**
@@ -204,34 +249,14 @@
     if (!rows.length) return;
     _pendingTradeRows = [];
 
-    var list = document.getElementById('trade-list');
-    if (!list) return;
-
-    var empty = list.querySelector('.tl-empty');
-    if (empty) empty.remove();
-
-    // DocumentFragment로 한 번에 삽입 (역순: 최신 틱이 최상단)
-    var frag = document.createDocumentFragment();
+    // 최신 틱이 큐 앞에 오도록 역순으로 추가 (큐 선입선출 → 위에서부터 순차 삽입)
     for (var i = rows.length - 1; i >= 0; i--) {
-      var r = rows[i];
-      var row = document.createElement('div');
-      row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');
-      row.innerHTML =
-        '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
-        '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
-        '<span class="tl-chg">'   + r.chgStr + '</span>' +
-        '<span class="tl-accvol">' + (r.accvol > 0 ? r.accvol.toLocaleString() : '') + '</span>' +
-        '<span class="tl-time">'  + r.timeDisp + r.sessionBadge + '</span>';
-      row.classList.add('tl-row--visible');
-      frag.appendChild(row);
+      _renderQueue.push(rows[i]);
     }
 
-    // 최상단에 한 번에 삽입
-    list.insertBefore(frag, list.firstChild);
-
-    // 초과 행 제거
-    while (list.children.length > MAX_TRADES) {
-      list.removeChild(list.lastChild);
+    // 드레인이 실행 중이 아닐 때만 시작
+    if (!_renderTimer) {
+      _drainRenderQueue();
     }
   }
 
@@ -241,6 +266,8 @@
     _lastTradePrice = 0;
     _lastCvolDir = true;
     _pendingTradeRows = [];
+    _renderQueue = [];
+    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
     var list = document.getElementById('trade-list');
     if (list) {
       list.innerHTML = '<div class="tl-empty">체결 데이터 대기 중...</div>';
