@@ -249,8 +249,11 @@
     if (!rows.length) return;
     _pendingTradeRows = [];
 
-    // 최신 틱이 큐 앞에 오도록 역순으로 추가 (큐 선입선출 → 위에서부터 순차 삽입)
-    for (var i = rows.length - 1; i >= 0; i--) {
+    // push된 순서 그대로 큐에 추가.
+    // _addTradeRow 호출 순서가 "오래된 → 최신" 순일 때:
+    //   drain이 shift()로 꺼내 insertBefore(firstChild) 하면
+    //   최신이 가장 나중에 삽입되어 맨 위에 남음 → 올바른 순서.
+    for (var i = 0; i < rows.length; i++) {
       _renderQueue.push(rows[i]);
     }
 
