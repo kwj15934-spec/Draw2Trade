@@ -258,6 +258,9 @@
   window._clearTradeList = function () {
     _lastTradePrice = 0;
     _lastCvolDir = true;
+    _initialLoaded = false;
+    _currentTicker = '';
+    _renderedKeys  = {};
     _stopWorker();
     var list = document.getElementById('trade-list');
     if (list) {
@@ -358,12 +361,31 @@
   // ── 초기 틱 데이터 로드 (오직 /api/ticks API만 사용) ──────────────────────
 
   var _initialLoaded = false;
+  var _currentTicker = '';          // 현재 로드된 종목
+  var _renderedKeys  = {};          // 중복 체크용: "time|price|cvol" → true
+
+  /** time 문자열 → 6자리 HHMMSS 보정 */
+  function _normalizeTime(t) {
+    if (!t) return '000000';
+    t = String(t).trim();
+    if (t.length === 4) return t + '00';   // HHmm → HHmm00
+    if (t.length >= 6)  return t.slice(0, 6);
+    return t;
+  }
 
   window._loadInitialTrades = function () {
-    _initialLoaded = false;
     var ticker = window.D2T && window.D2T.ticker;
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
+
+    // 종목이 바뀌면 리스트 초기화
+    if (ticker !== _currentTicker) {
+      _currentTicker = ticker;
+      _renderedKeys  = {};
+      _initialLoaded = false;
+      // _clearTradeList는 realtime.js가 이미 호출하므로 여기선 큐/워커만 정리
+      _stopWorker();
+    }
 
     var tickUrl = '/api/ticks/' + encodeURIComponent(ticker) +
                   (market === 'US' ? '?market=US' : '');
@@ -379,49 +401,63 @@
       .catch(function () { /* silent */ });
   };
 
-  /** 틱 체결 내역 → 체결 리스트 렌더링 */
+  /**
+   * 틱 배열 → renderingQueue에 적재.
+   *
+   * 서버 응답: [최신(index 0), ..., 오래된(index N-1)]  ← time 내림차순
+   *
+   * 목표: 워커가 shift()+insertBefore(firstChild)로 꺼낼 때
+   *       오래된 것이 먼저 들어가고 최신이 마지막에 맨 위에 남아야 함.
+   *
+   * 따라서 큐에는 [오래된, ..., 최신] 순으로 push해야 함.
+   * → 서버 배열을 역순(index N-1 → 0)으로 순회하며 push.
+   */
   function _renderTickHistory(ticks) {
     if (_initialLoaded) return;
     _initialLoaded = true;
 
-    var list = ticks.slice(0, MAX_TRADES).reverse();
+    if (ticks.length > 0) {
+      _updateHeaderFromTick(ticks[0]);
+    }
 
-    for (var i = 0; i < list.length; i++) {
-      var t = list[i];
-      var chgRate = parseFloat(t.chgRate) || 0;
-      var sign = chgRate >= 0 ? '+' : '';
-      var color = chgRate >= 0 ? '#26a69a' : '#ef5350';
+    // 역순 순회: 오래된(끝) → 최신(앞) 순으로 큐에 push
+    var limit = Math.min(ticks.length, MAX_TRADES);
+    for (var i = limit - 1; i >= 0; i--) {
+      var t = ticks[i];
 
-      // bs 우선순위: REST bs 필드 → chgSign fallback
+      // 시간 6자리 보정
+      var rawTime = _normalizeTime(t.time);
+      var key = rawTime + '|' + t.price + '|' + t.cvol;
+      if (_renderedKeys[key]) continue;
+      _renderedKeys[key] = true;
+
+      // bs 보강
       var bs = t.bs || '';
       if (!bs) {
         if (t.chgSign === '1' || t.chgSign === '2') bs = '1';
         else if (t.chgSign === '4' || t.chgSign === '5') bs = '5';
       }
 
-      // session_type 보강: 시간대(HHMM)로 NXT 판별
+      // session_type 보강
       var sType = t.session_type || '';
-      if (!sType && t.time && t.time.length >= 6) {
-        var hhmmss = parseInt(t.time.slice(0, 6), 10);
-        if (hhmmss >= 153001 && hhmmss <= 160000)      sType = 'POST_MARKET';
-        else if (hhmmss >= 160001 && hhmmss <= 180000) sType = 'AFTER_HOURS';
-        else if (hhmmss >= 180001 && hhmmss <= 200100) sType = 'NXT';
+      if (!sType && rawTime.length >= 6) {
+        var h6 = parseInt(rawTime, 10);
+        if      (h6 >= 83000  && h6 <= 84000)  sType = 'PRE_MARKET';
+        else if (h6 >= 90000  && h6 <= 153000) sType = 'REGULAR';
+        else if (h6 >= 153001 && h6 <= 160000) sType = 'POST_MARKET';
+        else if (h6 >= 160001 && h6 <= 180000) sType = 'AFTER_HOURS';
+        else if (h6 >= 180001 && h6 <= 200100) sType = 'NXT';
       }
 
-      var tick = {
-        price: t.price,
-        volume: t.accvol,
-        cvol: t.cvol,
-        time: t.time,
-        bs: bs,
-        session: t.session || '',
-        session_type: sType
-      };
-      window._addTradeRow(tick, t.chgRate, sign, color);
-    }
-
-    if (ticks.length > 0) {
-      _updateHeaderFromTick(ticks[0]);
+      window._addTradeRow({
+        price:        t.price,
+        volume:       t.accvol,
+        cvol:         t.cvol,
+        time:         rawTime,
+        bs:           bs,
+        session:      t.session || '',
+        session_type: sType,
+      }, t.chgRate, t.chgRate >= 0 ? '+' : '', t.chgRate >= 0 ? '#26a69a' : '#ef5350');
     }
   }
 
