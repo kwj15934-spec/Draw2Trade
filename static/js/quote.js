@@ -1,17 +1,18 @@
 /**
- * quote.js — 호가창 + 실시간 체결 내역 (토스증권 스타일)
+ * quote.js — 호가창 + 실시간 체결 내역 (하이브리드 렌더링)
  *
  * 체결 내역(trade-list)은 오직 틱(Tick) 단위 데이터만 사용.
  * 캔들(Daily/Minute) 데이터는 체결 내역에 절대 사용하지 않음.
  *
  * realtime.js에서 아래 전역 함수를 호출:
  *   window._onAsking(msg)      — 호가 데이터 (type:"asking")
- *   window._addTradeRow(tick, chgPct, sign, color)  — 체결 틱
+ *   window._addTradeRow(tick, chgPct, sign, color)  — 실시간 체결 틱
  *   window._clearTradeList()   — 종목 변경 시 목록 초기화
  *
- * 호가창: requestAnimationFrame으로 최신 1건만 렌더링.
- * 체결 행: setInterval 워커(150ms)가 renderingQueue에서 1건씩 꺼내 삽입.
- *   큐 20건 이상 시 50ms로 가속. 종목 변경 시 워커 정지 + 큐 초기화.
+ * 하이브리드 렌더링:
+ *   - 과거 데이터(_mergeTickHistory): 즉시 DOM에 한 번에 삽입 (DocumentFragment)
+ *   - 실시간 틱(_addTradeRow): renderingQueue → setInterval 워커(150ms) 순차 삽입
+ *   - _renderedKeys: "time|price|cvol" 키로 양쪽 중복 방어
  */
 (function () {
   'use strict';
@@ -125,13 +126,14 @@
   // _addTradeRow 호출 순서: "오래된 → 최신" (renderTickHistory가 reverse 후 루프)
   // shift() + insertBefore(firstChild): 오래된 것 먼저 삽입 → 최신이 맨 위에 남음
 
-  var renderingQueue = [];      // 삽입 대기 행 데이터 배열
+  // 실시간 틱 전용 큐 — 과거 데이터는 이 큐를 거치지 않음
+  var renderingQueue = [];      // 실시간 틱 삽입 대기 배열
   var _workerInterval = null;   // setInterval 핸들
-  var _workerDelay = 500;       // 현재 인터벌 지연(ms)
+  var _workerDelay = 150;       // 현재 인터벌 지연(ms)
 
-  var DELAY_NORMAL = 500;       // 기본 지연 — 1건씩 500ms 간격으로 "탁탁탁"
-  var DELAY_FAST   = 120;       // 큐 15건 이상 시 가속
-  var QUEUE_FAST_THRESH = 15;   // 가속 임계값
+  var DELAY_NORMAL = 150;       // 실시간 틱: 150ms 간격
+  var DELAY_FAST   = 50;        // 큐 10건 이상 시 가속
+  var QUEUE_FAST_THRESH = 10;   // 가속 임계값
 
   function _insertOneRow() {
     if (!renderingQueue.length) return;
@@ -193,69 +195,35 @@
     renderingQueue = [];
   }
 
-  window._markRealtimeActive = function () { _initialLoaded = true; };
+  window._markRealtimeActive = function () { /* reserved */ };
 
   /**
-   * _addTradeRow: 체결 틱 1건을 renderingQueue에 추가.
-   * 워커가 150ms마다 꺼내 DOM에 삽입한다.
+   * _addTradeRow: 실시간 틱 1건을 renderingQueue에 추가.
+   * 워커가 150ms마다 꺼내 DOM 맨 위에 삽입 (slide-down 애니메이션).
+   * 과거 데이터는 _mergeTickHistory가 즉시 DOM에 직접 삽입하므로 이 경로를 사용하지 않음.
    */
   window._addTradeRow = function (tick, chgPct, sign, color) {
-    var price  = tick.price;
-    var cvol   = parseInt(tick.cvol, 10) || 0;
-    var accvol = parseInt(tick.volume, 10) || 0;
-
+    var cvol = parseInt(tick.cvol, 10) || 0;
     if (cvol <= 0) return;
 
-    // 시간 HH:mm:ss 포맷 강제
-    var time    = tick.time || '';
-    var market  = window.D2T && window.D2T.market;
-    var dispTime = (market === 'US') ? _etToKst(time) : time;
-    var timeDisp = dispTime.length >= 6
-      ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6)
-      : (dispTime.length >= 4
-          ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':00'
-          : '--:--:--');
+    // 실시간 중복 방어: 이미 과거 데이터로 표시된 틱은 스킵
+    var rawTime = _normalizeTime(tick.time || '');
+    var key = rawTime + '|' + tick.price + '|' + cvol;
+    if (_renderedKeys[key]) return;
+    _renderedKeys[key] = true;
 
-    // 매수/매도 방향 판별
-    var bs = tick.bs || '';
-    var cvolIsBuy;
-    if (bs === '1') {
-      cvolIsBuy = true;
-    } else if (bs === '5') {
-      cvolIsBuy = false;
-    } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
-      cvolIsBuy = (price > _lastTradePrice);
-    } else {
-      cvolIsBuy = _lastCvolDir;
-    }
-    _lastTradePrice = price;
-    _lastCvolDir = cvolIsBuy;
-
-    var cvolColor = cvolIsBuy ? '#ef5350' : '#2196f3';
-    var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
-
-    // 세션 배지
-    var sType = tick.session_type || '';
-    var session = tick.session || '';
-    if (!sType && tick.time && tick.time.length >= 6) {
-      var _h6 = parseInt(tick.time.slice(0, 6), 10);
-      if      (_h6 >= 83000  && _h6 <= 84000)  sType = 'PRE_MARKET';
-      else if (_h6 >= 90000  && _h6 <= 153000) sType = 'REGULAR';
-      else if (_h6 >= 153001 && _h6 <= 160000) sType = 'POST_MARKET';
-      else if (_h6 >= 160001 && _h6 <= 180000) sType = 'AFTER_HOURS';
-      else if (_h6 >= 180001 && _h6 <= 200100) sType = 'NXT';
-    }
-    var sessionBadge = '';
-    if      (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
-    else if (sType === 'PRE_MARKET'  || session === '5')   sessionBadge = '<span class="tr-session pre">장전</span>';
-    else if (sType === 'POST_MARKET')                      sessionBadge = '<span class="tr-session post">장후</span>';
-    else if (sType === 'AFTER_HOURS' || session === '2')   sessionBadge = '<span class="tr-session after">단일가</span>';
+    var r = _buildRowData(
+      { price: tick.price, volume: tick.volume, cvol: tick.cvol,
+        time: rawTime, bs: tick.bs || '', session: tick.session || '',
+        session_type: tick.session_type || '' },
+      chgPct, sign, color
+    );
 
     renderingQueue.push({
-      isBuy: cvolIsBuy, isBig: cvol >= 500, cvolColor: cvolColor,
-      price: price, cvol: cvol, accvol: accvol,
-      chgStr: chgStr, timeDisp: timeDisp, sessionBadge: sessionBadge,
-      tickId: tick._key || '',   // data-tick-id용
+      isBuy: r.isBuy, isBig: r.isBig, cvolColor: r.cvolColor,
+      price: r.price, cvol: r.cvol, accvol: r.accvol,
+      chgStr: r.chgStr, timeDisp: r.timeDisp, sessionBadge: r.sessionBadge,
+      tickId: key,
     });
 
     _startWorker();
@@ -428,44 +396,54 @@
   };
 
   /**
-   * 틱 배열을 받아 미표시 건만 renderingQueue에 추가.
+   * 과거 틱 배열 → 즉시 DOM에 한 번에 삽입 (하이브리드 방식).
    *
    * 서버 응답: [최신(index 0), ..., 오래된(index N-1)]  ← time 내림차순
    *
-   * - 이미 _renderedKeys에 있는 틱은 건너뜀 (중복 방어)
-   * - 큐에는 [오래된→최신] 순으로 push
-   *   → shift()+insertBefore(firstChild) 시 최신이 맨 위에 남음
-   *
-   * 최초 로드: 최대 MAX_TRADES 건 모두 큐에 적재
-   * 재호출(REST polling): 서버 응답 중 새 건만 큐에 prepend
+   * - _renderedKeys에 미리 등록 → 이후 실시간 틱 중복 방어
+   * - DocumentFragment로 한 번에 삽입 (리플로우 최소화)
+   * - 서버 응답 순서(최신→오래된)대로 insertBefore(firstChild) 반복
+   *   → 오래된 것이 맨 아래, 최신이 맨 위에 최종 배치
    */
   function _mergeTickHistory(ticks) {
     if (ticks.length > 0) {
       _updateHeaderFromTick(ticks[0]);
     }
 
-    var newItems = [];   // 이번에 추가할 미표시 틱 (서버 순서: 최신→오래된)
+    var list = document.getElementById('trade-list');
+    if (!list) return;
+
+    // 미표시 틱만 추출 (서버 순서 유지: 최신→오래된)
+    var newItems = [];
     var limit = Math.min(ticks.length, MAX_TRADES);
     for (var i = 0; i < limit; i++) {
       var t = ticks[i];
       var rawTime = _normalizeTime(t.time);
       var key = rawTime + '|' + t.price + '|' + t.cvol;
-      if (_renderedKeys[key]) continue;   // 이미 표시된 틱 스킵
-      _renderedKeys[key] = true;
-      newItems.push({ t: t, rawTime: rawTime });
+      if (_renderedKeys[key]) continue;
+      _renderedKeys[key] = true;   // 실시간 틱 중복 방어용으로 미리 등록
+      newItems.push({ t: t, rawTime: rawTime, key: key });
     }
 
-    if (!newItems.length) return;   // 새 데이터 없으면 아무것도 안 함
+    if (!newItems.length) return;
 
-    // 역순(오래된→최신) 순으로 큐에 push
+    // 빈 상태 메시지 제거
+    var empty = list.querySelector('.tl-empty');
+    if (empty) empty.remove();
+
+    // DocumentFragment에 행 생성
+    // insertBefore(frag, firstChild)로 한 번에 맨 위에 삽입.
+    // newItems가 [최신, 오래된] 순이므로, fragment 내부 순서를 역순으로 만들면
+    // insertBefore 후 최신이 맨 위에 남음.
+    var frag = document.createDocumentFragment();
     for (var j = newItems.length - 1; j >= 0; j--) {
-      var item = newItems[j];
-      var t2   = item.t;
-      var rt   = item.rawTime;
+      var item  = newItems[j];
+      var t2    = item.t;
+      var rt    = item.rawTime;
 
       var bs = t2.bs || '';
       if (!bs) {
-        if (t2.chgSign === '1' || t2.chgSign === '2') bs = '1';
+        if      (t2.chgSign === '1' || t2.chgSign === '2') bs = '1';
         else if (t2.chgSign === '4' || t2.chgSign === '5') bs = '5';
       }
 
@@ -479,12 +457,93 @@
         else if (h6 >= 180001 && h6 <= 200100) sType = 'NXT';
       }
 
-      window._addTradeRow({
+      var chgRate = parseFloat(t2.chgRate) || 0;
+      var rowData = _buildRowData({
         price: t2.price, volume: t2.accvol, cvol: t2.cvol,
         time: rt, bs: bs, session: t2.session || '', session_type: sType,
-        _key: rt + '|' + t2.price + '|' + t2.cvol,   // DOM data-tick-id용
-      }, t2.chgRate, t2.chgRate >= 0 ? '+' : '', t2.chgRate >= 0 ? '#26a69a' : '#ef5350');
+      }, chgRate >= 0 ? String(Math.abs(chgRate).toFixed(2)) : String(Math.abs(chgRate).toFixed(2)),
+         chgRate >= 0 ? '+' : '-',
+         chgRate >= 0 ? '#26a69a' : '#ef5350');
+
+      var row = document.createElement('div');
+      row.className = 'tl-row' + (rowData.isBuy ? ' tl-buy' : ' tl-sell') + (rowData.isBig ? ' tl-big' : '');
+      row.setAttribute('data-tick-id', item.key);
+      row.innerHTML =
+        '<span class="tl-price">' + rowData.price.toLocaleString() + '</span>' +
+        '<span class="tl-vol" style="color:' + rowData.cvolColor + '">' + rowData.cvol.toLocaleString() + '</span>' +
+        '<span class="tl-chg">'   + rowData.chgStr + '</span>' +
+        '<span class="tl-accvol">' + (rowData.accvol > 0 ? rowData.accvol.toLocaleString() : '') + '</span>' +
+        '<span class="tl-time">'  + rowData.timeDisp + rowData.sessionBadge + '</span>';
+      row.classList.add('tl-row--visible');   // 즉시 표시 (애니메이션 없이)
+      frag.appendChild(row);
     }
+
+    // 한 번에 DOM 삽입 (맨 위에 prepend)
+    list.insertBefore(frag, list.firstChild);
+
+    // 초과 행 정리
+    while (list.children.length > MAX_TRADES) {
+      list.removeChild(list.lastChild);
+    }
+  }
+
+  /**
+   * 틱 데이터 → 행 렌더링용 객체 변환.
+   * _mergeTickHistory(과거)와 _addTradeRow(실시간) 공통 로직.
+   */
+  function _buildRowData(tick, chgPct, sign, color) {
+    var price  = tick.price;
+    var cvol   = parseInt(tick.cvol, 10) || 0;
+    var accvol = parseInt(tick.volume, 10) || 0;
+
+    // HH:mm:ss 강제
+    var time     = tick.time || '';
+    var market   = window.D2T && window.D2T.market;
+    var dispTime = (market === 'US') ? _etToKst(time) : time;
+    var timeDisp = dispTime.length >= 6
+      ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6)
+      : (dispTime.length >= 4
+          ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':00'
+          : '--:--:--');
+
+    // 매수/매도 방향
+    var bs = tick.bs || '';
+    var cvolIsBuy;
+    if (bs === '1')      { cvolIsBuy = true; }
+    else if (bs === '5') { cvolIsBuy = false; }
+    else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
+      cvolIsBuy = (price > _lastTradePrice);
+    } else {
+      cvolIsBuy = _lastCvolDir;
+    }
+    _lastTradePrice = price;
+    _lastCvolDir    = cvolIsBuy;
+
+    var cvolColor = cvolIsBuy ? '#ef5350' : '#2196f3';
+    var chgStr    = (chgPct !== null && chgPct !== '') ? sign + chgPct + '%' : '—';
+
+    // 세션 배지
+    var sType   = tick.session_type || '';
+    var session = tick.session || '';
+    if (!sType && time.length >= 6) {
+      var h6 = parseInt(time.slice(0, 6), 10);
+      if      (h6 >= 83000  && h6 <= 84000)  sType = 'PRE_MARKET';
+      else if (h6 >= 90000  && h6 <= 153000) sType = 'REGULAR';
+      else if (h6 >= 153001 && h6 <= 160000) sType = 'POST_MARKET';
+      else if (h6 >= 160001 && h6 <= 180000) sType = 'AFTER_HOURS';
+      else if (h6 >= 180001 && h6 <= 200100) sType = 'NXT';
+    }
+    var sessionBadge = '';
+    if      (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
+    else if (sType === 'PRE_MARKET'  || session === '5')   sessionBadge = '<span class="tr-session pre">장전</span>';
+    else if (sType === 'POST_MARKET')                      sessionBadge = '<span class="tr-session post">장후</span>';
+    else if (sType === 'AFTER_HOURS' || session === '2')   sessionBadge = '<span class="tr-session after">단일가</span>';
+
+    return {
+      isBuy: cvolIsBuy, isBig: cvol >= 500, cvolColor: cvolColor,
+      price: price, cvol: cvol, accvol: accvol,
+      chgStr: chgStr, timeDisp: timeDisp, sessionBadge: sessionBadge,
+    };
   }
 
   /** 틱 → 헤더바 */
