@@ -470,23 +470,24 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             except (ValueError, TypeError):
                 continue
 
-    # NXT 시간대 (08:00~08:50, 15:30~20:00) → NXT 체결 우선
+    # ── 소스 1: NXT 야간 체결 (15:30~20:00, 08:00~08:50)
     if (800 <= hm < 850) or (1530 <= hm < 2001):
         try:
             nxt_raw = fetch_nxt_tick_history(ticker)
             logger.info("NXT tick history (%s): %d건 응답", ticker, len(nxt_raw or []))
             _parse_raw_ticks(nxt_raw, "nxt")
         except Exception as e:
-            logger.warning("NXT tick API 실패 (%s), 캐시로 대체: %s", ticker, e)
+            logger.warning("NXT tick API 실패 (%s): %s", ticker, e)
 
-    # 정규장 체결도 항상 시도 (NXT/시간외와 병합)
+    # ── 소스 2: 정규장 체결 (항상 시도)
     try:
         _parse_raw_ticks(fetch_kr_tick_history(ticker), "")
     except Exception as e:
-        logger.warning("KR tick API 실패 (%s), 캐시로 대체: %s", ticker, e)
+        logger.warning("KR tick API 실패 (%s): %s", ticker, e)
 
-    # 서버 캐시(메모리+디스크) 무조건 병합 — 시간외 단일가 데이터 확보
-    existing_times = {t["time"] for t in ticks}
+    # ── 소스 3: 서버 캐시 (메모리+디스크) — 실시간 WS 수신 틱 보완
+    # 중복 키: (time, price, cvol) 조합으로 정밀 중복 제거
+    existing_keys = {(t["time"], t["price"], t["cvol"]) for t in ticks}
     cached = get_cached_ticks(ticker)
     for t in cached:
         if t.get("type") != "tick":
@@ -495,10 +496,11 @@ async def tick_history(ticker: str, market: str = Query("KR")):
         if cvol <= 0:
             continue
         tick_time = t.get("time", "")
-        if tick_time in existing_times:
+        price = int(float(t.get("price", 0)))
+        key = (tick_time, price, cvol)
+        if key in existing_keys:
             continue
-        existing_times.add(tick_time)
-        price = float(t.get("price", 0))
+        existing_keys.add(key)
         volume = int(t.get("volume", 0))
         if prev_close and prev_close > 0:
             chg_rate = round((price - prev_close) / prev_close * 100, 2)
@@ -507,20 +509,20 @@ async def tick_history(ticker: str, market: str = Query("KR")):
         chg_sign = "2" if chg_rate >= 0 else "5"
         s_tag = t.get("session", "")
         ticks.append({
-            "time":    tick_time,
-            "price":   int(price),
-            "cvol":    cvol,
-            "accvol":  volume,
-            "chgRate": str(chg_rate),
-            "chgSign": chg_sign,
-            "bs":      t.get("bs", ""),
-            "session": s_tag,
+            "time":         tick_time,
+            "price":        price,
+            "cvol":         cvol,
+            "accvol":       volume,
+            "chgRate":      str(chg_rate),
+            "chgSign":      chg_sign,
+            "bs":           t.get("bs", ""),
+            "session":      s_tag,
             "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
         })
 
-    # 시간순 내림차순 정렬 후 최신 30건만 반환
+    # 시간순 내림차순 정렬 후 최신 50건 반환
     ticks.sort(key=lambda x: x["time"], reverse=True)
-    ticks = ticks[:30]
+    ticks = ticks[:50]
 
     return {"ticker": ticker, "ticks": ticks, "quote": quote}
 
