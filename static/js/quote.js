@@ -127,11 +127,11 @@
 
   var renderingQueue = [];      // 삽입 대기 행 데이터 배열
   var _workerInterval = null;   // setInterval 핸들
-  var _workerDelay = 150;       // 현재 인터벌 지연(ms)
+  var _workerDelay = 500;       // 현재 인터벌 지연(ms)
 
-  var DELAY_NORMAL = 150;       // 기본 지연
-  var DELAY_FAST   = 50;        // 큐 20건 이상 시 가속
-  var QUEUE_FAST_THRESH = 20;   // 가속 임계값
+  var DELAY_NORMAL = 500;       // 기본 지연 — 1건씩 500ms 간격으로 "탁탁탁"
+  var DELAY_FAST   = 120;       // 큐 15건 이상 시 가속
+  var QUEUE_FAST_THRESH = 15;   // 가속 임계값
 
   function _insertOneRow() {
     if (!renderingQueue.length) return;
@@ -378,13 +378,16 @@
     var market = window.D2T && window.D2T.market;
     if (!ticker) return;
 
-    // 종목이 바뀌면 리스트 초기화
+    // 종목이 바뀌면 완전 초기화 — 리스트를 비운 채 새 데이터가 하나씩 채워지는 연출
     if (ticker !== _currentTicker) {
       _currentTicker = ticker;
       _renderedKeys  = {};
       _initialLoaded = false;
-      // _clearTradeList는 realtime.js가 이미 호출하므로 여기선 큐/워커만 정리
+      _lastTradePrice = 0;
+      _lastCvolDir = true;
       _stopWorker();
+      var _tl = document.getElementById('trade-list');
+      if (_tl) _tl.innerHTML = '<div class="tl-empty">체결 데이터 불러오는 중...</div>';
     }
 
     var tickUrl = '/api/ticks/' + encodeURIComponent(ticker) +

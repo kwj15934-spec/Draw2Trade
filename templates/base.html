@@ -1485,7 +1485,13 @@
     #trade-list::-webkit-scrollbar-thumb,
     #trade-list-daily::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
 
-    /* 행 — 슬라이드인 애니메이션 */
+    /* 행 — slide-down + fade-in 키프레임 */
+    @keyframes tl-slidein {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 행 */
     .tl-row {
       display: grid;
       grid-template-columns: 2fr 1fr 1.2fr 1.4fr 2fr;
@@ -1494,14 +1500,12 @@
       border-bottom: 1px solid rgba(255,255,255,0.028);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
-      /* 진입 초기값 */
+      /* 초기 상태: 숨김 (--visible 클래스가 붙어야 애니메이션 시작) */
       opacity: 0;
-      transform: translateY(-8px);
-      transition: opacity 0.2s ease-out, transform 0.2s cubic-bezier(0.22,1,0.36,1), background 0.1s;
+      transition: background 0.1s;
     }
     .tl-row--visible {
-      opacity: 1;
-      transform: translateY(0);
+      animation: tl-slidein 0.22s cubic-bezier(0.22,1,0.36,1) forwards;
     }
     .tl-row:hover { background: rgba(255,255,255,0.03); }
 
