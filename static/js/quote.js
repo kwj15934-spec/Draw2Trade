@@ -9,8 +9,9 @@
  *   window._addTradeRow(tick, chgPct, sign, color)  — 체결 틱
  *   window._clearTradeList()   — 종목 변경 시 목록 초기화
  *
- * rAF 배치: 호가창은 requestAnimationFrame으로 최신 1건만 렌더링.
- * 체결 행 추가는 DocumentFragment로 모아서 rAF에 flush.
+ * 호가창: requestAnimationFrame으로 최신 1건만 렌더링.
+ * 체결 행: setInterval 워커(150ms)가 renderingQueue에서 1건씩 꺼내 삽입.
+ *   큐 20건 이상 시 50ms로 가속. 종목 변경 시 워커 정지 + 큐 초기화.
  */
 (function () {
   'use strict';
@@ -113,164 +114,151 @@
     if (bidTotalEl) bidTotalEl.textContent = '매수 ' + _fmtVol(bidTotal);
   }
 
-  // ── rAF 배치: 체결 내역 ──────────────────────────────────────────────────────
+  // ── 순차 렌더링 워커 (setInterval 기반) ────────────────────────────────────
+  //
+  // 흐름:
+  //   _addTradeRow() → renderingQueue.push(data)
+  //   setInterval(150ms) → 큐 shift() → DOM insertBefore(firstChild) → 애니메이션
+  //
+  // 큐 20건 이상: 50ms로 가속, 이하: 150ms 정상 속도
+  //
+  // _addTradeRow 호출 순서: "오래된 → 최신" (renderTickHistory가 reverse 후 루프)
+  // shift() + insertBefore(firstChild): 오래된 것 먼저 삽입 → 최신이 맨 위에 남음
 
-  var _pendingTradeRows = [];   // 틱 사이에 모인 체결 행 데이터
-  var _tradeRafScheduled = false;
+  var renderingQueue = [];      // 삽입 대기 행 데이터 배열
+  var _workerInterval = null;   // setInterval 핸들
+  var _workerDelay = 150;       // 현재 인터벌 지연(ms)
 
-  // 순차 렌더링 큐
-  var _renderQueue = [];        // 삽입 대기 중인 행 객체 배열
-  var _renderTimer = null;      // setTimeout 핸들
+  var DELAY_NORMAL = 150;       // 기본 지연
+  var DELAY_FAST   = 50;        // 큐 20건 이상 시 가속
+  var QUEUE_FAST_THRESH = 20;   // 가속 임계값
 
-  /** 큐에서 1건씩 꺼내 DOM에 삽입하는 반복 함수 */
-  function _drainRenderQueue() {
-    _renderTimer = null;
-    if (!_renderQueue.length) return;
+  function _insertOneRow() {
+    if (!renderingQueue.length) return;
 
-    // 밀림 방지: 10건 이상 쌓이면 지연을 줄여 빠르게 소화
-    var delay = _renderQueue.length >= 10 ? 30 : 100;
+    // 가변 지연: 큐 크기에 따라 인터벌 재설정
+    var targetDelay = renderingQueue.length >= QUEUE_FAST_THRESH ? DELAY_FAST : DELAY_NORMAL;
+    if (targetDelay !== _workerDelay) {
+      _workerDelay = targetDelay;
+      clearInterval(_workerInterval);
+      _workerInterval = setInterval(_insertOneRow, _workerDelay);
+    }
 
-    var r = _renderQueue.shift();
+    var r = renderingQueue.shift();
     var list = document.getElementById('trade-list');
-    if (list) {
-      var empty = list.querySelector('.tl-empty');
-      if (empty) empty.remove();
+    if (!list) return;
 
-      var row = document.createElement('div');
-      row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');
-      row.innerHTML =
-        '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
-        '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
-        '<span class="tl-chg">'   + r.chgStr + '</span>' +
-        '<span class="tl-accvol">' + (r.accvol > 0 ? r.accvol.toLocaleString() : '') + '</span>' +
-        '<span class="tl-time">'  + r.timeDisp + r.sessionBadge + '</span>';
+    var empty = list.querySelector('.tl-empty');
+    if (empty) empty.remove();
 
-      list.insertBefore(row, list.firstChild);
+    var row = document.createElement('div');
+    row.className = 'tl-row' + (r.isBuy ? ' tl-buy' : ' tl-sell') + (r.isBig ? ' tl-big' : '');
+    row.innerHTML =
+      '<span class="tl-price">' + r.price.toLocaleString() + '</span>' +
+      '<span class="tl-vol" style="color:' + r.cvolColor + '">' + r.cvol.toLocaleString() + '</span>' +
+      '<span class="tl-chg">'   + r.chgStr + '</span>' +
+      '<span class="tl-accvol">' + (r.accvol > 0 ? r.accvol.toLocaleString() : '') + '</span>' +
+      '<span class="tl-time">'  + r.timeDisp + r.sessionBadge + '</span>';
 
-      // 다음 프레임에 visible 클래스 추가 (트랜지션 트리거)
-      requestAnimationFrame(function () {
-        row.classList.add('tl-row--visible');
-      });
+    list.insertBefore(row, list.firstChild);
 
-      // 초과 행 제거
-      while (list.children.length > MAX_TRADES) {
-        list.removeChild(list.lastChild);
-      }
+    // 다음 프레임에 visible 클래스 추가 → CSS transition 트리거
+    requestAnimationFrame(function () {
+      row.classList.add('tl-row--visible');
+    });
+
+    // 최대 행 수 유지
+    while (list.children.length > MAX_TRADES) {
+      list.removeChild(list.lastChild);
     }
+  }
 
-    if (_renderQueue.length) {
-      _renderTimer = setTimeout(_drainRenderQueue, delay);
-    }
+  /** 워커 시작 (아직 실행 중이 아닐 때만) */
+  function _startWorker() {
+    if (_workerInterval) return;
+    _workerDelay = DELAY_NORMAL;
+    _workerInterval = setInterval(_insertOneRow, _workerDelay);
+  }
+
+  /** 워커 정지 + 큐 비우기 */
+  function _stopWorker() {
+    if (_workerInterval) { clearInterval(_workerInterval); _workerInterval = null; }
+    renderingQueue = [];
   }
 
   window._markRealtimeActive = function () { _initialLoaded = true; };
 
   /**
-   * _addTradeRow: 체결 틱 1건을 버퍼에 추가하고 rAF로 DOM 반영 예약.
+   * _addTradeRow: 체결 틱 1건을 renderingQueue에 추가.
+   * 워커가 150ms마다 꺼내 DOM에 삽입한다.
    */
   window._addTradeRow = function (tick, chgPct, sign, color) {
-    var price   = tick.price;
-    var cvol    = parseInt(tick.cvol, 10) || 0;
-    var accvol  = parseInt(tick.volume, 10) || 0;
+    var price  = tick.price;
+    var cvol   = parseInt(tick.cvol, 10) || 0;
+    var accvol = parseInt(tick.volume, 10) || 0;
 
-    // cvol이 0이면 표시하지 않음
     if (cvol <= 0) return;
 
+    // 시간 HH:mm:ss 포맷 강제
     var time    = tick.time || '';
-    // US 시장이면 ET → KST 변환
-    var market = window.D2T && window.D2T.market;
+    var market  = window.D2T && window.D2T.market;
     var dispTime = (market === 'US') ? _etToKst(time) : time;
     var timeDisp = dispTime.length >= 6
-      ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6) : '';
+      ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6)
+      : (dispTime.length >= 4
+          ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':00'
+          : '--:--:--');
 
-    // 매수/매도 방향 판별 — bs(CCLD_DVSN) 우선, 없으면 직전가 비교 fallback
+    // 매수/매도 방향 판별
     var bs = tick.bs || '';
     var cvolIsBuy;
     if (bs === '1') {
-      cvolIsBuy = true;                                  // 매수 체결
+      cvolIsBuy = true;
     } else if (bs === '5') {
-      cvolIsBuy = false;                                 // 매도 체결
+      cvolIsBuy = false;
     } else if (_lastTradePrice > 0 && price !== _lastTradePrice) {
-      cvolIsBuy = (price > _lastTradePrice);             // 직전가보다 높으면 매수
+      cvolIsBuy = (price > _lastTradePrice);
     } else {
-      cvolIsBuy = _lastCvolDir;                          // 동가: 직전 방향 유지
+      cvolIsBuy = _lastCvolDir;
     }
     _lastTradePrice = price;
     _lastCvolDir = cvolIsBuy;
 
-    // 행 테두리(isBuy) = 매수/매도 방향 기반 (등락률과 무관)
-    var isBuy = cvolIsBuy;
-
-    // 체결량 색상: 매수=빨강, 매도=파랑
     var cvolColor = cvolIsBuy ? '#ef5350' : '#2196f3';
     var chgStr = (chgPct !== null) ? sign + chgPct + '%' : '—';
 
-    // 세션 배지 결정
+    // 세션 배지
     var sType = tick.session_type || '';
     var session = tick.session || '';
-    // session_type 미설정 시 HHMMSS 6자리 기준 자동 판별
     if (!sType && tick.time && tick.time.length >= 6) {
-      var _hhmmss = parseInt(tick.time.slice(0, 6), 10);
-      if (_hhmmss >= 83000 && _hhmmss <= 84000)       sType = 'PRE_MARKET';
-      else if (_hhmmss >= 90000 && _hhmmss <= 153000) sType = 'REGULAR';
-      else if (_hhmmss >= 153001 && _hhmmss <= 160000) sType = 'POST_MARKET';
-      else if (_hhmmss >= 160001 && _hhmmss <= 180000) sType = 'AFTER_HOURS';
-      else if (_hhmmss >= 180001 && _hhmmss <= 200100) sType = 'NXT';
+      var _h6 = parseInt(tick.time.slice(0, 6), 10);
+      if      (_h6 >= 83000  && _h6 <= 84000)  sType = 'PRE_MARKET';
+      else if (_h6 >= 90000  && _h6 <= 153000) sType = 'REGULAR';
+      else if (_h6 >= 153001 && _h6 <= 160000) sType = 'POST_MARKET';
+      else if (_h6 >= 160001 && _h6 <= 180000) sType = 'AFTER_HOURS';
+      else if (_h6 >= 180001 && _h6 <= 200100) sType = 'NXT';
     }
     var sessionBadge = '';
-    if (sType === 'NXT' || session === 'nxt') {
-      sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
-    } else if (sType === 'PRE_MARKET' || session === '5') {
-      sessionBadge = '<span class="tr-session pre">장전</span>';
-    } else if (sType === 'POST_MARKET') {
-      sessionBadge = '<span class="tr-session post">장후</span>';
-    } else if (sType === 'AFTER_HOURS' || session === '2') {
-      sessionBadge = '<span class="tr-session after">단일가</span>';
-    }
+    if      (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
+    else if (sType === 'PRE_MARKET'  || session === '5')   sessionBadge = '<span class="tr-session pre">장전</span>';
+    else if (sType === 'POST_MARKET')                      sessionBadge = '<span class="tr-session post">장후</span>';
+    else if (sType === 'AFTER_HOURS' || session === '2')   sessionBadge = '<span class="tr-session after">단일가</span>';
 
-    var isBig = cvol >= 500;
-
-    // rAF 버퍼에 추가
-    _pendingTradeRows.push({
-      isBuy: isBuy, isBig: isBig, cvolColor: cvolColor,
+    renderingQueue.push({
+      isBuy: cvolIsBuy, isBig: cvol >= 500, cvolColor: cvolColor,
       price: price, cvol: cvol, accvol: accvol,
       chgStr: chgStr, timeDisp: timeDisp, sessionBadge: sessionBadge,
     });
 
-    if (!_tradeRafScheduled) {
-      _tradeRafScheduled = true;
-      requestAnimationFrame(_flushTradeRows);
-    }
+    _startWorker();
   };
-
-  function _flushTradeRows() {
-    _tradeRafScheduled = false;
-    var rows = _pendingTradeRows;
-    if (!rows.length) return;
-    _pendingTradeRows = [];
-
-    // push된 순서 그대로 큐에 추가.
-    // _addTradeRow 호출 순서가 "오래된 → 최신" 순일 때:
-    //   drain이 shift()로 꺼내 insertBefore(firstChild) 하면
-    //   최신이 가장 나중에 삽입되어 맨 위에 남음 → 올바른 순서.
-    for (var i = 0; i < rows.length; i++) {
-      _renderQueue.push(rows[i]);
-    }
-
-    // 드레인이 실행 중이 아닐 때만 시작
-    if (!_renderTimer) {
-      _drainRenderQueue();
-    }
-  }
 
   // ── 체결 목록 초기화 ───────────────────────────────────────────────────────
 
   window._clearTradeList = function () {
     _lastTradePrice = 0;
     _lastCvolDir = true;
-    _pendingTradeRows = [];
-    _renderQueue = [];
-    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
+    _stopWorker();
     var list = document.getElementById('trade-list');
     if (list) {
       list.innerHTML = '<div class="tl-empty">체결 데이터 대기 중...</div>';
