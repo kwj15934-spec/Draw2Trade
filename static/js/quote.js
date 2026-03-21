@@ -431,11 +431,16 @@
     var empty = list.querySelector('.tl-empty');
     if (empty) empty.remove();
 
-    // DocumentFragment에 행 생성
-    // insertBefore(frag, firstChild)로 한 번에 맨 위에 삽입.
-    // newItems가 [최신, 오래된] 순이므로, fragment 내부 순서를 역순으로 만들면
-    // insertBefore 후 최신이 맨 위에 남음.
-    var frag = document.createDocumentFragment();
+    // 정렬 보장: newItems는 서버 응답 순서(최신→오래된)이지만,
+    // 시간이 섞여 있을 수 있으므로 6자리 숫자 기준 내림차순 재정렬.
+    newItems.sort(function(a, b) {
+      return parseInt(b.rawTime, 10) - parseInt(a.rawTime, 10);
+    });
+
+    // 삽입 전략:
+    //   newItems = [최신, ..., 오래된] (내림차순 정렬됨)
+    //   오래된 것(끝)부터 insertBefore(firstChild) → 최신이 마지막에 맨 위에 남음.
+    // 이 방식은 초기 로드·재호출 모두 DOM 순서를 최신↑ 오래된↓ 으로 보장.
     for (var j = newItems.length - 1; j >= 0; j--) {
       var item  = newItems[j];
       var t2    = item.t;
@@ -461,7 +466,7 @@
       var rowData = _buildRowData({
         price: t2.price, volume: t2.accvol, cvol: t2.cvol,
         time: rt, bs: bs, session: t2.session || '', session_type: sType,
-      }, chgRate >= 0 ? String(Math.abs(chgRate).toFixed(2)) : String(Math.abs(chgRate).toFixed(2)),
+      }, Math.abs(chgRate).toFixed(2),
          chgRate >= 0 ? '+' : '-',
          chgRate >= 0 ? '#26a69a' : '#ef5350');
 
@@ -474,12 +479,9 @@
         '<span class="tl-chg">'   + rowData.chgStr + '</span>' +
         '<span class="tl-accvol">' + (rowData.accvol > 0 ? rowData.accvol.toLocaleString() : '') + '</span>' +
         '<span class="tl-time">'  + rowData.timeDisp + rowData.sessionBadge + '</span>';
-      row.classList.add('tl-row--visible');   // 즉시 표시 (애니메이션 없이)
-      frag.appendChild(row);
+      row.classList.add('tl-row--visible');
+      list.insertBefore(row, list.firstChild);   // 개별 insertBefore → 최신이 맨 위 보장
     }
-
-    // 한 번에 DOM 삽입 (맨 위에 prepend)
-    list.insertBefore(frag, list.firstChild);
 
     // 초과 행 정리
     while (list.children.length > MAX_TRADES) {
