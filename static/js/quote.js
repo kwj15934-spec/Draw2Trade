@@ -538,7 +538,7 @@
     var sessionBadge = '';
     if      (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
     else if (sType === 'PRE_MARKET'  || session === '5')   sessionBadge = '<span class="tr-session pre">장전</span>';
-    else if (sType === 'POST_MARKET')                      sessionBadge = '<span class="tr-session post">장후</span>';
+    else if (sType === 'POST_MARKET')                      sessionBadge = '';
     else if (sType === 'AFTER_HOURS' || session === '2')   sessionBadge = '<span class="tr-session after">단일가</span>';
 
     return {
