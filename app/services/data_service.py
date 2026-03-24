@@ -772,18 +772,28 @@ def _merge_overtime_intraday(ticker: str, candles: list[dict], interval_min: int
 
     분봉 time 포맷: "fake UTC" (KST 시각을 UTC timestamp로 표기)
     """
-    from datetime import timezone as _utc
+    from datetime import timezone as _utc, timedelta as _td
+    _KST_TZ = _utc(offset=_td(hours=9))
     try:
-        now = datetime.now()
+        # 반드시 KST 기준으로 시간 판단 (서버가 UTC 환경이어도 정확)
+        now = datetime.now(_KST_TZ)
         hm = now.hour * 100 + now.minute
 
-        # 정규장 전(08:00~09:00)이거나 장후(15:30~20:05) 구간에만 실행
-        # 정규장 중에는 데이터 없음
-        in_pre_nxt   = (800  <= hm <= 900)
-        in_afterhours = (1530 <= hm <= 1805)
-        in_nxt_night  = (1800 <= hm <= 2005)
+        # 시간대별 플래그 (KST 기준)
+        # in_pre_nxt   : NXT 장전 단일가  08:00~09:00
+        # in_afterhours: 시간외 단일가    15:30~18:00
+        # in_nxt_night : NXT 야간거래소   18:00~20:30 (약간 여유 추가)
+        # 장중(09:00~15:30)이면 시간외 데이터 없으므로 스킵
+        in_pre_nxt    = (800  <= hm < 900)
+        in_afterhours = (1530 <= hm < 1800)
+        in_nxt_night  = (1800 <= hm < 2030)
 
-        if not (in_pre_nxt or in_afterhours or in_nxt_night):
+        if 900 <= hm < 1530:
+            # 정규장 중: 시간외 데이터 없음, 원본 반환
+            return candles
+
+        # 아직 8시 이전(심야~새벽) 이면 오늘 데이터 없음
+        if hm < 800:
             return candles
 
         today_str      = now.strftime("%Y%m%d")

@@ -29,7 +29,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/stock", tags=["stock-context"])
 
 _KST = timezone(timedelta(hours=9))
-_KR_TICKER_RE = re.compile(r"^\d{6}$")
+_KR_TICKER_RE = re.compile(r"^\d{1,6}$")  # 1~6자리 숫자 허용 (내부에서 6자리로 패딩)
+
+
+def _normalize_symbol(symbol: str) -> str:
+    """종목코드를 6자리로 제로패딩. 예: '5930' → '005930'"""
+    s = symbol.strip()
+    if s.isdigit():
+        return s.zfill(6)
+    return s
 
 # ── 캐시 헬퍼 ────────────────────────────────────────────────────────────────
 
@@ -75,7 +83,8 @@ async def get_finance(
         }
     """
     if not _KR_TICKER_RE.match(symbol):
-        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+        raise HTTPException(status_code=422, detail="KR 종목 코드(숫자)만 지원합니다.")
+    symbol = _normalize_symbol(symbol)
 
     cache_key = f"finance:{symbol}"
     cached = await _cache_get(cache_key)
@@ -179,7 +188,8 @@ async def get_news(
         }
     """
     if not _KR_TICKER_RE.match(symbol):
-        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+        raise HTTPException(status_code=422, detail="KR 종목 코드(숫자)만 지원합니다.")
+    symbol = _normalize_symbol(symbol)
 
     cache_key = f"news:{symbol}"
     cached = await _cache_get(cache_key)
@@ -275,7 +285,8 @@ async def get_supply(
         }
     """
     if not _KR_TICKER_RE.match(symbol):
-        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+        raise HTTPException(status_code=422, detail="KR 종목 코드(숫자)만 지원합니다.")
+    symbol = _normalize_symbol(symbol)
 
     cache_key = f"supply:{symbol}"
     cached = await _cache_get(cache_key)
@@ -367,7 +378,8 @@ async def get_community(
         }
     """
     if not _KR_TICKER_RE.match(symbol):
-        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+        raise HTTPException(status_code=422, detail="KR 종목 코드(숫자)만 지원합니다.")
+    symbol = _normalize_symbol(symbol)
 
     cache_key = f"community:{symbol}"
     cached = await _cache_get(cache_key)

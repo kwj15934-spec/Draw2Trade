@@ -39,6 +39,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+# KIS 클라이언트/서비스 로그는 INFO로 강제 상향 (DEBUG 메시지도 보임)
+for _log_name in ("app.services.kis_client", "app.routers.kis_data",
+                  "app.services.data_service", "app.routers.chart"):
+    logging.getLogger(_log_name).setLevel(logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 # ── 템플릿 ───────────────────────────────────────────────────────────────────
@@ -134,6 +139,33 @@ class ActivityMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(ActivityMiddleware)
+
+
+# ── API 요청/응답 로깅 미들웨어 ────────────────────────────────────────────────
+class ApiLogMiddleware(BaseHTTPMiddleware):
+    """
+    /api/ 경로의 요청/응답을 로깅한다.
+    4xx/5xx 응답은 WARNING, 나머지는 DEBUG.
+    """
+    async def dispatch(self, request: Request, call_next):
+        if not request.url.path.startswith("/api/"):
+            return await call_next(request)
+        import time as _time
+        t0 = _time.monotonic()
+        response = await call_next(request)
+        elapsed_ms = int((_time.monotonic() - t0) * 1000)
+        status = response.status_code
+        msg = "%s %s → %d (%dms)" % (request.method, request.url.path, status, elapsed_ms)
+        if status >= 500:
+            logger.error("API %s", msg)
+        elif status >= 400:
+            logger.warning("API %s", msg)
+        else:
+            logger.debug("API %s", msg)
+        return response
+
+
+app.add_middleware(ApiLogMiddleware)
 
 # 정적 파일
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")

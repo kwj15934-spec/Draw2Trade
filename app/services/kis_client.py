@@ -368,22 +368,42 @@ def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, An
         try:
             req = _req.Request(url, headers=headers)
             with _req.urlopen(req, timeout=5) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                raw = resp.read().decode("utf-8")
+                result = json.loads(raw)
+                # KIS 비정상 응답 코드 로깅 (rt_cd != "0")
+                rt_cd = result.get("rt_cd", "")
+                if rt_cd and rt_cd != "0":
+                    logger.debug(
+                        "KIS API rt_cd=%s tr_id=%s msg=%s",
+                        rt_cd, tr_id, result.get("msg1", "")
+                    )
+                return result
         except _req.HTTPError as e:
             last_exc = e
             if e.code == 503 and attempt < 2:
                 wait = _RETRY_DELAYS[attempt]
-                logger.warning("KIS GET 503 (%s), %ds 후 재시도 (%d/3)", path, wait, attempt + 1)
+                logger.warning(
+                    "KIS GET 503 tr_id=%s path=%s → %ds 후 재시도 (%d/3)",
+                    tr_id, path, wait, attempt + 1,
+                )
                 time.sleep(wait)
                 continue
-            logger.warning("KIS GET HTTP %d (%s): %s", e.code, path, e)
+            # 오류 본문 읽기 시도
+            try:
+                err_body = e.read().decode("utf-8", errors="replace")[:200]
+            except Exception:
+                err_body = ""
+            logger.warning(
+                "KIS GET HTTP %d tr_id=%s path=%s body=%s",
+                e.code, tr_id, path, err_body,
+            )
             return None
         except Exception as e:
             last_exc = e
-            logger.warning("KIS GET 실패 (%s): %s", path, e)
+            logger.warning("KIS GET 실패 tr_id=%s path=%s err=%s", tr_id, path, e)
             return None
 
-    logger.warning("KIS GET 최대 재시도 초과 (%s): %s", path, last_exc)
+    logger.warning("KIS GET 최대 재시도 초과 tr_id=%s path=%s err=%s", tr_id, path, last_exc)
     return None
 
 
