@@ -305,6 +305,58 @@
 
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════
+       종목 상세 컨텍스트 패널 (info-side-panel)
+       · 기본 350px 너비, 접기/펼치기 가능
+       · 탭: 재무 / 뉴스·공시 / 시장 반응
+       ══════════════════════════════════════════════════════════════ -->
+  <div id="info-side-panel" class="info-side-panel">
+
+    <!-- 접기/펼치기 핸들 -->
+    <button id="info-panel-toggle" class="info-panel-toggle" title="컨텍스트 패널 접기/펼치기" onclick="toggleInfoPanel()">&#8250;</button>
+
+    <!-- 패널 내부 (접었을 때 숨김) -->
+    <div class="info-panel-body">
+
+      <!-- 탭 헤더 -->
+      <div class="info-panel-tabs">
+        <button class="info-tab-btn active" data-itab="finance"  onclick="switchInfoTab('finance')">재무</button>
+        <button class="info-tab-btn"        data-itab="news"     onclick="switchInfoTab('news')">뉴스/공시</button>
+        <button class="info-tab-btn"        data-itab="reaction" onclick="switchInfoTab('reaction')">시장 반응</button>
+      </div>
+
+      <!-- ── 재무 탭 ──────────────────────────────────── -->
+      <div id="info-pane-finance" class="info-pane active">
+        <div class="info-pane-loading" id="finance-loading" style="display:none;">
+          <div class="info-spinner"></div><span>로딩 중...</span>
+        </div>
+        <div id="finance-content">
+          <div class="info-empty">종목을 로드하면 재무 지표가 표시됩니다.</div>
+        </div>
+      </div>
+
+      <!-- ── 뉴스/공시 탭 ────────────────────────────── -->
+      <div id="info-pane-news" class="info-pane" style="display:none;">
+        <div class="info-pane-loading" id="news-loading" style="display:none;">
+          <div class="info-spinner"></div><span>로딩 중...</span>
+        </div>
+        <div id="news-content">
+          <div class="info-empty">종목을 로드하면 뉴스가 표시됩니다.</div>
+        </div>
+      </div>
+
+      <!-- ── 시장 반응 탭 ───────────────────────────── -->
+      <div id="info-pane-reaction" class="info-pane" style="display:none;">
+        <div class="info-empty">
+          유사 패턴 클릭 시 해당 시점 뉴스 마커가<br>차트에 표시됩니다.
+          <br><br>
+          <small style="color:#555;">차트 우측 패널에서 결과를 클릭해보세요.</small>
+        </div>
+      </div>
+
+    </div><!-- /.info-panel-body -->
+  </div><!-- /#info-side-panel -->
+
   <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
 
@@ -842,5 +894,180 @@
 <script src="/static/js/realtime.js?v=20260321_ultimate"></script>
 <script src="/static/js/quote.js?v=20260322_sorted"></script>
 {% endif %}
+
+<!-- ── 종목 상세 컨텍스트 패널 JS ─────────────────────────────── -->
+<script>
+(function () {
+  'use strict';
+
+  var _infoPanelCollapsed = false;
+  var INFO_PANEL_W = 350; // px (열린 상태)
+
+  // ── 탭 전환 ─────────────────────────────────────────────────────
+  window.switchInfoTab = function (tabName) {
+    var panes = document.querySelectorAll('.info-pane');
+    var btns  = document.querySelectorAll('.info-tab-btn');
+    panes.forEach(function (p) { p.style.display = 'none'; });
+    btns.forEach(function (b) { b.classList.remove('active'); });
+    var pane = document.getElementById('info-pane-' + tabName);
+    var btn  = document.querySelector('.info-tab-btn[data-itab="' + tabName + '"]');
+    if (pane) pane.style.display = 'flex';
+    if (btn)  btn.classList.add('active');
+  };
+
+  // ── 패널 접기/펼치기 ────────────────────────────────────────────
+  window.toggleInfoPanel = function () {
+    _infoPanelCollapsed = !_infoPanelCollapsed;
+    var panel  = document.getElementById('info-side-panel');
+    var toggle = document.getElementById('info-panel-toggle');
+    var main   = document.querySelector('.d2t-main');
+    if (!panel) return;
+
+    if (_infoPanelCollapsed) {
+      panel.classList.add('collapsed');
+      if (toggle) toggle.innerHTML = '&#8249;'; // ‹
+      if (main) main.style.setProperty('--info-panel-w', '22px');
+    } else {
+      panel.classList.remove('collapsed');
+      if (toggle) toggle.innerHTML = '&#8250;'; // ›
+      if (main) main.style.setProperty('--info-panel-w', INFO_PANEL_W + 'px');
+    }
+
+    // LW Charts 차트 너비 동기화 (autoSize:true이므로 ResizeObserver가 처리하지만
+    // 트랜지션이 끝난 뒤에도 명시적으로 fit 호출해 반응성 보장)
+    var TRANSITION_MS = 240;
+    setTimeout(function () {
+      if (window.D2T && D2T.chart) {
+        try { D2T.chart.timeScale().fitContent(); } catch (e) { /* ignore */ }
+      }
+      if (typeof window.syncCanvas === 'function') window.syncCanvas();
+    }, TRANSITION_MS);
+  };
+
+  // ── 재무 데이터 로드 ─────────────────────────────────────────────
+  window.loadFinanceData = function (ticker, market) {
+    if (!ticker) return;
+    if (market && market !== 'KR') {
+      document.getElementById('finance-content').innerHTML =
+        '<div class="info-empty">재무 데이터는 KR 종목만 지원합니다.</div>';
+      return;
+    }
+    var loadingEl = document.getElementById('finance-loading');
+    var contentEl = document.getElementById('finance-content');
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (contentEl) contentEl.innerHTML = '';
+
+    fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        var rows = [
+          { label: 'PER',  value: d.per  != null ? d.per.toFixed(2)  + 'x' : 'N/A' },
+          { label: 'PBR',  value: d.pbr  != null ? d.pbr.toFixed(2)  + 'x' : 'N/A' },
+          { label: 'ROE',  value: d.roe  != null ? d.roe.toFixed(2)  + '%' : 'N/A' },
+          { label: 'EPS',  value: d.eps  != null ? d.eps.toLocaleString() + '원' : 'N/A' },
+          { label: '시가총액', value: d.market_cap != null ? _fmtCap(d.market_cap) : 'N/A' },
+        ];
+        var html = '<div class="finance-card">'
+          + '<div class="finance-card-title">밸류에이션 지표</div>'
+          + rows.map(function (r) {
+              return '<div class="finance-row">'
+                + '<span class="finance-row-label">' + r.label + '</span>'
+                + '<span class="finance-row-value">' + r.value + '</span>'
+                + '</div>';
+            }).join('')
+          + '</div>';
+        if (contentEl) contentEl.innerHTML = html;
+      })
+      .catch(function (e) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (contentEl) contentEl.innerHTML =
+          '<div class="info-empty">재무 데이터를 불러오지 못했습니다.<br><small>' + (e.message||'') + '</small></div>';
+      });
+  };
+
+  function _fmtCap(v) {
+    if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
+    if (v >= 1e8)  return (v / 1e8).toFixed(0) + '억';
+    return v.toLocaleString() + '원';
+  }
+
+  // ── 뉴스 데이터 로드 ─────────────────────────────────────────────
+  window.loadNewsData = function (ticker, market) {
+    if (!ticker) return;
+    if (market && market !== 'KR') {
+      document.getElementById('news-content').innerHTML =
+        '<div class="info-empty">뉴스/공시는 KR 종목만 지원합니다.</div>';
+      return;
+    }
+    var loadingEl = document.getElementById('news-loading');
+    var contentEl = document.getElementById('news-content');
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (contentEl) contentEl.innerHTML = '';
+
+    fetch('/api/v1/stock/news/' + encodeURIComponent(ticker))
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        var items = d.items || [];
+        if (!items.length) {
+          if (contentEl) contentEl.innerHTML = '<div class="info-empty">최근 뉴스/공시가 없습니다.</div>';
+          return;
+        }
+        var html = items.map(function (n) {
+          return '<div class="news-item" onclick="window._onNewsClick && window._onNewsClick(' + JSON.stringify(n) + ')">'
+            + '<div class="news-item-title">' + _esc(n.title) + '</div>'
+            + '<div class="news-item-meta">'
+            + '<span class="news-item-type">' + _esc(n.type || '뉴스') + '</span>'
+            + '<span>' + _esc(n.date || '') + '</span>'
+            + '</div></div>';
+        }).join('');
+        if (contentEl) contentEl.innerHTML = html;
+      })
+      .catch(function (e) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (contentEl) contentEl.innerHTML =
+          '<div class="info-empty">뉴스를 불러오지 못했습니다.<br><small>' + (e.message||'') + '</small></div>';
+      });
+  };
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── 차트 로드 시 자동으로 패널 데이터 갱신 ──────────────────────
+  // chart.js의 _onChartLoaded 훅에 연결 (기존 훅 보존)
+  document.addEventListener('DOMContentLoaded', function () {
+    var _origOnChartLoaded = window._onChartLoaded;
+    window._onChartLoaded = function (ticker, market) {
+      // 재무 탭이 활성이면 즉시 로드, 아니면 탭 전환 시 lazy load
+      var activeTab = document.querySelector('.info-tab-btn.active');
+      var tab = activeTab ? activeTab.dataset.itab : 'finance';
+      if (tab === 'finance')  window.loadFinanceData(ticker, market);
+      if (tab === 'news')     window.loadNewsData(ticker, market);
+      // 기존 훅 호출
+      if (typeof _origOnChartLoaded === 'function') _origOnChartLoaded(ticker, market);
+    };
+
+    // 탭 클릭 시 lazy load
+    document.querySelectorAll('.info-tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tab = btn.dataset.itab;
+        var ticker = window.D2T && D2T.ticker;
+        var market = window.D2T && D2T.market;
+        if (tab === 'finance' && ticker) window.loadFinanceData(ticker, market);
+        if (tab === 'news'    && ticker) window.loadNewsData(ticker, market);
+      });
+    });
+  });
+
+})();
+</script>
 
 {% endblock %}

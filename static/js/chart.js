@@ -1239,4 +1239,148 @@
   window.D2T.loadChart       = loadChart;
   window.D2T.loadResultChart = loadResultChart;
   window.D2T.switchMarket    = switchMarket;
+
+  // ── 컨텍스트 마커: 뉴스/이벤트를 차트 하단에 표시 ────────────────────────
+  /**
+   * setContextMarkers(newsItems)
+   *
+   * newsItems: Array of { title, date, type }
+   *   date  — 'YYYY-MM-DD' 또는 'YYYY-MM'
+   *   type  — '뉴스' | '공시' | '기타'
+   *   title — 표시할 텍스트 (30자 이상이면 자동 truncate)
+   *
+   * 유사 패턴 클릭 후 해당 시점 인근 뉴스를 차트 마커로 표시할 때 사용한다.
+   * 기존 시작·종료 마커는 유지하고, 뉴스 마커를 추가한다.
+   */
+  var _contextMarkerSeries = null;
+
+  D2T.setContextMarkers = function (newsItems) {
+    if (!D2T.chart || !D2T.series) return;
+    if (!newsItems || newsItems.length === 0) {
+      _clearContextMarkers();
+      return;
+    }
+
+    var candles = D2T.candles;
+    if (!candles || candles.length === 0) return;
+
+    // candles의 time 집합 (빠른 조회)
+    var timeSet = {};
+    for (var ci = 0; ci < candles.length; ci++) {
+      timeSet[candles[ci].time] = true;
+    }
+
+    // 뉴스 date → 캔들 time 매핑 (날짜 형식 정규화)
+    function _nearestCandleTime(dateStr) {
+      if (!dateStr) return null;
+      // 'YYYY-MM' → 'YYYY-MM-01' 로 취급
+      var d = dateStr.length === 7 ? dateStr + '-01' : dateStr;
+      // 정확히 일치하면 바로 반환
+      if (timeSet[d]) return d;
+      // 일치 없으면 가장 가까운 이전 캔들 time 반환
+      var best = null;
+      for (var i = 0; i < candles.length; i++) {
+        var t = candles[i].time;
+        if (typeof t === 'string' && t <= d) best = t;
+        if (typeof t === 'number') {
+          // intraday: unix timestamp → 'YYYY-MM-DD' 변환
+          var dt = new Date(t * 1000);
+          var ds = dt.getUTCFullYear() + '-'
+            + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-'
+            + String(dt.getUTCDate()).padStart(2, '0');
+          if (ds <= d) best = t;
+        }
+      }
+      return best;
+    }
+
+    var TYPE_COLOR = { '공시': '#ff9800', '뉴스': '#5c9cf5', '기타': '#7a8499' };
+
+    var markers = [];
+    newsItems.forEach(function (n) {
+      var t = _nearestCandleTime(n.date);
+      if (t == null) return;
+      var color = TYPE_COLOR[n.type] || TYPE_COLOR['기타'];
+      var label = (n.title || '').length > 28
+        ? (n.title || '').slice(0, 28) + '…'
+        : (n.title || '');
+      markers.push({
+        time:     t,
+        position: 'belowBar',
+        color:    color,
+        shape:    'arrowUp',
+        text:     '[' + (n.type || '뉴스') + '] ' + label,
+      });
+    });
+
+    if (markers.length === 0) return;
+
+    // 기존 시리즈 마커와 병합 (시작·종료 마커는 그대로 유지)
+    var existing = [];
+    try { existing = D2T.series.markers() || []; } catch (e) { existing = []; }
+    // 이전 컨텍스트 마커(belowBar/arrowUp) 제거 후 새 것만 추가
+    var filtered = existing.filter(function (m) { return !(m.position === 'belowBar' && m.shape === 'arrowUp'); });
+    var merged = filtered.concat(markers);
+    // time 오름차순 정렬 (LW Charts 요구사항)
+    merged.sort(function (a, b) {
+      var ta = a.time, tb = b.time;
+      if (ta < tb) return -1;
+      if (ta > tb) return 1;
+      return 0;
+    });
+    D2T.series.setMarkers(merged);
+  };
+
+  function _clearContextMarkers() {
+    if (!D2T.series) return;
+    try {
+      var existing = D2T.series.markers() || [];
+      var filtered = existing.filter(function (m) { return !(m.position === 'belowBar' && m.shape === 'arrowUp'); });
+      D2T.series.setMarkers(filtered);
+    } catch (e) { /* ignore */ }
+  }
+
+  D2T.clearContextMarkers = _clearContextMarkers;
+
+  // ── 뉴스 클릭 시 차트 마커 표시 (info-panel → chart 연동) ───────────────
+  // index.html의 뉴스 아이템 onclick에서 호출됨
+  window._onNewsClick = function (newsItem) {
+    D2T.setContextMarkers([newsItem]);
+
+    // 해당 날짜 캔들로 스크롤 (일치하는 캔들이 있으면)
+    if (newsItem.date && D2T.chart && D2T.candles) {
+      var d = newsItem.date.length === 7 ? newsItem.date + '-01' : newsItem.date;
+      var idx = -1;
+      for (var i = 0; i < D2T.candles.length; i++) {
+        var ct = D2T.candles[i].time;
+        if (typeof ct === 'string' && ct <= d) idx = i;
+      }
+      if (idx >= 0) {
+        var halfVis = 20;
+        try {
+          var vr = D2T.chart.timeScale().getVisibleLogicalRange();
+          if (vr) halfVis = Math.round((vr.to - vr.from) / 2);
+        } catch (e) { /* ignore */ }
+        try {
+          D2T.chart.timeScale().setVisibleLogicalRange({ from: idx - halfVis, to: idx + halfVis });
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    // 시장 반응 탭 전환
+    if (typeof window.switchInfoTab === 'function') {
+      window.switchInfoTab('reaction');
+      var reactionPane = document.getElementById('info-pane-reaction');
+      if (reactionPane) {
+        var d = newsItem.date || '';
+        reactionPane.innerHTML =
+          '<div style="padding:12px 0;">'
+          + '<div style="font-size:12px;color:#7a8499;margin-bottom:8px;">' + d + ' · ' + (newsItem.type || '뉴스') + '</div>'
+          + '<div style="font-size:13px;color:#d4d8e2;line-height:1.6;">' + String(newsItem.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+          + '<div style="margin-top:14px;font-size:11px;color:#555;">차트에 마커가 표시됩니다.</div>'
+          + '</div>';
+      }
+    }
+  };
+
 })();

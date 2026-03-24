@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, chart, pattern, realtime, us_chart, user_data
+from app.routers import auth, chart, kis_data, pattern, realtime, us_chart, user_data
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
@@ -141,6 +141,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # API 라우터
 app.include_router(auth.router)
 app.include_router(chart.router)
+app.include_router(kis_data.router)
 app.include_router(pattern.router)
 app.include_router(us_chart.router)
 app.include_router(user_data.router)
