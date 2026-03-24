@@ -563,6 +563,7 @@
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn) backBtn.style.display = 'none';
         if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR');
+        if (typeof window._onFiwChartLoaded === 'function') window._onFiwChartLoaded(ticker, D2T.market || 'KR');
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);

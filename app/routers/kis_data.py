@@ -396,7 +396,7 @@ async def get_community(
         "board_url": f"https://finance.naver.com/item/board.naver?code={symbol}",
         "items":     items,
     }
-    await _cache_set(cache_key, result, ttl=120)  # 2분 캐시
+    await _cache_set(cache_key, result, ttl=180)  # 3분 캐시
     return result
 
 

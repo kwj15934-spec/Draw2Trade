@@ -2,8 +2,9 @@
 community_service.py — 네이버 종토방 최신 글 스크래핑.
 
 - URL: https://finance.naver.com/item/board.naver?code={symbol}
-- 현재 종목의 최신 글 제목 + 시간 + 공감/비공감 수 반환
-- User-Agent 설정 + 파싱 실패 시 빈 리스트 graceful 처리
+- 최신 글 제목 + 시간 + 공감/비공감 수 반환
+- urllib + HTMLParser 기반 (외부 의존성 없음)
+- Redis 3분 캐싱 지원
 """
 from __future__ import annotations
 
@@ -11,7 +12,6 @@ import logging
 import re
 import urllib.request as _req
 from html.parser import HTMLParser
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +27,18 @@ class _BoardParser(HTMLParser):
         self._items: list[dict] = []
         self._in_table  = False
         self._in_row    = False
-        self._td_idx    = -1          # 현재 <td> 컬럼 인덱스
+        self._td_idx    = -1
         self._cur: dict | None = None
         self._capture   = False
-        self._depth     = 0           # tbody 중첩 깊이
-
-    # ── 파싱 결과 ────────────────────────────────────────────────────────────
+        self._depth     = 0
 
     @property
     def items(self) -> list[dict]:
         return self._items
 
-    # ── HTMLParser 오버라이드 ─────────────────────────────────────────────────
-
     def handle_starttag(self, tag: str, attrs):
         a = dict(attrs)
-        cls = a.get("class", "")
+        cls  = a.get("class", "")
         href = a.get("href", "")
 
         if tag == "tbody":
@@ -60,19 +56,20 @@ class _BoardParser(HTMLParser):
             self._capture = False
 
         elif tag == "a" and self._in_row and self._td_idx == 1:
-            # 2번째 td 안의 링크 → 글 제목 링크
             if self._cur is not None:
-                self._cur["url"] = "https://finance.naver.com" + href if href.startswith("/") else href
+                self._cur["url"] = (
+                    "https://finance.naver.com" + href
+                    if href.startswith("/") else href
+                )
             self._capture = True
 
         elif tag == "span" and self._in_row:
-            # agree/disagree 는 <span class="agree"> or <span class="disagree">
             if "agree" in cls and "disagree" not in cls:
                 self._capture = True
-                self._td_idx = 90  # sentinel
+                self._td_idx = 90
             elif "disagree" in cls:
                 self._capture = True
-                self._td_idx = 91  # sentinel
+                self._td_idx = 91
 
     def handle_endtag(self, tag: str):
         if tag == "tbody":
@@ -86,7 +83,7 @@ class _BoardParser(HTMLParser):
                 self._items.append(self._cur)
             self._cur = None
 
-        elif tag == "a" or tag == "span":
+        elif tag in ("a", "span"):
             self._capture = False
 
     def handle_data(self, data: str):
@@ -95,12 +92,9 @@ class _BoardParser(HTMLParser):
         text = data.strip()
         if not text:
             return
-
         if self._td_idx == 1:
-            # 제목
             self._cur["title"] += text
         elif self._td_idx == 3:
-            # 날짜 (YYYY.MM.DD HH:MM)
             self._cur["date"] = text
         elif self._td_idx == 90:
             try:
@@ -116,7 +110,7 @@ class _BoardParser(HTMLParser):
 
 def fetch_community_posts(symbol: str, limit: int = 10) -> list[dict]:
     """
-    네이버 종토방에서 symbol 종목의 최신 글을 scrape하여 반환.
+    네이버 종토방에서 symbol 종목의 최신 글 scrape 후 반환.
 
     Returns:
         [{"title": str, "date": str, "agree": int, "disagree": int, "url": str}, ...]
@@ -142,7 +136,6 @@ def fetch_community_posts(symbol: str, limit: int = 10) -> list[dict]:
         parser.feed(html)
         posts = parser.items[:limit]
 
-        # title 정리 (연속 공백 제거)
         for p in posts:
             p["title"] = re.sub(r"\s+", " ", p["title"]).strip()
 

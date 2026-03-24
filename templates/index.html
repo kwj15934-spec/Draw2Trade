@@ -199,6 +199,38 @@
     <div id="chart-wrapper">
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
+
+      <!-- ── 플로팅 종목 정보 위젯 ──────────────────────── -->
+      <div id="floating-info-widget">
+        <div id="fiw-header">
+          <span id="fiw-title">종목 정보</span>
+          <div id="fiw-controls">
+            <button id="fiw-btn-min" title="최소화">─</button>
+            <button id="fiw-btn-close" title="닫기">✕</button>
+          </div>
+        </div>
+        <div id="fiw-tabs">
+          <button class="fiw-tab active" data-tab="finance">📊 재무</button>
+          <button class="fiw-tab" data-tab="news">🔔 뉴스</button>
+          <button class="fiw-tab" data-tab="community">💬 반응</button>
+        </div>
+        <div id="fiw-body">
+          <!-- 재무 패널 -->
+          <div id="fiw-panel-finance" class="fiw-panel active">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+          <!-- 뉴스 패널 -->
+          <div id="fiw-panel-news" class="fiw-panel" style="display:none;">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+          <!-- 반응(종토방) 패널 -->
+          <div id="fiw-panel-community" class="fiw-panel" style="display:none;">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+        </div>
+      </div>
+      <!-- ── 위젯 최소화 탭 (닫혀있을 때 표시) ─────────── -->
+      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">💬</button>
       <!-- 차트 로딩 스피너 -->
       <div id="chart-loading-spinner" style="display:none; position:absolute; inset:0; z-index:20; background:rgba(18,18,20,0.7); align-items:center; justify-content:center;">
         <div style="text-align:center;">
@@ -855,6 +887,214 @@
       });
     });
   });
+})();
+</script>
+
+<script>
+// ── 플로팅 종목 정보 위젯 ────────────────────────────────────
+(function () {
+  var _ticker = '';
+  var _loaded = { finance: false, news: false, community: false };
+  var _activeTab = 'finance';
+
+  // ── 탭 전환 ──────────────────────────────────────────────
+  function switchTab(tab) {
+    _activeTab = tab;
+    document.querySelectorAll('.fiw-tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    document.querySelectorAll('.fiw-panel').forEach(function (p) {
+      p.style.display = (p.id === 'fiw-panel-' + tab) ? 'flex' : 'none';
+    });
+    if (_ticker && !_loaded[tab]) _fetchTab(tab, _ticker);
+  }
+
+  document.querySelectorAll('.fiw-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchTab(this.dataset.tab); });
+  });
+
+  // ── 닫기 / 최소화 ─────────────────────────────────────────
+  var _widget   = document.getElementById('floating-info-widget');
+  var _restoreTab = document.getElementById('fiw-restore-tab');
+
+  document.getElementById('fiw-btn-close').addEventListener('click', function () {
+    if (_widget) _widget.style.display = 'none';
+    if (_restoreTab) { _restoreTab.style.display = 'flex'; }
+  });
+  document.getElementById('fiw-btn-min').addEventListener('click', function () {
+    if (_widget) _widget.style.display = 'none';
+    if (_restoreTab) { _restoreTab.style.display = 'flex'; }
+  });
+  if (_restoreTab) {
+    _restoreTab.addEventListener('click', function () {
+      _restoreTab.style.display = 'none';
+      if (_widget) _widget.style.display = 'flex';
+    });
+  }
+
+  // ── 드래그 이동 ────────────────────────────────────────────
+  (function initDrag() {
+    var header = document.getElementById('fiw-header');
+    if (!header || !_widget) return;
+    var dragging = false, ox = 0, oy = 0;
+    header.addEventListener('mousedown', function (e) {
+      if (e.target.tagName === 'BUTTON') return;
+      dragging = true;
+      var rect = _widget.getBoundingClientRect();
+      ox = e.clientX - rect.left;
+      oy = e.clientY - rect.top;
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      var parent = _widget.parentElement.getBoundingClientRect();
+      var nx = e.clientX - parent.left - ox;
+      var ny = e.clientY - parent.top  - oy;
+      // 경계 클램프
+      nx = Math.max(0, Math.min(nx, parent.width  - _widget.offsetWidth));
+      ny = Math.max(0, Math.min(ny, parent.height - _widget.offsetHeight));
+      _widget.style.right = 'unset';
+      _widget.style.top   = ny + 'px';
+      _widget.style.left  = nx + 'px';
+    });
+    document.addEventListener('mouseup', function () {
+      dragging = false;
+      document.body.style.userSelect = '';
+    });
+  })();
+
+  // ── 데이터 fetch ───────────────────────────────────────────
+  function _setPanel(tab, html) {
+    var el = document.getElementById('fiw-panel-' + tab);
+    if (el) el.innerHTML = html;
+  }
+  function _loadingPanel(tab) {
+    _setPanel(tab, '<div class="fiw-loading">로딩 중…</div>');
+  }
+  function _errorPanel(tab, msg) {
+    _setPanel(tab, '<div class="fiw-loading">' + (msg || '데이터 없음') + '</div>');
+  }
+
+  function _fetchTab(tab, ticker) {
+    _loaded[tab] = true; // 중복 방지 (실패해도 재시도 안 함)
+    if (tab === 'finance') _fetchFinance(ticker);
+    else if (tab === 'news') _fetchNews(ticker);
+    else if (tab === 'community') _fetchCommunity(ticker);
+  }
+
+  // 재무
+  function _fetchFinance(ticker) {
+    _loadingPanel('finance');
+    fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) { _errorPanel('finance', '재무 데이터 없음'); return; }
+        var rows = [
+          ['PER',   d.per  != null ? d.per.toFixed(2)  : '—'],
+          ['PBR',   d.pbr  != null ? d.pbr.toFixed(2)  : '—'],
+          ['ROE',   d.roe  != null ? d.roe.toFixed(1) + '%' : '—'],
+          ['EPS',   d.eps  != null ? Number(d.eps).toLocaleString('ko-KR') : '—'],
+        ];
+        var cap = d.market_cap
+          ? (d.market_cap >= 1e12
+              ? (d.market_cap / 1e12).toFixed(1) + '조'
+              : (d.market_cap / 1e8).toFixed(0) + '억') + ' 원'
+          : null;
+        var html = '';
+        if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
+        rows.forEach(function (r) {
+          html += '<div class="fiw-finance-row">' +
+            '<span class="fiw-finance-label">' + r[0] + '</span>' +
+            '<span class="fiw-finance-value">' + r[1] + '</span>' +
+            '</div>';
+        });
+        _setPanel('finance', html || '<div class="fiw-loading">데이터 없음</div>');
+      })
+      .catch(function () { _errorPanel('finance', '조회 실패'); });
+  }
+
+  // 뉴스
+  function _fetchNews(ticker) {
+    _loadingPanel('news');
+    fetch('/api/v1/stock/news/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var items = (d && d.items) || [];
+        if (!items.length) { _errorPanel('news', '뉴스/공시 없음'); return; }
+        var html = items.map(function (it) {
+          var url = it.url || '#';
+          return '<div class="fiw-news-item" onclick="window.open(\'' + url + '\',\'_blank\')">' +
+            '<div class="fiw-news-title">' + _esc(it.title) + '</div>' +
+            '<div class="fiw-news-meta">' +
+              '<span class="fiw-news-type">' + _esc(it.type || '뉴스') + '</span>' +
+              '<span>' + _esc(it.date || '') + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        _setPanel('news', html);
+      })
+      .catch(function () { _errorPanel('news', '조회 실패'); });
+  }
+
+  // 종토방
+  function _fetchCommunity(ticker) {
+    _loadingPanel('community');
+    fetch('/api/v1/stock/community/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var items = (d && d.items) || [];
+        if (!items.length) { _errorPanel('community', '게시글 없음'); return; }
+        var hot = Math.max.apply(null, items.map(function (i) { return i.agree || 0; }));
+        var html = items.map(function (it) {
+          var isHot = hot > 0 && (it.agree || 0) >= hot * 0.5;
+          var url = it.url || d.board_url || '#';
+          return '<div class="fiw-comm-item" onclick="window.open(\'' + url + '\',\'_blank\')">' +
+            '<div class="fiw-comm-title">' +
+              (isHot ? '🔥 ' : '') + _esc(it.title) +
+            '</div>' +
+            '<div class="fiw-comm-meta">' +
+              '<span class="fiw-comm-agree">👍 ' + (it.agree || 0) + '</span>' +
+              '<span>👎 ' + (it.disagree || 0) + '</span>' +
+              '<span>' + _esc(it.date || '') + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        _setPanel('community', html);
+      })
+      .catch(function () { _errorPanel('community', '조회 실패'); });
+  }
+
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── 종목 변경 시 갱신 ─────────────────────────────────────
+  window.fetchCommunityData = function (ticker) {
+    if (!ticker || ticker === _ticker) return;
+    _ticker = ticker;
+    _loaded = { finance: false, news: false, community: false };
+    // 위젯 제목 갱신
+    var title = document.getElementById('fiw-title');
+    if (title) title.textContent = ticker;
+    // 현재 탭만 즉시 로드, 나머지는 탭 전환 시 lazy 로드
+    _fetchTab(_activeTab, ticker);
+    // 위젯 표시 (닫혀있어도 종목 변경 시 자동 열기)
+    if (_widget && _widget.style.display === 'none' && _restoreTab && _restoreTab.style.display !== 'flex') {
+      // 처음 종목 로드 시 자동으로 표시
+    }
+  };
+
+  // KR 전용 (US 종목은 지원 안 함)
+  window._onFiwChartLoaded = function (ticker, market) {
+    if (market !== 'KR') {
+      if (_widget) _widget.style.display = 'none';
+      return;
+    }
+    if (_widget && _widget.style.display === 'none' && (!_restoreTab || _restoreTab.style.display === 'none')) {
+      _widget.style.display = 'flex';
+    }
+    window.fetchCommunityData(ticker);
+  };
 })();
 </script>
 
