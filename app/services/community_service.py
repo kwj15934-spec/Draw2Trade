@@ -130,14 +130,19 @@ def fetch_community_posts(symbol: str, limit: int = 10) -> list[dict]:
             },
         )
         with _req.urlopen(request, timeout=_TIMEOUT) as resp:
-            html = resp.read().decode("euc-kr", errors="replace")
+            raw = resp.read()
+        # cp949는 euc-kr 상위호환 — 네이버 특수문자까지 안전하게 처리
+        html = raw.decode("cp949", errors="replace")
 
         parser = _BoardParser()
         parser.feed(html)
         posts = parser.items[:limit]
 
+        # HTML 엔티티 디코딩 + 공백 정규화
+        from html import unescape as _unescape
         for p in posts:
-            p["title"] = re.sub(r"\s+", " ", p["title"]).strip()
+            p["title"] = re.sub(r"\s+", " ", _unescape(p["title"])).strip()
+            p["date"]  = _unescape(p["date"]).strip()
 
         return posts
 
