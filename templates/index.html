@@ -207,6 +207,38 @@
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════
+           Floating Info Widget — 종목 정보 미니 창
+           ══════════════════════════════════════════════════ -->
+      <div id="mini-context-window" class="mcw-window">
+        <!-- 헤더: 탭 버튼 + 최소화 -->
+        <div class="mcw-header">
+          <div class="mcw-tabs">
+            <button class="mcw-tab active" data-tab="finance" onclick="mcwSwitchTab('finance',this)">📊 재무</button>
+            <button class="mcw-tab" data-tab="news"    onclick="mcwSwitchTab('news',this)">🔔 뉴스</button>
+            <button class="mcw-tab" data-tab="react"   onclick="mcwSwitchTab('react',this)">💬 반응</button>
+          </div>
+          <button class="mcw-minimize-btn" onclick="mcwToggleMinimize()" title="최소화">−</button>
+        </div>
+        <!-- 콘텐츠 영역 -->
+        <div class="mcw-body" id="mcw-body">
+          <div class="mcw-pane active" id="mcw-pane-finance">
+            <div class="mcw-placeholder">종목을 선택하면<br>재무 지표가 표시됩니다.</div>
+          </div>
+          <div class="mcw-pane" id="mcw-pane-news">
+            <div class="mcw-placeholder">종목을 선택하면<br>뉴스가 표시됩니다.</div>
+          </div>
+          <div class="mcw-pane" id="mcw-pane-react">
+            <div class="mcw-placeholder">종목을 선택하면<br>종토방 반응이 표시됩니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최소화된 탭 (우측 벽 부착) -->
+      <div id="mini-context-tab" class="mcw-tab-collapsed" style="display:none;" onclick="mcwToggleMinimize()">
+        <span class="mcw-tab-label">📊</span>
+      </div>
+
       <div id="auto-ruler-overlay" style="display:none; position:absolute; inset:0; z-index:15; cursor:col-resize;">
         <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #26a69a; pointer-events:none; transition:left .03s;"></div>
         <div id="auto-ruler-date" style="position:absolute; top:8px; background:#26a69a; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
@@ -1188,6 +1220,213 @@
       }, 30000); // 30초마다 체크
     }
   });
+
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════
+     Floating Info Widget — JS
+     ════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  // ── 상태 ────────────────────────────────────────────────────────────────
+  var _currentSymbol = '';
+  var _currentTab    = 'finance';
+  var _minimized     = false;
+  var _tabIcon       = { finance: '📊', news: '🔔', react: '💬' };
+
+  // ── 탭 전환 ─────────────────────────────────────────────────────────────
+  window.mcwSwitchTab = function (tab, btnEl) {
+    _currentTab = tab;
+
+    document.querySelectorAll('.mcw-tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    ['finance', 'news', 'react'].forEach(function (t) {
+      var p = document.getElementById('mcw-pane-' + t);
+      if (p) p.classList.toggle('active', t === tab);
+    });
+    var lbl = document.querySelector('.mcw-tab-label');
+    if (lbl) lbl.textContent = _tabIcon[tab] || '📊';
+
+    if (_currentSymbol) _loadTab(tab, _currentSymbol, false);
+  };
+
+  // ── 최소화 토글 ──────────────────────────────────────────────────────────
+  window.mcwToggleMinimize = function () {
+    _minimized = !_minimized;
+    var win = document.getElementById('mini-context-window');
+    var tabEl = document.getElementById('mini-context-tab');
+    if (win)   win.classList.toggle('mcw-minimized', _minimized);
+    if (tabEl) tabEl.style.display = _minimized ? 'flex' : 'none';
+  };
+
+  // ── 로딩 / 에러 / 빈상태 렌더 ───────────────────────────────────────────
+  function _renderLoading(paneId) {
+    var p = document.getElementById(paneId);
+    if (p) p.innerHTML = '<div class="mcw-loading"><div class="mcw-spinner"></div></div>';
+  }
+
+  function _renderError(paneId, msg) {
+    var p = document.getElementById(paneId);
+    if (p) p.innerHTML = '<div class="mcw-error"><span class="mcw-error-icon">🔧</span>' + (msg || '서버 점검 중입니다.') + '</div>';
+  }
+
+  function _renderEmpty(paneId, msg) {
+    var p = document.getElementById(paneId);
+    if (p) p.innerHTML = '<div class="mcw-placeholder">' + (msg || '데이터가 없습니다.') + '</div>';
+  }
+
+  // ── 재무 렌더 ─────────────────────────────────────────────────────────
+  function _renderFinance(data) {
+    var p = document.getElementById('mcw-pane-finance');
+    if (!p) return;
+    if (!data) {
+      _renderError('mcw-pane-finance', '재무 데이터를<br>불러올 수 없습니다.<br><small style="color:#555d7a">서버 점검 중입니다</small>');
+      return;
+    }
+    function _fmt(v, suffix) {
+      if (v == null) return '<span style="color:#555d7a">—</span>';
+      return v.toFixed(2) + (suffix || '');
+    }
+    function _fmtCap(v) {
+      if (v == null) return '<span style="color:#555d7a">—</span>';
+      if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
+      if (v >= 1e8)  return Math.round(v / 1e8) + '억';
+      return v.toLocaleString();
+    }
+    var html = '';
+    if (data.name) html += '<div class="mcw-finance-name">' + _esc(data.name) + '</div>';
+    html += '<div class="mcw-finance-grid">';
+    html += _card('PER',   _fmt(data.per, '배'));
+    html += _card('PBR',   _fmt(data.pbr, '배'));
+    html += _card('ROE',   _fmt(data.roe, '%'));
+    html += _card('EPS',   data.eps != null ? data.eps.toLocaleString() + '원' : '<span style="color:#555d7a">—</span>');
+    html += _card('시가총액', _fmtCap(data.market_cap));
+    html += '</div>';
+    if (data.date) html += '<div class="mcw-finance-date">기준: ' + _esc(data.date) + '</div>';
+    p.innerHTML = html;
+  }
+
+  function _card(label, value) {
+    return '<div class="mcw-finance-card">'
+      + '<div class="mcw-finance-label">' + label + '</div>'
+      + '<div class="mcw-finance-value">' + value + '</div>'
+      + '</div>';
+  }
+
+  // ── 뉴스 렌더 ─────────────────────────────────────────────────────────
+  function _renderNews(data) {
+    var p = document.getElementById('mcw-pane-news');
+    if (!p) return;
+    if (!data || !data.items || data.items.length === 0) {
+      _renderEmpty('mcw-pane-news', 'KIS API 연결 후<br>뉴스가 표시됩니다.'); return;
+    }
+    var html = '';
+    data.items.forEach(function (item) {
+      var badgeCls = item.type === '공시' ? 'mcw-news-badge disclosure' : 'mcw-news-badge';
+      var clickAttr = item.url ? ' onclick="window.open(\'' + _esc(item.url) + '\',\'_blank\');return false;" style="cursor:pointer;"' : '';
+      html += '<div class="mcw-news-item"' + clickAttr + '>';
+      html += '<div class="mcw-news-title">' + _esc(item.title) + '</div>';
+      html += '<div class="mcw-news-meta">';
+      html += '<span class="' + badgeCls + '">' + _esc(item.type) + '</span>';
+      html += '<span>' + _esc(item.date) + '</span>';
+      html += '</div></div>';
+    });
+    p.innerHTML = html;
+  }
+
+  // ── 종토방 렌더 ───────────────────────────────────────────────────────
+  function _renderReact(data) {
+    var p = document.getElementById('mcw-pane-react');
+    if (!p) return;
+    if (!data || !data.items || data.items.length === 0) {
+      _renderEmpty('mcw-pane-react', '종목 게시글이 없거나<br>스크래핑에 실패했습니다.'); return;
+    }
+    var boardUrl = data.board_url || '#';
+    var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">'
+      + '<a href="' + _esc(boardUrl) + '" target="_blank" rel="noopener" class="mcw-react-link">종토방 바로가기 →</a>'
+      + '</div>';
+    data.items.forEach(function (item) {
+      html += '<div class="mcw-react-item">';
+      if (item.url) {
+        html += '<a href="' + _esc(item.url) + '" target="_blank" rel="noopener" class="mcw-react-title" style="text-decoration:none;display:-webkit-box;">' + _esc(item.title) + '</a>';
+      } else {
+        html += '<div class="mcw-react-title">' + _esc(item.title) + '</div>';
+      }
+      html += '<div class="mcw-react-meta">';
+      html += '<span>' + _esc(item.date) + '</span>';
+      if (item.agree)    html += '<span class="mcw-react-agree">👍 ' + item.agree + '</span>';
+      if (item.disagree) html += '<span class="mcw-react-disagree">👎 ' + item.disagree + '</span>';
+      html += '</div></div>';
+    });
+    p.innerHTML = html;
+  }
+
+  // ── 탭별 데이터 로드 ──────────────────────────────────────────────────
+  function _loadTab(tab, symbol, showLoading) {
+    if (showLoading) _renderLoading('mcw-pane-' + tab);
+    var urlMap = {
+      finance: '/api/v1/stock/finance/'   + symbol,
+      news:    '/api/v1/stock/news/'      + symbol,
+      react:   '/api/v1/stock/community/' + symbol,
+    };
+    var url = urlMap[tab];
+    if (!url) return;
+
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        if (tab === 'finance')  _renderFinance(data);
+        else if (tab === 'news')   _renderNews(data);
+        else if (tab === 'react')  _renderReact(data);
+      })
+      .catch(function (err) {
+        var is503 = err && err.message && err.message.indexOf('503') >= 0;
+        var msg = is503
+          ? '서버 점검 중입니다.<br><small style="color:#555d7a">잠시 후 다시 시도해 주세요</small>'
+          : '데이터를 불러올 수 없습니다.';
+        _renderError('mcw-pane-' + tab, msg);
+      });
+  }
+
+  // ── 외부 공개 API: updateMiniWindow(symbol) ───────────────────────────
+  window.updateMiniWindow = function (symbol) {
+    if (!symbol) return;
+    if (!/^\d{6}$/.test(symbol)) {
+      ['finance', 'news', 'react'].forEach(function (t) {
+        _renderEmpty('mcw-pane-' + t, 'KR 종목만 지원됩니다.');
+      });
+      return;
+    }
+    // 동일 종목 반복 호출 무시
+    if (_currentSymbol === symbol) return;
+    _currentSymbol = symbol;
+
+    // 다른 탭 캐시 초기화 (플레이스홀더로)
+    ['finance', 'news', 'react'].forEach(function (t) {
+      if (t !== _currentTab) {
+        _renderEmpty('mcw-pane-' + t, '탭을 클릭하면 데이터를 불러옵니다.');
+      }
+    });
+    _loadTab(_currentTab, symbol, true);
+  };
+
+  // ── XSS 방어 ─────────────────────────────────────────────────────────
+  function _esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
 })();
 </script>

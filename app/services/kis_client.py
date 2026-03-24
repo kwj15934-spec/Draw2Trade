@@ -340,7 +340,7 @@ def _rate_limit() -> None:
 
 
 def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, Any]]:
-    """KIS REST GET 요청. 실패 시 None 반환."""
+    """KIS REST GET 요청. 503 발생 시 최대 3회 재시도 (1s, 2s 간격). 실패 시 None 반환."""
     global _api_call_count, _api_call_by_tr
     app_key, app_secret = get_credentials()
     token = get_token()
@@ -350,22 +350,41 @@ def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, An
     _rate_limit()
     _record_call()
     _api_call_by_tr[tr_id] = _api_call_by_tr.get(tr_id, 0) + 1
-    try:
-        qs = _parse.urlencode(params)
-        url = f"{_base_url()}{path}?{qs}"
-        headers = {
-            "authorization": f"Bearer {token}",
-            "appkey": app_key,
-            "appsecret": app_secret,
-            "tr_id": tr_id,
-            "Content-Type": "application/json; charset=utf-8",
-        }
-        req = _req.Request(url, headers=headers)
-        with _req.urlopen(req, timeout=3) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
-        logger.warning("KIS GET 실패 (%s): %s", path, e)
-        return None
+
+    qs = _parse.urlencode(params)
+    url = f"{_base_url()}{path}?{qs}"
+    headers = {
+        "authorization": f"Bearer {token}",
+        "appkey": app_key,
+        "appsecret": app_secret,
+        "tr_id": tr_id,
+        "Content-Type": "application/json; charset=utf-8",
+    }
+
+    _RETRY_DELAYS = [1.0, 2.0]  # 503 재시도 대기 시간 (초)
+    last_exc: Exception | None = None
+
+    for attempt in range(3):  # 최대 3회 시도
+        try:
+            req = _req.Request(url, headers=headers)
+            with _req.urlopen(req, timeout=5) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except _req.HTTPError as e:
+            last_exc = e
+            if e.code == 503 and attempt < 2:
+                wait = _RETRY_DELAYS[attempt]
+                logger.warning("KIS GET 503 (%s), %ds 후 재시도 (%d/3)", path, wait, attempt + 1)
+                time.sleep(wait)
+                continue
+            logger.warning("KIS GET HTTP %d (%s): %s", e.code, path, e)
+            return None
+        except Exception as e:
+            last_exc = e
+            logger.warning("KIS GET 실패 (%s): %s", path, e)
+            return None
+
+    logger.warning("KIS GET 최대 재시도 초과 (%s): %s", path, last_exc)
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

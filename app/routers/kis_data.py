@@ -344,6 +344,47 @@ async def _fetch_supply_kis(symbol: str) -> dict:
     return {"symbol": symbol, "levels": levels}
 
 
+# ── 종토방 (네이버 커뮤니티) ─────────────────────────────────────────────────
+
+@router.get("/community/{symbol}")
+async def get_community(
+    symbol: str = Path(..., description="종목 코드 (KR 6자리)"),
+):
+    """
+    네이버 종토방 최신 글 목록을 반환한다.
+
+    Response:
+        {
+          "symbol": "005930",
+          "board_url": "https://finance.naver.com/item/board.naver?code=005930",
+          "items": [
+            {"title": "...", "date": "2024-07-09 10:23", "agree": 5, "disagree": 1, "url": "..."},
+            ...
+          ]
+        }
+    """
+    if not _KR_TICKER_RE.match(symbol):
+        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+
+    cache_key = f"community:{symbol}"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+
+    import asyncio
+    from app.services.community_service import fetch_community_posts
+    loop = asyncio.get_event_loop()
+    items = await loop.run_in_executor(None, fetch_community_posts, symbol, 10)
+
+    result = {
+        "symbol":    symbol,
+        "board_url": f"https://finance.naver.com/item/board.naver?code={symbol}",
+        "items":     items,
+    }
+    await _cache_set(cache_key, result, ttl=120)  # 2분 캐시
+    return result
+
+
 # ── 시간외 주도주 (등락률 상위) ───────────────────────────────────────────────
 
 @router.get("/market/overtime-leaders")
