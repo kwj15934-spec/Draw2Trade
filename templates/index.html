@@ -210,9 +210,9 @@
           </div>
         </div>
         <div id="fiw-tabs">
-          <button class="fiw-tab active" data-tab="finance">📊 재무</button>
-          <button class="fiw-tab" data-tab="news">🔔 뉴스</button>
-          <button class="fiw-tab" data-tab="community">💬 반응</button>
+          <button class="fiw-tab active" data-tab="finance">재무</button>
+          <button class="fiw-tab" data-tab="news">뉴스</button>
+          <button class="fiw-tab" data-tab="community">반응</button>
         </div>
         <div id="fiw-body">
           <!-- 재무 패널 -->
@@ -230,7 +230,7 @@
         </div>
       </div>
       <!-- ── 위젯 최소화 탭 (닫혀있을 때 표시) ─────────── -->
-      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">💬</button>
+      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">i</button>
       <!-- 차트 로딩 스피너 -->
       <div id="chart-loading-spinner" style="display:none; position:absolute; inset:0; z-index:20; background:rgba(18,18,20,0.7); align-items:center; justify-content:center;">
         <div style="text-align:center;">
@@ -1050,11 +1050,11 @@
           var url = it.url || d.board_url || '#';
           return '<div class="fiw-comm-item" onclick="window.open(\'' + url + '\',\'_blank\')">' +
             '<div class="fiw-comm-title">' +
-              (isHot ? '🔥 ' : '') + _esc(it.title) +
+              (isHot ? '* ' : '') + _esc(it.title) +
             '</div>' +
             '<div class="fiw-comm-meta">' +
-              '<span class="fiw-comm-agree">👍 ' + (it.agree || 0) + '</span>' +
-              '<span>👎 ' + (it.disagree || 0) + '</span>' +
+              '<span class="fiw-comm-agree">+' + (it.agree || 0) + '</span>' +
+              '<span>-' + (it.disagree || 0) + '</span>' +
               '<span>' + _esc(it.date || '') + '</span>' +
             '</div>' +
           '</div>';
