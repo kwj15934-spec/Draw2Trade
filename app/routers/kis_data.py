@@ -6,10 +6,13 @@ app/routers/kis_data.py — 종목 상세 컨텍스트 패널 + 대시보드용 
   GET /api/v1/stock/news/{symbol}         — 최신 뉴스 및 공시 제목 리스트
   GET /api/v1/stock/supply/{symbol}       — 매물대 (FHPST01130000)
   GET /api/v1/market/overtime-leaders     — 시간외 등락률 상위 종목 (FHPST02340000)
+  GET /api/v1/market/scanner/volume       — 거래량 순위 (FHPST01710000)
+  GET /api/v1/market/scanner/rise         — 등락률 상위 (FHPST01700000)
+  GET /api/v1/market/scanner/high         — 신고가 종목 (FHPST01040000)
 
 주의사항:
   - KIS API 미설정 시 pykrx 폴백 / 빈 응답으로 부드럽게 처리한다.
-  - Redis 캐시 적용 (재무 30분, 뉴스 10분, 매물대 5분, 주도주 2분).
+  - Redis 캐시 적용 (재무 30분, 뉴스 10분, 매물대 5분, 주도주 2분, 스캐너 10초).
   - 현재 KR 종목(6자리 숫자)만 정식 지원. US 요청 시 422 반환.
 """
 from __future__ import annotations
@@ -485,3 +488,244 @@ async def _fetch_overtime_leaders(top_n: int) -> dict:
     items = await loop.run_in_executor(None, _sync)
     as_of = datetime.now(_KST).strftime("%H:%M")
     return {"items": items, "as_of": as_of}
+
+
+# ── 실시간 스캐너 ─────────────────────────────────────────────────────────────
+
+@router.get("/market/scanner/volume")
+async def get_scanner_volume(top_n: int = 20):
+    """거래량 순위 조회 (FHPST01710000), 10초 캐시."""
+    cache_key = f"scanner_volume_{top_n}"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    result = await _fetch_scanner(
+        tr_id="FHPST01710000",
+        path="/uapi/domestic-stock/v1/ranking/volume",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20171",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_DIV_CLS_CODE":      "0",
+            "FID_BLNG_CLS_CODE":     "0",
+            "FID_TRGT_CLS_CODE":     "111111111",
+            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_INPUT_DATE_1":      "",
+        },
+        top_n=top_n,
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+    )
+    await _cache_set(cache_key, result, ttl=10)
+    return result
+
+
+@router.get("/market/scanner/rise")
+async def get_scanner_rise(top_n: int = 20):
+    """등락률 상위 조회 (FHPST01700000), 10초 캐시."""
+    cache_key = f"scanner_rise_{top_n}"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    result = await _fetch_scanner(
+        tr_id="FHPST01700000",
+        path="/uapi/domestic-stock/v1/ranking/fluctuation",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20170",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_RANK_SORT_CLS_CODE":"0",
+            "FID_INPUT_CNT_1":       "0",
+            "FID_PRCG_CLS_CODE":     "0",
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_TRGT_CLS_CODE":     "0",
+            "FID_TRGT_EXLS_CLS_CODE":"0",
+            "FID_DIV_CLS_CODE":      "0",
+            "FID_RST_DVS_CDE":       "0",
+        },
+        top_n=top_n,
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+    )
+    await _cache_set(cache_key, result, ttl=10)
+    return result
+
+
+@router.get("/market/scanner/high")
+async def get_scanner_high(top_n: int = 20):
+    """신고가 종목 조회 (FHPST01040000), 10초 캐시."""
+    cache_key = f"scanner_high_{top_n}"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    result = await _fetch_scanner(
+        tr_id="FHPST01040000",
+        path="/uapi/domestic-stock/v1/ranking/new-highlow",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20104",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_HL_CLS_CODE":       "1",    # 1=신고가
+            "FID_INPUT_CNT_1":       "5",    # 최근 N일 기준 신고가
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_TRGT_CLS_CODE":     "0",
+            "FID_TRGT_EXLS_CLS_CODE":"0",
+            "FID_DIV_CLS_CODE":      "0",
+        },
+        top_n=top_n,
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+    )
+    await _cache_set(cache_key, result, ttl=10)
+    return result
+
+
+async def _fetch_scanner(
+    tr_id: str,
+    path: str,
+    extra_params: dict,
+    top_n: int,
+    ticker_key: str,
+    name_key: str,
+    price_key: str,
+    rate_key: str,
+    vol_key: str,
+) -> dict:
+    """공통 스캐너 fetch 로직."""
+    import asyncio
+
+    def _sync() -> list[dict]:
+        try:
+            from app.services.kis_client import _get, is_configured
+            if not is_configured():
+                return []
+
+            params = {"FID_COND_MRKT_DIV_CODE": "J"}
+            params.update(extra_params)
+
+            data = _get(path=path, params=params, tr_id=tr_id)
+            if not data or data.get("rt_cd") != "0":
+                return []
+
+            rows = data.get("output") or []
+            items: list[dict] = []
+            for row in rows:
+                try:
+                    ticker = (row.get(ticker_key) or "").strip()
+                    if not ticker or not ticker.isdigit():
+                        continue
+                    price = int(str(row.get(price_key, "0")).replace(",", "") or "0")
+                    vol   = int(str(row.get(vol_key,   "0")).replace(",", "") or "0")
+                    rate  = (row.get(rate_key) or "0").strip()
+                    if rate and not rate.startswith(("+", "-")):
+                        try:
+                            if float(rate) >= 0:
+                                rate = "+" + rate
+                        except ValueError:
+                            pass
+                    name = (row.get(name_key) or "").strip()
+                    items.append({
+                        "ticker":      ticker,
+                        "name":        name,
+                        "price":       price,
+                        "change_rate": rate,
+                        "volume":      vol,
+                    })
+                except (ValueError, TypeError):
+                    continue
+                if len(items) >= top_n:
+                    break
+            return items
+        except Exception as e:
+            logger.warning("KIS 스캐너 조회 실패 (%s): %s", tr_id, e)
+            return []
+
+    loop = asyncio.get_event_loop()
+    items = await loop.run_in_executor(None, _sync)
+    as_of = datetime.now(_KST).strftime("%H:%M:%S")
+    return {"items": items, "as_of": as_of}
+
+
+# ── 스캐너 패턴 유사도 분석 ───────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+
+class _PatternCompareRequest(_BaseModel):
+    ticker: str
+    candidates: list[str]
+    top_n: int = 10
+    days: int = 20   # 비교 기간 (거래일 수)
+
+
+@router.post("/market/scanner/pattern-compare")
+async def scanner_pattern_compare(body: _PatternCompareRequest):
+    """
+    기준 종목(ticker)의 최근 N 거래일 종가 패턴을 candidates와 비교하여
+    피어슨 상관계수 기준 상위 top_n 종목을 반환한다.
+    """
+    import asyncio
+    try:
+        import numpy as np
+    except ImportError:
+        return {"results": [], "base_ticker": body.ticker, "error": "numpy unavailable"}
+
+    def _sync() -> list[dict]:
+        from app.services.data_service import get_ohlcv_by_timeframe
+
+        def _closes(tkr: str):
+            try:
+                data = get_ohlcv_by_timeframe(tkr, "daily", years=1)
+                if not data or not data.get("close"):
+                    return None
+                arr = np.array(data["close"][-body.days:], dtype=float)
+                if len(arr) < 5:
+                    return None
+                if arr[0] == 0:
+                    return None
+                # 첫 값 기준 수익률 정규화
+                arr = arr / arr[0] - 1.0
+                return arr
+            except Exception:
+                return None
+
+        base = _closes(body.ticker)
+        if base is None:
+            return []
+
+        results: list[dict] = []
+        for cand in body.candidates:
+            if cand == body.ticker:
+                continue
+            arr = _closes(cand)
+            if arr is None:
+                continue
+            # 길이 맞추기
+            n = min(len(base), len(arr))
+            a, b = base[-n:], arr[-n:]
+            # 피어슨 상관계수
+            if a.std() < 1e-9 or b.std() < 1e-9:
+                score = 0.0
+            else:
+                score = float(np.corrcoef(a, b)[0, 1])
+            results.append({"ticker": cand, "score": score})
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[: body.top_n]
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, _sync)
+    return {"results": results, "base_ticker": body.ticker}
