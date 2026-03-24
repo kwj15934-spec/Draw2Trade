@@ -907,7 +907,8 @@ def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None
         yf_period   = period_map.get(interval_min, "60d")
 
         t = yf.Ticker(symbol)
-        df = t.history(period=yf_period, interval=yf_interval, auto_adjust=True)
+        # prepost=True: 프리마켓 + 애프터마켓 포함 (정규장 전후 연장 거래)
+        df = t.history(period=yf_period, interval=yf_interval, auto_adjust=True, prepost=True)
         if df is None or df.empty:
             return None
 

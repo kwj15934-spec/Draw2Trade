@@ -252,6 +252,8 @@
         borderColor: '#2a2e39',
         timeVisible: true,
         secondsVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
         fontSize: window.innerWidth <= 640 ? 9 : 12,
         tickMarkFormatter: function (time, tickMarkType, locale) {
           var d = (typeof time === 'number')
@@ -304,8 +306,112 @@
       _redrawRafId = requestAnimationFrame(function () {
         _redrawRafId = null;
         if (typeof window.redraw === 'function') window.redraw();
+        _drawNxtOverlay();
       });
     });
+
+    // ── NXT 배경 음영 캔버스 오버레이 ──────────────────────────────────────
+    // chart-wrapper 위에 절대 위치 canvas를 씌워 NXT 시간대에 파란 음영을 그린다.
+    var _nxtCanvas = null;
+
+    function _initNxtCanvas() {
+      var wrapper = document.getElementById('chart-wrapper');
+      if (!wrapper) return;
+      var existing = document.getElementById('nxt-overlay-canvas');
+      if (existing) existing.remove();
+      _nxtCanvas = document.createElement('canvas');
+      _nxtCanvas.id = 'nxt-overlay-canvas';
+      _nxtCanvas.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'pointer-events:none', 'z-index:2',
+      ].join(';');
+      wrapper.style.position = 'relative';
+      wrapper.appendChild(_nxtCanvas);
+    }
+
+    function _drawNxtOverlay() {
+      if (!_nxtCanvas || !D2T.chart || !D2T.candles || !D2T.candles.length) return;
+      var tf = D2T.timeframe || '';
+      var isIntra = !!{ '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 }[tf];
+      if (!isIntra) {
+        // 일봉/주봉/월봉에서는 음영 지우기
+        var ctx0 = _nxtCanvas.getContext('2d');
+        if (ctx0) ctx0.clearRect(0, 0, _nxtCanvas.width, _nxtCanvas.height);
+        return;
+      }
+
+      var wrapper = document.getElementById('chart-wrapper');
+      if (!wrapper) return;
+      var dpr = window.devicePixelRatio || 1;
+      var w = wrapper.offsetWidth;
+      var h = wrapper.offsetHeight;
+      _nxtCanvas.width  = w * dpr;
+      _nxtCanvas.height = h * dpr;
+      _nxtCanvas.style.width  = w + 'px';
+      _nxtCanvas.style.height = h + 'px';
+
+      var ctx = _nxtCanvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // NXT 시간대: 08:00~09:00, 15:30~20:00 (UTC seconds offset, fake-UTC 기준)
+      // 각 캔들의 UTC시간(HH)으로 NXT 여부 판단
+      var NXT_RANGES = [
+        { hStart: 8,  mStart: 0,  hEnd: 9,  mEnd: 0  },   // 장전 NXT
+        { hStart: 15, mStart: 30, hEnd: 20, mEnd: 0  },    // 시간외 + NXT 야간
+      ];
+
+      var candles = D2T.candles;
+      var ts = D2T.chart.timeScale();
+
+      // 연속된 NXT 구간을 x좌표로 변환하여 rect 그리기
+      var inNxt = false;
+      var nxtStartX = 0;
+
+      function _isNxtTime(fakeTsSeconds) {
+        var d = new Date(fakeTsSeconds * 1000);
+        var hh = d.getUTCHours(), mm = d.getUTCMinutes();
+        var hm = hh * 60 + mm;
+        for (var r = 0; r < NXT_RANGES.length; r++) {
+          var s = NXT_RANGES[r].hStart * 60 + NXT_RANGES[r].mStart;
+          var e = NXT_RANGES[r].hEnd   * 60 + NXT_RANGES[r].mEnd;
+          if (hm >= s && hm < e) return true;
+        }
+        return false;
+      }
+
+      ctx.fillStyle = 'rgba(30, 100, 200, 0.07)';
+
+      var barWidth = 0;
+      if (candles.length >= 2) {
+        var x1 = ts.timeToCoordinate(candles[0].time);
+        var x2 = ts.timeToCoordinate(candles[1].time);
+        if (x1 != null && x2 != null) barWidth = Math.abs(x2 - x1);
+      }
+      if (barWidth < 1) barWidth = 6;
+
+      for (var i = 0; i < candles.length; i++) {
+        var c = candles[i];
+        var isNxt = _isNxtTime(c.time);
+        var cx = ts.timeToCoordinate(c.time);
+        if (cx == null) { inNxt = false; continue; }
+
+        if (isNxt && !inNxt) {
+          inNxt = true;
+          nxtStartX = cx - barWidth / 2;
+        } else if (!isNxt && inNxt) {
+          inNxt = false;
+          ctx.fillRect(nxtStartX, 0, cx - barWidth / 2 - nxtStartX, h);
+        }
+      }
+      // 마지막 캔들이 NXT 구간에서 끝나는 경우
+      if (inNxt) {
+        var lastX = ts.timeToCoordinate(candles[candles.length - 1].time);
+        if (lastX != null) ctx.fillRect(nxtStartX, 0, lastX + barWidth / 2 - nxtStartX, h);
+      }
+    }
+
+    D2T.drawNxtOverlay = _drawNxtOverlay;
 
     // 리사이즈 대응 (디바운스 100ms — 리사이즈 중 과도한 호출 방지)
     var wrapper = document.getElementById('chart-wrapper');
@@ -316,20 +422,27 @@
         _resizeTimer = setTimeout(function () {
           // autoSize:true 이므로 LW Charts가 자동 리사이즈 — syncCanvas만 호출
           if (typeof syncCanvas === 'function') syncCanvas();
+          _drawNxtOverlay();
         }, 100);
       });
       ro.observe(wrapper);
     }
+
+    _initNxtCanvas();
   }
 
   // ── 거래량 데이터 세팅 헬퍼 ──────────────────────────────────────────────
   function setVolumeData(candles) {
     if (!D2T.volumeSeries || !candles) return;
     D2T.volumeSeries.setData(candles.map(function (c) {
+      // fill-forward 캔들은 거래량 없음 → 투명
+      if (c.fill) return { time: c.time, value: 0, color: 'rgba(0,0,0,0)' };
       return {
         time:  c.time,
         value: c.volume || 0,
-        color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
+        color: c.overtime
+          ? ((c.close >= c.open) ? 'rgba(38,166,154,0.25)' : 'rgba(239,83,80,0.25)')
+          : ((c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)'),
       };
     }));
   }
@@ -384,12 +497,40 @@
         });
         // 유사종목 비교 시 설정된 autoscaleInfoProvider 초기화
         D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
-        D2T.series.setData(data.candles);
-        D2T.candles = data.candles;
-        setVolumeData(data.candles);
+
+        // 시간외/NXT/fill-forward 캔들 색상 오버라이드
+        var isIntraday2 = !!INTRADAY_TF[data.timeframe || tf];
+        var paintedCandles = data.candles;
+        if (isIntraday2) {
+          paintedCandles = data.candles.map(function (c) {
+            if (c.fill) {
+              // fill-forward: 보이지 않게 (직전 종가 유지, 색상 완전 투명)
+              return Object.assign({}, c, {
+                color: 'rgba(0,0,0,0)', wickColor: 'rgba(0,0,0,0)', borderColor: 'rgba(0,0,0,0)',
+              });
+            }
+            if (c.overtime) {
+              var isUp = c.close >= c.open;
+              return Object.assign({}, c, {
+                color:       isUp ? 'rgba(38,166,154,0.35)' : 'rgba(239,83,80,0.35)',
+                wickColor:   isUp ? 'rgba(38,166,154,0.5)'  : 'rgba(239,83,80,0.5)',
+                borderColor: isUp ? 'rgba(38,166,154,0.5)'  : 'rgba(239,83,80,0.5)',
+              });
+            }
+            return c;
+          });
+        }
+
+        D2T.series.setData(paintedCandles);
+        D2T.candles = paintedCandles;
+        setVolumeData(paintedCandles);
         D2T.chart.timeScale().fitContent();
         // 오른쪽에 여백을 두어 실시간 캔들이 바로 보이도록
         D2T.chart.timeScale().scrollToRealTime();
+        // NXT 배경 음영 렌더 (분봉인 경우)
+        requestAnimationFrame(function () {
+          if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
+        });
         D2T.ticker = ticker;
         var tfLabel = TF_LABELS[data.timeframe || tf] || tf;
         var unit = TF_UNITS[data.timeframe || tf] || '개';
@@ -1185,18 +1326,36 @@
             ? D2T.candles[D2T.candles.length - 1].time : 0;
           var newCandles = data.candles.filter(function (c) { return c.time > lastTime; });
           if (newCandles.length > 0) {
-            // 새 캔들 추가
+            // 새 캔들 추가 (시간외/NXT 반투명, fill 투명)
             newCandles.forEach(function (c) {
-              D2T.series.update(c);
+              var displayC = c;
+              if (c.fill) {
+                displayC = Object.assign({}, c, {
+                  color: 'rgba(0,0,0,0)', wickColor: 'rgba(0,0,0,0)', borderColor: 'rgba(0,0,0,0)',
+                });
+              } else if (c.overtime) {
+                var isUp = c.close >= c.open;
+                displayC = Object.assign({}, c, {
+                  color:       isUp ? 'rgba(38,166,154,0.35)' : 'rgba(239,83,80,0.35)',
+                  wickColor:   isUp ? 'rgba(38,166,154,0.5)'  : 'rgba(239,83,80,0.5)',
+                  borderColor: isUp ? 'rgba(38,166,154,0.5)'  : 'rgba(239,83,80,0.5)',
+                });
+              }
+              D2T.series.update(displayC);
               if (D2T.volumeSeries) {
                 D2T.volumeSeries.update({
                   time:  c.time,
-                  value: c.volume || 0,
-                  color: (c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
+                  value: c.fill ? 0 : (c.volume || 0),
+                  color: c.fill ? 'rgba(0,0,0,0)'
+                    : c.overtime
+                      ? (c.close >= c.open ? 'rgba(38,166,154,0.2)' : 'rgba(239,83,80,0.2)')
+                      : (c.close >= c.open ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)'),
                 });
               }
             });
             D2T.candles = data.candles;
+            // NXT 배경 음영 갱신
+            if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
           } else {
             // 마지막 캔들 업데이트 (진행 중인 캔들 갱신)
             var latest = data.candles[data.candles.length - 1];

@@ -652,6 +652,249 @@ def _ensure_server_refresh_loop() -> None:
     threading.Thread(target=_server_refresh_loop, daemon=True).start()
 
 
+def _ticks_to_ohlcv_buckets(
+    ticks: list[dict],
+    today_str: str,
+    interval_min: int,
+    hm_start: int,
+    hm_end: int,
+    session_label: str,
+) -> dict[int, dict]:
+    """
+    틱 리스트에서 지정 시간 범위의 OHLCV 버킷 딕셔너리를 생성한다.
+
+    ticks: [{date, time(HHMMSS), price, cvol, volume, ...}, ...]  최신→과거 순
+    today_str: "YYYYMMDD"
+    hm_start / hm_end: HHMM 정수 범위 (포함)
+    반환: { fake_utc_ts: {"open",...,"close",...,"vol":..., "session": session_label} }
+    """
+    from datetime import timezone as _utc
+    bucket_sec = interval_min * 60
+    buckets: dict[int, dict] = {}
+
+    for t in ticks:
+        if t.get("date", "") != today_str:
+            continue
+        t_str = str(t.get("time", "") or "").zfill(6)
+        if len(t_str) < 6:
+            continue
+        hh, mm = int(t_str[:2]), int(t_str[2:4])
+        hm = hh * 100 + mm
+        if not (hm_start <= hm <= hm_end):
+            continue
+        try:
+            p = float(t.get("price", 0))
+            v = int(t.get("cvol", 0) or 0)
+            if p <= 0:
+                continue
+            # bucket 시작 분 (interval_min 단위)
+            bucket_mm = (mm // interval_min) * interval_min
+            dt = datetime(
+                int(today_str[:4]), int(today_str[4:6]), int(today_str[6:8]),
+                hh, bucket_mm, 0, tzinfo=_utc.utc,
+            )
+            ts = int(dt.timestamp())
+            if ts not in buckets:
+                buckets[ts] = {"open": p, "high": p, "low": p, "close": p, "vol": v, "session": session_label}
+            else:
+                b = buckets[ts]
+                b["high"]  = max(b["high"], p)
+                b["low"]   = min(b["low"], p)
+                b["close"] = p
+                b["vol"]  += v
+        except (ValueError, TypeError):
+            continue
+    return buckets
+
+
+def _fill_forward(candles: list[dict]) -> list[dict]:
+    """
+    시간순 정렬된 캔들 리스트에서 공백 구간(데이터 없는 분봉)을
+    직전 종가로 채운다 (fill-forward).
+
+    공백: 연속된 두 캔들의 시간 간격이 2분봉 이상 차이날 때.
+    채우는 캔들: open=high=low=close=직전종가, volume=0, fill=True
+    """
+    from datetime import timezone as _utc
+    if not candles:
+        return candles
+
+    # 가장 자주 등장하는 interval 추정 (분봉)
+    if len(candles) >= 2:
+        gaps = []
+        for i in range(1, min(len(candles), 20)):
+            g = candles[i]["time"] - candles[i - 1]["time"]
+            if g > 0:
+                gaps.append(g)
+        interval_sec = min(gaps) if gaps else 60
+    else:
+        interval_sec = 60
+
+    result = []
+    for i, c in enumerate(candles):
+        if i == 0:
+            result.append(c)
+            continue
+        prev = result[-1]
+        gap = c["time"] - prev["time"]
+        # 2배 이상 벌어진 경우만 채움 (1분봉이면 120초 이상)
+        if gap > interval_sec * 1.5:
+            fill_price = prev["close"]
+            ts = prev["time"] + interval_sec
+            while ts < c["time"]:
+                result.append({
+                    "time":   ts,
+                    "open":   fill_price,
+                    "high":   fill_price,
+                    "low":    fill_price,
+                    "close":  fill_price,
+                    "volume": 0,
+                    "fill":   True,
+                })
+                ts += interval_sec
+        result.append(c)
+    return result
+
+
+def _merge_overtime_intraday(ticker: str, candles: list[dict], interval_min: int) -> list[dict]:
+    """
+    정규장 분봉 리스트에 시간외/NXT 데이터를 병합하여 08:00~20:00 12시간 차트를 구성한다.
+
+    데이터 소스:
+      1. KIS FHPST02310000 (시간외 시간별 체결) → 15:30~18:00 구간
+      2. kis_stream tick cache            → NXT 구간 (08:00~09:00, 18:00~20:00)
+
+    시간대 구분:
+      PRE_NXT   : 08:00~09:00  (NXT 장전 단일가)
+      REGULAR   : 09:00~15:30  (KRX 정규장) ← 기존 candles
+      AFTER_HOURS: 15:30~18:00 (시간외 단일가)
+      NXT_NIGHT : 18:00~20:00  (NXT 야간거래소)
+
+    분봉 time 포맷: "fake UTC" (KST 시각을 UTC timestamp로 표기)
+    """
+    from datetime import timezone as _utc
+    try:
+        now = datetime.now()
+        hm = now.hour * 100 + now.minute
+
+        # 정규장 전(08:00~09:00)이거나 장후(15:30~20:05) 구간에만 실행
+        # 정규장 중에는 데이터 없음
+        in_pre_nxt   = (800  <= hm <= 900)
+        in_afterhours = (1530 <= hm <= 1805)
+        in_nxt_night  = (1800 <= hm <= 2005)
+
+        if not (in_pre_nxt or in_afterhours or in_nxt_night):
+            return candles
+
+        today_str      = now.strftime("%Y%m%d")
+        today_str_dash = now.strftime("%Y-%m-%d")
+        existing_ts: set[int] = {c["time"] for c in candles}
+        extra_candles: list[dict] = []
+
+        # ── 1. 시간외 단일가 (15:30~18:00): FHPST02310000 ─────────────────────
+        if in_afterhours or in_nxt_night:
+            try:
+                if kis_client.is_configured():
+                    raw = kis_client._get(
+                        path="/uapi/domestic-stock/v1/quotations/overtime-daily-chartprice",
+                        params={
+                            "FID_COND_MRKT_DIV_CODE": "J",
+                            "FID_INPUT_ISCD":          ticker,
+                            "FID_INPUT_DATE_1":        today_str,
+                            "FID_INPUT_DATE_2":        today_str,
+                            "FID_PERIOD_DIV_CODE":     "D",
+                        },
+                        tr_id="FHPST02310000",
+                    )
+                    if raw and raw.get("rt_cd") == "0":
+                        rows = raw.get("output2") or raw.get("output") or []
+                        bucket_size = max(interval_min, 10)
+                        ah_buckets: dict[int, dict] = {}
+                        for row in rows:
+                            try:
+                                t_str = str(row.get("stck_cntg_hour", "") or "").zfill(6)
+                                p = float(str(row.get("stck_prpr", "0")).replace(",", ""))
+                                v = int(str(row.get("acml_vol", "0")).replace(",", ""))
+                                if len(t_str) < 6 or p <= 0:
+                                    continue
+                                hh2, mm2 = int(t_str[:2]), int(t_str[2:4])
+                                bucket_mm = (mm2 // bucket_size) * bucket_size
+                                dt2 = datetime(now.year, now.month, now.day, hh2, bucket_mm, 0,
+                                               tzinfo=_utc.utc)
+                                ts2 = int(dt2.timestamp())
+                                if ts2 in existing_ts:
+                                    continue
+                                if ts2 not in ah_buckets:
+                                    ah_buckets[ts2] = {"open": p, "high": p, "low": p, "close": p, "vol": v}
+                                else:
+                                    b = ah_buckets[ts2]
+                                    b["high"]  = max(b["high"], p)
+                                    b["low"]   = min(b["low"], p)
+                                    b["close"] = p
+                                    b["vol"]   = max(b["vol"], v)
+                            except (ValueError, TypeError):
+                                continue
+                        for ts2, b in ah_buckets.items():
+                            extra_candles.append({
+                                "time": ts2, "open": b["open"], "high": b["high"],
+                                "low": b["low"], "close": b["close"], "volume": b["vol"],
+                                "overtime": True, "session": "AFTER_HOURS",
+                            })
+                            existing_ts.add(ts2)
+            except Exception as e:
+                logger.debug("시간외 FHPST02310000 호출 실패 (%s): %s", ticker, e)
+
+        # ── 2. NXT tick cache → PRE_NXT(08~09) + NXT_NIGHT(18~20) ───────────
+        try:
+            from app.services.kis_stream import get_cached_ticks
+            ticks = get_cached_ticks(ticker)
+            if ticks:
+                # NXT 장전 (08:00~08:59)
+                if in_pre_nxt:
+                    pre_buckets = _ticks_to_ohlcv_buckets(
+                        ticks, today_str, interval_min, 800, 859, "PRE_NXT"
+                    )
+                    for ts2, b in pre_buckets.items():
+                        if ts2 not in existing_ts:
+                            extra_candles.append({
+                                "time": ts2, "open": b["open"], "high": b["high"],
+                                "low": b["low"], "close": b["close"], "volume": b["vol"],
+                                "overtime": True, "session": "PRE_NXT",
+                            })
+                            existing_ts.add(ts2)
+                # NXT 야간 (18:00~19:59)
+                if in_nxt_night:
+                    night_buckets = _ticks_to_ohlcv_buckets(
+                        ticks, today_str, interval_min, 1800, 1959, "NXT_NIGHT"
+                    )
+                    for ts2, b in night_buckets.items():
+                        if ts2 not in existing_ts:
+                            extra_candles.append({
+                                "time": ts2, "open": b["open"], "high": b["high"],
+                                "low": b["low"], "close": b["close"], "volume": b["vol"],
+                                "overtime": True, "session": "NXT_NIGHT",
+                            })
+                            existing_ts.add(ts2)
+        except Exception as e:
+            logger.debug("NXT tick 캐시 병합 실패 (%s): %s", ticker, e)
+
+        if not extra_candles:
+            return candles
+
+        merged = candles + extra_candles
+        merged.sort(key=lambda c: c["time"])
+
+        # fill-forward: 공백 구간을 직전 종가로 채움 (차트 선 끊김 방지)
+        merged = _fill_forward(merged)
+
+        logger.info("시간외/NXT 분봉 병합 완료: %s +%d 캔들", ticker, len(extra_candles))
+        return merged
+
+    except Exception as e:
+        logger.debug("시간외 분봉 병합 실패 (%s): %s", ticker, e)
+        return candles
+
+
 def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False) -> list[dict] | None:
     """
     KR 분봉/시간봉 캔들 반환.
@@ -739,6 +982,10 @@ def get_kr_intraday(ticker: str, interval_min: int = 1, poll_only: bool = False)
 
     # KIS API에서 interval_min 단위로 직접 반환 → 추가 집계 불필요
     result = candles_1m
+
+    # ── 시간외 단일가 분봉 병합 ──────────────────────────────────────────────
+    # 15:30 이후 장중/장후 구간에서 FHPST02310000 호출하여 10분 단위 시간외 캔들 추가
+    result = _merge_overtime_intraday(ticker, result, interval_min)
 
     # TTL 캐시 저장
     ttl = _INTRADAY_TTL.get(interval_min, 300)

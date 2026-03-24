@@ -14,8 +14,8 @@ TR 코드:
   H0STCVT0  — 국내주식 시간외 단일가 체결
   H0STASP0  — 국내주식 실시간 호가
   H0STASV0  — 국내주식 시간외 실시간 호가 (KRX)
-  H0NMCNT0  — 국내주식 NXT 실시간 체결  (야간거래소 18:00~24:00)
-  H0NMASP0  — 국내주식 NXT 실시간 호가  (야간거래소 18:00~24:00)
+  H0NMCNT0  — 국내주식 NXT 실시간 체결  (장전 08:00~09:00 + 야간 18:00~20:00)
+  H0NMASP0  — 국내주식 NXT 실시간 호가  (장전 08:00~09:00 + 야간 18:00~20:00)
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
@@ -149,7 +149,7 @@ async def _throttled_broadcast(ticker: str) -> None:
 
 # ── 최근 틱 캐시 (종목별 최대 50건, 디스크 영속화) ───────────────────────────
 _tick_cache: dict[str, deque] = {}   # ticker → deque of tick dicts
-_TICK_CACHE_MAX = 50
+_TICK_CACHE_MAX = 300  # 12시간 분봉 대응 (1분봉 × 720분)
 _TICK_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "ticks"
 _SAVE_INTERVAL = 10      # N건마다 디스크 저장 (성능 최적화)
 _save_counters: dict[str, int] = {}  # ticker → 미저장 카운터
