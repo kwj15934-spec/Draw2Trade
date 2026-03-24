@@ -557,11 +557,6 @@
         // 매물대 자동 로드
         D2T.loadSupplyLevels(ticker);
 
-        // Floating Info Widget 갱신
-        if (typeof window.updateMiniWindow === 'function') {
-          window.updateMiniWindow(ticker);
-        }
-
         if (typeof clearDraw === 'function') clearDraw();
         // 새 종목 로드 시 원본 상태/버튼 초기화
         D2T.originState = null;
