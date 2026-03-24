@@ -446,12 +446,112 @@ def get_ohlcv_by_timeframe(
         return None
     data["timeframe"] = timeframe
 
+    # 일봉 + 오늘 시간외 단일가 데이터 병합 (15:30~18:00 구간)
+    if timeframe == "daily":
+        data = _merge_overtime_candle(ticker, data)
+
     # 디스크 + 메모리에 저장
     try:
         cp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     except Exception:
         pass
     _mem_ohlcv_wd[cache_key] = data
+    return data
+
+
+def _merge_overtime_candle(ticker: str, data: dict) -> dict:
+    """
+    일봉 데이터 뒤에 오늘 시간외 단일가 집계 캔들을 병합한다.
+
+    - 정규장 종료(15:30) 이후~18:00 사이에만 동작.
+    - KIS FHPST02310000 (시간외 시간별 체결) 호출.
+    - KIS 미설정 / 데이터 없음 시 원본 data 그대로 반환.
+    - 오늘 날짜 캔들이 이미 있으면 시간외 OHLCV로 업데이트(고가/저가/종가/거래량 갱신).
+    - `overtime_candle: True` 플래그를 해당 캔들에 추가 (프론트 시각화용).
+    """
+    try:
+        now = datetime.now()
+        hm = now.hour * 100 + now.minute
+        # 시간외 단일가 시간대: 15:30~18:05 (약간 여유)
+        if not (1530 <= hm <= 1805):
+            return data
+
+        from app.services import kis_client
+        if not kis_client.is_configured():
+            return data
+
+        today_str = now.strftime("%Y-%m-%d")
+        today_yyyymmdd = now.strftime("%Y%m%d")
+
+        # KIS 시간외 시간별 체결 조회
+        raw = kis_client._get(
+            path="/uapi/domestic-stock/v1/quotations/overtime-daily-chartprice",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD":          ticker,
+                "FID_INPUT_DATE_1":        today_yyyymmdd,
+                "FID_INPUT_DATE_2":        today_yyyymmdd,
+                "FID_PERIOD_DIV_CODE":     "D",
+            },
+            tr_id="FHPST02310000",
+        )
+        if not raw or raw.get("rt_cd") != "0":
+            return data
+
+        rows = raw.get("output2") or raw.get("output") or []
+        if not rows:
+            return data
+
+        # 시간외 캔들 집계
+        prices, volumes = [], []
+        for row in rows:
+            try:
+                p = float(str(row.get("stck_prpr", "0")).replace(",", ""))
+                v = int(str(row.get("acml_vol",   "0")).replace(",", ""))
+                if p > 0:
+                    prices.append(p)
+                    volumes.append(v)
+            except (ValueError, TypeError):
+                continue
+
+        if not prices:
+            return data
+
+        ot_open   = prices[0]
+        ot_close  = prices[-1]
+        ot_high   = max(prices)
+        ot_low    = min(prices)
+        ot_volume = max(volumes) if volumes else 0  # 누적 거래량 (마지막이 최대)
+
+        # 오늘 캔들 존재 여부 확인
+        if today_str in data.get("dates", []):
+            idx = data["dates"].index(today_str)
+            # 기존 정규장 캔들의 고가/저가에 시간외 반영
+            data["high"][idx]   = max(float(data["high"][idx]),   ot_high)
+            data["low"][idx]    = min(float(data["low"][idx]),    ot_low)
+            data["close"][idx]  = ot_close   # 종가를 시간외 현재가로 갱신
+            if ot_volume > int(data["volume"][idx]):
+                data["volume"][idx] = ot_volume
+            # 프론트에서 시간외 구간임을 알 수 있도록 플래그 추가
+            if "overtime_flags" not in data:
+                data["overtime_flags"] = [False] * len(data["dates"])
+            data["overtime_flags"][idx] = True
+        else:
+            # 오늘 캔들이 없으면 시간외 캔들 신규 추가
+            data["dates"].append(today_str)
+            data["open"].append(ot_open)
+            data["high"].append(ot_high)
+            data["low"].append(ot_low)
+            data["close"].append(ot_close)
+            data["volume"].append(ot_volume)
+            if "overtime_flags" not in data:
+                data["overtime_flags"] = [False] * (len(data["dates"]) - 1)
+            data["overtime_flags"].append(True)
+
+        logger.info("시간외 캔들 병합 완료: %s 시간외 체결 %d건", ticker, len(prices))
+    except Exception as e:
+        logger.debug("시간외 캔들 병합 실패 (%s): %s", ticker, e)
+
     return data
 
 

@@ -318,6 +318,21 @@
     <!-- 패널 내부 (접었을 때 숨김) -->
     <div class="info-panel-body">
 
+      <!-- ══════════════════════════════════════════════
+           실시간 주도주 위젯 (시간외 등락률 상위 5종목)
+           15:30~18:05 시간대에만 표시됨
+           ══════════════════════════════════════════════ -->
+      <div id="overtime-leaders-widget" class="overtime-widget" style="display:none;">
+        <div class="overtime-widget-header">
+          <span class="overtime-widget-title">⚡ 시간외 주도주</span>
+          <span id="overtime-widget-time" class="overtime-widget-time"></span>
+          <button class="overtime-widget-refresh" onclick="refreshOvertimeLeaders()" title="새로고침">↻</button>
+        </div>
+        <div id="overtime-leaders-list" class="overtime-leaders-list">
+          <div class="info-empty" style="padding:10px 0;">불러오는 중...</div>
+        </div>
+      </div>
+
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
         <button class="info-tab-btn active" data-itab="finance"  onclick="switchInfoTab('finance')">재무</button>
@@ -1065,6 +1080,113 @@
         if (tab === 'news'    && ticker) window.loadNewsData(ticker, market);
       });
     });
+  });
+
+})();
+</script>
+
+<!-- ── 시간외 주도주 위젯 JS ─────────────────────────────────── -->
+<script>
+(function () {
+  'use strict';
+
+  var _OT_INTERVAL_MS = 120000; // 2분 자동 갱신
+  var _otTimer = null;
+
+  // 시간외 단일가 활성 시간대 판별 (KST 15:30~18:05)
+  function _isOvertimeHours() {
+    try {
+      var now = new Date();
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul', hour: 'numeric', minute: 'numeric', hour12: false,
+      }).formatToParts(now);
+      var h = parseInt((parts.find(function (p) { return p.type === 'hour'; }) || {}).value || 0, 10);
+      var m = parseInt((parts.find(function (p) { return p.type === 'minute'; }) || {}).value || 0, 10);
+      var hm = h * 100 + m;
+      return hm >= 1530 && hm <= 1805;
+    } catch (e) { return false; }
+  }
+
+  function _showWidget(show) {
+    var w = document.getElementById('overtime-leaders-widget');
+    if (w) w.style.display = show ? '' : 'none';
+  }
+
+  window.refreshOvertimeLeaders = function () {
+    if (!_isOvertimeHours()) { _showWidget(false); return; }
+    _showWidget(true);
+
+    var listEl = document.getElementById('overtime-leaders-list');
+    var timeEl = document.getElementById('overtime-widget-time');
+
+    fetch('/api/v1/market/overtime-leaders?top_n=5')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) {
+          if (listEl) listEl.innerHTML = '<div class="info-empty" style="padding:8px 0;">데이터 없음</div>';
+          return;
+        }
+        if (timeEl) timeEl.textContent = d.as_of || '';
+        var items = d.items || [];
+        if (!items.length) {
+          if (listEl) listEl.innerHTML = '<div class="info-empty" style="padding:8px 0;">시간외 데이터 없음</div>';
+          return;
+        }
+        var html = items.map(function (it, idx) {
+          var rateStr  = String(it.change_rate || '0');
+          var rateNum  = parseFloat(rateStr.replace('+', '')) || 0;
+          var rateCls  = rateNum > 0 ? 'up' : rateNum < 0 ? 'down' : 'flat';
+          var priceStr = (it.price || 0).toLocaleString();
+          var name     = String(it.name || it.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          return '<div class="overtime-leader-item" onclick="window._onOvertimeLeaderClick(' + JSON.stringify(it) + ')">'
+            + '<span class="ot-rank">' + (idx + 1) + '</span>'
+            + '<span class="ot-name" title="' + name + '">' + name + '</span>'
+            + '<span class="ot-price">' + priceStr + '</span>'
+            + '<span class="ot-rate ' + rateCls + '">' + rateStr + '%</span>'
+            + '</div>';
+        }).join('');
+        if (listEl) listEl.innerHTML = html;
+      })
+      .catch(function () {
+        if (listEl) listEl.innerHTML = '<div class="info-empty" style="padding:8px 0;">조회 실패</div>';
+      });
+  };
+
+  // 주도주 클릭 → 차트 즉시 전환
+  window._onOvertimeLeaderClick = function (item) {
+    if (!item || !item.ticker) return;
+    // KR 시장으로 전환되어 있지 않으면 전환
+    if (window.D2T && D2T.market !== 'KR' && typeof D2T.switchMarket === 'function') {
+      D2T.switchMarket('KR');
+    }
+    // 일봉으로 전환 후 차트 로드
+    if (window.D2T && typeof D2T.loadChart === 'function') {
+      D2T.timeframe = 'daily';
+      document.querySelectorAll('.timeframe-btn').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.tf === 'daily');
+      });
+      D2T.loadChart(item.ticker, 'daily');
+    }
+    // ticker-select 동기화
+    var sel = document.getElementById('ticker-select');
+    if (sel) sel.value = item.ticker;
+  };
+
+  // 초기화: DOMContentLoaded 후 시간외 시간대면 즉시 로드 + 주기 갱신
+  document.addEventListener('DOMContentLoaded', function () {
+    if (_isOvertimeHours()) {
+      window.refreshOvertimeLeaders();
+      _otTimer = setInterval(window.refreshOvertimeLeaders, _OT_INTERVAL_MS);
+    } else {
+      // 15:30이 되면 자동으로 위젯 활성화
+      var _checkTimer = setInterval(function () {
+        if (_isOvertimeHours()) {
+          window.refreshOvertimeLeaders();
+          _otTimer = setInterval(window.refreshOvertimeLeaders, _OT_INTERVAL_MS);
+          clearInterval(_checkTimer);
+        }
+      }, 30000); // 30초마다 체크
+    }
   });
 
 })();

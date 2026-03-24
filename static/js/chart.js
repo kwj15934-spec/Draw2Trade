@@ -409,6 +409,13 @@
           searchInp.placeholder = ticker + (data.name ? '  ' + data.name : '');
           searchInp.value = '';
         }
+        // 시간외 캔들 시각화
+        if (data.overtime_flags && data.overtime_flags.length) {
+          D2T.markOvertimeCandles(data.overtime_flags);
+        }
+        // 매물대 자동 로드
+        D2T.loadSupplyLevels(ticker);
+
         if (typeof clearDraw === 'function') clearDraw();
         // 새 종목 로드 시 원본 상태/버튼 초기화
         D2T.originState = null;
@@ -1239,6 +1246,141 @@
   window.D2T.loadChart       = loadChart;
   window.D2T.loadResultChart = loadResultChart;
   window.D2T.switchMarket    = switchMarket;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 매물대 (Supply/Demand Price Cluster) 오버레이
+  // ══════════════════════════════════════════════════════════════════════════
+  /**
+   * D2T.renderSupplyLevels(levels)
+   *
+   * levels: Array of { price, volume, ratio }
+   *   price  — 가격
+   *   volume — 해당 가격대 거래량
+   *   ratio  — 전체 대비 비율 [0, 1]
+   *
+   * LW Charts의 priceLines를 사용해 가로형 히스토그램 효과를 낸다.
+   * 상위 10개 레벨을 알파 블렌딩된 수평선으로 표시한다.
+   */
+  var _supplyLines = [];
+
+  D2T.renderSupplyLevels = function (levels) {
+    _clearSupplyLines();
+    if (!D2T.series || !levels || levels.length === 0) return;
+
+    // ratio 기준 상위 10개 선택
+    var sorted = levels.slice().sort(function (a, b) { return b.ratio - a.ratio; });
+    var top = sorted.slice(0, 10);
+
+    // 현재가를 기준으로 위/아래 색상 구분
+    var lastClose = D2T.candles && D2T.candles.length
+      ? D2T.candles[D2T.candles.length - 1].close
+      : 0;
+
+    top.forEach(function (lv) {
+      var isAbove = lv.price > lastClose;
+      // ratio로 투명도 결정 (최대 0.7, 최소 0.15)
+      var alpha = Math.round(Math.min(0.7, Math.max(0.15, lv.ratio * 4)) * 255);
+      var hex = alpha.toString(16).padStart(2, '0');
+      var color = isAbove
+        ? '#ef5350' + hex   // 저항대 — 빨강
+        : '#26a69a' + hex;  // 지지대 — 청록
+
+      try {
+        var pl = D2T.series.createPriceLine({
+          price:       lv.price,
+          color:       color,
+          lineWidth:   Math.max(1, Math.round(lv.ratio * 8)),  // 두께 1~8px
+          lineStyle:   2,   // dashed
+          axisLabelVisible: false,
+          title:       '',
+        });
+        _supplyLines.push(pl);
+      } catch (e) { /* ignore */ }
+    });
+  };
+
+  function _clearSupplyLines() {
+    if (!D2T.series) return;
+    _supplyLines.forEach(function (pl) {
+      try { D2T.series.removePriceLine(pl); } catch (e) { /* ignore */ }
+    });
+    _supplyLines = [];
+  }
+
+  D2T.clearSupplyLevels = _clearSupplyLines;
+
+  // ── 매물대 자동 로드 (차트 로드 시 호출) ──────────────────────────────────
+  D2T.loadSupplyLevels = function (ticker) {
+    if (!ticker || D2T.market !== 'KR') { _clearSupplyLines(); return; }
+    // 일봉/주봉/월봉에서만 의미 있음 (분봉 제외)
+    if ({ '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 }[D2T.timeframe]) {
+      _clearSupplyLines();
+      return;
+    }
+    fetch('/api/v1/stock/supply/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.levels) D2T.renderSupplyLevels(d.levels);
+      })
+      .catch(function () { /* silent */ });
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 시간외 구간 시각화 (After-Hours band)
+  // ══════════════════════════════════════════════════════════════════════════
+  /**
+   * D2T.markOvertimeCandles(overtimeFlags)
+   *
+   * overtimeFlags: Array<boolean>, 인덱스가 candles 배열과 1:1 대응.
+   *   true  — 시간외 단일가 구간 캔들
+   *   false — 정규장 캔들
+   *
+   * 시간외 캔들의 색상을 반투명하게 변경하여 정규장과 시각적으로 구분한다.
+   * LW Charts API 제약상 개별 캔들 색상 오버라이드 방식 사용.
+   */
+  D2T.markOvertimeCandles = function (overtimeFlags) {
+    if (!D2T.series || !D2T.candles) return;
+    if (!overtimeFlags || overtimeFlags.length === 0) return;
+
+    var candles = D2T.candles;
+    // 시간외 캔들에만 색상 오버라이드 적용
+    var patched = candles.map(function (c, i) {
+      if (!overtimeFlags[i]) return c;
+      // 시간외: 캔들 색상을 흐리게
+      var isUp = c.close >= c.open;
+      return Object.assign({}, c, {
+        color:      isUp ? 'rgba(38,166,154,0.35)'  : 'rgba(239,83,80,0.35)',
+        wickColor:  isUp ? 'rgba(38,166,154,0.5)'   : 'rgba(239,83,80,0.5)',
+        borderColor: isUp ? 'rgba(38,166,154,0.5)'  : 'rgba(239,83,80,0.5)',
+      });
+    });
+    D2T.series.setData(patched);
+
+    // After-Hours 마커 (마지막 시간외 캔들 위에 라벨)
+    var lastOTIdx = -1;
+    for (var i = overtimeFlags.length - 1; i >= 0; i--) {
+      if (overtimeFlags[i]) { lastOTIdx = i; break; }
+    }
+    if (lastOTIdx >= 0) {
+      var existing = [];
+      try { existing = D2T.series.markers() || []; } catch (e) {}
+      var hasAH = existing.some(function (m) { return m._isAH; });
+      if (!hasAH) {
+        var ahMarker = {
+          time:     candles[lastOTIdx].time,
+          position: 'inBar',
+          color:    'rgba(255,152,0,0.7)',
+          shape:    'circle',
+          text:     'AH',
+          size:     0.5,
+          _isAH:    true,
+        };
+        var merged = existing.filter(function (m) { return !m._isAH; }).concat([ahMarker]);
+        merged.sort(function (a, b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
+        D2T.series.setMarkers(merged);
+      }
+    }
+  };
 
   // ── 컨텍스트 마커: 뉴스/이벤트를 차트 하단에 표시 ────────────────────────
   /**

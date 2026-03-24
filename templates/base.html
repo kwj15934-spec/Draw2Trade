@@ -673,6 +673,92 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
+    /* 시간외 주도주 위젯 */
+    .overtime-widget {
+      flex-shrink: 0;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      padding: 8px 12px 10px;
+    }
+    .overtime-widget-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .overtime-widget-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #ff9800;
+      letter-spacing: 0.3px;
+      flex: 1;
+    }
+    .overtime-widget-time {
+      font-size: 10px;
+      color: #555;
+    }
+    .overtime-widget-refresh {
+      background: none;
+      border: none;
+      color: #7a8499;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 2px;
+      line-height: 1;
+      transition: color .15s;
+    }
+    .overtime-widget-refresh:hover { color: #26a69a; }
+    .overtime-leaders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .overtime-leader-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: #1e1e22;
+      border: 1px solid #27272a;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .overtime-leader-item:hover { border-color: #ff9800; }
+    .ot-rank {
+      font-size: 10px;
+      color: #555;
+      width: 14px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .ot-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+      color: #d4d8e2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ot-price {
+      font-size: 11px;
+      color: #d4d8e2;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+    .ot-rate {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      min-width: 52px;
+      text-align: right;
+    }
+    .ot-rate.up   { color: #ef5350; }
+    .ot-rate.down { color: #26a69a; }
+    .ot-rate.flat { color: #7a8499; }
+
     /* 뉴스 아이템 */
     .news-item {
       background: #1e1e22;

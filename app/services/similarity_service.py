@@ -2,11 +2,17 @@
 Similarity service - 복합 가중치 패턴 유사도 계산.
 
 점수식:
-  FinalScore = 0.45 * ShapeCorr
-             + 0.20 * LevelCloseness
-             + 0.20 * DiffCorr
-             + 0.10 * ExtremumScore
-             + 0.05 * VolatilityScore
+  FinalScore = 0.36 * ShapeCorr
+             + 0.16 * LevelCloseness
+             + 0.16 * DiffCorr
+             + 0.08 * ExtremumScore
+             + 0.04 * VolatilityScore
+             + 0.20 * VolumeSpike       ← 거래량 급증 가중치 (v2)
+
+VolumeSpike 계산:
+  - 패턴 구간 내 거래량 이동평균 대비 최대 급증 배율을 0~1로 스케일링.
+  - 거래량 데이터가 없거나 오류 시 0.5 (중립) 처리하여 기존 점수에 영향 최소화.
+  - 의미 있는 거래량 급증(≥3σ)이 있는 구간을 우선 노출.
 
 처리 파이프라인:
   사용자 드로잉 → 150포인트 리샘플 → 0~1 정규화
@@ -59,8 +65,12 @@ def _pearson_raw(a: np.ndarray, b: np.ndarray) -> float:
     return 0.0 if np.isnan(corr) else corr
 
 
-def _score_components(a: np.ndarray, b: np.ndarray) -> dict:
-    """5개 컴포넌트 + total 점수를 dict로 반환."""
+def _score_components(a: np.ndarray, b: np.ndarray, vol_score: float = 0.5) -> dict:
+    """6개 컴포넌트 + total 점수를 dict로 반환.
+
+    vol_score: 거래량 급증 점수 [0, 1].
+               호출자가 계산해 전달. 데이터 없으면 0.5(중립).
+    """
     shape_corr      = max(0.0, _pearson_raw(a, b))
     level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
     da, db          = np.diff(a), np.diff(b)
@@ -72,34 +82,68 @@ def _score_components(a: np.ndarray, b: np.ndarray) -> dict:
     va              = float(np.std(da))
     vb              = float(np.std(db))
     volatility_score = 1.0 - min(1.0, abs(va - vb) / max(va, vb, _EPS))
+    # 거래량 급증 20% 가중치 — 기존 5개 가중치를 80%로 축소하여 합계 1.0 유지
     total = (
-        0.45 * shape_corr
-        + 0.20 * level_closeness
-        + 0.20 * diff_corr
-        + 0.10 * extremum_score
-        + 0.05 * volatility_score
+        0.36 * shape_corr        # 45% → 36%
+        + 0.16 * level_closeness  # 20% → 16%
+        + 0.16 * diff_corr        # 20% → 16%
+        + 0.08 * extremum_score   # 10% →  8%
+        + 0.04 * volatility_score # 5%  →  4%
+        + 0.20 * vol_score        # 신규: 거래량 급증
     )
     return {
-        "total":      total,
-        "shape":      shape_corr,
-        "level":      level_closeness,
-        "diff":       diff_corr,
-        "extremum":   extremum_score,
-        "volatility": volatility_score,
+        "total":        total,
+        "shape":        shape_corr,
+        "level":        level_closeness,
+        "diff":         diff_corr,
+        "extremum":     extremum_score,
+        "volatility":   volatility_score,
+        "volume_spike": vol_score,
     }
+
+
+def _volume_spike_score(volume_arr: np.ndarray) -> float:
+    """
+    거래량 급증 점수 [0, 1].
+
+    계산 방법:
+      1. 구간 내 이동평균(window=5) 대비 최대 거래량 배율(peak_ratio) 계산.
+      2. peak_ratio를 시그모이드로 [0,1] 스케일링:
+         score = 1 / (1 + exp(-k * (ratio - threshold)))
+         threshold=3.0, k=0.5  → ratio 3배=0.5, 6배≈0.82, 10배≈0.93
+      3. 거래량 데이터가 없거나 모두 0이면 중립값 0.5 반환.
+    """
+    if volume_arr is None or len(volume_arr) < 3:
+        return 0.5
+    vol = volume_arr.astype(float)
+    if vol.max() < _EPS:
+        return 0.5  # 거래량 없는 ETF 등 — 중립
+    # 이동평균 (window=min(5, len))
+    w = min(5, len(vol))
+    ma = np.convolve(vol, np.ones(w) / w, mode="valid")
+    if len(ma) == 0 or ma.max() < _EPS:
+        return 0.5
+    # 각 봉의 MA대비 배율
+    ratio_arr = vol[w - 1:] / np.where(ma > _EPS, ma, _EPS)
+    peak_ratio = float(ratio_arr.max())
+    # 시그모이드 스케일링 (threshold=3.0, k=0.5)
+    import math
+    score = 1.0 / (1.0 + math.exp(-0.5 * (peak_ratio - 3.0)))
+    return round(min(1.0, max(0.0, score)), 4)
 
 
 def similarity_score(a: np.ndarray, b: np.ndarray) -> float:
     """
-    복합 유사도 점수 [0, 1].
+    복합 유사도 점수 [0, 1].  (거래량 데이터 없는 경우 vol_score=0.5 중립)
 
-    ① ShapeCorr      (45%) : max(0, Pearson(a, b))
-    ② LevelCloseness (20%) : 1 - mean(|a - b|)
-    ③ DiffCorr       (20%) : max(0, Pearson(diff(a), diff(b)))
-    ④ ExtremumScore  (10%) : 피크·바닥 위치 유사도
-    ⑤ VolatilityScore( 5%) : 변동성 유사도
+    ① ShapeCorr      (36%) : max(0, Pearson(a, b))
+    ② LevelCloseness (16%) : 1 - mean(|a - b|)
+    ③ DiffCorr       (16%) : max(0, Pearson(diff(a), diff(b)))
+    ④ ExtremumScore  ( 8%) : 피크·바닥 위치 유사도
+    ⑤ VolatilityScore( 4%) : 변동성 유사도
+    ⑥ VolumeSpike   (20%) : 거래량 급증 유사도
     """
-    return _score_components(a, b)["total"]
+    return _score_components(a, b, vol_score=0.5)["total"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -172,8 +216,9 @@ def search_similar(
 
     skipped_short = 0
     for ticker, ohlcv in cache.items():
-        dates = ohlcv.get("dates", [])
-        close = ohlcv.get("close", [])
+        dates  = ohlcv.get("dates",  [])
+        close  = ohlcv.get("close",  [])
+        volume = ohlcv.get("volume", [])
 
         # ── 날짜 범위 지정 모드 ────────────────────────────────────────────
         if use_date_range:
@@ -188,7 +233,10 @@ def search_similar(
             if sw > 1 and len(arr) > sw:
                 arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
             normed = normalize(resample(arr, PATTERN_LEN))
-            comp = _score_components(tmpl, normed)
+            # 거래량 급증 점수 계산
+            _vol_window = np.array([volume[i] for i in indices], dtype=float) if volume else np.array([])
+            _vs = _volume_spike_score(_vol_window)
+            comp = _score_components(tmpl, normed, vol_score=_vs)
             # 고정 기간 모드: 요청된 date_from/date_to를 기간으로 표시
             # (실제 데이터 첫/마지막이 아닌, 검색 기준 기간을 표시)
             disp_from = date_from or dates[indices[0]]
@@ -344,8 +392,14 @@ def search_similar(
             d_from = dates[best_i] if best_i < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
-        # 최종 선정된 구간의 컴포넌트 점수 계산
-        comp = _score_components(tmpl, best_normed)
+        # 최종 선정된 구간의 거래량 급증 점수 + 컴포넌트 점수 계산
+        _vol_arr_final = (
+            np.array(volume[best_i: best_i + win], dtype=float)
+            if volume and len(volume) >= best_i + win
+            else np.array([])
+        )
+        _vs_final = _volume_spike_score(_vol_arr_final)
+        comp = _score_components(tmpl, best_normed, vol_score=_vs_final)
         results.append({
             "ticker": ticker,
             "company_name": names.get(ticker, ticker),

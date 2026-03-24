@@ -1,13 +1,15 @@
 """
-app/routers/kis_data.py — 종목 상세 컨텍스트 패널용 KIS 연동 엔드포인트.
+app/routers/kis_data.py — 종목 상세 컨텍스트 패널 + 대시보드용 KIS 연동 엔드포인트.
 
 엔드포인트:
-  GET /api/v1/stock/finance/{symbol}  — PER, PBR, ROE 등 재무 지표
-  GET /api/v1/stock/news/{symbol}     — 최신 뉴스 및 공시 제목 리스트
+  GET /api/v1/stock/finance/{symbol}      — PER, PBR, ROE 등 재무 지표
+  GET /api/v1/stock/news/{symbol}         — 최신 뉴스 및 공시 제목 리스트
+  GET /api/v1/stock/supply/{symbol}       — 매물대 (FHPST01130000)
+  GET /api/v1/market/overtime-leaders     — 시간외 등락률 상위 종목 (FHPST02340000)
 
 주의사항:
   - KIS API 미설정 시 pykrx 폴백 / 빈 응답으로 부드럽게 처리한다.
-  - Redis 캐시 적용 (재무 30분, 뉴스 10분).
+  - Redis 캐시 적용 (재무 30분, 뉴스 10분, 매물대 5분, 주도주 2분).
   - 현재 KR 종목(6자리 숫자)만 정식 지원. US 요청 시 422 반환.
 """
 from __future__ import annotations
@@ -248,3 +250,197 @@ def _parse_kis_date(raw: str) -> str:
     if len(raw) >= 8:
         return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
     return ""
+
+
+# ── 매물대 (공급/수요 Price Cluster) ─────────────────────────────────────────
+
+@router.get("/supply/{symbol}")
+async def get_supply(
+    symbol: str = Path(..., description="종목 코드 (KR 6자리)"),
+):
+    """
+    매물대(가격별 거래량 분포) 데이터를 반환한다.
+    KIS TR FHPST01130000 호출.
+
+    Response:
+        {
+          "symbol": "005930",
+          "levels": [
+            {"price": 70000, "volume": 1234567, "ratio": 0.12},
+            ...
+          ]
+        }
+    """
+    if not _KR_TICKER_RE.match(symbol):
+        raise HTTPException(status_code=422, detail="KR 6자리 종목 코드만 지원합니다.")
+
+    cache_key = f"supply:{symbol}"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+
+    result = await _fetch_supply_kis(symbol)
+    await _cache_set(cache_key, result, ttl=300)  # 5분
+    return result
+
+
+async def _fetch_supply_kis(symbol: str) -> dict:
+    """KIS FHPST01130000 — 국내주식 매물대 조회."""
+    import asyncio
+
+    def _sync() -> list[dict]:
+        try:
+            from app.services.kis_client import _get, is_configured
+            if not is_configured():
+                return []
+
+            today = datetime.now(_KST).strftime("%Y%m%d")
+            # 1년 전 기준
+            from datetime import timedelta as _td
+            start = (datetime.now(_KST) - _td(days=365)).strftime("%Y%m%d")
+
+            data = _get(
+                path="/uapi/domestic-stock/v1/quotations/psearch-title",
+                params={
+                    "FID_COND_MRKT_DIV_CODE": "J",   # 주식
+                    "FID_INPUT_ISCD":          symbol,
+                    "FID_INPUT_DATE_1":        start,
+                    "FID_INPUT_DATE_2":        today,
+                    "FID_PERIOD_DIV_CODE":     "D",   # 일봉
+                    "FID_ORG_ADJ_PRC":         "0",
+                },
+                tr_id="FHPST01130000",
+            )
+            if not data or data.get("rt_cd") != "0":
+                return []
+
+            items = []
+            total_vol = 0
+            raw_rows = data.get("output2") or data.get("output") or []
+            for row in raw_rows:
+                try:
+                    price = int(str(row.get("stck_prpr", "0")).replace(",", ""))
+                    vol   = int(str(row.get("acml_vol",  "0")).replace(",", ""))
+                    if price > 0 and vol >= 0:
+                        items.append({"price": price, "volume": vol})
+                        total_vol += vol
+                except (ValueError, TypeError):
+                    continue
+
+            # ratio(비율) 계산
+            for item in items:
+                item["ratio"] = round(item["volume"] / total_vol, 4) if total_vol > 0 else 0.0
+
+            # 가격 오름차순 정렬
+            items.sort(key=lambda x: x["price"])
+            return items
+
+        except Exception as e:
+            logger.warning("KIS 매물대 조회 실패 (%s): %s", symbol, e)
+            return []
+
+    loop = asyncio.get_event_loop()
+    levels = await loop.run_in_executor(None, _sync)
+    return {"symbol": symbol, "levels": levels}
+
+
+# ── 시간외 주도주 (등락률 상위) ───────────────────────────────────────────────
+
+@router.get("/market/overtime-leaders")
+async def get_overtime_leaders(top_n: int = 5):
+    """
+    시간외 단일가 등락률 상위 종목을 반환한다.
+    KIS TR FHPST02340000 호출.
+
+    Response:
+        {
+          "items": [
+            {
+              "ticker": "005930",
+              "name":   "삼성전자",
+              "price":  78000,
+              "change_rate": "+3.45",
+              "volume": 234567
+            },
+            ...
+          ],
+          "as_of": "15:35"
+        }
+    """
+    cache_key = "overtime_leaders"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+
+    result = await _fetch_overtime_leaders(top_n)
+    await _cache_set(cache_key, result, ttl=120)  # 2분
+    return result
+
+
+async def _fetch_overtime_leaders(top_n: int) -> dict:
+    """KIS FHPST02340000 — 시간외 단일가 등락률 상위 조회."""
+    import asyncio
+
+    def _sync() -> list[dict]:
+        try:
+            from app.services.kis_client import _get, is_configured
+            if not is_configured():
+                return []
+
+            data = _get(
+                path="/uapi/domestic-stock/v1/ranking/overtime-fluctuation",
+                params={
+                    "FID_COND_MRKT_DIV_CODE": "J",
+                    "FID_COND_SCR_DIV_CODE":  "20234",
+                    "FID_INPUT_ISCD":          "0001",   # KOSPI 전체
+                    "FID_RANK_SORT_CLS_CODE":  "0",      # 등락률 상위
+                    "FID_INPUT_CNT_1":         str(top_n * 2),  # 여유있게 조회
+                    "FID_TRGT_CLS_CODE":       "111111111",
+                    "FID_TRGT_EXLS_CLS_CODE":  "000000",
+                    "FID_MIN_CTRT":            "",
+                    "FID_MAX_CTRT":            "",
+                },
+                tr_id="FHPST02340000",
+            )
+            if not data or data.get("rt_cd") != "0":
+                return []
+
+            items = []
+            rows = data.get("output") or []
+            for row in rows:
+                try:
+                    ticker = (row.get("stck_shrn_iscd") or "").strip()
+                    if not ticker:
+                        continue
+                    price = int(str(row.get("stck_prpr", "0")).replace(",", ""))
+                    vol   = int(str(row.get("acml_vol",  "0")).replace(",", ""))
+                    rate  = (row.get("prdy_ctrt") or row.get("ovtm_untp_prdy_ctrt") or "0").strip()
+                    # + 기호가 없으면 추가 (양수인 경우)
+                    if rate and not rate.startswith(("+", "-")):
+                        try:
+                            if float(rate) >= 0:
+                                rate = "+" + rate
+                        except ValueError:
+                            pass
+                    name = (row.get("hts_kor_isnm") or "").strip()
+                    items.append({
+                        "ticker":      ticker,
+                        "name":        name,
+                        "price":       price,
+                        "change_rate": rate,
+                        "volume":      vol,
+                    })
+                except (ValueError, TypeError):
+                    continue
+                if len(items) >= top_n:
+                    break
+            return items
+
+        except Exception as e:
+            logger.warning("KIS 시간외 주도주 조회 실패: %s", e)
+            return []
+
+    loop = asyncio.get_event_loop()
+    items = await loop.run_in_executor(None, _sync)
+    as_of = datetime.now(_KST).strftime("%H:%M")
+    return {"items": items, "as_of": as_of}
