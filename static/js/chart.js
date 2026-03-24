@@ -1355,31 +1355,6 @@
       });
     });
     D2T.series.setData(patched);
-
-    // After-Hours 마커 (마지막 시간외 캔들 위에 라벨)
-    var lastOTIdx = -1;
-    for (var i = overtimeFlags.length - 1; i >= 0; i--) {
-      if (overtimeFlags[i]) { lastOTIdx = i; break; }
-    }
-    if (lastOTIdx >= 0) {
-      var existing = [];
-      try { existing = D2T.series.markers() || []; } catch (e) {}
-      var hasAH = existing.some(function (m) { return m._isAH; });
-      if (!hasAH) {
-        var ahMarker = {
-          time:     candles[lastOTIdx].time,
-          position: 'inBar',
-          color:    'rgba(255,152,0,0.7)',
-          shape:    'circle',
-          text:     'AH',
-          size:     0.5,
-          _isAH:    true,
-        };
-        var merged = existing.filter(function (m) { return !m._isAH; }).concat([ahMarker]);
-        merged.sort(function (a, b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
-        D2T.series.setMarkers(merged);
-      }
-    }
   };
 
   // ── 컨텍스트 마커: 뉴스/이벤트를 차트 하단에 표시 ────────────────────────
