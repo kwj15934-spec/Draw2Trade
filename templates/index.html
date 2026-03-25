@@ -203,7 +203,9 @@
       <!-- ── 플로팅 종목 정보 위젯 ──────────────────────── -->
       <div id="floating-info-widget">
         <div id="fiw-header">
-          <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
+          <div id="fiw-title-group">
+            <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
+          </div>
           <div id="fiw-controls">
             <button id="fiw-btn-min" title="최소화">─</button>
             <button id="fiw-btn-close" title="닫기">✕</button>
@@ -220,11 +222,11 @@
             <div class="fiw-loading">로딩 중…</div>
           </div>
           <!-- 뉴스 패널 -->
-          <div id="fiw-panel-news" class="fiw-panel" style="display:none;">
+          <div id="fiw-panel-news" class="fiw-panel">
             <div class="fiw-loading">로딩 중…</div>
           </div>
           <!-- 반응(종토방) 패널 -->
-          <div id="fiw-panel-community" class="fiw-panel" style="display:none;">
+          <div id="fiw-panel-community" class="fiw-panel">
             <div class="fiw-loading">로딩 중…</div>
           </div>
         </div>
@@ -861,7 +863,7 @@
       b.classList.toggle('active', b.dataset.tab === tab);
     });
     document.querySelectorAll('.fiw-panel').forEach(function (p) {
-      p.style.display = (p.id === 'fiw-panel-' + tab) ? 'flex' : 'none';
+      p.classList.toggle('active', p.id === 'fiw-panel-' + tab);
     });
     if (_ticker && !_loaded[tab]) _fetchTab(tab, _ticker);
   }
@@ -1008,10 +1010,13 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) { _errorPanel('finance', '서버 점검 중'); return; }
-        // 종목명을 헤더에 반영: "메인 차트 정보 | 삼성전자 (005930)"
-        if (d.name) {
-          var tkSpan = document.getElementById('fiw-ticker');
-          if (tkSpan) tkSpan.textContent = '| ' + d.name + ' (' + (d.symbol || _ticker) + ')';
+        // 종목명을 헤더에 반영: "삼성전자 (005930)"
+        var tkSpan = document.getElementById('fiw-ticker');
+        if (tkSpan) {
+          var sym  = d.symbol || _ticker || '';
+          var name = d.name   || d.company_name || '';
+          tkSpan.textContent = name ? name + ' (' + sym + ')' : sym ? '(' + sym + ')' : '';
+          tkSpan.title = tkSpan.textContent;  // 말줄임 시 툴팁
         }
         var isNA       = d.na === true;
         var isSnapshot = d.snapshot === true;
@@ -1111,7 +1116,7 @@
     var title  = document.getElementById('fiw-title');
     var tkSpan = document.getElementById('fiw-ticker');
     if (title)  title.textContent  = '메인 차트 정보';
-    if (tkSpan) tkSpan.textContent = '(' + ticker + ')';
+    if (tkSpan) tkSpan.textContent = ticker ? '(' + ticker + ')' : '';
     // 현재 탭만 즉시 로드, 나머지는 탭 전환 시 lazy 로드
     _fetchTab(_activeTab, ticker);
     // 위젯 표시 (닫혀있어도 종목 변경 시 자동 열기)
