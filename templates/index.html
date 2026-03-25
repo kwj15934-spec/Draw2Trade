@@ -203,7 +203,7 @@
       <!-- ── 플로팅 종목 정보 위젯 ──────────────────────── -->
       <div id="floating-info-widget">
         <div id="fiw-header">
-          <span id="fiw-title">종목 정보</span>
+          <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" style="font-size:10px;color:#555;margin-left:5px;font-weight:400;"></span>
           <div id="fiw-controls">
             <button id="fiw-btn-min" title="최소화">─</button>
             <button id="fiw-btn-close" title="닫기">✕</button>
@@ -1037,8 +1037,10 @@
     _ticker = ticker;
     _loaded = { finance: false, news: false, community: false };
     // 위젯 제목 갱신
-    var title = document.getElementById('fiw-title');
-    if (title) title.textContent = ticker;
+    var title  = document.getElementById('fiw-title');
+    var tkSpan = document.getElementById('fiw-ticker');
+    if (title)  title.textContent  = '메인 차트 정보';
+    if (tkSpan) tkSpan.textContent = '(' + ticker + ')';
     // 현재 탭만 즉시 로드, 나머지는 탭 전환 시 lazy 로드
     _fetchTab(_activeTab, ticker);
     // 위젯 표시 (닫혀있어도 종목 변경 시 자동 열기)
