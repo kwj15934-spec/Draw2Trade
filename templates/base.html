@@ -442,8 +442,8 @@
     /* ── 메인 콘텐츠 영역 (CSS Grid — 패널 간섭 완전 차단) ── */
     .d2t-main {
       display: grid;
-      /* 차트(유동) | 스플리터(5px) | 호가(고정) | 컨텍스트패널(접기가능) | 사이드바(고정) */
-      grid-template-columns: 1fr 5px var(--quote-w, 220px) var(--info-panel-w, 350px) auto;
+      /* 차트(유동) | 스플리터(5px) | 호가(고정) | 컨텍스트패널(접기가능) | 사이드바스플리터(4px) | 사이드바(고정) */
+      grid-template-columns: 1fr 5px var(--quote-w, 220px) var(--info-panel-w, 350px) 4px var(--sidebar-w, 280px);
       flex: 1;
       min-height: 0;
       overflow: hidden;
@@ -792,6 +792,8 @@
       top: 12px;
       right: 12px;
       width: 280px;
+      min-width: 250px;
+      min-height: 300px;
       background: rgba(22, 22, 26, 0.82);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
@@ -804,6 +806,30 @@
       overflow: hidden;
       transition: opacity .2s, transform .2s;
     }
+    /* 위젯 리사이즈 핸들 */
+    #fiw-resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 18px;
+      height: 18px;
+      cursor: se-resize;
+      z-index: 60;
+      border-radius: 0 0 14px 0;
+    }
+    #fiw-resize-handle::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid rgba(255,255,255,0.25);
+      border-bottom: 2px solid rgba(255,255,255,0.25);
+      border-radius: 1px;
+      transition: border-color .15s;
+    }
+    #fiw-resize-handle:hover::after { border-color: rgba(255,255,255,0.55); }
     #fiw-header {
       display: flex;
       align-items: center;
@@ -818,6 +844,17 @@
       font-weight: 700;
       color: #d4d8e2;
       letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .fiw-ticker-sub {
+      font-size: 10px;
+      color: #7a8499;
+      margin-left: 5px;
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
     }
     #fiw-controls {
       display: flex;
@@ -1031,10 +1068,37 @@
     }
     #fiw-restore-tab:hover { background: rgba(38,166,154,0.2); border-color: #26a69a; }
 
-    /* ── 실시간 스캐너 패널 ────────────────────────────────── */
-    /* ── 사이드바 (CSS Grid 5번 컬럼) ─────────────────────── */
-    .d2t-sidebar {
+    /* ── 사이드바 스플리터 (5번 컬럼) ─────────────────────── */
+    #sidebar-resize-handle {
       grid-column: 5;
+      width: 4px;
+      background: transparent;
+      cursor: col-resize;
+      position: relative;
+      z-index: 10;
+      transition: background .15s;
+      touch-action: none;
+    }
+    #sidebar-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 40px;
+      background: #2d2d30;
+      border-radius: 2px;
+      transition: background .15s, height .15s;
+    }
+    #sidebar-resize-handle:hover { background: rgba(38,166,154,0.08); }
+    #sidebar-resize-handle:hover::after { background: #26a69a; height: 60px; }
+    #sidebar-resize-handle.dragging { background: rgba(38,166,154,0.12); }
+    #sidebar-resize-handle.dragging::after { background: #26a69a; height: 80px; }
+
+    /* ── 사이드바 (CSS Grid 6번 컬럼) ─────────────────────── */
+    .d2t-sidebar {
+      grid-column: 6;
       width: 280px;
       min-width: 240px;
       max-width: 320px;

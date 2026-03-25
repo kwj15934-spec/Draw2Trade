@@ -203,7 +203,7 @@
       <!-- ── 플로팅 종목 정보 위젯 ──────────────────────── -->
       <div id="floating-info-widget">
         <div id="fiw-header">
-          <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" style="font-size:10px;color:#555;margin-left:5px;font-weight:400;"></span>
+          <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
           <div id="fiw-controls">
             <button id="fiw-btn-min" title="최소화">─</button>
             <button id="fiw-btn-close" title="닫기">✕</button>
@@ -228,6 +228,7 @@
             <div class="fiw-loading">로딩 중…</div>
           </div>
         </div>
+        <div id="fiw-resize-handle" title="크기 조절"></div>
       </div>
       <!-- ── 위젯 최소화 탭 (닫혀있을 때 표시) ─────────── -->
       <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">i</button>
@@ -403,6 +404,9 @@
 
     </div><!-- /.info-panel-body -->
   </div><!-- /#info-side-panel -->
+
+  <!-- ── 사이드바 스플리터 ────────────────────────── -->
+  <div id="sidebar-resize-handle"></div>
 
   <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
@@ -916,6 +920,68 @@
     });
   })();
 
+  // ── 플로팅 위젯 리사이즈 ──────────────────────────────────
+  (function initWidgetResize() {
+    var handle = document.getElementById('fiw-resize-handle');
+    if (!handle || !_widget) return;
+    var resizing = false, startX, startY, startW, startH;
+    var MIN_W = 250, MIN_H = 300;
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      resizing = true;
+      startX = e.clientX; startY = e.clientY;
+      startW = _widget.offsetWidth; startH = _widget.offsetHeight;
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!resizing) return;
+      var nw = Math.max(MIN_W, startW + (e.clientX - startX));
+      var nh = Math.max(MIN_H, startH + (e.clientY - startY));
+      _widget.style.width  = nw + 'px';
+      _widget.style.height = nh + 'px';
+    });
+    document.addEventListener('mouseup', function () {
+      if (!resizing) return;
+      resizing = false;
+      document.body.style.userSelect = '';
+    });
+  })();
+
+  // ── 사이드바 스플리터 리사이즈 ───────────────────────────────
+  (function initSidebarResize() {
+    var handle = document.getElementById('sidebar-resize-handle');
+    if (!handle) return;
+    var resizing = false, startX, startW;
+    var MIN_W = 180, MAX_W = 520;
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      resizing = true;
+      startX = e.clientX;
+      startW = parseInt(getComputedStyle(document.documentElement)
+                         .getPropertyValue('--sidebar-w')) || 280;
+      document.body.style.userSelect = 'none';
+      handle.classList.add('dragging');
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!resizing) return;
+      var delta = startX - e.clientX;   // 오른쪽→왼쪽 드래그 = 사이드바 넓어짐
+      var nw = Math.min(MAX_W, Math.max(MIN_W, startW + delta));
+      document.documentElement.style.setProperty('--sidebar-w', nw + 'px');
+      // 차트 폭 재적용
+      if (window.D2T && D2T.chart) {
+        var chartEl = document.getElementById('chart-container');
+        if (chartEl) D2T.chart.applyOptions({ width: chartEl.offsetWidth });
+      }
+    });
+    document.addEventListener('mouseup', function () {
+      if (!resizing) return;
+      resizing = false;
+      document.body.style.userSelect = '';
+      handle.classList.remove('dragging');
+    });
+  })();
+
   // ── 데이터 fetch ───────────────────────────────────────────
   function _setPanel(tab, html) {
     var el = document.getElementById('fiw-panel-' + tab);
@@ -942,6 +1008,11 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) { _errorPanel('finance', '서버 점검 중'); return; }
+        // 종목명을 헤더에 반영: "메인 차트 정보 | 삼성전자 (005930)"
+        if (d.name) {
+          var tkSpan = document.getElementById('fiw-ticker');
+          if (tkSpan) tkSpan.textContent = '| ' + d.name + ' (' + (d.symbol || _ticker) + ')';
+        }
         var isNA       = d.na === true;
         var isSnapshot = d.snapshot === true;
         var rows = [
@@ -1036,7 +1107,7 @@
     if (!ticker || ticker === _ticker) return;
     _ticker = ticker;
     _loaded = { finance: false, news: false, community: false };
-    // 위젯 제목 갱신
+    // 위젯 제목 갱신 (종목명은 재무 API 응답 후 추가 반영)
     var title  = document.getElementById('fiw-title');
     var tkSpan = document.getElementById('fiw-ticker');
     if (title)  title.textContent  = '메인 차트 정보';
