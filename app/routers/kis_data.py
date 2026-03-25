@@ -112,16 +112,20 @@ async def get_finance(
 
     # 스냅샷도 없으면 서버 점검 중 메시지 반환 (503 대신)
     fallback = {
-        "symbol":     symbol,
-        "name":       "",
-        "per":        None,
-        "pbr":        None,
-        "roe":        None,
-        "eps":        None,
-        "market_cap": None,
-        "date":       "",
-        "na":         True,
-        "msg":        "서버 점검 중",
+        "symbol":       symbol,
+        "name":         "",
+        "per":          None,
+        "pbr":          None,
+        "roe":          None,
+        "eps":          None,
+        "div_yield":    None,
+        "dps":          None,
+        "market_cap":   None,
+        "shares":       None,
+        "listing_date": "",
+        "date":         "",
+        "na":           True,
+        "msg":          "서버 점검 중",
     }
     await _cache_set(cache_key, fallback, ttl=300)             # 5분만 캐싱
     return fallback
@@ -155,11 +159,19 @@ async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
                         # Series.get 미지원 시 dict 변환
                         row = row.to_dict() if hasattr(row, 'to_dict') else {}
 
-                    # 시가총액 (억 단위 → 원 단위)
+                    # 시가총액 + 상장주식수 (get_market_cap 응답에 포함)
                     cap_df = pkrx.get_market_cap(dt, dt, symbol)
                     market_cap = None
+                    shares = None
                     if cap_df is not None and not cap_df.empty:
-                        market_cap = int(cap_df.iloc[-1].get("시가총액", 0))
+                        cap_row = cap_df.iloc[-1]
+                        market_cap = int(cap_row.get("시가총액", 0) or 0)
+                        shares_raw = cap_row.get("상장주식수") or cap_row.get("shares") or None
+                        if shares_raw is not None:
+                            try:
+                                shares = int(shares_raw)
+                            except (TypeError, ValueError):
+                                pass
 
                     name = ""
                     try:
@@ -167,15 +179,27 @@ async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
                     except Exception:
                         pass
 
+                    # 상장일 조회 (pykrx get_market_ticker_info 또는 KRX)
+                    listing_date = ""
+                    try:
+                        tickers_df = pkrx.get_market_ticker_list("19000101", market="ALL")
+                        # listing_date는 pykrx 공식 지원 미비 → 빈값으로 처리
+                    except Exception:
+                        pass
+
                     return {
-                        "symbol":     symbol,
-                        "name":       name,
-                        "per":        _safe_float(row.get("PER")),
-                        "pbr":        _safe_float(row.get("PBR")),
-                        "roe":        _safe_float(row.get("ROE")),
-                        "eps":        _safe_float(row.get("EPS")),
-                        "market_cap": market_cap,
-                        "date":       dt,
+                        "symbol":       symbol,
+                        "name":         name,
+                        "per":          _safe_float(row.get("PER")),
+                        "pbr":          _safe_float(row.get("PBR")),
+                        "roe":          _safe_float(row.get("ROE")),
+                        "eps":          _safe_float(row.get("EPS")),
+                        "div_yield":    _safe_float(row.get("DIV")),   # 배당수익률(%)
+                        "dps":          _safe_float(row.get("DPS")),   # 주당배당금
+                        "market_cap":   market_cap,
+                        "shares":       shares,
+                        "listing_date": listing_date,
+                        "date":         dt,
                     }
                 except Exception as e:
                     logger.debug("pykrx fundamental %s %s: %s", symbol, dt, e)

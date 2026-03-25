@@ -977,50 +977,81 @@
     else if (tab === 'community') _fetchCommunity(ticker);
   }
 
-  // 재무
+  // 재무 — FnGuide 스타일
   function _fetchFinance(ticker) {
     _loadingPanel('finance');
     fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) { _errorPanel('finance', '서버 점검 중'); return; }
-        // 종목명을 헤더에 반영: "삼성전자 (005930)"
+
+        // 헤더 종목명 반영
         var tkSpan = document.getElementById('fiw-ticker');
         if (tkSpan) {
           var sym  = d.symbol || _ticker || '';
           var name = d.name   || d.company_name || '';
           tkSpan.textContent = name ? name + ' (' + sym + ')' : sym ? '(' + sym + ')' : '';
-          tkSpan.title = tkSpan.textContent;  // 말줄임 시 툴팁
+          tkSpan.title = tkSpan.textContent;
         }
+
         var isNA       = d.na === true;
         var isSnapshot = d.snapshot === true;
-        var rows = [
-          ['PER', d.per  != null ? d.per.toFixed(2)               : '—'],
-          ['PBR', d.pbr  != null ? d.pbr.toFixed(2)               : '—'],
-          ['ROE', d.roe  != null ? d.roe.toFixed(1) + '%'         : '—'],
-          ['EPS', d.eps  != null ? Number(d.eps).toLocaleString('ko-KR') : '—'],
-        ];
-        var cap = d.market_cap
-          ? (d.market_cap >= 1e12
-              ? (d.market_cap / 1e12).toFixed(1) + '조'
-              : (d.market_cap / 1e8).toFixed(0) + '억') + ' 원'
-          : null;
-        var html = '';
+
         if (isNA) {
-          html += '<div class="fiw-finance-na-msg">' + (d.msg || '서버 점검 중') + '</div>';
-        } else {
-          if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
-          if (isSnapshot) html += '<div class="fiw-finance-snapshot-badge">캐시된 데이터</div>';
+          _setPanel('finance', '<div class="fiw-finance-na-msg">' + _esc(d.msg || '서버 점검 중') + '</div>');
+          return;
         }
-        rows.forEach(function (r) {
-          var valCls = isNA ? 'fiw-finance-value fiw-finance-na' : 'fiw-finance-value';
-          var valTip = isNA ? ' title="서버 점검 중"' : '';
-          html += '<div class="fiw-finance-row">' +
-            '<span class="fiw-finance-label">' + r[0] + '</span>' +
-            '<span class="' + valCls + '"' + valTip + '>' + r[1] + '</span>' +
+
+        // ── 시가총액 배너 ──────────────────────────────────
+        var capStr = '—';
+        if (d.market_cap) {
+          capStr = d.market_cap >= 1e12
+            ? (d.market_cap / 1e12).toFixed(2) + '조 원'
+            : (d.market_cap / 1e8).toFixed(0) + '억 원';
+        }
+        var sharesStr = d.shares ? Number(d.shares).toLocaleString('ko-KR') + '주' : '—';
+
+        var html = '<div class="fiw-cap-banner">' +
+          '<span class="fiw-cap-label">시가총액</span>' +
+          '<span class="fiw-cap-value">' + _esc(capStr) + '</span>' +
+          '</div>';
+
+        if (isSnapshot) {
+          html += '<div class="fiw-finance-snapshot-badge" style="margin-bottom:4px;">☁ 캐시된 데이터</div>';
+        }
+
+        // ── 2컬럼 KPI 그리드 ───────────────────────────────
+        var kpis = [
+          { label: 'PER',      val: d.per  != null ? d.per.toFixed(2)           : '—' },
+          { label: 'PBR',      val: d.pbr  != null ? d.pbr.toFixed(2)           : '—' },
+          { label: 'ROE',      val: d.roe  != null ? d.roe.toFixed(1) + '%'     : '—' },
+          { label: 'EPS',      val: d.eps  != null ? Number(d.eps).toLocaleString('ko-KR') : '—' },
+          { label: '배당수익률', val: d.div_yield != null ? d.div_yield.toFixed(2) + '%' : '—' },
+          { label: 'DPS',      val: d.dps  != null ? Number(d.dps).toLocaleString('ko-KR') : '—' },
+        ];
+
+        html += '<div class="fiw-kpi-grid">';
+        kpis.forEach(function (k) {
+          html += '<div class="fiw-kpi-cell">' +
+            '<span class="fiw-kpi-label">' + _esc(k.label) + '</span>' +
+            '<span class="fiw-kpi-value">' + _esc(k.val) + '</span>' +
             '</div>';
         });
-        _setPanel('finance', html || '<div class="fiw-loading">데이터 없음</div>');
+        html += '</div>';
+
+        // ── 추가 정보 행 ───────────────────────────────────
+        var extras = [
+          ['상장주식수', sharesStr],
+          ['기준일', d.date ? d.date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '—'],
+        ];
+        extras.forEach(function (r) {
+          html += '<div class="fiw-finance-row">' +
+            '<span class="fiw-finance-label">' + _esc(r[0]) + '</span>' +
+            '<span class="fiw-finance-value">' + _esc(r[1]) + '</span>' +
+            '</div>';
+        });
+
+        _setPanel('finance', html);
       })
       .catch(function () { _errorPanel('finance', '조회 실패'); });
   }
@@ -1049,7 +1080,7 @@
       .catch(function () { _errorPanel('news', '점검 중'); });
   }
 
-  // 종토방
+  // 시장 반응 — 네이버+토스 통합 피드
   function _fetchCommunity(ticker) {
     _loadingPanel('community');
     fetch('/api/v1/stock/community/' + encodeURIComponent(ticker))
@@ -1057,19 +1088,39 @@
       .then(function (d) {
         var items = (d && d.items) || [];
         if (!items.length) { _errorPanel('community', '현재 등록된 의견이 없습니다'); return; }
-        var hot = Math.max.apply(null, items.map(function (i) { return i.agree || 0; }));
+
+        var hot = Math.max.apply(null, items.map(function (i) {
+          return Math.max(i.agree || 0, i.like_count || 0);
+        }));
+
         var html = items.map(function (it) {
-          var isHot = hot > 0 && (it.agree || 0) >= hot * 0.5;
-          var url = it.url || d.board_url || '#';
-          return '<div class="fiw-comm-item" onclick="window.open(\'' + url + '\',\'_blank\')">' +
-            '<div class="fiw-comm-title">' +
-              (isHot ? '* ' : '') + _esc(it.title) +
+          var src   = it.source || 'naver';
+          var badge = '<span class="fiw-src-badge ' + src + '">' +
+            (src === 'toss' ? 'Toss' : 'Naver') + '</span>';
+          var url   = it.url || '#';
+          var agree = Math.max(it.agree || 0, it.like_count || 0);
+          var isHot = hot > 0 && agree >= hot * 0.5;
+
+          // 이모지 칩 렌더
+          var emojiHtml = '';
+          if (it.emojis && it.emojis.length) {
+            emojiHtml = '<div class="fiw-comm-emojis">' +
+              it.emojis.slice(0, 5).map(function (e) {
+                return '<span class="fiw-emoji-chip">' +
+                  e.emoji + ' <span class="fiw-emoji-count">' + e.count + '</span></span>';
+              }).join('') + '</div>';
+          }
+
+          return '<div class="fiw-comm-item" onclick="window.open(\'' + _esc(url) + '\',\'_blank\')">' +
+            '<div class="fiw-comm-title">' + badge +
+              (isHot ? '🔥 ' : '') + _esc(it.title) +
             '</div>' +
             '<div class="fiw-comm-meta">' +
-              '<span class="fiw-comm-agree">+' + (it.agree || 0) + '</span>' +
-              '<span>-' + (it.disagree || 0) + '</span>' +
+              (agree > 0 ? '<span class="fiw-comm-agree">👍 ' + agree + '</span>' : '') +
+              (it.disagree > 0 ? '<span>👎 ' + it.disagree + '</span>' : '') +
               '<span>' + _esc(it.date || '') + '</span>' +
             '</div>' +
+            emojiHtml +
           '</div>';
         }).join('');
         _setPanel('community', html);

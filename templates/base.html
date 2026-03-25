@@ -939,33 +939,63 @@
       text-align: center;
       padding: 2px 0 4px;
     }
-    /* 재무 패널 */
+    /* ── FnGuide 스타일 재무 패널 ───────────────────────── */
+    /* 시가총액 강조 배너 */
+    .fiw-cap-banner {
+      background: linear-gradient(135deg, rgba(38,166,154,0.15), rgba(38,166,154,0.05));
+      border: 1px solid rgba(38,166,154,0.25);
+      border-radius: 8px;
+      padding: 7px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .fiw-cap-label { font-size: 10px; color: #7a8499; }
+    .fiw-cap-value { font-size: 13px; font-weight: 700; color: #26a69a; }
+    /* 2컬럼 그리드 지표 */
+    .fiw-kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    .fiw-kpi-cell {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 5px 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fiw-kpi-cell:hover { background: rgba(255,255,255,0.06); }
+    .fiw-kpi-label { font-size: 9.5px; color: #7a8499; letter-spacing: 0.3px; }
+    .fiw-kpi-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: #d4d8e2;
+      font-variant-numeric: tabular-nums;
+    }
+    .fiw-kpi-value.positive { color: #ef5350; }
+    .fiw-kpi-value.negative { color: #26a69a; }
+    /* 추가 정보 행 */
     .fiw-finance-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 5px 4px;
-      border-radius: 6px;
-      transition: background .12s;
+      padding: 4px 2px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
     }
-    .fiw-finance-row:hover { background: rgba(255,255,255,0.04); }
-    .fiw-finance-label {
-      font-size: 11px;
-      color: #7a8499;
-    }
+    .fiw-finance-row:last-child { border-bottom: none; }
+    .fiw-finance-label { font-size: 10.5px; color: #7a8499; }
     .fiw-finance-value {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: #d4d8e2;
-      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
     }
-    .fiw-finance-cap {
-      font-size: 11px;
-      color: #26a69a;
-      text-align: center;
-      padding: 6px 4px 2px;
-      font-weight: 700;
-    }
+    .fiw-finance-cap { display: none; } /* 구버전 호환 숨김 */
     /* 뉴스 패널 — 토스 스타일 카드 */
     .fiw-news-item {
       display: block;
@@ -1014,7 +1044,7 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    /* 반응(종토방) 패널 */
+    /* ── 시장 반응 통합 피드 ─────────────────────────────── */
     .fiw-comm-item {
       padding: 6px 4px;
       border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -1024,6 +1054,19 @@
     }
     .fiw-comm-item:last-child { border-bottom: none; }
     .fiw-comm-item:hover { background: rgba(255,255,255,0.04); }
+    /* 소스 배지 */
+    .fiw-src-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-right: 4px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
+    .fiw-src-badge.naver { background: rgba(3,199,90,0.2); color: #03c75a; border: 1px solid rgba(3,199,90,0.35); }
+    .fiw-src-badge.toss  { background: rgba(82,110,255,0.2); color: #526eff; border: 1px solid rgba(82,110,255,0.35); }
     .fiw-comm-title {
       font-size: 11px;
       color: #c8ccd4;
@@ -1036,8 +1079,26 @@
       display: flex;
       gap: 6px;
       align-items: center;
+      flex-wrap: wrap;
     }
     .fiw-comm-agree { color: #ef5350; font-weight: 600; }
+    /* 이모지 반응 */
+    .fiw-comm-emojis {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 3px;
+    }
+    .fiw-emoji-chip {
+      font-size: 11px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 1px 5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .fiw-emoji-count { font-size: 9px; color: #888; }
     /* 복원 탭 버튼 — 사이드바 내장 후 상단 패널 축소 상태 표시 */
     #fiw-restore-tab {
       width: 100%;
