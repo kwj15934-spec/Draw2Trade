@@ -412,7 +412,6 @@
       <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
       <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
       <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
-      <button class="sidebar-tab-btn" data-tab="scanner" id="sidebar-tab-scanner">스캐너</button>
     </div>
 
     <!-- ── 유사 종목 패널 ─────────────────────── -->
@@ -447,50 +446,6 @@
       <div id="drawings-list" style="padding:8px 0;"></div>
     </div>
 
-    <!-- ── 스캐너 패널 ────────────────────────── -->
-    <div id="sidebar-panel-scanner" style="display:none;">
-      <div class="scanner-panel">
-        <!-- 서브탭 -->
-        <div class="scanner-subtabs">
-          <button class="scanner-subtab-btn active" data-scan="rise">급등</button>
-          <button class="scanner-subtab-btn" data-scan="volume">거래량</button>
-          <button class="scanner-subtab-btn" data-scan="high">신고가</button>
-        </div>
-        <!-- 패턴 분석 버튼 -->
-        <button class="scanner-pattern-btn" id="scanner-pattern-btn" onclick="openScannerPatternModal()">
-          ◈ 현재 차트와 유사 스캐너 종목 분석
-        </button>
-        <!-- 컬럼 헤더 -->
-        <div class="scanner-header-row">
-          <span class="sc-hdr-rank">#</span>
-          <span class="sc-hdr-name">종목</span>
-          <span class="sc-hdr-price">현재가</span>
-          <span class="sc-hdr-rate">등락률</span>
-        </div>
-        <!-- 목록 -->
-        <div class="scanner-list-wrap" id="scanner-list">
-          <div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">로딩 중…</div>
-        </div>
-        <!-- 푸터 -->
-        <div class="scanner-footer">
-          <span class="scanner-as-of" id="scanner-as-of">—</span>
-          <button class="scanner-refresh-btn" onclick="loadScannerData()" title="새로고침">↻</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ── 스캐너 패턴 유사도 팝업 ─────────────────────────── -->
-<div id="scanner-pattern-modal">
-  <div class="spm-box">
-    <div class="spm-title">◈ 패턴 유사도 분석</div>
-    <div class="spm-sub" id="spm-sub-text">현재 차트 패턴과 스캐너 종목 간 유사도를 비교합니다.</div>
-    <div class="spm-list" id="spm-list">
-      <div style="text-align:center;color:#555;font-size:12px;padding:20px;">분석 중…</div>
-    </div>
-    <button class="spm-close-btn" onclick="closeScannerPatternModal()">닫기</button>
   </div>
 </div>
 
@@ -868,7 +823,7 @@
     // 초기 활성 탭(results) 패널을 flex로 열기
     var activeBtn = document.querySelector('.sidebar-tab-btn.active');
     var activeTab = activeBtn ? activeBtn.dataset.tab : 'results';
-    ['results','favorites','drawings','scanner'].forEach(function(p) {
+    ['results','favorites','drawings'].forEach(function(p) {
       var el = document.getElementById('sidebar-panel-' + p);
       if (el) el.style.display = (p === activeTab) ? 'flex' : 'none';
     });
@@ -878,12 +833,10 @@
         var tab = this.dataset.tab;
         document.querySelectorAll('.sidebar-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         this.classList.add('active');
-        var panels = ['results','favorites','drawings','scanner'];
-        panels.forEach(function(p) {
+        ['results','favorites','drawings'].forEach(function(p) {
           var el = document.getElementById('sidebar-panel-' + p);
           if (el) el.style.display = (p === tab) ? 'flex' : 'none';
         });
-        if (tab === 'scanner') loadScannerData();
       });
     });
   });
@@ -1099,193 +1052,6 @@
 })();
 </script>
 
-<script>
-// ── 실시간 스캐너 ────────────────────────────────────────────
-(function () {
-  var _scanMode = 'rise';   // 현재 서브탭
-  var _scanTimer = null;
-  var _scanData  = {};      // { rise: [], volume: [], high: [] }
-
-  var SCAN_REFRESH_MS = 10000;  // 10초 자동 갱신
-
-  function fmtPrice(v) {
-    if (!v && v !== 0) return '—';
-    return Number(v).toLocaleString('ko-KR');
-  }
-
-  function renderScannerList(items) {
-    var el = document.getElementById('scanner-list');
-    if (!el) return;
-    if (!items || !items.length) {
-      el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">데이터 없음</div>';
-      return;
-    }
-    var html = '';
-    items.forEach(function (item, i) {
-      var rate   = parseFloat(item.change_rate) || 0;
-      var rateClass = rate > 0 ? 'up' : rate < 0 ? 'down' : 'flat';
-      var rateStr   = item.change_rate || '0.00';
-      if (rateStr && !rateStr.match(/^[+\-]/)) rateStr = (rate >= 0 ? '+' : '') + rateStr;
-      html +=
-        '<div class="scanner-item" onclick="scannerItemClick(\'' + item.ticker + '\')">' +
-          '<span class="sc-rank">' + (i + 1) + '</span>' +
-          '<span class="sc-name">' + (item.name || item.ticker) + '</span>' +
-          '<span class="sc-price">' + fmtPrice(item.price) + '</span>' +
-          '<span class="sc-rate ' + rateClass + '">' + rateStr + '%</span>' +
-        '</div>';
-    });
-    el.innerHTML = html;
-  }
-
-  // loadScannerData: Promise 반환 (패턴체크에서 await 가능)
-  // silent=true 이면 목록 로딩 스피너를 표시하지 않음
-  window.loadScannerData = function (silent) {
-    var el = document.getElementById('scanner-list');
-    if (!silent && el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">로딩 중…</div>';
-
-    return fetch('/api/v1/stock/market/scanner/' + _scanMode)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!d) return;
-        _scanData[_scanMode] = d.items || [];
-        var asOf = document.getElementById('scanner-as-of');
-        if (asOf) asOf.textContent = (d.fallback ? '[스냅샷] ' : '') + (d.as_of || '—');
-        if (!silent) renderScannerList(_scanData[_scanMode]);
-        return _scanData[_scanMode];
-      })
-      .catch(function () {
-        var el = document.getElementById('scanner-list');
-        if (!silent && el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">조회 실패</div>';
-        return [];
-      });
-  };
-
-  window.scannerItemClick = function (ticker) {
-    if (typeof loadChart === 'function') loadChart(ticker, null);
-  };
-
-  // 서브탭 전환
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.scanner-subtab-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.scanner-subtab-btn').forEach(function (b) { b.classList.remove('active'); });
-        this.classList.add('active');
-        _scanMode = this.dataset.scan;
-        // 캐시 있으면 즉시 렌더
-        if (_scanData[_scanMode] && _scanData[_scanMode].length) {
-          renderScannerList(_scanData[_scanMode]);
-        } else {
-          loadScannerData();
-        }
-      });
-    });
-  });
-
-  // 자동 갱신: 스캐너 패널이 보일 때만
-  function _startAutoRefresh() {
-    _stopAutoRefresh();
-    _scanTimer = setInterval(function () {
-      var panel = document.getElementById('sidebar-panel-scanner');
-      if (panel && panel.style.display !== 'none') loadScannerData();
-    }, SCAN_REFRESH_MS);
-  }
-  function _stopAutoRefresh() {
-    if (_scanTimer) { clearInterval(_scanTimer); _scanTimer = null; }
-  }
-  document.addEventListener('DOMContentLoaded', function () {
-    _startAutoRefresh();
-    // 페이지 로드 시 백그라운드에서 데이터 선 로드 (스캐너 탭을 열지 않아도 패턴체크 가능)
-    loadScannerData(true);
-  });
-
-  // ── 패턴 유사도 팝업 ────────────────────────────────────
-  window.openScannerPatternModal = async function () {
-    var modal = document.getElementById('scanner-pattern-modal');
-    if (!modal) return;
-    modal.classList.add('open');
-
-    var listEl  = document.getElementById('spm-list');
-    var patBtn  = document.getElementById('scanner-pattern-btn');
-    var sub     = document.getElementById('spm-sub-text');
-    var modeLabel = {'rise':'급등','volume':'거래량','high':'신고가'};
-
-    // 현재 차트 티커 수집 (먼저 체크)
-    var currentTicker = (window.D2T && D2T.ticker) ? D2T.ticker : null;
-    if (!currentTicker) {
-      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">차트에 종목을 먼저 로드하세요.</div>';
-      return;
-    }
-
-    // 스캐너 데이터가 없으면 즉시 fetch
-    var items = _scanData[_scanMode] || [];
-    if (!items.length) {
-      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">스캐너 데이터 로딩 중…</div>';
-      if (patBtn) { patBtn.disabled = true; patBtn.textContent = '로딩 중...'; }
-      try {
-        items = await loadScannerData(true) || [];
-        _scanData[_scanMode] = items;
-      } finally {
-        if (patBtn) { patBtn.disabled = false; patBtn.textContent = '◈ 현재 차트와 유사 스캐너 종목 분석'; }
-      }
-    }
-
-    if (!items.length) {
-      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">스캐너 데이터를 가져올 수 없습니다.</div>';
-      return;
-    }
-
-    if (sub) sub.textContent = '[' + (modeLabel[_scanMode] || _scanMode) + '] 종목 ' + items.length + '개와 현재 차트 패턴 비교';
-    listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 계산 중…</div>';
-
-    var tickers = items.slice(0, 15).map(function (i) { return i.ticker; });
-    try {
-      var r = await fetch('/api/v1/stock/market/scanner/pattern-compare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: currentTicker, candidates: tickers, top_n: 10 }),
-      });
-      var d = r.ok ? await r.json() : null;
-      if (!d || !d.results || !d.results.length) {
-        listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">결과 없음</div>';
-        return;
-      }
-      var nameMap = {};
-      items.forEach(function (i) { nameMap[i.ticker] = i.name; });
-      var html = '';
-      d.results.forEach(function (res, idx) {
-        var score = (res.score * 100).toFixed(1);
-        html +=
-          '<div class="spm-item" onclick="scannerItemClick(\'' + res.ticker + '\');closeScannerPatternModal();">' +
-            '<div class="spm-rank-badge">' + (idx + 1) + '</div>' +
-            '<div>' +
-              '<div class="spm-name">' + (nameMap[res.ticker] || res.ticker) + '</div>' +
-              '<div class="spm-ticker">' + res.ticker + '</div>' +
-            '</div>' +
-            '<div class="spm-score">' + score + '%</div>' +
-          '</div>';
-      });
-      listEl.innerHTML = html;
-    } catch (e) {
-      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 분석 실패</div>';
-    }
-  };
-
-  window.closeScannerPatternModal = function () {
-    var modal = document.getElementById('scanner-pattern-modal');
-    if (modal) modal.classList.remove('open');
-  };
-
-  // 팝업 배경 클릭으로 닫기
-  document.addEventListener('DOMContentLoaded', function () {
-    var modal = document.getElementById('scanner-pattern-modal');
-    if (modal) {
-      modal.addEventListener('click', function (e) {
-        if (e.target === modal) closeScannerPatternModal();
-      });
-    }
-  });
-})();
-</script>
 
 <script>
 // ── 호가 패널 드래그 리사이즈 ──────────────────────────────
