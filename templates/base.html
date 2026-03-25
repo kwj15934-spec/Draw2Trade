@@ -875,28 +875,38 @@
       text-align: center;
       padding: 20px 0;
     }
-    /* LIVE 점 (뉴스 탭) */
-    .fiw-live-dot {
+    /* LIVE 배지 (뉴스 탭) */
+    .fiw-live-badge {
       display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #5c9cf5;
-      margin-right: 4px;
+      background: #1a3a6e;
+      color: #5c9cf5;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #2a5ab0;
+      margin-right: 5px;
       vertical-align: middle;
-      animation: fiw-pulse 1.6s ease-in-out infinite;
+      animation: fiw-pulse 2s ease-in-out infinite;
     }
     @keyframes fiw-pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.4; transform: scale(0.7); }
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.55; }
     }
-    /* 재무 N/A */
+    /* 재무 N/A / 스냅샷 */
     .fiw-finance-na { color: #555 !important; cursor: help; }
     .fiw-finance-na-msg {
       font-size: 11px;
       color: #555;
       text-align: center;
       padding: 6px 0 2px;
+    }
+    .fiw-finance-snapshot-badge {
+      font-size: 10px;
+      color: #8a7040;
+      text-align: center;
+      padding: 2px 0 4px;
     }
     /* 재무 패널 */
     .fiw-finance-row {

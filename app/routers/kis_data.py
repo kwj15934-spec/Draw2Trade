@@ -87,6 +87,8 @@ async def get_finance(
     symbol = _normalize_symbol(symbol)
 
     cache_key = f"finance:{symbol}"
+    snap_key  = f"finance_snapshot:{symbol}"
+
     cached = await _cache_get(cache_key)
     if cached:
         return cached
@@ -94,10 +96,21 @@ async def get_finance(
     result = await _fetch_finance_pykrx(symbol)
 
     if result:
-        await _cache_set(cache_key, result, ttl=1800)  # 30분
+        await _cache_set(cache_key, result, ttl=1800)          # 30분 단기 캐시
+        await _cache_set(snap_key,  result, ttl=604800)        # 7일 스냅샷 보관
         return result
 
-    # pykrx 실패 시 503 대신 N/A 기본값 반환 (프론트엔드가 뻗지 않게)
+    # pykrx 실패 시 7일 스냅샷 Fallback 시도
+    snapshot = await _cache_get(snap_key)
+    if snapshot:
+        logger.info("재무 스냅샷 Fallback 반환 (%s)", symbol)
+        snap_copy = dict(snapshot)
+        snap_copy["snapshot"] = True   # 프론트엔드: "캐시된 데이터" 표시용
+        snap_copy.pop("na", None)
+        await _cache_set(cache_key, snap_copy, ttl=300)        # 5분 단기 재캐시
+        return snap_copy
+
+    # 스냅샷도 없으면 서버 점검 중 메시지 반환 (503 대신)
     fallback = {
         "symbol":     symbol,
         "name":       "",
@@ -107,9 +120,10 @@ async def get_finance(
         "eps":        None,
         "market_cap": None,
         "date":       "",
-        "na":         True,  # 프론트엔드 N/A 표시 플래그
+        "na":         True,
+        "msg":        "서버 점검 중",
     }
-    await _cache_set(cache_key, fallback, ttl=300)  # N/A는 5분만 캐싱
+    await _cache_set(cache_key, fallback, ttl=300)             # 5분만 캐싱
     return fallback
 
 

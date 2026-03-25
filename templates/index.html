@@ -211,7 +211,7 @@
         </div>
         <div id="fiw-tabs">
           <button class="fiw-tab active" data-tab="finance">재무</button>
-          <button class="fiw-tab" data-tab="news"><span class="fiw-live-dot"></span>실시간 뉴스</button>
+          <button class="fiw-tab" data-tab="news"><span class="fiw-live-badge">LIVE</span>실시간 속보</button>
           <button class="fiw-tab" data-tab="community">시장반응</button>
         </div>
         <div id="fiw-body">
@@ -941,14 +941,14 @@
     fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d) { _errorPanel('finance', '재무 데이터 없음'); return; }
-        var isNA = d.na === true;
-        var naAttr = isNA ? ' title="데이터를 불러올 수 없습니다" class="fiw-finance-value fiw-finance-na"' : ' class="fiw-finance-value"';
+        if (!d) { _errorPanel('finance', '서버 점검 중'); return; }
+        var isNA       = d.na === true;
+        var isSnapshot = d.snapshot === true;
         var rows = [
-          ['PER',   d.per  != null ? d.per.toFixed(2)  : '—'],
-          ['PBR',   d.pbr  != null ? d.pbr.toFixed(2)  : '—'],
-          ['ROE',   d.roe  != null ? d.roe.toFixed(1) + '%' : '—'],
-          ['EPS',   d.eps  != null ? Number(d.eps).toLocaleString('ko-KR') : '—'],
+          ['PER', d.per  != null ? d.per.toFixed(2)               : '—'],
+          ['PBR', d.pbr  != null ? d.pbr.toFixed(2)               : '—'],
+          ['ROE', d.roe  != null ? d.roe.toFixed(1) + '%'         : '—'],
+          ['EPS', d.eps  != null ? Number(d.eps).toLocaleString('ko-KR') : '—'],
         ];
         var cap = d.market_cap
           ? (d.market_cap >= 1e12
@@ -956,13 +956,18 @@
               : (d.market_cap / 1e8).toFixed(0) + '억') + ' 원'
           : null;
         var html = '';
-        if (isNA) html += '<div class="fiw-finance-na-msg">데이터를 불러올 수 없습니다</div>';
-        else if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
+        if (isNA) {
+          html += '<div class="fiw-finance-na-msg">' + (d.msg || '서버 점검 중') + '</div>';
+        } else {
+          if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
+          if (isSnapshot) html += '<div class="fiw-finance-snapshot-badge">캐시된 데이터</div>';
+        }
         rows.forEach(function (r) {
-          var valAttr = isNA ? ' class="fiw-finance-value fiw-finance-na" title="데이터를 불러올 수 없습니다"' : ' class="fiw-finance-value"';
+          var valCls = isNA ? 'fiw-finance-value fiw-finance-na' : 'fiw-finance-value';
+          var valTip = isNA ? ' title="서버 점검 중"' : '';
           html += '<div class="fiw-finance-row">' +
             '<span class="fiw-finance-label">' + r[0] + '</span>' +
-            '<span' + valAttr + '>' + r[1] + '</span>' +
+            '<span class="' + valCls + '"' + valTip + '>' + r[1] + '</span>' +
             '</div>';
         });
         _setPanel('finance', html || '<div class="fiw-loading">데이터 없음</div>');
@@ -1066,7 +1071,7 @@ window.showHistoricalNews = function (btn, ticker, periodFrom, periodTo) {
   // 토글
   if (panel.style.display !== 'none') {
     panel.style.display = 'none';
-    btn.textContent = '당시 뉴스';
+    btn.textContent = '패턴 당시 뉴스';
     return;
   }
 
@@ -1084,7 +1089,7 @@ window.showHistoricalNews = function (btn, ticker, periodFrom, periodTo) {
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
       var items = (d && d.items) || [];
-      btn.textContent = '당시 뉴스 닫기';
+      btn.textContent = '패턴 당시 뉴스 닫기';
       btn.disabled = false;
 
       if (!items.length) {
@@ -1111,7 +1116,7 @@ window.showHistoricalNews = function (btn, ticker, periodFrom, periodTo) {
       }
     })
     .catch(function () {
-      btn.textContent = '당시 뉴스';
+      btn.textContent = '패턴 당시 뉴스';
       btn.disabled = false;
       panel.innerHTML = '<div class="rhn-empty">조회 실패</div>';
     });

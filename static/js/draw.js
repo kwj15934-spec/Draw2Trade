@@ -1171,8 +1171,8 @@
             '</div>' +
             '<button class="result-hist-news-btn" ' +
               'onclick="event.stopPropagation();showHistoricalNews(this,\'' + tk + '\',\'' + escHtml(r.period_from||'') + '\',\'' + escHtml(r.period_to||'') + '\')" ' +
-              'title="당시 주요 뉴스 보기">' +
-              '당시 뉴스' +
+              'title="패턴 당시 주요 뉴스 보기">' +
+              '패턴 당시 뉴스' +
             '</button>' +
             '<div class="result-hist-news-panel" style="display:none;"></div>' +
           '</div>'
