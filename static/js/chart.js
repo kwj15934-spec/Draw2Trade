@@ -832,6 +832,10 @@
         if (typeof window._onChartLoaded === 'function') {
           window._onChartLoaded(ticker, D2T.market || 'KR');
         }
+        // 5) 플로팅 위젯 종목 동기화 (유사 종목 클릭 시 위젯도 해당 종목으로 갱신)
+        if (typeof window._onFiwChartLoaded === 'function') {
+          window._onFiwChartLoaded(ticker, D2T.market || 'KR');
+        }
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);

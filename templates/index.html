@@ -1082,7 +1082,7 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         var items = (d && d.items) || [];
-        if (!items.length) { _errorPanel('community', '게시글 없음'); return; }
+        if (!items.length) { _errorPanel('community', '현재 등록된 의견이 없습니다'); return; }
         var hot = Math.max.apply(null, items.map(function (i) { return i.agree || 0; }));
         var html = items.map(function (it) {
           var isHot = hot > 0 && (it.agree || 0) >= hot * 0.5;
@@ -1107,25 +1107,28 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── 종목 변경 시 갱신 ─────────────────────────────────────
-  window.fetchCommunityData = function (ticker) {
-    if (!ticker || ticker === _ticker) return;
+  // ── 종목 데이터 전체 리셋 + 갱신 ────────────────────────────
+  function _resetWidget(ticker) {
+    if (!ticker) return;
     _ticker = ticker;
     _loaded = { finance: false, news: false, community: false };
-    // 위젯 제목 갱신 (종목명은 재무 API 응답 후 추가 반영)
+    // 위젯 제목 즉시 갱신 (종목명은 재무 API 응답 후 추가 반영)
     var title  = document.getElementById('fiw-title');
     var tkSpan = document.getElementById('fiw-ticker');
     if (title)  title.textContent  = '메인 차트 정보';
-    if (tkSpan) tkSpan.textContent = ticker ? '(' + ticker + ')' : '';
-    // 현재 탭만 즉시 로드, 나머지는 탭 전환 시 lazy 로드
+    if (tkSpan) { tkSpan.textContent = '(' + ticker + ')'; tkSpan.title = '(' + ticker + ')'; }
+    // 현재 활성 탭 즉시 로드, 나머지는 탭 전환 시 lazy 로드
     _fetchTab(_activeTab, ticker);
-    // 위젯 표시 (닫혀있어도 종목 변경 시 자동 열기)
-    if (_widget && _widget.style.display === 'none' && _restoreTab && _restoreTab.style.display !== 'flex') {
-      // 처음 종목 로드 시 자동으로 표시
-    }
+  }
+
+  // 외부 호출용 (하위 호환 유지)
+  window.fetchCommunityData = function (ticker) {
+    if (!ticker) return;
+    // 같은 종목이어도 유사 종목 클릭 등으로 강제 재로드할 수 있으므로 가드 제거
+    _resetWidget(ticker);
   };
 
-  // KR 전용 (US 종목은 지원 안 함)
+  // KR 전용 — chart.js loadChart / loadResultChart 완료 시 호출됨
   window._onFiwChartLoaded = function (ticker, market) {
     if (market !== 'KR') {
       if (_widget) _widget.style.display = 'none';
@@ -1134,7 +1137,7 @@
     if (_widget && _widget.style.display === 'none' && (!_restoreTab || _restoreTab.style.display === 'none')) {
       _widget.style.display = 'flex';
     }
-    window.fetchCommunityData(ticker);
+    _resetWidget(ticker);
   };
 })();
 </script>

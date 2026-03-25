@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
+import urllib.error as _urlerr
 import urllib.request as _req
 from html import unescape
 
@@ -25,6 +26,10 @@ def fetch_community_posts(symbol: str, limit: int = 10) -> list[dict]:
     Returns:
         [{"title": str, "date": str, "agree": int, "disagree": int, "url": str}, ...]
     """
+    # 6자리 미만이면 앞에 0을 채워 정규화 (예: '5930' → '005930')
+    if symbol.isdigit():
+        symbol = symbol.zfill(6)
+
     url = _BOARD_URL.format(symbol=symbol)
     try:
         request = _req.Request(
@@ -100,6 +105,12 @@ def fetch_community_posts(symbol: str, limit: int = 10) -> list[dict]:
 
         return posts
 
+    except _urlerr.HTTPError as e:
+        logger.warning("종토방 스크래핑 실패 (%s) — HTTP %s %s", symbol, e.code, e.reason)
+        return []
+    except _urlerr.URLError as e:
+        logger.warning("종토방 스크래핑 실패 (%s) — URLError: %s", symbol, e.reason)
+        return []
     except Exception as e:
-        logger.warning("종토방 스크래핑 실패 (%s): %s", symbol, e)
+        logger.warning("종토방 스크래핑 실패 (%s) — %s: %s", symbol, type(e).__name__, e)
         return []
