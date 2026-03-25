@@ -902,26 +902,48 @@
       padding: 6px 4px 2px;
       font-weight: 700;
     }
-    /* 뉴스 패널 */
+    /* 뉴스 패널 — 토스 스타일 카드 */
     .fiw-news-item {
-      padding: 6px 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: block;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
       cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s ease, transform 0.15s ease;
     }
-    .fiw-news-item:last-child { border-bottom: none; }
+    .fiw-news-item:last-child { margin-bottom: 0; }
+    .fiw-news-item:hover {
+      background: rgba(255,255,255,0.10);
+      transform: translateY(-1px);
+    }
     .fiw-news-title {
       font-size: 11px;
       color: #c8ccd4;
-      line-height: 1.45;
-      margin-bottom: 2px;
+      line-height: 1.5;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .fiw-news-meta {
       font-size: 10px;
-      color: #555;
+      color: #666;
       display: flex;
       gap: 6px;
     }
-    .fiw-news-type { color: #26a69a; font-weight: 600; }
+    .fiw-news-desc {
+      font-size: 10px;
+      color: #888;
+      line-height: 1.4;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
     /* 반응(종토방) 패널 */
     .fiw-comm-item {
       padding: 6px 4px;

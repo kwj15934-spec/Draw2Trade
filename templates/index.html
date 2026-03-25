@@ -1020,20 +1020,21 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         var items = (d && d.items) || [];
-        if (!items.length) { _errorPanel('news', '뉴스/공시 없음'); return; }
+        if (!items.length) { _errorPanel('news', '점검 중'); return; }
         var html = items.map(function (it) {
           var url = it.url || '#';
-          return '<div class="fiw-news-item" onclick="window.open(\'' + url + '\',\'_blank\')">' +
+          var desc = it.description ? '<div class="fiw-news-desc">' + _esc(it.description) + '</div>' : '';
+          return '<a class="fiw-news-item" href="' + _esc(url) + '" target="_blank" rel="noopener">' +
             '<div class="fiw-news-title">' + _esc(it.title) + '</div>' +
+            desc +
             '<div class="fiw-news-meta">' +
-              '<span class="fiw-news-type">' + _esc(it.type || '뉴스') + '</span>' +
               '<span>' + _esc(it.date || '') + '</span>' +
             '</div>' +
-          '</div>';
+          '</a>';
         }).join('');
         _setPanel('news', html);
       })
-      .catch(function () { _errorPanel('news', '조회 실패'); });
+      .catch(function () { _errorPanel('news', '점검 중'); });
   }
 
   // 종토방
@@ -1136,22 +1137,26 @@
     el.innerHTML = html;
   }
 
-  window.loadScannerData = function () {
+  // loadScannerData: Promise 반환 (패턴체크에서 await 가능)
+  // silent=true 이면 목록 로딩 스피너를 표시하지 않음
+  window.loadScannerData = function (silent) {
     var el = document.getElementById('scanner-list');
-    if (el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">로딩 중…</div>';
+    if (!silent && el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">로딩 중…</div>';
 
-    fetch('/api/v1/stock/market/scanner/' + _scanMode)
+    return fetch('/api/v1/stock/market/scanner/' + _scanMode)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) return;
         _scanData[_scanMode] = d.items || [];
         var asOf = document.getElementById('scanner-as-of');
-        if (asOf) asOf.textContent = d.as_of || '—';
-        renderScannerList(_scanData[_scanMode]);
+        if (asOf) asOf.textContent = (d.fallback ? '[스냅샷] ' : '') + (d.as_of || '—');
+        if (!silent) renderScannerList(_scanData[_scanMode]);
+        return _scanData[_scanMode];
       })
       .catch(function () {
         var el = document.getElementById('scanner-list');
-        if (el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">조회 실패</div>';
+        if (!silent && el) el.innerHTML = '<div style="padding:20px 10px;text-align:center;color:#555;font-size:12px;">조회 실패</div>';
+        return [];
       });
   };
 
@@ -1187,66 +1192,82 @@
   function _stopAutoRefresh() {
     if (_scanTimer) { clearInterval(_scanTimer); _scanTimer = null; }
   }
-  document.addEventListener('DOMContentLoaded', _startAutoRefresh);
+  document.addEventListener('DOMContentLoaded', function () {
+    _startAutoRefresh();
+    // 페이지 로드 시 백그라운드에서 데이터 선 로드 (스캐너 탭을 열지 않아도 패턴체크 가능)
+    loadScannerData(true);
+  });
 
   // ── 패턴 유사도 팝업 ────────────────────────────────────
-  window.openScannerPatternModal = function () {
+  window.openScannerPatternModal = async function () {
     var modal = document.getElementById('scanner-pattern-modal');
     if (!modal) return;
     modal.classList.add('open');
 
-    var items = _scanData[_scanMode] || [];
-    if (!items.length) {
-      document.getElementById('spm-list').innerHTML =
-        '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">스캐너 데이터가 없습니다. 먼저 스캐너 탭을 열어 데이터를 불러오세요.</div>';
-      return;
-    }
+    var listEl  = document.getElementById('spm-list');
+    var patBtn  = document.getElementById('scanner-pattern-btn');
+    var sub     = document.getElementById('spm-sub-text');
+    var modeLabel = {'rise':'급등','volume':'거래량','high':'신고가'};
 
-    var sub = document.getElementById('spm-sub-text');
-    if (sub) sub.textContent = '[' + {'rise':'급등','volume':'거래량','high':'신고가'}[_scanMode] + '] 종목 ' + items.length + '개와 현재 차트 패턴 비교';
-
-    var listEl = document.getElementById('spm-list');
-    listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 계산 중…</div>';
-
-    // 현재 차트 티커 수집
+    // 현재 차트 티커 수집 (먼저 체크)
     var currentTicker = (window.D2T && D2T.ticker) ? D2T.ticker : null;
     if (!currentTicker) {
       listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">차트에 종목을 먼저 로드하세요.</div>';
       return;
     }
 
+    // 스캐너 데이터가 없으면 즉시 fetch
+    var items = _scanData[_scanMode] || [];
+    if (!items.length) {
+      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">스캐너 데이터 로딩 중…</div>';
+      if (patBtn) { patBtn.disabled = true; patBtn.textContent = '로딩 중...'; }
+      try {
+        items = await loadScannerData(true) || [];
+        _scanData[_scanMode] = items;
+      } finally {
+        if (patBtn) { patBtn.disabled = false; patBtn.textContent = '◈ 현재 차트와 유사 스캐너 종목 분석'; }
+      }
+    }
+
+    if (!items.length) {
+      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">스캐너 데이터를 가져올 수 없습니다.</div>';
+      return;
+    }
+
+    if (sub) sub.textContent = '[' + (modeLabel[_scanMode] || _scanMode) + '] 종목 ' + items.length + '개와 현재 차트 패턴 비교';
+    listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 계산 중…</div>';
+
     var tickers = items.slice(0, 15).map(function (i) { return i.ticker; });
-    fetch('/api/v1/stock/market/scanner/pattern-compare', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticker: currentTicker, candidates: tickers, top_n: 10 }),
-    })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!d || !d.results || !d.results.length) {
-          listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">결과 없음</div>';
-          return;
-        }
-        var nameMap = {};
-        items.forEach(function (i) { nameMap[i.ticker] = i.name; });
-        var html = '';
-        d.results.forEach(function (r, idx) {
-          var score = (r.score * 100).toFixed(1);
-          html +=
-            '<div class="spm-item" onclick="scannerItemClick(\'' + r.ticker + '\');closeScannerPatternModal();">' +
-              '<div class="spm-rank-badge">' + (idx + 1) + '</div>' +
-              '<div>' +
-                '<div class="spm-name">' + (nameMap[r.ticker] || r.ticker) + '</div>' +
-                '<div class="spm-ticker">' + r.ticker + '</div>' +
-              '</div>' +
-              '<div class="spm-score">' + score + '%</div>' +
-            '</div>';
-        });
-        listEl.innerHTML = html;
-      })
-      .catch(function () {
-        listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 분석 실패</div>';
+    try {
+      var r = await fetch('/api/v1/stock/market/scanner/pattern-compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: currentTicker, candidates: tickers, top_n: 10 }),
       });
+      var d = r.ok ? await r.json() : null;
+      if (!d || !d.results || !d.results.length) {
+        listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">결과 없음</div>';
+        return;
+      }
+      var nameMap = {};
+      items.forEach(function (i) { nameMap[i.ticker] = i.name; });
+      var html = '';
+      d.results.forEach(function (res, idx) {
+        var score = (res.score * 100).toFixed(1);
+        html +=
+          '<div class="spm-item" onclick="scannerItemClick(\'' + res.ticker + '\');closeScannerPatternModal();">' +
+            '<div class="spm-rank-badge">' + (idx + 1) + '</div>' +
+            '<div>' +
+              '<div class="spm-name">' + (nameMap[res.ticker] || res.ticker) + '</div>' +
+              '<div class="spm-ticker">' + res.ticker + '</div>' +
+            '</div>' +
+            '<div class="spm-score">' + score + '%</div>' +
+          '</div>';
+      });
+      listEl.innerHTML = html;
+    } catch (e) {
+      listEl.innerHTML = '<div style="text-align:center;color:#555;font-size:12px;padding:20px;">유사도 분석 실패</div>';
+    }
   };
 
   window.closeScannerPatternModal = function () {

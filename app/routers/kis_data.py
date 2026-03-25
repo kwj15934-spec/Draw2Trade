@@ -196,60 +196,26 @@ async def get_news(
     if cached:
         return cached
 
-    result = await _fetch_news_kis(symbol)
-    await _cache_set(cache_key, result, ttl=600)  # 10분
+    result = await _fetch_news_naver(symbol)
+    await _cache_set(cache_key, result, ttl=900)  # 15분
     return result
 
 
-async def _fetch_news_kis(symbol: str) -> dict:
+async def _fetch_news_naver(symbol: str) -> dict:
     """
-    KIS 종목 뉴스 API (FHKST01010400) 호출.
-    KIS 미설정 또는 오류 시 빈 items 반환.
+    네이버 검색 API로 종목 뉴스를 조회한다.
+    종목명은 data_service.get_company_name() 로 조회하여 검색어로 사용.
     """
     import asyncio
 
     def _sync() -> list[dict]:
         try:
-            from app.services.kis_client import _get, is_configured
-            if not is_configured():
-                return []
-
-            # KIS 국내 뉴스 조회 TR
-            # path: /uapi/domestic-stock/v1/quotations/news-title
-            data = _get(
-                path="/uapi/domestic-stock/v1/quotations/news-title",
-                params={
-                    "PDNO":     symbol,     # 종목 코드
-                    "NEWS_DT":  "",         # 조회 일자 (공백 = 최신)
-                    "SRT_CD":   "40",       # 최신순
-                    "NNUM":     "20",       # 최대 20건
-                },
-                tr_id="FHKST01010400",
-            )
-            if not data or data.get("rt_cd") != "0":
-                return []
-
-            items = []
-            for row in data.get("output1") or []:
-                title = (row.get("hts_pbnt_titl_cntt") or "").strip()
-                if not title:
-                    continue
-                raw_dt = row.get("cntt_usiq_dttm") or row.get("data_dt") or ""
-                # YYYYMMDDHHMMSS → YYYY-MM-DD
-                date_str = _parse_kis_date(raw_dt)
-                # 유형 분류: 공시(DART) vs 뉴스
-                kind = row.get("news_dstp_type_code") or ""
-                news_type = "공시" if kind in ("02", "03") else "뉴스"
-                items.append({
-                    "title": title,
-                    "date":  date_str,
-                    "type":  news_type,
-                    "url":   row.get("hts_pbnt_url", ""),
-                })
-            return items
-
+            from app.services.data_service import get_company_name
+            from app.services.naver_service import fetch_news
+            company = get_company_name(symbol) or symbol
+            return fetch_news(company, display=10)
         except Exception as e:
-            logger.warning("KIS 뉴스 조회 실패 (%s): %s", symbol, e)
+            logger.warning("Naver 뉴스 조회 실패 (%s): %s", symbol, e)
             return []
 
     loop = asyncio.get_event_loop()
@@ -508,6 +474,7 @@ async def _fetch_overtime_leaders(top_n: int) -> dict:
 async def get_scanner_volume(top_n: int = 20):
     """거래량 순위 조회 (FHPST01710000), 10초 캐시."""
     cache_key = f"scanner_volume_{top_n}"
+    snap_key  = f"scanner_volume_{top_n}_snapshot"
     cached = await _cache_get(cache_key)
     if cached:
         return cached
@@ -532,8 +499,11 @@ async def get_scanner_volume(top_n: int = 20):
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
         vol_key="acml_vol",
+        snap_key=snap_key,
     )
-    await _cache_set(cache_key, result, ttl=10)
+    if result["items"]:
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)  # 스냅샷 1시간 보관
     return result
 
 
@@ -541,6 +511,7 @@ async def get_scanner_volume(top_n: int = 20):
 async def get_scanner_rise(top_n: int = 20):
     """등락률 상위 조회 (FHPST01700000), 10초 캐시."""
     cache_key = f"scanner_rise_{top_n}"
+    snap_key  = f"scanner_rise_{top_n}_snapshot"
     cached = await _cache_get(cache_key)
     if cached:
         return cached
@@ -567,8 +538,11 @@ async def get_scanner_rise(top_n: int = 20):
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
         vol_key="acml_vol",
+        snap_key=snap_key,
     )
-    await _cache_set(cache_key, result, ttl=10)
+    if result["items"]:
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)
     return result
 
 
@@ -576,6 +550,7 @@ async def get_scanner_rise(top_n: int = 20):
 async def get_scanner_high(top_n: int = 20):
     """신고가 종목 조회 (FHPST01040000), 10초 캐시."""
     cache_key = f"scanner_high_{top_n}"
+    snap_key  = f"scanner_high_{top_n}_snapshot"
     cached = await _cache_get(cache_key)
     if cached:
         return cached
@@ -600,8 +575,11 @@ async def get_scanner_high(top_n: int = 20):
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
         vol_key="acml_vol",
+        snap_key=snap_key,
     )
-    await _cache_set(cache_key, result, ttl=10)
+    if result["items"]:
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)
     return result
 
 
@@ -615,8 +593,9 @@ async def _fetch_scanner(
     price_key: str,
     rate_key: str,
     vol_key: str,
+    snap_key: str = "",
 ) -> dict:
-    """공통 스캐너 fetch 로직."""
+    """공통 스캐너 fetch 로직. KIS 실패 시 스냅샷 Fallback."""
     import asyncio
 
     def _sync() -> list[dict]:
@@ -630,6 +609,7 @@ async def _fetch_scanner(
 
             data = _get(path=path, params=params, tr_id=tr_id)
             if not data or data.get("rt_cd") != "0":
+                logger.debug("KIS 스캐너 빈 응답 (%s) rt_cd=%s", tr_id, (data or {}).get("rt_cd"))
                 return []
 
             rows = data.get("output") or []
@@ -668,7 +648,17 @@ async def _fetch_scanner(
     loop = asyncio.get_event_loop()
     items = await loop.run_in_executor(None, _sync)
     as_of = datetime.now(_KST).strftime("%H:%M:%S")
-    return {"items": items, "as_of": as_of}
+
+    # KIS 응답이 없으면 스냅샷으로 Fallback
+    if not items and snap_key:
+        snapshot = await _cache_get(snap_key)
+        if snapshot and snapshot.get("items"):
+            logger.info("스캐너 Fallback 스냅샷 반환 (%s)", snap_key)
+            snap_copy = dict(snapshot)
+            snap_copy["fallback"] = True  # 클라이언트에 스냅샷임을 알림
+            return snap_copy
+
+    return {"items": items, "as_of": as_of, "fallback": False}
 
 
 # ── 스캐너 패턴 유사도 분석 ───────────────────────────────────────────────────
