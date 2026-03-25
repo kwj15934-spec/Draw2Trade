@@ -996,53 +996,138 @@
       font-variant-numeric: tabular-nums;
     }
     .fiw-finance-cap { display: none; } /* 구버전 호환 숨김 */
-    /* 뉴스 패널 — 토스 스타일 카드 */
+    /* ══════════════════════════════════════════════════════
+       뉴스 피드 — 다크 모드 리뉴얼
+       ══════════════════════════════════════════════════════ */
+
+    /* 뉴스 서브탭 (인기/주요/최신/급상승) */
+    .news-subtabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+      background: #0f0f12;
+    }
+    .news-subtab {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #444;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 6px 2px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .news-subtab.active { color: #d4d8e2; border-bottom-color: #26a69a; }
+    .news-subtab:hover  { color: #8090a8; }
+
+    /* 뉴스 카드 */
     .fiw-news-item {
-      display: block;
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      padding: 8px 10px;
-      margin-bottom: 6px;
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
       cursor: pointer;
       text-decoration: none;
-      transition: background 0.15s ease, transform 0.15s ease;
+      transition: background .12s;
+      border-radius: 4px;
     }
-    .fiw-news-item:last-child { margin-bottom: 0; }
-    .fiw-news-item:hover {
-      background: rgba(255,255,255,0.10);
-      transform: translateY(-1px);
+    .fiw-news-item:last-child { border-bottom: none; }
+    .fiw-news-item:hover { background: rgba(255,255,255,0.04); }
+
+    /* 썸네일 */
+    .fiw-news-thumb {
+      width: 52px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #1e1e24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .fiw-news-item:hover .fiw-news-title {
-      color: #4dd0c4;
-      text-decoration: underline;
-      text-underline-offset: 2px;
+    .fiw-news-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 5px;
     }
+    .fiw-news-thumb-placeholder {
+      font-size: 18px;
+      opacity: 0.3;
+    }
+
+    /* 카드 본문 */
+    .fiw-news-body { flex: 1; min-width: 0; }
     .fiw-news-title {
       font-size: 11px;
+      font-weight: 600;
       color: #c8ccd4;
-      line-height: 1.5;
+      line-height: 1.45;
       margin-bottom: 4px;
-      transition: color 0.15s ease;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      transition: color .12s;
     }
-    .fiw-news-meta {
-      font-size: 10px;
-      color: #666;
+    .fiw-news-item:hover .fiw-news-title { color: #4dd0c4; }
+
+    /* 종목 배지 */
+    .fiw-news-badges {
       display: flex;
-      gap: 6px;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-bottom: 3px;
     }
-    .fiw-news-desc {
-      font-size: 10px;
-      color: #888;
-      line-height: 1.4;
-      margin-bottom: 4px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+    .fiw-stock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: opacity .12s;
+    }
+    .fiw-stock-badge:hover { opacity: 0.75; }
+    .fiw-stock-badge.up   { background: rgba(239,83,80,0.18); color: #ef5350; border: 1px solid rgba(239,83,80,0.35); }
+    .fiw-stock-badge.down { background: rgba(38,166,154,0.15); color: #26a69a; border: 1px solid rgba(38,166,154,0.3); }
+    .fiw-stock-badge.flat { background: rgba(120,120,140,0.15); color: #888; border: 1px solid rgba(120,120,140,0.25); }
+
+    /* 메타 정보 (매체명 + 시간) */
+    .fiw-news-meta {
+      font-size: 9.5px;
+      color: #555;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .fiw-news-source {
+      color: #4a5568;
+      font-weight: 600;
+    }
+    .fiw-news-desc { display: none; } /* 공간 절약 */
+
+    /* 법적 고지 배너 */
+    .fiw-legal-notice {
+      flex-shrink: 0;
+      background: rgba(239,83,80,0.06);
+      border-top: 1px solid rgba(239,83,80,0.2);
+      padding: 7px 10px;
+      font-size: 9px;
+      color: #6b4444;
+      line-height: 1.6;
+    }
+    .fiw-legal-notice strong {
+      display: block;
+      color: #8a5252;
+      font-weight: 700;
+      margin-bottom: 2px;
     }
     /* ── 시장 반응 통합 피드 ─────────────────────────────── */
     .fiw-comm-item {

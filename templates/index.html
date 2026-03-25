@@ -403,8 +403,23 @@
           <div id="fiw-panel-finance" class="fiw-panel active">
             <div class="fiw-loading">로딩 중…</div>
           </div>
-          <div id="fiw-panel-news" class="fiw-panel">
-            <div class="fiw-loading">로딩 중…</div>
+          <div id="fiw-panel-news" class="fiw-panel" style="padding:0; display:flex; flex-direction:column;">
+            <!-- 뉴스 서브탭 -->
+            <div class="news-subtabs" id="news-subtabs">
+              <button class="news-subtab active" data-news-tab="latest">최신뉴스</button>
+              <button class="news-subtab" data-news-tab="hot">인기뉴스</button>
+              <button class="news-subtab" data-news-tab="major">주요뉴스</button>
+              <button class="news-subtab" data-news-tab="surge">급상승</button>
+            </div>
+            <!-- 뉴스 리스트 (스크롤) -->
+            <div id="news-feed-list" style="flex:1;overflow-y:auto;padding:6px 8px;">
+              <div class="fiw-loading">로딩 중…</div>
+            </div>
+            <!-- 법적 고지 (항상 표시) -->
+            <div class="fiw-legal-notice">
+              <strong>⚠ 투자 유의사항</strong>
+              본 서비스는 유사투자자문업자입니다. 개별 투자 상담·자금 운용이 불가하며, 원금 손실은 투자자 귀속입니다.
+            </div>
           </div>
           <div id="fiw-panel-community" class="fiw-panel">
             <div class="fiw-loading">로딩 중…</div>
@@ -970,6 +985,12 @@
 
   // ── 데이터 fetch ───────────────────────────────────────────
   function _setPanel(tab, html) {
+    // 뉴스 패널은 서브탭+법적고지가 정적 HTML이므로 피드 목록만 갱신
+    if (tab === 'news') {
+      var feedEl = document.getElementById('news-feed-list');
+      if (feedEl) feedEl.innerHTML = html;
+      return;
+    }
     var el = document.getElementById('fiw-panel-' + tab);
     if (el) el.innerHTML = html;
   }
@@ -1066,29 +1087,137 @@
       .catch(function () { _errorPanel('finance', '조회 실패'); });
   }
 
-  // 뉴스
+  // ── 뉴스 피드 ────────────────────────────────────────────
+  var _newsSubtab  = 'latest';      // 현재 활성 서브탭
+  var _newsCache   = {};            // { ticker: { latest:[], hot:[], ... } }
+
+  // 서브탭 클릭 이벤트 바인딩 (DOMContentLoaded 이후 실행됨)
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.news-subtab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        _newsSubtab = this.dataset.newsTab;
+        document.querySelectorAll('.news-subtab').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.newsTab === _newsSubtab);
+        });
+        _renderNewsFeed(_ticker);
+      });
+    });
+  });
+
   function _fetchNews(ticker) {
-    _loadingPanel('news');
+    var feedEl = document.getElementById('news-feed-list');
+    if (feedEl) feedEl.innerHTML = '<div class="fiw-loading">로딩 중…</div>';
+
     fetch('/api/v1/stock/news/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        var items = (d && d.items) || [];
-        if (!items.length) { _errorPanel('news', '점검 중'); return; }
-        var html = items.map(function (it) {
-          var url = it.url || '#';
-          var desc = it.description ? '<div class="fiw-news-desc">' + _esc(it.description) + '</div>' : '';
-          return '<a class="fiw-news-item" href="' + _esc(url) + '" target="_blank" rel="noopener">' +
-            '<div class="fiw-news-title">' + _esc(it.title) + '</div>' +
-            desc +
-            '<div class="fiw-news-meta">' +
-              '<span>' + _esc(it.date || '') + '</span>' +
-            '</div>' +
-          '</a>';
-        }).join('');
-        _setPanel('news', html);
+        var raw = (d && d.items) || [];
+        // 서브탭별로 분류 (같은 데이터를 정렬/필터 방식으로 구분)
+        _newsCache[ticker] = {
+          latest: raw.slice(),                                          // 최신순(원본)
+          hot:    raw.slice().sort(function(a,b){ return (b.agree||0)-(a.agree||0); }),
+          major:  raw.filter(function(i){ return i.type && i.type !== '뉴스'; }).concat(
+                  raw.filter(function(i){ return !i.type || i.type === '뉴스'; })),
+          surge:  raw.filter(function(i){ return i.related && i.related.some(function(r){ return (r.chg_rate||0) >= 3; }) })
+                     .concat(raw.filter(function(i){ return !i.related || !i.related.some(function(r){ return (r.chg_rate||0) >= 3; }); })),
+        };
+        _renderNewsFeed(ticker);
       })
-      .catch(function () { _errorPanel('news', '점검 중'); });
+      .catch(function () {
+        var feedEl = document.getElementById('news-feed-list');
+        if (feedEl) feedEl.innerHTML = '<div class="fiw-loading">점검 중</div>';
+      });
   }
+
+  function _renderNewsFeed(ticker) {
+    var feedEl = document.getElementById('news-feed-list');
+    if (!feedEl) return;
+    var cache  = _newsCache[ticker];
+    var items  = cache ? (cache[_newsSubtab] || cache.latest || []) : [];
+    if (!items.length) {
+      feedEl.innerHTML = '<div class="fiw-loading">뉴스가 없습니다</div>';
+      return;
+    }
+    feedEl.innerHTML = items.map(function (it) {
+      return _renderNewsCard(it, ticker);
+    }).join('');
+  }
+
+  function _renderNewsCard(it, ticker) {
+    var url      = it.url || '#';
+    var title    = _esc(it.title || '');
+    var date     = _esc(it.date  || '');
+    var source   = _esc(it.source || it.type || '뉴스');
+
+    // 썸네일
+    var thumbHtml = it.thumbnail
+      ? '<div class="fiw-news-thumb"><img src="' + _esc(it.thumbnail) +
+        '" alt="" onerror="this.parentNode.innerHTML=\'<span class=fiw-news-thumb-placeholder>📰</span>\'"></div>'
+      : '<div class="fiw-news-thumb"><span class="fiw-news-thumb-placeholder">📰</span></div>';
+
+    // 종목 배지 — 현재 종목 기준
+    var badgesHtml = _buildStockBadges(it, ticker);
+
+    return '<a class="fiw-news-item" href="' + _esc(url) + '" target="_blank" rel="noopener" ' +
+      'onclick="_onNewsItemClick(event,\'' + _esc(ticker) + '\',\'' + _esc(url) + '\')">' +
+      thumbHtml +
+      '<div class="fiw-news-body">' +
+        '<div class="fiw-news-title">' + title + '</div>' +
+        (badgesHtml ? '<div class="fiw-news-badges">' + badgesHtml + '</div>' : '') +
+        '<div class="fiw-news-meta">' +
+          '<span class="fiw-news-source">' + source + '</span>' +
+          '<span>' + date + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</a>';
+  }
+
+  // 종목 배지 생성: related 배열 또는 현재 종목으로 구성
+  function _buildStockBadges(it, currentTicker) {
+    var related = it.related || [];
+    if (!related.length) {
+      // 현재 종목 자체를 배지로 표시 (등락률은 실시간 헤더 데이터 참조)
+      var priceEl = document.getElementById('thb-change-pct');
+      var pct     = priceEl ? priceEl.textContent.replace(/[^0-9.\-+%]/g, '') : '';
+      var cls     = 'flat';
+      if (pct.startsWith('+')) cls = 'up';
+      else if (pct.startsWith('-')) cls = 'down';
+      var tkEl  = document.getElementById('thb-name');
+      var name  = (tkEl ? tkEl.textContent : '') || currentTicker;
+      return '<span class="fiw-stock-badge ' + cls + '" ' +
+        'onclick="event.stopPropagation();_syncChartFromBadge(\'' + _esc(currentTicker) + '\')" ' +
+        'title="차트로 이동">' + _esc(name) +
+        (pct ? ' ' + pct : '') + '</span>';
+    }
+    return related.slice(0, 3).map(function (r) {
+      var pct  = r.chg_rate != null ? (r.chg_rate >= 0 ? '+' : '') + r.chg_rate.toFixed(1) + '%' : '';
+      var cls  = r.chg_rate > 0 ? 'up' : r.chg_rate < 0 ? 'down' : 'flat';
+      var sym  = _esc(r.symbol || '');
+      var nm   = _esc(r.name || r.symbol || '');
+      return '<span class="fiw-stock-badge ' + cls + '" ' +
+        'onclick="event.stopPropagation();_syncChartFromBadge(\'' + sym + '\')" ' +
+        'title="' + nm + ' 차트로 이동">' +
+        nm + (pct ? ' ' + pct : '') + '</span>';
+    }).join('');
+  }
+
+  // 뉴스 클릭 → 날짜 차트 동기화 (기존 _onNewsClick 연동)
+  window._onNewsItemClick = function (e, ticker, url) {
+    // 외부 링크는 기본 동작 유지, 차트 날짜만 동기화
+    if (typeof window._onNewsClick === 'function' && _newsCache[ticker]) {
+      var items = _newsCache[ticker].latest || [];
+      var found = items.find(function(i){ return (i.url || '') === url; });
+      if (found) window._onNewsClick(found);
+    }
+  };
+
+  // 배지 클릭 → 해당 종목 차트 로드
+  window._syncChartFromBadge = function (symbol) {
+    if (!symbol) return;
+    if (window.D2T && typeof D2T.loadChart === 'function') {
+      D2T.loadChart(symbol);
+    }
+  };
 
   // 시장 반응 — 네이버+토스 통합 피드
   function _fetchCommunity(ticker) {
@@ -1171,12 +1300,14 @@
     // 즉시 헤더+스피너 업데이트 (시각 반응)
     var tkSpan = document.getElementById('fiw-ticker');
     if (tkSpan) { tkSpan.textContent = '(' + ticker + ') 로딩 중…'; }
-    // 시장 반응 탭이 열려있으면 즉시 스피너 표시
+    // 활성 탭이 community/news이면 즉시 스피너 표시
     if (_activeTab === 'community') {
       _setPanel('community',
         '<div class="fiw-loading" style="color:#526eff;">' +
         '<div class="d2t-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 6px;"></div>' +
         '데이터 로딩 중…</div>');
+    } else if (_activeTab === 'news') {
+      _setPanel('news', '<div class="fiw-loading">로딩 중…</div>');
     }
     _debounceTimer = setTimeout(function () {
       _debounceTimer = null;
