@@ -220,7 +220,9 @@ async def pending_page(request: Request):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    return templates.TemplateResponse("pricing.html", {"request": request})
+    # 결제 기능 준비 중 — 임시 비활성화
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=302)
 
 
 @app.get("/terms", response_class=HTMLResponse)
