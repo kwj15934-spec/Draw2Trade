@@ -208,6 +208,16 @@ async def notices_page(request: Request):
     return templates.TemplateResponse("notices.html", {"request": request})
 
 
+@app.get("/news", response_class=HTMLResponse)
+async def news_page(request: Request):
+    return templates.TemplateResponse("news.html", {"request": request})
+
+
+@app.get("/feed", response_class=HTMLResponse)
+async def feed_page(request: Request):
+    return templates.TemplateResponse("feed.html", {"request": request})
+
+
 @app.get("/blank", response_class=HTMLResponse)
 async def blank(request: Request):
     return templates.TemplateResponse("blank.html", {"request": request})

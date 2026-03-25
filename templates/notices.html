@@ -7,176 +7,201 @@
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:     #141416;
-      --bg2:    #1e1e21;
-      --bg3:    #1e2332;
+      --bg:     #0f0f12;
+      --bg2:    #18181c;
+      --bg3:    #1e1e24;
       --teal:   #26a69a;
-      --teal2:  #1a7a70;
       --orange: #ff6b35;
       --text:   #d4d8e2;
       --muted:  #7a8499;
-      --border: #2d2d30;
+      --border: #27272a;
     }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text);
+      font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px; line-height: 1.6; }
 
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      line-height: 1.6;
+    /* ── 네비 ─────────────────────────────────── */
+    .d2t-nav {
+      position: sticky; top: 0; z-index: 100;
+      height: 48px; background: #18181b; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 20px; gap: 8px;
     }
+    .d2t-brand {
+      font-size: 15px; font-weight: 800; color: var(--orange);
+      text-decoration: none; display: flex; align-items: center; gap: 7px; white-space: nowrap;
+    }
+    .d2t-brand img { height: 22px; width: 22px; object-fit: contain; }
+    .nav-spacer { flex: 1; }
+    .nav-link {
+      display: flex; align-items: center; height: 26px; padding: 0 10px;
+      font-size: 11px; color: var(--muted); border: 1px solid var(--border);
+      border-radius: 5px; text-decoration: none; white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .nav-link:hover  { color: #d4d8e2; border-color: var(--teal); }
+    .nav-link.active { color: var(--teal); border-color: var(--teal); }
 
-    .lp-nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px; height: 60px;
-      background: rgba(13,17,23,0.92);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-    }
-    .lp-nav-brand {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 18px; font-weight: 700; color: var(--orange);
-      text-decoration: none;
-    }
-    .lp-nav-brand img { height: 28px; width: 28px; }
-    .lp-nav-links { display: flex; gap: 8px; }
-    .btn-outline {
-      padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--text); cursor: pointer; text-decoration: none;
-      transition: border-color .2s, color .2s;
-    }
-    .btn-outline:hover { border-color: var(--teal); color: var(--teal); }
-    .btn-primary {
-      padding: 7px 20px; border-radius: 6px; font-size: 13px; font-weight: 600;
-      border: none; background: var(--teal); color: #fff;
-      cursor: pointer; text-decoration: none; transition: background .2s;
-    }
-    .btn-primary:hover { background: var(--teal2); }
+    /* ── 페이지 ───────────────────────────────── */
+    .page-wrap { max-width: 760px; margin: 0 auto; padding: 36px 20px 80px; }
 
-    .page-wrap {
-      max-width: 760px; margin: 0 auto;
-      padding: 100px 24px 80px;
-    }
+    .page-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--teal); text-transform: uppercase; margin-bottom: 10px; }
+    .page-title { font-size: clamp(22px, 4vw, 32px); font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .page-desc  { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
 
-    .page-label {
-      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-      color: var(--teal); text-transform: uppercase; margin-bottom: 12px;
-    }
-    .page-title {
-      font-size: clamp(26px, 4vw, 38px); font-weight: 800;
-      color: #fff; margin-bottom: 40px;
-    }
-
-    .filter-tabs {
-      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px;
-    }
+    /* ── 필터 탭 ──────────────────────────────── */
+    .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
     .filter-tab {
       padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
       border: 1px solid var(--border); background: transparent;
       color: var(--muted); cursor: pointer; transition: all .15s;
     }
-    .filter-tab:hover, .filter-tab.active { border-color: var(--teal); color: var(--teal); background: rgba(38,166,154,.08); }
+    .filter-tab:hover, .filter-tab.active {
+      border-color: var(--teal); color: var(--teal); background: rgba(38,166,154,.08);
+    }
 
-    .notices-list { display: flex; flex-direction: column; gap: 12px; }
+    /* ── 공지 카드 ────────────────────────────── */
+    .notices-list { display: flex; flex-direction: column; gap: 10px; }
 
     .notice-card {
       background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 20px 24px;
-      transition: border-color .2s; cursor: pointer;
+      border-radius: 12px; padding: 18px 20px;
+      transition: border-color .15s, transform .1s; cursor: pointer;
     }
-    .notice-card:hover { border-color: var(--teal); }
-    .notice-card.pinned { border-color: rgba(38,166,154,.4); }
+    .notice-card:hover { border-color: rgba(38,166,154,.45); transform: translateY(-1px); }
+    .notice-card.pinned { border-color: rgba(38,166,154,.3); background: rgba(38,166,154,.03); }
 
-    .notice-header {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
-    }
+    .notice-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
     .notice-pin { font-size: 12px; color: var(--teal); font-weight: 700; }
     .notice-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 4px;
-      font-size: 11px; font-weight: 700;
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;
     }
-    .badge-update  { background: rgba(38,166,154,.15); color: var(--teal); }
-    .badge-event   { background: rgba(38,166,154,.15); color: var(--orange); }
-    .badge-notice  { background: rgba(122,132,153,.15); color: var(--muted); }
+    .badge-update { background: rgba(38,166,154,.15); color: var(--teal); }
+    .badge-event  { background: rgba(255,107,53,.12); color: var(--orange); }
+    .badge-notice { background: rgba(122,132,153,.12); color: var(--muted); }
 
-    .notice-title {
-      font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px;
-    }
+    .notice-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 5px; }
     .notice-preview {
-      font-size: 14px; color: var(--muted); white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
+      font-size: 12px; color: var(--muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px;
     }
-    .notice-date { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .notice-footer { display: flex; align-items: center; gap: 12px; }
+    .notice-date { font-size: 11px; color: var(--muted); }
+    .notice-views { font-size: 11px; color: #4a5568; }
 
-    .notice-modal-bg {
+    /* ── 이미지 썸네일 (카드에 있을 때) ─────── */
+    .notice-thumb {
+      width: 100%; max-height: 180px; object-fit: cover;
+      border-radius: 8px; margin-bottom: 12px; display: block;
+    }
+
+    /* ── 모달 ─────────────────────────────────── */
+    .modal-bg {
       display: none; position: fixed; inset: 0; z-index: 500;
-      background: rgba(0,0,0,.7); align-items: center; justify-content: center;
+      background: rgba(0,0,0,.75); align-items: center; justify-content: center;
     }
-    .notice-modal-bg.open { display: flex; }
-    .notice-modal {
-      background: #1e1e21; border: 1px solid var(--border);
-      border-radius: 12px; padding: 36px;
-      width: 100%; max-width: 600px; margin: 24px;
-      max-height: 80vh; overflow-y: auto; position: relative;
+    .modal-bg.open { display: flex; }
+    .modal-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; width: 100%; max-width: 640px; margin: 20px;
+      max-height: 88vh; overflow-y: auto; position: relative;
     }
-    .notice-modal-close {
-      position: absolute; top: 16px; right: 16px;
-      background: none; border: none; color: var(--muted);
-      font-size: 20px; cursor: pointer;
+    .modal-img {
+      width: 100%; max-height: 280px; object-fit: cover;
+      border-radius: 14px 14px 0 0; display: none;
     }
-    .notice-modal-badge { margin-bottom: 12px; }
-    .notice-modal-title {
-      font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 6px;
+    .modal-content { padding: 28px 32px 32px; }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(0,0,0,.4); border: none; color: #aaa;
+      font-size: 18px; cursor: pointer; border-radius: 50%;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      z-index: 10; transition: background .15s;
     }
-    .notice-modal-date { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .notice-modal-body {
-      font-size: 15px; color: var(--text); line-height: 1.8;
-      white-space: pre-wrap;
+    .modal-close:hover { background: rgba(255,255,255,.15); }
+    .modal-badge-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .modal-title {
+      font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; line-height: 1.3;
+    }
+    .modal-meta { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+    .modal-body {
+      font-size: 14px; color: var(--text); line-height: 1.8;
+      white-space: pre-wrap; border-top: 1px solid rgba(255,255,255,.06); padding-top: 16px;
     }
 
-    .empty-state {
-      text-align: center; padding: 80px 24px;
-      color: var(--muted); font-size: 15px;
+    /* ── 빈 상태 / 스피너 ─────────────────── */
+    .empty-state { text-align: center; padding: 60px 24px; color: var(--muted); font-size: 14px; }
+    .n-spinner {
+      width: 26px; height: 26px; margin: 0 auto 12px;
+      border: 2px solid rgba(255,255,255,.08); border-top-color: var(--teal);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 문의 모달 ────────────────────────── */
+    .contact-modal {
+      display: none; position: fixed; inset: 0; z-index: 999;
+      background: rgba(0,0,0,.75); align-items: center; justify-content: center;
+    }
+    .contact-modal.open { display: flex; }
+    .contact-box {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 32px; width: 100%; max-width: 440px; margin: 20px; position: relative;
+    }
+    .contact-title { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .contact-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none;
+      transition: border-color .15s;
+    }
+    .form-input:focus { border-color: var(--teal); }
+    .btn-submit {
+      width: 100%; padding: 12px; background: var(--teal); border: none;
+      border-radius: 8px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-submit:hover { background: #1a7a70; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+    .contact-success {
+      display: none; background: rgba(38,166,154,.12); border: 1px solid var(--teal);
+      border-radius: 8px; padding: 14px; color: var(--teal); font-size: 13px;
+      text-align: center; margin-bottom: 16px;
     }
 
     footer {
-      padding: 40px 24px; text-align: center;
-      color: var(--muted); font-size: 13px;
+      padding: 32px 20px; text-align: center; color: var(--muted); font-size: 11px;
       border-top: 1px solid var(--border);
     }
     footer a { color: var(--muted); text-decoration: none; }
     footer a:hover { color: var(--teal); }
-
-    @media (max-width: 600px) {
-      .lp-nav { padding: 0 16px; height: 52px; }
-      .lp-nav-brand { font-size: 15px; gap: 7px; }
-      .lp-nav-brand img { height: 22px; width: 22px; }
-      .btn-outline { padding: 5px 10px; font-size: 12px; }
-      .btn-primary, .btn-primary-nav { padding: 5px 12px; font-size: 12px; }
-      .notice-modal { padding: 24px; }
-    }
   </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 </head>
 <body>
 
-<nav class="lp-nav">
-  <a href="/" class="lp-nav-brand">
-    <img src="/static/img/favicon.svg" alt="logo" onerror="this.style.display='none'">
+<!-- ── 네비게이션 ───────────────────────────────── -->
+<nav class="d2t-nav">
+  <a href="/" class="d2t-brand">
+    <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.src='/static/img/favicon.svg'">
     Draw2Trade
   </a>
-  <div class="lp-nav-links">
-    <a href="/app" class="btn-primary">시작하기</a>
-    <a href="#" onclick="openContact();return false;" class="btn-outline">문의하기</a>
-  </div>
+  <div class="nav-spacer"></div>
+  <a href="/news"    class="nav-link">📰 뉴스</a>
+  <a href="/feed"    class="nav-link">📊 피드</a>
+  <a href="/notices" class="nav-link active">📢 공지</a>
+  <a href="/app"     class="nav-link">차트 앱 →</a>
 </nav>
 
+<!-- ── 본문 ─────────────────────────────────────── -->
 <div class="page-wrap">
   <div class="page-label">공지사항</div>
   <h1 class="page-title">업데이트 · 이벤트 · 안내</h1>
+  <p class="page-desc">Draw2Trade 최신 소식과 서비스 안내를 확인하세요.</p>
 
   <div class="filter-tabs">
     <button class="filter-tab active" onclick="filterNotices('all', this)">전체</button>
@@ -186,60 +211,61 @@
   </div>
 
   <div class="notices-list" id="notices-list">
-    <div class="empty-state">공지사항을 불러오는 중입니다...</div>
+    <div class="empty-state">
+      <div class="n-spinner"></div>
+      공지사항을 불러오는 중입니다…
+    </div>
   </div>
 </div>
 
-<div class="notice-modal-bg" id="notice-modal-bg" onclick="closeModal(event)">
-  <div class="notice-modal">
-    <button class="notice-modal-close" onclick="closeModal()">✕</button>
-    <div class="notice-modal-badge" id="modal-badge"></div>
-    <div class="notice-modal-title" id="modal-title"></div>
-    <div class="notice-modal-date" id="modal-date"></div>
-    <div class="notice-modal-body" id="modal-body"></div>
+<!-- ── 공지 상세 모달 ─────────────────────────── -->
+<div class="modal-bg" id="notice-modal-bg" onclick="closeModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <img class="modal-img" id="modal-img" src="" alt="">
+    <div class="modal-content">
+      <div class="modal-badge-row" id="modal-badge"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 문의 모달 ───────────────────────────────── -->
+<div class="contact-modal" id="contact-modal" onclick="if(event.target===this)closeContact()">
+  <div class="contact-box">
+    <button onclick="closeContact()" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+    <div class="contact-title">문의하기</div>
+    <div class="contact-sub">회신 받을 이메일을 남겨주세요.</div>
+    <div class="contact-success" id="contact-success">문의가 접수됐습니다. 빠르게 답변 드리겠습니다.</div>
+    <form id="contact-form" onsubmit="submitContact(event)">
+      <div class="form-group">
+        <label class="form-label">이름 (선택)</label>
+        <input name="name" type="text" placeholder="홍길동" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">이메일 <span style="color:var(--teal);">*</span></label>
+        <input name="email" type="email" placeholder="example@email.com" required class="form-input">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label class="form-label">문의 내용 <span style="color:var(--teal);">*</span></label>
+        <textarea name="message" rows="4" placeholder="궁금한 점이나 의견을 남겨주세요." required class="form-input" style="resize:vertical;"></textarea>
+      </div>
+      <button type="submit" class="btn-submit" id="contact-submit">보내기</button>
+    </form>
   </div>
 </div>
 
 <footer>
-  <p style="margin-bottom:8px;">
+  <p style="margin-bottom:6px;">
     &copy; 2026 Draw2Trade &nbsp;·&nbsp;
     <a href="#" onclick="openContact();return false;">문의하기</a> &nbsp;·&nbsp;
     <a href="/terms">이용약관</a> &nbsp;·&nbsp;
     <a href="/privacy">개인정보 처리방침</a>
   </p>
-  <p style="font-size:12px;color:#4a5568;">
-    본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.
-  </p>
-  <p style="font-size:12px;color:#4a5568;">
-    상호: FORMETA &nbsp;|&nbsp; 대표자: 김원준 &nbsp;|&nbsp; 사업자등록번호: 536-32-01566 &nbsp;|&nbsp; 전화번호: 02-6015-9983 &nbsp;|&nbsp; 이메일: <a href="mailto:kwj15934@formeta.kr" style="color:#4a5568;text-decoration:none;">kwj15934@formeta.kr</a>
-  </p>
+  <p style="margin-top:4px;">상호: FORMETA &nbsp;|&nbsp; 대표자: 김원준 &nbsp;|&nbsp; 사업자등록번호: 536-32-01566 &nbsp;|&nbsp; 이메일: <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a></p>
 </footer>
-
-<div id="contact-modal" style="display:none; position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.7); align-items:center; justify-content:center;">
-  <div style="background:#1e1e21; border:1px solid #2d2d30; border-radius:12px; padding:36px; width:100%; max-width:460px; margin:24px; position:relative;">
-    <button onclick="closeContact()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#7a8499; font-size:20px; cursor:pointer;">✕</button>
-    <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:6px;">문의하기</div>
-    <div style="font-size:13px; color:#7a8499; margin-bottom:24px;">회신 받을 이메일을 남겨주세요.</div>
-    <div id="contact-success" style="display:none; background:rgba(38,166,154,.12); border:1px solid #26a69a; border-radius:8px; padding:14px; color:#26a69a; font-size:14px; text-align:center; margin-bottom:16px;">
-      문의가 접수됐습니다. 빠르게 답변 드리겠습니다.
-    </div>
-    <form id="contact-form" onsubmit="submitContact(event)">
-      <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">이름 (선택)</label>
-        <input name="name" type="text" placeholder="홍길동" style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">이메일 <span style="color:#26a69a;">*</span></label>
-        <input name="email" type="email" placeholder="example@email.com" required style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
-      </div>
-      <div style="margin-bottom:22px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">문의 내용 <span style="color:#26a69a;">*</span></label>
-        <textarea name="message" rows="4" placeholder="궁금한 점이나 의견을 남겨주세요." required style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none; resize:vertical;"></textarea>
-      </div>
-      <button type="submit" id="contact-submit" style="width:100%; padding:12px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer;">보내기</button>
-    </form>
-  </div>
-</div>
 
 <script>
   var allNotices = [];
@@ -250,8 +276,8 @@
     event:  '<span class="notice-badge badge-event">이벤트</span>',
     notice: '<span class="notice-badge badge-notice">공지</span>',
   };
-  var TYPE_KO = { update: '업데이트', event: '이벤트', notice: '공지' };
 
+  /* ── 공지 로드 ─────────────────────────── */
   async function loadNotices() {
     try {
       var res = await fetch('/api/notices');
@@ -265,7 +291,7 @@
 
   function filterNotices(type, el) {
     currentFilter = type;
-    document.querySelectorAll('.filter-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.filter-tab').forEach(function (t) { t.classList.remove('active'); });
     el.classList.add('active');
     render();
   }
@@ -273,30 +299,70 @@
   function render() {
     var list = currentFilter === 'all'
       ? allNotices
-      : allNotices.filter(function(n){ return n.type === currentFilter; });
+      : allNotices.filter(function (n) { return n.type === currentFilter; });
     var el = document.getElementById('notices-list');
     if (!list.length) {
       el.innerHTML = '<div class="empty-state">해당 유형의 공지가 없습니다.</div>';
       return;
     }
-    el.innerHTML = list.map(function(n) {
+    el.innerHTML = list.map(function (n) {
       var pin = n.pinned ? '<span class="notice-pin">📌</span>' : '';
+      // content에서 [IMG:url] 패턴 파싱
+      var imgMatch = n.content.match(/\[IMG:(https?:\/\/[^\]]+)\]/);
+      var imgHtml  = imgMatch
+        ? '<img class="notice-thumb" src="' + escHtml(imgMatch[1]) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '';
+      var preview  = escHtml(n.content.replace(/\[IMG:[^\]]+\]/g, '').trim().slice(0, 80));
+
       return '<div class="notice-card' + (n.pinned ? ' pinned' : '') + '" onclick="openModal(' + n.id + ')">' +
+        imgHtml +
         '<div class="notice-header">' + pin + (BADGE[n.type] || BADGE.notice) + '</div>' +
         '<div class="notice-title">' + escHtml(n.title) + '</div>' +
-        '<div class="notice-preview">' + escHtml(n.content) + '</div>' +
-        '<div class="notice-date">' + n.date + '</div>' +
-        '</div>';
+        '<div class="notice-preview">' + preview + '</div>' +
+        '<div class="notice-footer">' +
+          '<span class="notice-date">' + n.date + '</span>' +
+          (n.views ? '<span class="notice-views">👁 ' + n.views + '</span>' : '') +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
-  function openModal(id) {
-    var n = allNotices.find(function(x){ return x.id === id; });
+  /* ── 모달 열기 ─────────────────────────── */
+  async function openModal(id) {
+    // 로컬에서 먼저 표시
+    var n = allNotices.find(function (x) { return x.id === id; });
     if (!n) return;
+    _renderModal(n);
+
+    // 조회수 갱신 버전으로 교체 (비동기)
+    try {
+      var res = await fetch('/api/notices/' + id);
+      if (res.ok) {
+        var fresh = await res.json();
+        // 조회수 업데이트
+        n.views = fresh.views;
+        _renderModal(fresh);
+      }
+    } catch {}
+  }
+
+  function _renderModal(n) {
+    var imgMatch = n.content.match(/\[IMG:(https?:\/\/[^\]]+)\]/);
+    var imgEl = document.getElementById('modal-img');
+    if (imgMatch) {
+      imgEl.src = imgMatch[1];
+      imgEl.style.display = 'block';
+    } else {
+      imgEl.style.display = 'none';
+      imgEl.src = '';
+    }
+
     document.getElementById('modal-badge').innerHTML = BADGE[n.type] || BADGE.notice;
     document.getElementById('modal-title').textContent = n.title;
-    document.getElementById('modal-date').textContent = n.date;
-    document.getElementById('modal-body').textContent = n.content;
+    document.getElementById('modal-meta').textContent =
+      n.date + (n.views != null ? '  ·  조회 ' + n.views : '');
+    document.getElementById('modal-body').textContent =
+      n.content.replace(/\[IMG:[^\]]+\]/g, '').trim();
     document.getElementById('notice-modal-bg').classList.add('open');
   }
 
@@ -306,30 +372,23 @@
     }
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
+  /* ── 문의 ──────────────────────────────── */
   function openContact() {
-    var m = document.getElementById('contact-modal');
-    m.style.display = 'flex';
+    document.getElementById('contact-modal').classList.add('open');
     document.getElementById('contact-success').style.display = 'none';
     document.getElementById('contact-form').style.display = 'block';
     document.getElementById('contact-submit').disabled = false;
   }
   function closeContact() {
-    document.getElementById('contact-modal').style.display = 'none';
+    document.getElementById('contact-modal').classList.remove('open');
   }
-  document.getElementById('contact-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeContact();
-  });
   async function submitContact(e) {
     e.preventDefault();
     var btn = document.getElementById('contact-submit');
-    btn.disabled = true; btn.textContent = '전송 중...';
+    btn.disabled = true; btn.textContent = '전송 중…';
     var body = new FormData(e.target);
     try {
-      var res = await fetch('/api/contact', { method: 'POST', body: body });
+      var res  = await fetch('/api/contact', { method: 'POST', body: body });
       var data = await res.json();
       if (data.ok) {
         e.target.style.display = 'none';
@@ -343,6 +402,10 @@
       btn.disabled = false; btn.textContent = '보내기';
       alert('전송 중 오류가 발생했습니다.');
     }
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   loadNotices();

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>뉴스 — Draw2Trade</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #0f0f12;
+      --bg2:    #18181c;
+      --bg3:    #1e1e24;
+      --teal:   #26a69a;
+      --orange: #ff6b35;
+      --red:    #ef5350;
+      --blue:   #26a69a;
+      --text:   #d4d8e2;
+      --muted:  #7a8499;
+      --border: #27272a;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text);
+      font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px; line-height: 1.5; }
+
+    /* ── 네비 ─────────────────────────────────── */
+    .d2t-nav {
+      position: sticky; top: 0; z-index: 100;
+      height: 48px; background: #18181b; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 20px; gap: 8px;
+    }
+    .d2t-brand {
+      font-size: 15px; font-weight: 800; color: var(--orange);
+      text-decoration: none; display: flex; align-items: center; gap: 7px;
+      white-space: nowrap;
+    }
+    .d2t-brand img { height: 22px; width: 22px; object-fit: contain; }
+    .nav-spacer { flex: 1; }
+    .nav-link {
+      display: flex; align-items: center; height: 26px; padding: 0 10px;
+      font-size: 11px; color: var(--muted); border: 1px solid var(--border);
+      border-radius: 5px; text-decoration: none; white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .nav-link:hover { color: #d4d8e2; border-color: var(--teal); }
+    .nav-link.active { color: var(--teal); border-color: var(--teal); }
+
+    /* ── 페이지 레이아웃 ──────────────────────── */
+    .page-layout {
+      max-width: 1080px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 300px;
+      gap: 24px; padding: 28px 20px 60px;
+    }
+    @media (max-width: 760px) {
+      .page-layout { grid-template-columns: 1fr; }
+      .news-sidebar { display: none; }
+    }
+
+    /* ── 상단 헤더 ────────────────────────────── */
+    .page-header { margin-bottom: 20px; }
+    .page-header h1 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .page-header p  { font-size: 12px; color: var(--muted); }
+
+    /* ── 서브탭 ───────────────────────────────── */
+    .news-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid var(--border);
+      margin-bottom: 20px; overflow-x: auto; scrollbar-width: none;
+    }
+    .news-tabs::-webkit-scrollbar { display: none; }
+    .news-tab {
+      flex-shrink: 0; padding: 8px 16px; font-size: 12px; font-weight: 600;
+      color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color .15s, border-color .15s; white-space: nowrap;
+    }
+    .news-tab.active { color: #d4d8e2; border-bottom-color: var(--teal); }
+    .news-tab:hover  { color: #a0a8b8; }
+
+    /* ── 검색바 ───────────────────────────────── */
+    .news-search-row {
+      display: flex; gap: 8px; margin-bottom: 18px;
+    }
+    .news-search-input {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 7px; padding: 8px 12px; color: var(--text);
+      font-size: 12px; outline: none;
+      transition: border-color .15s;
+    }
+    .news-search-input:focus { border-color: var(--teal); }
+    .news-search-input::placeholder { color: var(--muted); }
+
+    /* ── 뉴스 카드 ────────────────────────────── */
+    .news-list { display: flex; flex-direction: column; gap: 0; }
+
+    .news-card {
+      display: flex; gap: 14px; padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      text-decoration: none; color: inherit;
+      transition: background .1s;
+    }
+    .news-card:hover { background: rgba(255,255,255,.02); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+    .news-card:first-child { padding-top: 0; }
+
+    .news-thumb {
+      flex-shrink: 0; width: 80px; height: 60px;
+      border-radius: 7px; overflow: hidden;
+      background: var(--bg3); display: flex; align-items: center; justify-content: center;
+    }
+    .news-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .news-thumb-placeholder { font-size: 22px; color: #444; }
+
+    .news-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+    .news-source-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .news-source { font-size: 10px; font-weight: 700; color: var(--muted); }
+    .news-market-badge {
+      font-size: 9px; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; letter-spacing: 0.3px;
+    }
+    .badge-kr { background: rgba(38,166,154,.15); color: var(--teal); }
+    .badge-us { background: rgba(38,100,200,.15); color: #5b8def; }
+
+    .news-title {
+      font-size: 13px; font-weight: 600; color: #d4d8e2;
+      line-height: 1.45; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .news-card:hover .news-title { color: #4dd0c4; }
+
+    .news-meta-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;
+    }
+    .news-time { font-size: 10px; color: var(--muted); }
+
+    .news-stock-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .news-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      cursor: pointer; transition: opacity .15s; border: 1px solid transparent;
+    }
+    .news-chip:hover { opacity: 0.75; }
+    .chip-up   { background: rgba(239,83,80,.12); color: #ef5350; border-color: rgba(239,83,80,.25); }
+    .chip-down { background: rgba(38,166,154,.1); color: var(--teal); border-color: rgba(38,166,154,.2); }
+    .chip-flat { background: rgba(120,120,140,.12); color: #888; border-color: rgba(120,120,140,.2); }
+
+    /* ── 로딩/빈 상태 ────────────────────────── */
+    .news-empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); font-size: 14px;
+    }
+    .news-spinner {
+      width: 28px; height: 28px; margin: 0 auto 12px;
+      border: 2px solid rgba(255,255,255,.08);
+      border-top-color: var(--teal);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 사이드바 ─────────────────────────────── */
+    .news-sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+    .sidebar-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+    }
+    .sidebar-card-title {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      letter-spacing: .8px; text-transform: uppercase; margin-bottom: 12px;
+    }
+
+    /* 인기 종목 */
+    .hot-ticker-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .hot-ticker-row:last-child { border-bottom: none; }
+    .hot-ticker-name { font-size: 12px; color: #d4d8e2; font-weight: 600; }
+    .hot-ticker-code { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .hot-ticker-pct {
+      font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    }
+    .pct-up { color: #ef5350; }
+    .pct-down { color: var(--teal); }
+
+    /* 법적 고지 */
+    .legal-notice {
+      background: rgba(239,83,80,.05); border: 1px solid rgba(239,83,80,.15);
+      border-radius: 8px; padding: 12px; font-size: 10px; color: #8a7070;
+      line-height: 1.6;
+    }
+    .legal-notice strong { display: block; color: #c07070; margin-bottom: 4px; }
+
+    /* ── 페이지네이션 ─────────────────────────── */
+    .news-pagination {
+      display: flex; justify-content: center; gap: 6px;
+      margin-top: 24px; flex-wrap: wrap;
+    }
+    .page-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+      background: none; color: var(--muted); font-size: 12px; cursor: pointer;
+      transition: all .15s;
+    }
+    .page-btn:hover, .page-btn.active { border-color: var(--teal); color: var(--teal); background: rgba(38,166,154,.08); }
+
+    footer {
+      padding: 32px 20px; text-align: center; color: var(--muted); font-size: 11px;
+      border-top: 1px solid var(--border); max-width: 1080px; margin: 0 auto;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--teal); }
+  </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ── 네비게이션 ──────────────────────────────────────── -->
+<nav class="d2t-nav">
+  <a href="/" class="d2t-brand">
+    <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.src='/static/img/favicon.svg'">
+    Draw2Trade
+  </a>
+  <div class="nav-spacer"></div>
+  <a href="/news"    class="nav-link active">📰 뉴스</a>
+  <a href="/feed"    class="nav-link">📊 피드</a>
+  <a href="/notices" class="nav-link">📢 공지</a>
+  <a href="/app"     class="nav-link">차트 앱 →</a>
+</nav>
+
+<!-- ── 메인 콘텐츠 ────────────────────────────────────── -->
+<div class="page-layout">
+
+  <!-- ── 좌측: 뉴스 피드 ───────────────────────────── -->
+  <div class="news-main">
+    <div class="page-header">
+      <h1>시장 뉴스</h1>
+      <p>국내·해외 주요 종목 뉴스를 실시간으로 확인하세요.</p>
+    </div>
+
+    <!-- 서브탭 -->
+    <div class="news-tabs" id="news-tabs">
+      <button class="news-tab active" data-tab="all">전체</button>
+      <button class="news-tab" data-tab="kr">국내 (KR)</button>
+      <button class="news-tab" data-tab="us">해외 (US)</button>
+      <button class="news-tab" data-tab="hot">인기</button>
+    </div>
+
+    <!-- 검색 -->
+    <div class="news-search-row">
+      <input class="news-search-input" id="news-search" type="text" placeholder="종목명 또는 키워드 검색…" oninput="onSearchInput()">
+    </div>
+
+    <!-- 뉴스 목록 -->
+    <div class="news-list" id="news-list">
+      <div class="news-empty">
+        <div class="news-spinner"></div>
+        뉴스를 불러오는 중입니다…
+      </div>
+    </div>
+
+    <div class="news-pagination" id="news-pagination"></div>
+  </div>
+
+  <!-- ── 우측: 사이드바 ─────────────────────────────── -->
+  <aside class="news-sidebar">
+
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">인기 종목</div>
+      <div id="hot-tickers">
+        <div class="news-empty" style="padding:20px 0;font-size:12px;">로딩 중…</div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">빠른 이동</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <a href="/app"     style="font-size:12px;color:var(--teal);text-decoration:none;padding:6px 8px;background:rgba(38,166,154,.07);border-radius:6px;">📈 차트 앱으로</a>
+        <a href="/feed"    style="font-size:12px;color:var(--muted);text-decoration:none;padding:6px 8px;background:var(--bg3);border-radius:6px;">📊 시장 피드</a>
+        <a href="/notices" style="font-size:12px;color:var(--muted);text-decoration:none;padding:6px 8px;background:var(--bg3);border-radius:6px;">📢 공지사항</a>
+      </div>
+    </div>
+
+    <div class="legal-notice">
+      <strong>⚠ 투자 유의사항</strong>
+      본 서비스는 유사투자자문업자입니다. 개별 투자 상담 및 자금 운용이 불가하며,
+      투자 결과에 대한 책임은 이용자에게 있습니다.
+    </div>
+
+  </aside>
+</div>
+
+<footer>
+  <p style="margin-bottom:6px;">
+    &copy; 2026 Draw2Trade &nbsp;·&nbsp;
+    <a href="/terms">이용약관</a> &nbsp;·&nbsp;
+    <a href="/privacy">개인정보 처리방침</a>
+  </p>
+  <p>상호: FORMETA &nbsp;|&nbsp; 대표: 김원준 &nbsp;|&nbsp; 사업자: 536-32-01566</p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var _tab      = 'all';
+  var _query    = '';
+  var _page     = 1;
+  var _perPage  = 15;
+  var _allItems = [];    // 전체 캐시 (KR + US 통합)
+  var _krItems  = [];
+  var _usItems  = [];
+  var _hotTickers = [
+    { name: '삼성전자', code: '005930', pct: null, market: 'KR' },
+    { name: 'SK하이닉스', code: '000660', pct: null, market: 'KR' },
+    { name: 'AAPL', code: 'AAPL', pct: null, market: 'US' },
+    { name: 'NVDA', code: 'NVDA', pct: null, market: 'US' },
+    { name: 'TSLA', code: 'TSLA', pct: null, market: 'US' },
+  ];
+
+  /* ── 뉴스 fetch ─────────────────────────────── */
+  var _KR_SYMBOLS = ['005930', '000660', '035420', '035720', '005380'];
+  var _US_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'META', 'GOOGL'];
+
+  function _fetchAll() {
+    setLoading();
+    var fetches = _KR_SYMBOLS.concat(_US_SYMBOLS).map(function (sym) {
+      return fetch('/api/v1/stock/news/' + encodeURIComponent(sym))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    });
+    Promise.all(fetches).then(function (results) {
+      _krItems = []; _usItems = [];
+      results.forEach(function (d, i) {
+        if (!d || !d.items) return;
+        var isUs = i >= _KR_SYMBOLS.length;
+        var sym  = isUs ? _US_SYMBOLS[i - _KR_SYMBOLS.length] : _KR_SYMBOLS[i];
+        d.items.forEach(function (item) {
+          var entry = Object.assign({}, item, { _symbol: sym, _market: isUs ? 'US' : 'KR' });
+          if (isUs) _usItems.push(entry); else _krItems.push(entry);
+        });
+      });
+      // 날짜 파싱으로 병합 정렬
+      _allItems = _krItems.concat(_usItems).sort(function (a, b) {
+        return _parseDate(b.date) - _parseDate(a.date);
+      });
+      _page = 1;
+      render();
+    });
+  }
+
+  function _parseDate(s) {
+    if (!s) return 0;
+    var m = s.match(/(\d{4})[.\-](\d{2})[.\-](\d{2})/);
+    if (!m) return 0;
+    return new Date(m[1] + '-' + m[2] + '-' + m[3]).getTime();
+  }
+
+  /* ── 렌더 ───────────────────────────────────── */
+  function getFiltered() {
+    var src = _tab === 'kr' ? _krItems
+            : _tab === 'us' ? _usItems
+            : _tab === 'hot' ? _allItems.slice().sort(function (a, b) { return (b.agree || 0) - (a.agree || 0); })
+            : _allItems;
+    if (_query) {
+      var q = _query.toLowerCase();
+      src = src.filter(function (it) {
+        return (it.title || '').toLowerCase().includes(q) ||
+               (it._symbol || '').toLowerCase().includes(q);
+      });
+    }
+    return src;
+  }
+
+  function render() {
+    var items = getFiltered();
+    var total = items.length;
+    var totalPages = Math.max(1, Math.ceil(total / _perPage));
+    if (_page > totalPages) _page = totalPages;
+    var sliced = items.slice((_page - 1) * _perPage, _page * _perPage);
+
+    var listEl = document.getElementById('news-list');
+    if (!sliced.length) {
+      listEl.innerHTML = '<div class="news-empty">표시할 뉴스가 없습니다.</div>';
+      document.getElementById('news-pagination').innerHTML = '';
+      return;
+    }
+    listEl.innerHTML = sliced.map(renderCard).join('');
+    renderPagination(totalPages);
+  }
+
+  function renderCard(it) {
+    var title  = esc(it.title || '');
+    var source = esc(it.source || it.type || '뉴스');
+    var date   = esc(it.date || '');
+    var url    = esc(it.url || '#');
+    var sym    = it._symbol || '';
+    var mkt    = it._market || 'KR';
+
+    var thumbHtml = it.thumbnail
+      ? '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<span class=news-thumb-placeholder>📰</span>\'">'
+      : '<span class="news-thumb-placeholder">📰</span>';
+
+    var mktBadge = mkt === 'US'
+      ? '<span class="news-market-badge badge-us">US</span>'
+      : '<span class="news-market-badge badge-kr">KR</span>';
+
+    var chip = sym
+      ? '<span class="news-chip chip-flat" onclick="event.preventDefault();goChart(\'' + esc(sym) + '\',\'' + mkt + '\')">' + esc(sym) + '</span>'
+      : '';
+
+    return '<a class="news-card" href="' + url + '" target="_blank" rel="noopener">' +
+      '<div class="news-thumb">' + thumbHtml + '</div>' +
+      '<div class="news-body">' +
+        '<div class="news-source-row">' +
+          '<span class="news-source">' + source + '</span>' +
+          mktBadge +
+        '</div>' +
+        '<div class="news-title">' + title + '</div>' +
+        '<div class="news-meta-row">' +
+          '<span class="news-time">' + date + '</span>' +
+          (chip ? '<div class="news-stock-chips">' + chip + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+    '</a>';
+  }
+
+  function renderPagination(total) {
+    var el = document.getElementById('news-pagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+    var html = '';
+    var start = Math.max(1, _page - 2);
+    var end   = Math.min(total, _page + 2);
+    if (_page > 1) html += '<button class="page-btn" onclick="goPage(' + (_page - 1) + ')">‹</button>';
+    for (var i = start; i <= end; i++) {
+      html += '<button class="page-btn' + (i === _page ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+    }
+    if (_page < total) html += '<button class="page-btn" onclick="goPage(' + (_page + 1) + ')">›</button>';
+    el.innerHTML = html;
+  }
+
+  function setLoading() {
+    document.getElementById('news-list').innerHTML =
+      '<div class="news-empty"><div class="news-spinner"></div>로딩 중…</div>';
+    document.getElementById('news-pagination').innerHTML = '';
+  }
+
+  /* ── 인기 종목 사이드바 ─────────────────────── */
+  function renderHotTickers() {
+    var el = document.getElementById('hot-tickers');
+    el.innerHTML = _hotTickers.map(function (t) {
+      var pct = t.pct;
+      var pctHtml = pct != null
+        ? '<span class="hot-ticker-pct ' + (pct >= 0 ? 'pct-up' : 'pct-down') + '">' +
+          (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</span>'
+        : '<span class="hot-ticker-pct" style="color:#555">—</span>';
+      return '<div class="hot-ticker-row" style="cursor:pointer" onclick="goChart(\'' + esc(t.code) + '\',\'' + t.market + '\')">' +
+        '<div>' +
+          '<div class="hot-ticker-name">' + esc(t.name) + '</div>' +
+          '<div class="hot-ticker-code">' + esc(t.code) + '</div>' +
+        '</div>' +
+        pctHtml +
+      '</div>';
+    }).join('');
+  }
+
+  /* ── 유틸 ───────────────────────────────────── */
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── 공개 핸들러 ─────────────────────────────── */
+  window.goPage = function (p) { _page = p; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
+  window.goChart = function (sym, mkt) {
+    var market = mkt === 'US' ? 'US' : 'KR';
+    window.location.href = '/app?symbol=' + encodeURIComponent(sym) + '&market=' + market;
+  };
+
+  window.onSearchInput = function () {
+    _query = document.getElementById('news-search').value.trim();
+    _page = 1;
+    render();
+  };
+
+  /* ── 탭 이벤트 ───────────────────────────────── */
+  document.querySelectorAll('.news-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.news-tab').forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      _tab = this.dataset.tab;
+      _page = 1;
+      render();
+    });
+  });
+
+  /* ── 초기 로드 ───────────────────────────────── */
+  renderHotTickers();
+  _fetchAll();
+})();
+</script>
+
+</body>
+</html>
