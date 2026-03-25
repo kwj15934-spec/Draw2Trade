@@ -854,9 +854,11 @@
 <script>
 // ── 플로팅 종목 정보 위젯 ────────────────────────────────────
 (function () {
-  var _ticker = '';
-  var _loaded = { finance: false, news: false, community: false };
+  var _ticker    = '';
+  var _loaded    = { finance: false, news: false, community: false };
   var _activeTab = 'finance';
+  var _debounceTimer = null;
+  var _DEBOUNCE_MS   = 300;   // 종목 변경 디바운스 대기 시간
 
   // ── 탭 전환 ──────────────────────────────────────────────
   function switchTab(tab) {
@@ -871,7 +873,16 @@
   }
 
   document.querySelectorAll('.fiw-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () { switchTab(this.dataset.tab); });
+    btn.addEventListener('click', function () {
+      var tab = this.dataset.tab;
+      var wasActive = _activeTab === tab && _loaded[tab];
+      switchTab(tab);
+      // 커뮤니티 탭은 이미 로드된 상태에서 다시 클릭해도 강제 갱신
+      if (tab === 'community' && wasActive && _ticker) {
+        _loaded.community = false;
+        _fetchTab('community', _ticker);
+      }
+    });
   });
 
   // ── 최소화 / 복원 ─────────────────────────────────────────
@@ -1137,20 +1148,47 @@
     if (!ticker) return;
     _ticker = ticker;
     _loaded = { finance: false, news: false, community: false };
-    // 위젯 제목 즉시 갱신 (종목명은 재무 API 응답 후 추가 반영)
+
+    // 헤더 즉시 갱신 (종목명은 재무 API 응답 후 추가 반영)
     var title  = document.getElementById('fiw-title');
     var tkSpan = document.getElementById('fiw-ticker');
     if (title)  title.textContent  = '메인 차트 정보';
     if (tkSpan) { tkSpan.textContent = '(' + ticker + ')'; tkSpan.title = '(' + ticker + ')'; }
-    // 현재 활성 탭 즉시 로드, 나머지는 탭 전환 시 lazy 로드
+
+    // 모든 패널에 즉시 로딩 스피너 표시 (반응성 확인)
+    _loadingPanel('finance');
+    _loadingPanel('news');
+    _loadingPanel('community');
+
+    // 현재 활성 탭만 즉시 fetch, 나머지는 탭 전환 시 lazy 로드
+    _loaded = { finance: false, news: false, community: false };
     _fetchTab(_activeTab, ticker);
+  }
+
+  // ── 디바운싱 래퍼 ─────────────────────────────────────────
+  // 종목 변경이 빠르게 연속될 때 마지막 종목의 요청만 실행
+  function _scheduleReset(ticker) {
+    if (_debounceTimer) clearTimeout(_debounceTimer);
+    // 즉시 헤더+스피너 업데이트 (시각 반응)
+    var tkSpan = document.getElementById('fiw-ticker');
+    if (tkSpan) { tkSpan.textContent = '(' + ticker + ') 로딩 중…'; }
+    // 시장 반응 탭이 열려있으면 즉시 스피너 표시
+    if (_activeTab === 'community') {
+      _setPanel('community',
+        '<div class="fiw-loading" style="color:#526eff;">' +
+        '<div class="d2t-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 6px;"></div>' +
+        '데이터 로딩 중…</div>');
+    }
+    _debounceTimer = setTimeout(function () {
+      _debounceTimer = null;
+      _resetWidget(ticker);
+    }, _DEBOUNCE_MS);
   }
 
   // 외부 호출용 (하위 호환 유지)
   window.fetchCommunityData = function (ticker) {
     if (!ticker) return;
-    // 같은 종목이어도 유사 종목 클릭 등으로 강제 재로드할 수 있으므로 가드 제거
-    _resetWidget(ticker);
+    _scheduleReset(ticker);
   };
 
   // KR 전용 — chart.js loadChart / loadResultChart 완료 시 호출됨
@@ -1165,7 +1203,8 @@
     } else {
       _expandWidget();
     }
-    _resetWidget(ticker);
+    // 디바운싱으로 갱신 (차트 fetch 완료 후 호출되므로 짧은 대기)
+    _scheduleReset(ticker);
   };
 })();
 </script>
