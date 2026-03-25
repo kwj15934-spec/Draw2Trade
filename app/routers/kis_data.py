@@ -97,7 +97,20 @@ async def get_finance(
         await _cache_set(cache_key, result, ttl=1800)  # 30분
         return result
 
-    raise HTTPException(status_code=503, detail="재무 데이터를 가져올 수 없습니다.")
+    # pykrx 실패 시 503 대신 N/A 기본값 반환 (프론트엔드가 뻗지 않게)
+    fallback = {
+        "symbol":     symbol,
+        "name":       "",
+        "per":        None,
+        "pbr":        None,
+        "roe":        None,
+        "eps":        None,
+        "market_cap": None,
+        "date":       "",
+        "na":         True,  # 프론트엔드 N/A 표시 플래그
+    }
+    await _cache_set(cache_key, fallback, ttl=300)  # N/A는 5분만 캐싱
+    return fallback
 
 
 async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
@@ -117,7 +130,16 @@ async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
                     df = pkrx.get_market_fundamental(dt, dt, symbol)
                     if df is None or df.empty:
                         continue
-                    row = df.iloc[-1]
+                    # DataFrame / Series / list 모두 방어 처리
+                    if hasattr(df, 'iloc'):
+                        row = df.iloc[-1]
+                    elif isinstance(df, list) and df:
+                        row = df[-1]
+                    else:
+                        continue
+                    if not hasattr(row, 'get'):
+                        # Series.get 미지원 시 dict 변환
+                        row = row.to_dict() if hasattr(row, 'to_dict') else {}
 
                     # 시가총액 (억 단위 → 원 단위)
                     cap_df = pkrx.get_market_cap(dt, dt, symbol)

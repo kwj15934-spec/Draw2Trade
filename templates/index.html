@@ -211,7 +211,7 @@
         </div>
         <div id="fiw-tabs">
           <button class="fiw-tab active" data-tab="finance">재무</button>
-          <button class="fiw-tab" data-tab="news">뉴스</button>
+          <button class="fiw-tab" data-tab="news"><span class="fiw-live-dot"></span>실시간 뉴스</button>
           <button class="fiw-tab" data-tab="community">시장반응</button>
         </div>
         <div id="fiw-body">
@@ -942,6 +942,8 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) { _errorPanel('finance', '재무 데이터 없음'); return; }
+        var isNA = d.na === true;
+        var naAttr = isNA ? ' title="데이터를 불러올 수 없습니다" class="fiw-finance-value fiw-finance-na"' : ' class="fiw-finance-value"';
         var rows = [
           ['PER',   d.per  != null ? d.per.toFixed(2)  : '—'],
           ['PBR',   d.pbr  != null ? d.pbr.toFixed(2)  : '—'],
@@ -954,11 +956,13 @@
               : (d.market_cap / 1e8).toFixed(0) + '억') + ' 원'
           : null;
         var html = '';
-        if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
+        if (isNA) html += '<div class="fiw-finance-na-msg">데이터를 불러올 수 없습니다</div>';
+        else if (cap) html += '<div class="fiw-finance-cap">시가총액 ' + cap + '</div>';
         rows.forEach(function (r) {
+          var valAttr = isNA ? ' class="fiw-finance-value fiw-finance-na" title="데이터를 불러올 수 없습니다"' : ' class="fiw-finance-value"';
           html += '<div class="fiw-finance-row">' +
             '<span class="fiw-finance-label">' + r[0] + '</span>' +
-            '<span class="fiw-finance-value">' + r[1] + '</span>' +
+            '<span' + valAttr + '>' + r[1] + '</span>' +
             '</div>';
         });
         _setPanel('finance', html || '<div class="fiw-loading">데이터 없음</div>');
@@ -1052,6 +1056,71 @@
 })();
 </script>
 
+<script>
+// ── 과거 뉴스 (유사 패턴 결과 카드 당시 뉴스) ───────────────
+window.showHistoricalNews = function (btn, ticker, periodFrom, periodTo) {
+  var card  = btn.closest('.result-card');
+  var panel = card ? card.querySelector('.result-hist-news-panel') : null;
+  if (!panel) return;
+
+  // 토글
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    btn.textContent = '당시 뉴스';
+    return;
+  }
+
+  btn.textContent = '로딩 중…';
+  btn.disabled = true;
+  panel.style.display = 'block';
+  panel.innerHTML = '<div class="rhn-loading">뉴스 조회 중…</div>';
+
+  // 날짜 헤더: period_from ~ period_to (YYYY-MM 축약)
+  var fromLabel = (periodFrom || '').substring(0, 7);
+  var toLabel   = (periodTo   || '').substring(0, 7);
+  var dateLabel = fromLabel ? fromLabel + (toLabel && toLabel !== fromLabel ? ' ~ ' + toLabel : '') + ' 당시 뉴스' : '과거 뉴스';
+
+  fetch('/api/v1/stock/news/' + encodeURIComponent(ticker))
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      var items = (d && d.items) || [];
+      btn.textContent = '당시 뉴스 닫기';
+      btn.disabled = false;
+
+      if (!items.length) {
+        panel.innerHTML = '<div class="rhn-empty">조회된 뉴스가 없습니다</div>';
+        return;
+      }
+
+      var html = '<div class="rhn-header">' + _escHtml(dateLabel) + '</div>';
+      items.forEach(function (it) {
+        var url = it.url || '#';
+        var desc = it.description
+          ? '<div class="rhn-desc">' + _escHtml(it.description) + '</div>' : '';
+        html += '<a class="rhn-item" href="' + _escHtml(url) + '" target="_blank" rel="noopener">' +
+          '<div class="rhn-title">' + _escHtml(it.title) + '</div>' +
+          desc +
+          '<div class="rhn-meta">' + _escHtml(it.date || '') + '</div>' +
+        '</a>';
+      });
+      panel.innerHTML = html;
+
+      // 과거 마커: 차트에 period_from 위치에 과거 마커 표시
+      if (window.D2T && typeof D2T.setHistoricalMarkers === 'function') {
+        D2T.setHistoricalMarkers(items, periodFrom, periodTo);
+      }
+    })
+    .catch(function () {
+      btn.textContent = '당시 뉴스';
+      btn.disabled = false;
+      panel.innerHTML = '<div class="rhn-empty">조회 실패</div>';
+    });
+};
+
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
 
 <script>
 // ── 호가 패널 드래그 리사이즈 ──────────────────────────────

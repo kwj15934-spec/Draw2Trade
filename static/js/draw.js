@@ -1169,6 +1169,12 @@
               '<div class="result-score-pct" style="color:' + color + '">' + pct + '%</div>' +
               '<div class="result-score-bar"><div class="result-score-fill" style="width:' + barW + '%;background:' + color + '"></div></div>' +
             '</div>' +
+            '<button class="result-hist-news-btn" ' +
+              'onclick="event.stopPropagation();showHistoricalNews(this,\'' + tk + '\',\'' + escHtml(r.period_from||'') + '\',\'' + escHtml(r.period_to||'') + '\')" ' +
+              'title="당시 주요 뉴스 보기">' +
+              '당시 뉴스' +
+            '</button>' +
+            '<div class="result-hist-news-panel" style="display:none;"></div>' +
           '</div>'
         );
       })

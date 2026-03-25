@@ -1619,6 +1619,131 @@
 
   D2T.clearContextMarkers = _clearContextMarkers;
 
+  // ── 과거 패턴 뉴스 마커 (유사 종목 결과 카드 → 과거 날짜 위 표시) ────────
+  // setContextMarkers(현재 종목 뉴스)와 분리: 별도 shape='circle' + 팝업
+  D2T.setHistoricalMarkers = function (newsItems, periodFrom, periodTo) {
+    if (!D2T.chart || !D2T.series) return;
+    if (!newsItems || !newsItems.length) return;
+
+    var candles = D2T.candles;
+    if (!candles || !candles.length) return;
+
+    // period_from 기준 anchor (캔들 중 가장 가까운 날짜)
+    var anchor = periodFrom ? periodFrom.substring(0, 10) : null;
+
+    function _nearestTime(dateStr) {
+      if (!dateStr) return null;
+      var d = dateStr.length === 7 ? dateStr + '-01' : dateStr.substring(0, 10);
+      var best = null;
+      for (var i = 0; i < candles.length; i++) {
+        var t = candles[i].time;
+        if (typeof t === 'string' && t <= d) best = t;
+      }
+      return best;
+    }
+
+    var markers = [];
+    newsItems.forEach(function (n, ni) {
+      // 날짜가 없으면 anchor 사용
+      var targetDate = (n.date && n.date.length >= 7) ? n.date : anchor;
+      var t = _nearestTime(targetDate);
+      if (t == null) return;
+
+      var shortTitle = (n.title || '').length > 24
+        ? (n.title || '').slice(0, 24) + '…'
+        : (n.title || '');
+
+      markers.push({
+        time:        t,
+        position:    'aboveBar',
+        color:       '#c8a951',          // 세피아 골드
+        shape:       'circle',
+        text:        shortTitle,
+        _historical: true,               // 커스텀 플래그 (팝업 연동용)
+        _newsItem:   n,
+        _periodFrom: periodFrom,
+        _periodTo:   periodTo,
+      });
+    });
+
+    if (!markers.length) return;
+
+    // 기존 과거 마커(aboveBar/circle) 제거 후 새 것으로 교체
+    var existing = [];
+    try { existing = D2T.series.markers() || []; } catch (e) { existing = []; }
+    var filtered = existing.filter(function (m) {
+      return !(m.position === 'aboveBar' && m.shape === 'circle' && m._historical);
+    });
+    var merged = filtered.concat(markers);
+    merged.sort(function (a, b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
+    D2T.series.setMarkers(merged);
+
+    // 첫 번째 마커 날짜로 스크롤
+    var firstT = markers[0].time;
+    var firstIdx = -1;
+    for (var i = 0; i < candles.length; i++) {
+      if (candles[i].time === firstT) { firstIdx = i; break; }
+    }
+    if (firstIdx >= 0) {
+      try {
+        var vr = D2T.chart.timeScale().getVisibleLogicalRange();
+        var half = vr ? Math.round((vr.to - vr.from) / 2) : 20;
+        D2T.chart.timeScale().setVisibleLogicalRange({ from: firstIdx - half, to: firstIdx + half });
+      } catch (e) { /* ignore */ }
+    }
+  };
+
+  // 과거 마커 클릭 → 날짜 팝업 (Lightweight Charts subscribeClick 활용)
+  (function _setupHistoricalMarkerClick() {
+    if (!D2T.chart) return;
+    D2T.chart.subscribeCrosshairMove(function () {}); // 초기화 보장용 no-op
+    D2T.chart.subscribeClick(function (param) {
+      if (!param || !param.time) return;
+      var existing = [];
+      try { existing = D2T.series.markers() || []; } catch (e) { return; }
+
+      // 클릭한 time과 일치하는 과거 마커 탐색
+      var matched = existing.filter(function (m) {
+        return m._historical && m.time === param.time;
+      });
+      if (!matched.length) return;
+
+      var pf = matched[0]._periodFrom || '';
+      var pt = matched[0]._periodTo   || '';
+      var fromLabel = pf.substring(0, 7);
+      var toLabel   = pt.substring(0, 7);
+      var header    = fromLabel
+        ? fromLabel + (toLabel && toLabel !== fromLabel ? ' ~ ' + toLabel : '') + ' 당시 뉴스'
+        : '과거 뉴스';
+
+      // 기존 팝업 제거
+      var old = document.getElementById('hist-marker-popup');
+      if (old) old.remove();
+
+      // 팝업 DOM 생성
+      var pop = document.createElement('div');
+      pop.id = 'hist-marker-popup';
+      pop.className = 'hist-marker-popup';
+      pop.innerHTML =
+        '<div class="hmp-header">' + header.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+        matched.map(function (m) {
+          var it = m._newsItem || {};
+          var title = String(it.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          var date  = String(it.date  || '').replace(/&/g,'&amp;');
+          var url   = it.url || '#';
+          return '<a class="hmp-item" href="' + url + '" target="_blank" rel="noopener">' +
+            '<span class="hmp-title">' + title + '</span>' +
+            '<span class="hmp-date">'  + date  + '</span>' +
+          '</a>';
+        }).join('') +
+        '<button class="hmp-close" onclick="document.getElementById(\'hist-marker-popup\').remove()">닫기</button>';
+
+      // 차트 컨테이너 내부에 붙임
+      var container = document.getElementById('chart-wrapper') || document.body;
+      container.appendChild(pop);
+    });
+  }());
+
   // ── 뉴스 클릭 시 차트 마커 표시 (info-panel → chart 연동) ───────────────
   // index.html의 뉴스 아이템 onclick에서 호출됨
   window._onNewsClick = function (newsItem) {

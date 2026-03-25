@@ -875,6 +875,29 @@
       text-align: center;
       padding: 20px 0;
     }
+    /* LIVE 점 (뉴스 탭) */
+    .fiw-live-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #5c9cf5;
+      margin-right: 4px;
+      vertical-align: middle;
+      animation: fiw-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes fiw-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+    /* 재무 N/A */
+    .fiw-finance-na { color: #555 !important; cursor: help; }
+    .fiw-finance-na-msg {
+      font-size: 11px;
+      color: #555;
+      text-align: center;
+      padding: 6px 0 2px;
+    }
     /* 재무 패널 */
     .fiw-finance-row {
       display: flex;
@@ -1243,6 +1266,7 @@
     .result-card {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 6px;
       padding: 7px 10px;
       border-bottom: 1px solid #1e1e21;
@@ -1300,6 +1324,135 @@
       transition: width 0.4s;
     }
 
+    /* ── 결과 카드: 당시 뉴스 버튼 + 패널 ────────────────── */
+    .result-hist-news-btn {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid #3a3210;
+      border-radius: 4px;
+      color: #c8a951;
+      font-size: 10px;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: background .12s, color .12s;
+      line-height: 1.6;
+    }
+    .result-hist-news-btn:hover {
+      background: #2a2208;
+      color: #e0c060;
+    }
+    .result-hist-news-panel {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+      background: #1c1a0e;
+      border: 1px solid #3a3210;
+      border-radius: 8px;
+      cursor: default;
+    }
+    .rhn-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: #c8a951;
+      margin-bottom: 8px;
+      letter-spacing: 0.2px;
+    }
+    .rhn-item {
+      display: block;
+      padding: 6px 0;
+      border-bottom: 1px solid #2a2510;
+      text-decoration: none;
+    }
+    .rhn-item:last-of-type { border-bottom: none; }
+    .rhn-item:hover .rhn-title { color: #e0c060; text-decoration: underline; }
+    .rhn-title {
+      font-size: 11px;
+      color: #c8b878;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color .12s;
+    }
+    .rhn-desc {
+      font-size: 10px;
+      color: #8a7a40;
+      margin-top: 3px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .rhn-meta {
+      font-size: 10px;
+      color: #5a5030;
+      margin-top: 3px;
+    }
+    .rhn-loading, .rhn-empty {
+      font-size: 11px;
+      color: #5a5030;
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    /* ── 과거 뉴스 마커 팝업 ──────────────────────────────── */
+    .hist-marker-popup {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 800;
+      background: #1c1a0e;
+      border: 1px solid #c8a951;
+      border-radius: 10px;
+      padding: 14px 16px 10px;
+      max-width: 340px;
+      width: calc(100% - 40px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+    }
+    .hmp-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: #c8a951;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #3a3210;
+      padding-bottom: 6px;
+    }
+    .hmp-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 6px 0;
+      border-bottom: 1px solid #2a2510;
+      text-decoration: none;
+    }
+    .hmp-item:last-of-type { border-bottom: none; }
+    .hmp-item:hover .hmp-title { color: #e0c060; }
+    .hmp-title {
+      font-size: 11px;
+      color: #c8b878;
+      line-height: 1.45;
+      transition: color .12s;
+    }
+    .hmp-date {
+      font-size: 10px;
+      color: #5a5030;
+    }
+    .hmp-close {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 7px;
+      background: none;
+      border: 1px solid #3a3210;
+      border-radius: 6px;
+      color: #5a5030;
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color .12s, color .12s;
+    }
+    .hmp-close:hover { border-color: #c8a951; color: #c8a951; }
 
     /* ── TOP 10 잠금 블록 ─────────────────────────────────── */
     .result-lock-block {
