@@ -142,9 +142,10 @@
     .chg-up   { color: #ef5350; }
     .chg-down { color: var(--teal); }
 
-    /* ── 로딩 ────────────────────────────────── */
-    .feed-loading {
-      text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px;
+    /* ── 로딩 / 빈 상태 ──────────────────────── */
+    .feed-loading, .feed-empty {
+      text-align: center; padding: 80px 20px; color: var(--muted); font-size: 14px;
+      line-height: 1.8;
     }
     .feed-spinner {
       width: 28px; height: 28px; margin: 0 auto 12px;
@@ -211,17 +212,13 @@
       <p>국내외 시장 지표·인사이트·이슈를 한눈에 확인하세요.</p>
     </div>
 
-    <!-- 피드 탭 -->
-    <div class="feed-tabs">
-      <button class="feed-tab active" data-tab="overview">시장 개요</button>
-      <button class="feed-tab" data-tab="kr">국내 이슈</button>
-      <button class="feed-tab" data-tab="us">해외 이슈</button>
-      <button class="feed-tab" data-tab="theme">테마·섹터</button>
-    </div>
-
     <!-- 피드 콘텐츠 -->
     <div class="feed-grid" id="feed-grid">
-      <div class="feed-loading"><div class="feed-spinner"></div>피드를 불러오는 중입니다…</div>
+      <div class="feed-empty">
+        <div style="font-size:32px;margin-bottom:12px;">📭</div>
+        아직 게시된 피드가 없습니다.<br>
+        <span style="font-size:11px;color:#4a5568;margin-top:6px;display:block;">곧 업데이트될 예정입니다.</span>
+      </div>
     </div>
   </div>
 
@@ -263,169 +260,6 @@
 (function () {
   'use strict';
 
-  var _tab = 'overview';
-
-  /* ── 피드 데이터 (API 집계 기반 인사이트 카드) ─── */
-  /* 실제 동적 데이터는 API에서 가져오고, 일부는 정적 인사이트로 구성 */
-
-  var STATIC_FEED = {
-    overview: [
-      {
-        category: '시장 개요', time: '실시간',
-        title: '오늘의 시장 지수',
-        body: 'KOSPI·KOSDAQ·S&P500·NASDAQ 주요 지수 현황을 확인하세요. 아래 수치는 최근 거래일 기준입니다.',
-        statsId: 'index-stats',
-        tags: []
-      },
-      {
-        category: '패턴 인사이트', time: '업데이트됨',
-        title: 'Draw2Trade 패턴 매칭이란?',
-        body: '직접 그린 차트 패턴을 KOSPI·US 전 종목 과거 데이터에서 유사도 기반으로 검색합니다. ' +
-              '상위 유사 구간의 이후 흐름을 통해 현재 패턴의 전개를 추정해보세요.',
-        stats: [],
-        tags: [{ label: '패턴 검색 시작', sym: '', market: '', link: '/app' }]
-      },
-      {
-        category: '활용 팁', time: '가이드',
-        title: '사이드바 정보 패널 200% 활용법',
-        body: '차트 앱 우측 사이드바에서 재무지표(PER·PBR·ROE·배당수익률)와 실시간 뉴스, 네이버+토스 시장 반응을 ' +
-              '한 화면에서 확인할 수 있습니다. 탭을 전환하거나 유사 종목을 클릭해보세요.',
-        stats: [],
-        tags: [{ label: '앱 바로가기', sym: '', market: '', link: '/app' }]
-      },
-    ],
-    kr: [
-      {
-        category: '국내 시장', time: '실시간',
-        title: '국내 급등·급락 종목 스크리너',
-        body: '아래 스크리너는 당일 등락률 상위·하위 종목을 실시간으로 표시합니다. 종목명을 클릭하면 패턴 검색 앱으로 이동합니다.',
-        stats: [],
-        tags: [],
-        screenerId: 'kr-screener'
-      },
-      {
-        category: '국내 시장', time: '가이드',
-        title: 'KOSPI·KOSDAQ 대표 섹터',
-        body: '반도체(삼성전자·SK하이닉스), 바이오(셀트리온·삼성바이오), 2차전지(LG에너지솔루션·삼성SDI), ' +
-              '인터넷(NAVER·카카오) 등 주요 섹터 대표주를 차트 앱에서 바로 검색해보세요.',
-        stats: [],
-        tags: [
-          { label: '삼성전자', sym: '005930', market: 'KR' },
-          { label: 'SK하이닉스', sym: '000660', market: 'KR' },
-          { label: '셀트리온', sym: '068270', market: 'KR' },
-          { label: 'NAVER', sym: '035420', market: 'KR' },
-        ]
-      },
-    ],
-    us: [
-      {
-        category: '해외 시장', time: '실시간',
-        title: '미국 주요 지수 & 빅테크',
-        body: 'S&P500·NASDAQ·DOW와 빅테크 7개 종목(Magnificent 7)의 흐름을 차트 앱에서 확인하세요. ' +
-              'US 탭 전환 후 AAPL·NVDA·MSFT·META·GOOGL·AMZN·TSLA를 검색해보세요.',
-        stats: [],
-        tags: [
-          { label: 'AAPL', sym: 'AAPL', market: 'US' },
-          { label: 'NVDA', sym: 'NVDA', market: 'US' },
-          { label: 'MSFT', sym: 'MSFT', market: 'US' },
-          { label: 'META', sym: 'META', market: 'US' },
-          { label: 'GOOGL', sym: 'GOOGL', market: 'US' },
-          { label: 'TSLA', sym: 'TSLA', market: 'US' },
-        ]
-      },
-    ],
-    theme: [
-      {
-        category: '테마·섹터', time: '업데이트됨',
-        title: 'AI·반도체 테마',
-        body: '글로벌 AI 투자 확대 기조 속 반도체·AI 인프라 섹터가 주목받고 있습니다. ' +
-              '국내에선 HBM·파운드리 관련주, 해외에선 NVDA·AMD·ASML 등이 핵심 모니터링 종목입니다.',
-        stats: [],
-        tags: [
-          { label: 'SK하이닉스', sym: '000660', market: 'KR' },
-          { label: 'NVDA', sym: 'NVDA', market: 'US' },
-          { label: 'AMD', sym: 'AMD', market: 'US' },
-        ]
-      },
-      {
-        category: '테마·섹터', time: '업데이트됨',
-        title: '2차전지·전기차 테마',
-        body: '전기차 보급 속도와 배터리 원자재(리튬·코발트) 가격 변동이 주요 모니터링 포인트입니다. ' +
-              'LG에너지솔루션·삼성SDI·SK이노베이션 등 국내 배터리 3사와 TSLA를 함께 살펴보세요.',
-        stats: [],
-        tags: [
-          { label: '삼성SDI', sym: '006400', market: 'KR' },
-          { label: 'LG화학', sym: '051910', market: 'KR' },
-          { label: 'TSLA', sym: 'TSLA', market: 'US' },
-        ]
-      },
-      {
-        category: '테마·섹터', time: '업데이트됨',
-        title: '바이오·헬스케어 테마',
-        body: '국내 바이오는 임상 결과·FDA 승인 이슈에 민감하게 반응합니다. ' +
-              '셀트리온·삼성바이오로직스·알테오젠 등 대형 바이오주의 이벤트 일정을 체크하세요.',
-        stats: [],
-        tags: [
-          { label: '셀트리온', sym: '068270', market: 'KR' },
-          { label: '삼성바이오', sym: '207940', market: 'KR' },
-          { label: '알테오젠', sym: '196170', market: 'KR' },
-        ]
-      },
-    ],
-  };
-
-  /* ── 지수 카드 렌더 ─────────────────────── */
-  function renderIndexBanner(data) {
-    if (!data || !data.length) return '';
-    return '<div class="index-banner">' +
-      data.map(function (d) {
-        var cls = d.chg >= 0 ? 'chg-up' : 'chg-down';
-        var sign = d.chg >= 0 ? '+' : '';
-        return '<div class="idx-item">' +
-          '<div class="idx-name">' + esc(d.name) + '</div>' +
-          '<div class="idx-val">' + esc(d.val) + '</div>' +
-          '<div class="idx-chg ' + cls + '">' + sign + esc(String(d.chg.toFixed(2))) + '%</div>' +
-        '</div>';
-      }).join('') +
-    '</div>';
-  }
-
-  /* ── 피드 카드 렌더 ─────────────────────── */
-  function renderCard(card, extraHtml) {
-    var tagsHtml = '';
-    if (card.tags && card.tags.length) {
-      tagsHtml = '<div class="ic-tags">' + card.tags.map(function (t) {
-        var onclick = t.link
-          ? 'onclick="location.href=\'' + esc(t.link) + '\'"'
-          : 'onclick="goChart(\'' + esc(t.sym) + '\',\'' + esc(t.market) + '\')"';
-        return '<span class="ic-tag" ' + onclick + '>' + esc(t.label) + '</span>';
-      }).join('') + '</div>';
-    }
-
-    var statsHtml = '';
-    if (card.stats && card.stats.length) {
-      statsHtml = '<div class="ic-stats">' + card.stats.map(function (s) {
-        var cls = s.up ? 'val-up' : s.down ? 'val-down' : 'val-flat';
-        return '<div class="ic-stat">' +
-          '<div class="ic-stat-label">' + esc(s.label) + '</div>' +
-          '<div class="ic-stat-value ' + cls + '">' + esc(s.value) + '</div>' +
-        '</div>';
-      }).join('') + '</div>';
-    }
-
-    return '<div class="insight-card">' +
-      '<div class="ic-header">' +
-        '<span class="ic-category">' + esc(card.category) + '</span>' +
-        '<span class="ic-time">' + esc(card.time) + '</span>' +
-      '</div>' +
-      '<div class="ic-title">' + esc(card.title) + '</div>' +
-      '<div class="ic-body">' + esc(card.body) + '</div>' +
-      (extraHtml || '') +
-      statsHtml +
-      tagsHtml +
-    '</div>';
-  }
-
   /* ── 스크리너 렌더 ──────────────────────── */
   function renderScreener(elId, items, dir) {
     var el = document.getElementById(elId);
@@ -443,86 +277,6 @@
           '<div class="sc-name">' + esc(it.name||it.symbol||'') + '</div>' +
           '<div class="sc-code">' + esc(it.symbol||it.code||'') + '</div>' +
         '</div>' +
-        '<span class="sc-pct ' + cls + '">' + sign + pct.toFixed(2) + '%</span>' +
-      '</div>';
-    }).join('');
-  }
-
-  /* ── 피드 렌더 ──────────────────────────── */
-  function render() {
-    var cards = STATIC_FEED[_tab] || [];
-    var grid  = document.getElementById('feed-grid');
-
-    var html = '';
-    cards.forEach(function (card) {
-      var extra = '';
-      if (card.statsId === 'index-stats') {
-        extra = '<div id="index-stats-placeholder"></div>';
-      }
-      html += renderCard(card, extra);
-    });
-
-    if (!html) html = '<div class="feed-loading">준비 중입니다.</div>';
-    grid.innerHTML = html;
-
-    // 지수 배너 비동기 주입
-    if (_tab === 'overview') injectIndexBanner();
-    // KR 스크리너 주입
-    if (_tab === 'kr') injectKrScreener();
-  }
-
-  /* ── 지수 데이터 fetch (스캐너 API 활용) ── */
-  function injectIndexBanner() {
-    // 지수 배너 플레이스홀더에 스피너 표시
-    var placeholder = document.getElementById('index-stats-placeholder');
-    if (placeholder) placeholder.innerHTML =
-      '<div class="feed-loading" style="padding:20px 0;"><div class="feed-spinner"></div></div>';
-
-    fetch('/api/v1/stock/market/scanner/change-rate?market=KR&limit=5')
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!placeholder) return;
-        // 지수 더미 데이터 + 실제 상위 종목으로 배너 구성
-        var indexData = [
-          { name: 'KOSPI', val: '—', chg: 0 },
-          { name: 'KOSDAQ', val: '—', chg: 0 },
-          { name: 'S&P 500', val: '—', chg: 0 },
-          { name: 'NASDAQ', val: '—', chg: 0 },
-        ];
-        placeholder.innerHTML = renderIndexBanner(indexData) +
-          '<div style="font-size:10px;color:var(--muted);margin-top:8px;">※ 지수 실시간 연동은 준비 중입니다. 아래 스크리너로 개별 종목을 확인하세요.</div>';
-      })
-      .catch(function () {
-        if (placeholder) placeholder.innerHTML =
-          '<div style="font-size:12px;color:var(--muted);padding:8px 0;">지수 데이터를 불러오지 못했습니다.</div>';
-      });
-  }
-
-  function injectKrScreener() {
-    fetch('/api/v1/stock/market/scanner/change-rate?market=KR&limit=10')
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        var items = (d && d.items) || [];
-        var upItems   = items.filter(function (i) { return (i.chg_rate || 0) > 0; }).slice(0, 5);
-        var downItems = items.filter(function (i) { return (i.chg_rate || 0) < 0; }).slice(0, 5);
-        // 카드 내에 KR 스크리너 주입
-        var grid = document.getElementById('feed-grid');
-        var screenEl = grid ? grid.querySelector('[data-screener="kr"]') : null;
-        if (screenEl) {
-          screenEl.innerHTML = renderScreenerRows(upItems);
-        }
-      })
-      .catch(function () {});
-  }
-
-  function renderScreenerRows(items) {
-    return items.map(function (it) {
-      var pct = it.chg_rate != null ? it.chg_rate : 0;
-      var cls = pct >= 0 ? 'pct-up' : 'pct-down';
-      var sign = pct >= 0 ? '+' : '';
-      return '<div class="screener-row" onclick="goChart(\'' + esc(it.symbol||'') + '\',\'KR\')">' +
-        '<div><div class="sc-name">' + esc(it.name||it.symbol||'') + '</div>' +
-        '<div class="sc-code">' + esc(it.symbol||'') + '</div></div>' +
         '<span class="sc-pct ' + cls + '">' + sign + pct.toFixed(2) + '%</span>' +
       '</div>';
     }).join('');
@@ -556,18 +310,7 @@
     window.location.href = '/app?symbol=' + encodeURIComponent(sym) + '&market=' + (mkt || 'KR');
   };
 
-  /* ── 탭 이벤트 ───────────────────────────── */
-  document.querySelectorAll('.feed-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.feed-tab').forEach(function (b) { b.classList.remove('active'); });
-      this.classList.add('active');
-      _tab = this.dataset.tab;
-      render();
-    });
-  });
-
   /* ── 초기화 ─────────────────────────────── */
-  render();
   loadSidebarScreener();
 })();
 </script>
