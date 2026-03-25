@@ -786,60 +786,34 @@
       font-weight: 600;
     }
 
-    /* ── 플로팅 종목 정보 위젯 ─────────────────────────────── */
+    /* ── 종목 정보 위젯 (사이드바 상단 패널 내장) ──────────── */
     #floating-info-widget {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 280px;
-      min-width: 250px;
-      min-height: 300px;
-      background: rgba(22, 22, 26, 0.82);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 14px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset;
-      z-index: 50;
+      /* 사이드바 상단 패널 내에서 flex 흐름으로 배치 */
+      flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      transition: opacity .2s, transform .2s;
+      background: #141416;
+      border-bottom: 1px solid #27272a;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 0;
     }
-    /* 위젯 리사이즈 핸들 */
-    #fiw-resize-handle {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 18px;
-      height: 18px;
-      cursor: se-resize;
-      z-index: 60;
-      border-radius: 0 0 14px 0;
-    }
-    #fiw-resize-handle::after {
-      content: '';
-      position: absolute;
-      bottom: 5px;
-      right: 5px;
-      width: 8px;
-      height: 8px;
-      border-right: 2px solid rgba(255,255,255,0.25);
-      border-bottom: 2px solid rgba(255,255,255,0.25);
-      border-radius: 1px;
-      transition: border-color .15s;
-    }
-    #fiw-resize-handle:hover::after { border-color: rgba(255,255,255,0.55); }
+    /* 위젯 리사이즈 핸들 — 사이드바 내장 후 수직 리사이저로 대체, 숨김 */
+    #fiw-resize-handle { display: none; }
     #fiw-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 9px 12px 8px;
+      padding: 7px 10px 6px;
       border-bottom: 1px solid rgba(255,255,255,0.07);
-      cursor: move;
+      cursor: default;
       user-select: none;
       gap: 6px;
       min-width: 0;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      width: 100%;
     }
     /* 제목+티커 묶음 */
     #fiw-title-group {
@@ -1064,29 +1038,25 @@
       align-items: center;
     }
     .fiw-comm-agree { color: #ef5350; font-weight: 600; }
-    /* 복원 탭 버튼 */
+    /* 복원 탭 버튼 — 사이드바 내장 후 상단 패널 축소 상태 표시 */
     #fiw-restore-tab {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 38px;
-      height: 38px;
-      background: rgba(22,22,26,0.82);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 10px;
-      color: #d4d8e2;
-      font-size: 16px;
+      width: 100%;
+      height: 36px;
+      background: #1a1a1d;
+      border: none;
+      border-bottom: 1px solid #27272a;
+      color: #7a8499;
+      font-size: 12px;
       cursor: pointer;
-      z-index: 50;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-      transition: background .15s;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
+      transition: color .15s, background .15s;
+      box-sizing: border-box;
+      flex-shrink: 0;
     }
-    #fiw-restore-tab:hover { background: rgba(38,166,154,0.2); border-color: #26a69a; }
+    #fiw-restore-tab:hover { background: rgba(38,166,154,0.08); color: #26a69a; }
 
     /* ── 사이드바 스플리터 (5번 컬럼) ─────────────────────── */
     #sidebar-resize-handle {
@@ -1119,28 +1089,83 @@
     /* ── 사이드바 (CSS Grid 6번 컬럼) ─────────────────────── */
     .d2t-sidebar {
       grid-column: 6;
-      width: 280px;
-      min-width: 240px;
-      max-width: 320px;
       display: flex;
       flex-direction: column;
       background: #1a1a1d;
       min-height: 0;
       overflow: hidden;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    /* ── 사이드바 상단 패널 (종목 정보) ───────────────────── */
+    #sidebar-top-panel {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      min-height: 120px;
+      height: 45%;
+      overflow: hidden;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    /* ── 사이드바 수직 리사이저 ───────────────────────────── */
+    #sidebar-vresizer {
+      flex-shrink: 0;
+      height: 5px;
+      cursor: row-resize;
+      background: #1e1e22;
+      border-top: 1px solid #27272a;
+      border-bottom: 1px solid #27272a;
+      position: relative;
+      transition: background .15s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #sidebar-vresizer::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px;
+      height: 3px;
+      border-top: 1px solid rgba(255,255,255,0.18);
+      border-bottom: 1px solid rgba(255,255,255,0.18);
+      border-radius: 2px;
+      transition: border-color .15s;
+    }
+    #sidebar-vresizer:hover { background: rgba(38,166,154,0.08); }
+    #sidebar-vresizer:hover::after { border-color: rgba(38,166,154,0.7); }
+    #sidebar-vresizer.dragging { background: rgba(38,166,154,0.12); }
+    #sidebar-vresizer.dragging::after { border-color: #26a69a; }
+
+    /* ── 사이드바 하단 패널 (탭+검색결과) ────────────────── */
+    #sidebar-bottom-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 80px;
+      overflow: hidden;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     .d2t-sidebar-header {
-      height: 46px;
       border-bottom: 1px solid #27272a;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 14px;
+      padding: 0 10px;
+      height: 36px;
       flex-shrink: 0;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     .d2t-sidebar-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: #d1d4dc;
     }
@@ -1158,6 +1183,8 @@
       min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     #results-wrapper::-webkit-scrollbar { width: 4px; }
@@ -1194,6 +1221,21 @@
       color: #7a8499; font-size: 12px; margin: 0; line-height: 1.6;
     }
     .d2t-search-loading strong { color: #d4d8e2; }
+
+    /* ── 사이드바 하단 패널 내부 콘텐츠 패널 ────────────── */
+    .sidebar-content-panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .sidebar-content-panel.active { display: flex; }
+    /* 즐겨찾기/저장 패널은 내부 스크롤 */
+    #sidebar-panel-favorites.active,
+    #sidebar-panel-drawings.active { overflow-y: auto; }
 
     /* ── 사이드바 탭 ─────────────────────────────────────── */
     .sidebar-tabs {
@@ -2341,8 +2383,8 @@
 
     /* ── 사이드바 너비 조정 ──────────────────────────────── */
     .d2t-sidebar {
-      width: 290px;
-      min-width: 250px;
+      width: 100%;
+      min-width: 0;
     }
 
     @media (max-width: 768px) {

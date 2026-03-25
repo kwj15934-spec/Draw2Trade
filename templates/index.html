@@ -200,40 +200,6 @@
       <div id="chart-container"></div>
       <canvas id="draw-canvas"></canvas>
 
-      <!-- ── 플로팅 종목 정보 위젯 ──────────────────────── -->
-      <div id="floating-info-widget">
-        <div id="fiw-header">
-          <div id="fiw-title-group">
-            <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
-          </div>
-          <div id="fiw-controls">
-            <button id="fiw-btn-min" title="최소화">─</button>
-            <button id="fiw-btn-close" title="닫기">✕</button>
-          </div>
-        </div>
-        <div id="fiw-tabs">
-          <button class="fiw-tab active" data-tab="finance">재무</button>
-          <button class="fiw-tab" data-tab="news"><span class="fiw-live-badge">LIVE</span>실시간 속보</button>
-          <button class="fiw-tab" data-tab="community">시장반응</button>
-        </div>
-        <div id="fiw-body">
-          <!-- 재무 패널 -->
-          <div id="fiw-panel-finance" class="fiw-panel active">
-            <div class="fiw-loading">로딩 중…</div>
-          </div>
-          <!-- 뉴스 패널 -->
-          <div id="fiw-panel-news" class="fiw-panel">
-            <div class="fiw-loading">로딩 중…</div>
-          </div>
-          <!-- 반응(종토방) 패널 -->
-          <div id="fiw-panel-community" class="fiw-panel">
-            <div class="fiw-loading">로딩 중…</div>
-          </div>
-        </div>
-        <div id="fiw-resize-handle" title="크기 조절"></div>
-      </div>
-      <!-- ── 위젯 최소화 탭 (닫혀있을 때 표시) ─────────── -->
-      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">i</button>
       <!-- 차트 로딩 스피너 -->
       <div id="chart-loading-spinner" style="display:none; position:absolute; inset:0; z-index:20; background:rgba(18,18,20,0.7); align-items:center; justify-content:center;">
         <div style="text-align:center;">
@@ -413,44 +379,89 @@
   <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
 
-    <!-- 탭 헤더 -->
-    <div class="sidebar-tabs">
-      <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
-      <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
-      <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
-    </div>
+    <!-- ══ 상단 패널: 종목 정보 위젯 ════════════ -->
+    <div id="sidebar-top-panel">
 
-    <!-- ── 유사 종목 패널 ─────────────────────── -->
-    <div id="sidebar-panel-results" style="display:none;">
-      <div class="d2t-sidebar-header">
-        <span class="result-header-title">☰ 검색 결과</span>
-        <span id="result-count" class="result-header-count" style="display:none;"></span>
-        <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">🔖 저장</button>
-      </div>
-      <div id="result-col-header" style="display:none;" class="result-col-header">
-        <span class="rch-rank">순위</span>
-        <span class="rch-name">종목</span>
-        <span class="rch-score">유사도</span>
-      </div>
-      <div id="results-wrapper">
-        <div id="results-placeholder">
-          패턴을 그린 후<br>
-          <strong style="color: #26a69a;">유사 종목 검색</strong>을 클릭하세요<br><br>
-          <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
+      <!-- 위젯 최소화 시 표시되는 복원 버튼 -->
+      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">▲ 종목 정보 열기</button>
+
+      <!-- 종목 정보 위젯 본체 -->
+      <div id="floating-info-widget">
+        <div id="fiw-header">
+          <div id="fiw-title-group">
+            <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
+          </div>
+          <div id="fiw-controls">
+            <button id="fiw-btn-min" title="최소화">─</button>
+          </div>
         </div>
-        <div id="results-list" style="display: none;"></div>
+        <div id="fiw-tabs">
+          <button class="fiw-tab active" data-tab="finance">재무</button>
+          <button class="fiw-tab" data-tab="news"><span class="fiw-live-badge">LIVE</span>속보</button>
+          <button class="fiw-tab" data-tab="community">시장반응</button>
+        </div>
+        <div id="fiw-body">
+          <div id="fiw-panel-finance" class="fiw-panel active">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+          <div id="fiw-panel-news" class="fiw-panel">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+          <div id="fiw-panel-community" class="fiw-panel">
+            <div class="fiw-loading">로딩 중…</div>
+          </div>
+        </div>
+        <div id="fiw-resize-handle"></div>
       </div>
-    </div>
 
-    <!-- ── 즐겨찾기 패널 ──────────────────────── -->
-    <div id="sidebar-panel-favorites" style="display:none;">
-      <div id="fav-list" style="padding:8px 0;"></div>
-    </div>
+    </div><!-- /#sidebar-top-panel -->
 
-    <!-- ── 저장된 검색 패널 ───────────────────── -->
-    <div id="sidebar-panel-drawings" style="display:none;">
-      <div id="drawings-list" style="padding:8px 0;"></div>
-    </div>
+    <!-- ══ 수직 리사이저 ══════════════════════════ -->
+    <div id="sidebar-vresizer"></div>
+
+    <!-- ══ 하단 패널: 검색결과/즐겨찾기/저장 ════ -->
+    <div id="sidebar-bottom-panel">
+
+      <!-- 탭 헤더 -->
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
+        <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
+        <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
+      </div>
+
+      <!-- ── 유사 종목 패널 ─────────────────────── -->
+      <div id="sidebar-panel-results" class="sidebar-content-panel active">
+        <div class="d2t-sidebar-header">
+          <span class="result-header-title">☰ 검색 결과</span>
+          <span id="result-count" class="result-header-count" style="display:none;"></span>
+          <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()">🔖 저장</button>
+        </div>
+        <div id="result-col-header" style="display:none;" class="result-col-header">
+          <span class="rch-rank">순위</span>
+          <span class="rch-name">종목</span>
+          <span class="rch-score">유사도</span>
+        </div>
+        <div id="results-wrapper">
+          <div id="results-placeholder">
+            패턴을 그린 후<br>
+            <strong style="color: #26a69a;">유사 종목 검색</strong>을 클릭하세요<br><br>
+            <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
+          </div>
+          <div id="results-list" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- ── 즐겨찾기 패널 ──────────────────────── -->
+      <div id="sidebar-panel-favorites" class="sidebar-content-panel">
+        <div id="fav-list" style="padding:8px 0;"></div>
+      </div>
+
+      <!-- ── 저장된 검색 패널 ───────────────────── -->
+      <div id="sidebar-panel-drawings" class="sidebar-content-panel">
+        <div id="drawings-list" style="padding:8px 0;"></div>
+      </div>
+
+    </div><!-- /#sidebar-bottom-panel -->
 
   </div>
 </div>
@@ -826,22 +837,13 @@
 
   // 사이드바 탭 전환
   document.addEventListener('DOMContentLoaded', function() {
-    // 초기 활성 탭(results) 패널을 flex로 열기
-    var activeBtn = document.querySelector('.sidebar-tab-btn.active');
-    var activeTab = activeBtn ? activeBtn.dataset.tab : 'results';
-    ['results','favorites','drawings'].forEach(function(p) {
-      var el = document.getElementById('sidebar-panel-' + p);
-      if (el) el.style.display = (p === activeTab) ? 'flex' : 'none';
-    });
-
     document.querySelectorAll('.sidebar-tab-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var tab = this.dataset.tab;
         document.querySelectorAll('.sidebar-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         this.classList.add('active');
-        ['results','favorites','drawings'].forEach(function(p) {
-          var el = document.getElementById('sidebar-panel-' + p);
-          if (el) el.style.display = (p === tab) ? 'flex' : 'none';
+        document.querySelectorAll('.sidebar-content-panel').forEach(function(p) {
+          p.classList.toggle('active', p.id === 'sidebar-panel-' + tab);
         });
       });
     });
@@ -872,90 +874,63 @@
     btn.addEventListener('click', function () { switchTab(this.dataset.tab); });
   });
 
-  // ── 닫기 / 최소화 ─────────────────────────────────────────
-  var _widget   = document.getElementById('floating-info-widget');
+  // ── 최소화 / 복원 ─────────────────────────────────────────
+  var _widget     = document.getElementById('floating-info-widget');
   var _restoreTab = document.getElementById('fiw-restore-tab');
+  var _topPanel   = document.getElementById('sidebar-top-panel');
 
-  document.getElementById('fiw-btn-close').addEventListener('click', function () {
-    if (_widget) _widget.style.display = 'none';
-    if (_restoreTab) { _restoreTab.style.display = 'flex'; }
-  });
-  document.getElementById('fiw-btn-min').addEventListener('click', function () {
-    if (_widget) _widget.style.display = 'none';
-    if (_restoreTab) { _restoreTab.style.display = 'flex'; }
-  });
-  if (_restoreTab) {
-    _restoreTab.addEventListener('click', function () {
-      _restoreTab.style.display = 'none';
-      if (_widget) _widget.style.display = 'flex';
-    });
+  function _collapseWidget() {
+    if (_widget)   _widget.style.display = 'none';
+    if (_restoreTab) _restoreTab.style.display = 'flex';
+    if (_topPanel) _topPanel.style.height = 'auto';
+  }
+  function _expandWidget() {
+    if (_restoreTab) _restoreTab.style.display = 'none';
+    if (_widget)   _widget.style.display = 'flex';
+    if (_topPanel) _topPanel.style.height = '';
   }
 
-  // ── 드래그 이동 ────────────────────────────────────────────
-  (function initDrag() {
-    var header = document.getElementById('fiw-header');
-    if (!header || !_widget) return;
-    var dragging = false, ox = 0, oy = 0;
-    header.addEventListener('mousedown', function (e) {
-      if (e.target.tagName === 'BUTTON') return;
-      dragging = true;
-      var rect = _widget.getBoundingClientRect();
-      ox = e.clientX - rect.left;
-      oy = e.clientY - rect.top;
-      document.body.style.userSelect = 'none';
-    });
-    document.addEventListener('mousemove', function (e) {
-      if (!dragging) return;
-      var parent = _widget.parentElement.getBoundingClientRect();
-      var nx = e.clientX - parent.left - ox;
-      var ny = e.clientY - parent.top  - oy;
-      // 경계 클램프
-      nx = Math.max(0, Math.min(nx, parent.width  - _widget.offsetWidth));
-      ny = Math.max(0, Math.min(ny, parent.height - _widget.offsetHeight));
-      _widget.style.right = 'unset';
-      _widget.style.top   = ny + 'px';
-      _widget.style.left  = nx + 'px';
-    });
-    document.addEventListener('mouseup', function () {
-      dragging = false;
-      document.body.style.userSelect = '';
-    });
-  })();
+  var _btnMin = document.getElementById('fiw-btn-min');
+  if (_btnMin) _btnMin.addEventListener('click', _collapseWidget);
+  if (_restoreTab) _restoreTab.addEventListener('click', _expandWidget);
 
-  // ── 플로팅 위젯 리사이즈 ──────────────────────────────────
-  (function initWidgetResize() {
-    var handle = document.getElementById('fiw-resize-handle');
-    if (!handle || !_widget) return;
-    var resizing = false, startX, startY, startW, startH;
-    var MIN_W = 250, MIN_H = 300;
-    handle.addEventListener('mousedown', function (e) {
+  // ── 사이드바 수직 리사이저 (상단/하단 패널 비율) ──────────
+  (function initVResizer() {
+    var vres    = document.getElementById('sidebar-vresizer');
+    var topPnl  = document.getElementById('sidebar-top-panel');
+    var sidebar = document.querySelector('.d2t-sidebar');
+    if (!vres || !topPnl || !sidebar) return;
+    var resizing = false, startY, startH;
+    var MIN_H = 80, MAX_RATIO = 0.75;
+    vres.addEventListener('mousedown', function (e) {
       e.preventDefault();
-      e.stopPropagation();
       resizing = true;
-      startX = e.clientX; startY = e.clientY;
-      startW = _widget.offsetWidth; startH = _widget.offsetHeight;
+      startY = e.clientY;
+      startH = topPnl.offsetHeight;
       document.body.style.userSelect = 'none';
+      vres.classList.add('dragging');
     });
     document.addEventListener('mousemove', function (e) {
       if (!resizing) return;
-      var nw = Math.max(MIN_W, startW + (e.clientX - startX));
-      var nh = Math.max(MIN_H, startH + (e.clientY - startY));
-      _widget.style.width  = nw + 'px';
-      _widget.style.height = nh + 'px';
+      var delta  = e.clientY - startY;
+      var maxH   = Math.floor(sidebar.offsetHeight * MAX_RATIO);
+      var newH   = Math.min(maxH, Math.max(MIN_H, startH + delta));
+      topPnl.style.height = newH + 'px';
     });
     document.addEventListener('mouseup', function () {
       if (!resizing) return;
       resizing = false;
       document.body.style.userSelect = '';
+      vres.classList.remove('dragging');
     });
   })();
 
-  // ── 사이드바 스플리터 리사이즈 ───────────────────────────────
+  // ── 사이드바 수평 스플리터 리사이즈 ──────────────────────
   (function initSidebarResize() {
     var handle = document.getElementById('sidebar-resize-handle');
     if (!handle) return;
     var resizing = false, startX, startW;
-    var MIN_W = 180, MAX_W = 520;
+    var MIN_W = 200, MAX_W = 520;
     handle.addEventListener('mousedown', function (e) {
       e.preventDefault();
       resizing = true;
@@ -967,10 +942,9 @@
     });
     document.addEventListener('mousemove', function (e) {
       if (!resizing) return;
-      var delta = startX - e.clientX;   // 오른쪽→왼쪽 드래그 = 사이드바 넓어짐
+      var delta = startX - e.clientX;
       var nw = Math.min(MAX_W, Math.max(MIN_W, startW + delta));
       document.documentElement.style.setProperty('--sidebar-w', nw + 'px');
-      // 차트 폭 재적용
       if (window.D2T && D2T.chart) {
         var chartEl = document.getElementById('chart-container');
         if (chartEl) D2T.chart.applyOptions({ width: chartEl.offsetWidth });
@@ -1131,11 +1105,14 @@
   // KR 전용 — chart.js loadChart / loadResultChart 완료 시 호출됨
   window._onFiwChartLoaded = function (ticker, market) {
     if (market !== 'KR') {
-      if (_widget) _widget.style.display = 'none';
+      _collapseWidget();
       return;
     }
-    if (_widget && _widget.style.display === 'none' && (!_restoreTab || _restoreTab.style.display === 'none')) {
-      _widget.style.display = 'flex';
+    // 위젯이 최소화 상태가 아닌 경우에만 강제 펼침
+    if (_widget && _widget.style.display === 'none' && _restoreTab && _restoreTab.style.display !== 'none') {
+      // 사용자가 직접 최소화한 상태 → 유지
+    } else {
+      _expandWidget();
     }
     _resetWidget(ticker);
   };
