@@ -362,12 +362,12 @@ def _strip_tags(text: str) -> str:
 
 
 def _parse_pub_date(raw: str) -> str:
-    """RFC 2822 → 'YYYY-MM-DD'. 파싱 실패 시 원본 반환."""
+    """RFC 2822 → 'YYYY-MM-DD HH:MM'. 파싱 실패 시 원본 반환."""
     try:
         from email.utils import parsedate
         t = parsedate(raw)
         if t:
-            return f"{t[0]:04d}-{t[1]:02d}-{t[2]:02d}"
+            return f"{t[0]:04d}-{t[1]:02d}-{t[2]:02d} {t[3]:02d}:{t[4]:02d}"
     except Exception:
         pass
     return raw
