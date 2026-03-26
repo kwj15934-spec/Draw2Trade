@@ -981,12 +981,6 @@
 
   // ── 데이터 fetch ───────────────────────────────────────────
   function _setPanel(tab, html) {
-    // 뉴스 패널은 서브탭+법적고지가 정적 HTML이므로 피드 목록만 갱신
-    if (tab === 'news') {
-      var feedEl = document.getElementById('news-feed-list');
-      if (feedEl) feedEl.innerHTML = html;
-      return;
-    }
     var el = document.getElementById('fiw-panel-' + tab);
     if (el) el.innerHTML = html;
   }
@@ -1102,6 +1096,7 @@
   }
 
   function _renderNews(items) {
+    if (items.length) console.log('[D2T] 뉴스 item[0] 전체:', JSON.stringify(items[0]));
     var html = items.slice(0, 12).map(function (it) {
       // URL: url → link → originallink 순으로 탐색
       var rawUrl = it.url || it.link || it.originallink || '';
