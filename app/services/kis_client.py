@@ -368,8 +368,15 @@ def _get(path: str, params: dict[str, str], tr_id: str) -> Optional[dict[str, An
         try:
             req = _req.Request(url, headers=headers)
             with _req.urlopen(req, timeout=5) as resp:
-                raw = resp.read().decode("utf-8")
-                result = json.loads(raw)
+                raw = resp.read().decode("utf-8", errors="replace")
+                try:
+                    result = json.loads(raw)
+                except json.JSONDecodeError as je:
+                    logger.warning(
+                        "KIS JSONDecodeError tr_id=%s path=%s err=%s raw_head=%.120s",
+                        tr_id, path, je, raw,
+                    )
+                    return None
                 # KIS 비정상 응답 코드 로깅 (rt_cd != "0")
                 rt_cd = result.get("rt_cd", "")
                 if rt_cd and rt_cd != "0":
