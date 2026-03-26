@@ -1254,7 +1254,12 @@
       color: #4a5568;
       font-weight: 600;
     }
-    .fiw-news-desc { display: none; } /* 공간 절약 */
+    .fiw-news-desc {
+      display: -webkit-box; -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical; overflow: hidden;
+      font-size: 10px; color: #52525b; line-height: 1.4;
+      margin-bottom: 2px;
+    }
 
     /* ── info-side-panel: 메인 패널 헤더 ────────────────── */
     .info-panel-ticker-header {
@@ -1571,9 +1576,65 @@
       width: 100%;
     }
     .sidebar-content-panel.active { display: flex; }
-    /* 즐겨찾기/저장 패널은 내부 스크롤 */
+    /* 즐겨찾기/저장/랭킹 패널은 내부 스크롤 */
     #sidebar-panel-favorites.active,
-    #sidebar-panel-drawings.active { overflow-y: auto; }
+    #sidebar-panel-drawings.active,
+    #sidebar-panel-ranking.active { overflow-y: auto; }
+
+    /* ── 랭킹 카테고리 셀렉트 ──────────────────────────── */
+    .ranking-cat-select {
+      font-size: 10px; font-weight: 600; color: #26a69a;
+      background: rgba(38,166,154,.08); border: 1px solid rgba(38,166,154,.2);
+      border-radius: 5px; padding: 3px 8px; cursor: pointer;
+      outline: none; appearance: auto;
+    }
+    .ranking-cat-select:hover { border-color: #26a69a; }
+    .ranking-cat-select option { background: #18181c; color: #d4d8e2; }
+
+    /* ── 랭킹 행 ───────────────────────────────────────── */
+    .rnk-row {
+      position: relative; display: flex; align-items: center;
+      padding: 6px 10px; cursor: pointer; transition: background .1s; overflow: hidden;
+    }
+    .rnk-row:hover { background: rgba(255,255,255,.03); }
+    .rnk-bar {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      pointer-events: none; z-index: 0;
+      transition: width .4s cubic-bezier(.4,0,.2,1);
+    }
+    .rnk-row > * { position: relative; z-index: 1; }
+    .rnk-num {
+      font-size: 10px; font-weight: 700; color: #52525b;
+      width: 16px; flex-shrink: 0; text-align: right; margin-right: 8px;
+    }
+    .rnk-num.top3      { color: #26a69a; }
+    .rnk-num.top3-rise { color: #ef5350; }
+    .rnk-num.top3-fall { color: #5b8def; }
+    .rnk-info { flex: 1; min-width: 0; }
+    .rnk-name {
+      font-size: 11px; font-weight: 600; color: #d4d8e2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rnk-code { font-size: 9px; color: #52525b; }
+    .rnk-right {
+      display: flex; flex-direction: column; align-items: flex-end;
+      flex-shrink: 0; margin-left: 6px; gap: 1px;
+    }
+    .rnk-pct {
+      font-size: 11px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .rnk-up   { color: #ef5350; }
+    .rnk-down { color: #26a69a; }
+    .rnk-flat { color: #555; }
+    .rnk-vol {
+      font-size: 9px; color: #52525b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .rnk-asof {
+      font-size: 9px; color: #3f3f46;
+      padding: 6px 10px 4px; text-align: right;
+    }
 
     /* ── 사이드바 탭 ─────────────────────────────────────── */
     .sidebar-tabs {
