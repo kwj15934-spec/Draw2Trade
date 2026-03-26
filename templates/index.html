@@ -396,17 +396,19 @@
   <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
 
-    <!-- ══ 상단 패널: 종목 정보 위젯 ════════════ -->
+    <!-- ══ 상단 패널: 유사 종목 상세 정보 ════════ -->
     <div id="sidebar-top-panel">
 
       <!-- 위젯 최소화 시 표시되는 복원 버튼 -->
-      <button id="fiw-restore-tab" style="display:none;" title="종목 정보 열기">▲ 종목 정보 열기</button>
+      <button id="fiw-restore-tab" style="display:none;" title="상세 정보 열기">상세 정보 열기</button>
 
       <!-- 종목 정보 위젯 본체 -->
       <div id="floating-info-widget">
         <div id="fiw-header">
           <div id="fiw-title-group">
-            <span id="fiw-title">메인 차트 정보</span><span id="fiw-ticker" class="fiw-ticker-sub"></span>
+            <!-- 종목 미선택 시: 안내 문구 / 선택 후: 종목명 -->
+            <span id="fiw-title" class="fiw-title-label">종목을 선택하세요</span>
+            <span id="fiw-ticker" class="fiw-ticker-sub"></span>
           </div>
           <div id="fiw-controls">
             <button id="fiw-btn-min" title="최소화">─</button>
@@ -414,20 +416,18 @@
         </div>
         <div id="fiw-tabs">
           <button class="fiw-tab active" data-tab="finance">재무</button>
-          <button class="fiw-tab" data-tab="related">관련 종목</button>
+          <button class="fiw-tab" data-tab="news">뉴스</button>
           <button class="fiw-tab" data-tab="community">시장반응</button>
         </div>
         <div id="fiw-body">
           <div id="fiw-panel-finance" class="fiw-panel active">
-            <div class="fiw-loading">로딩 중…</div>
+            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
           </div>
-          <div id="fiw-panel-related" class="fiw-panel">
-            <div id="fiw-related-list" style="padding:4px 0;">
-              <div class="fiw-loading">로딩 중…</div>
-            </div>
+          <div id="fiw-panel-news" class="fiw-panel">
+            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
           </div>
           <div id="fiw-panel-community" class="fiw-panel">
-            <div class="fiw-loading">로딩 중…</div>
+            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
           </div>
         </div>
         <div id="fiw-resize-handle"></div>
@@ -871,10 +871,11 @@
 // ── 플로팅 종목 정보 위젯 ────────────────────────────────────
 (function () {
   var _ticker    = '';
-  var _loaded    = { finance: false, related: false, community: false };
+  var _name      = '';   // 현재 선택 종목명
+  var _loaded    = { finance: false, news: false, community: false };
   var _activeTab = 'finance';
   var _debounceTimer = null;
-  var _DEBOUNCE_MS   = 300;   // 종목 변경 디바운스 대기 시간
+  var _DEBOUNCE_MS   = 300;
 
   // ── 탭 전환 ──────────────────────────────────────────────
   function switchTab(tab) {
@@ -1004,9 +1005,9 @@
   }
 
   function _fetchTab(tab, ticker) {
-    _loaded[tab] = true; // 중복 방지 (실패해도 재시도 안 함)
-    if (tab === 'finance')   _fetchFinance(ticker);
-    else if (tab === 'related')   _fetchRelated(ticker);
+    _loaded[tab] = true;
+    if (tab === 'finance')        _fetchFinance(ticker);
+    else if (tab === 'news')      _fetchNews(ticker);
     else if (tab === 'community') _fetchCommunity(ticker);
   }
 
@@ -1018,14 +1019,11 @@
       .then(function (d) {
         if (!d) { _errorPanel('finance', '서버 점검 중'); return; }
 
-        // 헤더 종목명 반영
-        var tkSpan = document.getElementById('fiw-ticker');
-        if (tkSpan) {
-          var sym  = d.symbol || _ticker || '';
-          var name = d.name   || d.company_name || '';
-          tkSpan.textContent = name ? name + ' (' + sym + ')' : sym ? '(' + sym + ')' : '';
-          tkSpan.title = tkSpan.textContent;
-        }
+        // 헤더 종목명 반영 (API 응답에서 이름을 얻으면 즉시 갱신)
+        var sym  = d.symbol || _ticker || '';
+        var nm   = d.name   || d.company_name || _name || '';
+        if (nm && !_name) _name = nm;
+        _updateHeader(sym, nm || _name);
 
         var isNA       = d.na === true;
         var isSnapshot = d.snapshot === true;
@@ -1090,54 +1088,32 @@
   }
 
 
-  // 관련 종목 — 업종·테마 기반 연관 종목 리스트
-  function _fetchRelated(ticker) {
-    _loadingPanel('related');
-    // 공급/수급 API에서 같은 업종 상위 종목 가져오기
-    fetch('/api/v1/stock/supply/' + encodeURIComponent(ticker))
+  // 뉴스 탭 — 네이버 뉴스 API (KR 전용)
+  function _fetchNews(ticker) {
+    _loadingPanel('news');
+    fetch('/api/v1/stock/news/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        var related = (d && d.related) || [];
-        if (!related.length) {
-          // supply API에 related 없으면 스캐너로 fallback
-          return fetch('/api/v1/stock/market/scanner/change-rate?market=KR&limit=10')
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (sd) {
-              var items = ((sd && sd.items) || []).filter(function (i) {
-                return (i.symbol || i.code) !== ticker;
-              }).slice(0, 8);
-              _renderRelated(items.map(function (i) {
-                return { symbol: i.symbol || i.code, name: i.name, chg_rate: i.chg_rate };
-              }));
-            });
-        }
-        _renderRelated(related.slice(0, 8));
+        var items = (d && d.items) || [];
+        if (!items.length) { _errorPanel('news', '뉴스가 없습니다'); return; }
+        _renderNews(items);
       })
-      .catch(function () { _errorPanel('related', '관련 종목을 불러오지 못했습니다'); });
+      .catch(function () { _errorPanel('news', '뉴스 조회 실패'); });
   }
 
-  function _renderRelated(items) {
-    if (!items || !items.length) {
-      _errorPanel('related', '관련 종목이 없습니다');
-      return;
-    }
-    var html = items.map(function (it) {
-      var sym  = it.symbol || it.code || '';
-      var name = it.name || sym;
-      var pct  = it.chg_rate != null ? it.chg_rate : null;
-      var pctHtml = pct != null
-        ? '<span class="fiw-related-pct ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat') + '">' +
-          (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</span>'
-        : '';
-      return '<div class="fiw-related-row" onclick="D2T.loadChart && D2T.loadChart(\'' + _esc(sym) + '\')" title="' + _esc(name) + ' 차트로 이동">' +
-        '<div class="fiw-related-info">' +
-          '<span class="fiw-related-name">' + _esc(name) + '</span>' +
-          '<span class="fiw-related-code">' + _esc(sym) + '</span>' +
-        '</div>' +
-        pctHtml +
-      '</div>';
+  function _renderNews(items) {
+    var html = items.slice(0, 12).map(function (it) {
+      var url   = _esc(it.url || '#');
+      var title = _esc(it.title || '');
+      var date  = _esc(it.date || '');
+      var desc  = it.description ? _esc(it.description) : '';
+      return '<a class="fiw-news-card" href="' + url + '" target="_blank" rel="noopener">' +
+        '<div class="fiw-news-title">' + title + '</div>' +
+        (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
+        '<div class="fiw-news-date">' + date + '</div>' +
+      '</a>';
     }).join('');
-    _setPanel('related', html);
+    _setPanel('news', html);
   }
 
   // 시장 반응 — 네이버+토스 통합 피드
@@ -1192,58 +1168,62 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── 헤더 즉시 갱신 (코드만 알 때 / 이름 있을 때 모두) ──────
+  function _updateHeader(ticker, name) {
+    var titleEl = document.getElementById('fiw-title');
+    var tkSpan  = document.getElementById('fiw-ticker');
+    if (!titleEl || !tkSpan) return;
+    if (name) {
+      titleEl.textContent = name;
+      tkSpan.textContent  = ticker ? '(' + ticker + ')' : '';
+    } else {
+      titleEl.textContent = ticker || '종목을 선택하세요';
+      tkSpan.textContent  = '';
+    }
+    tkSpan.title = tkSpan.textContent;
+  }
+
   // ── 종목 데이터 전체 리셋 + 갱신 ────────────────────────────
-  function _resetWidget(ticker) {
+  function _resetWidget(ticker, name) {
     if (!ticker) return;
     _ticker = ticker;
+    _name   = name || '';
     _loaded = { finance: false, news: false, community: false };
 
-    // 헤더 즉시 갱신 (종목명은 재무 API 응답 후 추가 반영)
-    var title  = document.getElementById('fiw-title');
-    var tkSpan = document.getElementById('fiw-ticker');
-    if (title)  title.textContent  = '메인 차트 정보';
-    if (tkSpan) { tkSpan.textContent = '(' + ticker + ')'; tkSpan.title = '(' + ticker + ')'; }
+    // 헤더 즉시 갱신
+    _updateHeader(ticker, _name);
 
-    // 모든 패널에 즉시 로딩 스피너 표시 (반응성 확인)
+    // 모든 패널 로딩 스피너
     _loadingPanel('finance');
-    _loadingPanel('related');
+    _loadingPanel('news');
     _loadingPanel('community');
 
-    // 현재 활성 탭만 즉시 fetch, 나머지는 탭 전환 시 lazy 로드
-    _loaded = { finance: false, news: false, community: false };
+    // 활성 탭만 즉시 fetch, 나머지는 lazy
     _fetchTab(_activeTab, ticker);
   }
 
   // ── 디바운싱 래퍼 ─────────────────────────────────────────
-  // 종목 변경이 빠르게 연속될 때 마지막 종목의 요청만 실행
-  function _scheduleReset(ticker) {
+  function _scheduleReset(ticker, name) {
     if (_debounceTimer) clearTimeout(_debounceTimer);
-    // 즉시 헤더+스피너 업데이트 (시각 반응)
-    var tkSpan = document.getElementById('fiw-ticker');
-    if (tkSpan) { tkSpan.textContent = '(' + ticker + ') 로딩 중…'; }
-    // 활성 탭이 community/news이면 즉시 스피너 표시
-    if (_activeTab === 'community') {
-      _setPanel('community',
-        '<div class="fiw-loading" style="color:#526eff;">' +
-        '<div class="d2t-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 6px;"></div>' +
-        '데이터 로딩 중…</div>');
-    } else if (_activeTab === 'related') {
-      _setPanel('related', '<div class="fiw-loading">로딩 중…</div>');
-    }
+    // 즉시 헤더 반영
+    _updateHeader(ticker, name || '');
+    // 활성 탭 즉시 스피너
+    _loadingPanel(_activeTab);
     _debounceTimer = setTimeout(function () {
       _debounceTimer = null;
-      _resetWidget(ticker);
+      _resetWidget(ticker, name);
     }, _DEBOUNCE_MS);
   }
 
   // 외부 호출용 (하위 호환 유지)
-  window.fetchCommunityData = function (ticker) {
+  window.fetchCommunityData = function (ticker, name) {
     if (!ticker) return;
-    _scheduleReset(ticker);
+    _scheduleReset(ticker, name);
   };
 
   // KR 전용 — chart.js loadChart / loadResultChart 완료 시 호출됨
-  window._onFiwChartLoaded = function (ticker, market) {
+  // name: 유사종목 클릭 시 종목명을 즉시 헤더에 반영하기 위해 전달
+  window._onFiwChartLoaded = function (ticker, market, name) {
     if (market !== 'KR') {
       _collapseWidget();
       return;
@@ -1254,8 +1234,7 @@
     } else {
       _expandWidget();
     }
-    // 디바운싱으로 갱신 (차트 fetch 완료 후 호출되므로 짧은 대기)
-    _scheduleReset(ticker);
+    _scheduleReset(ticker, name || '');
   };
 })();
 </script>

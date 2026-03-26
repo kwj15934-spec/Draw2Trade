@@ -793,13 +793,11 @@
   window._getMatchPoints    = function () { return matchPoints; };
   window._getDrawNormalized = function () { return drawNormalized; };
 
-  function loadResultMatch(idx, ticker, periodFrom, periodTo) {
+  function loadResultMatch(idx, ticker, periodFrom, periodTo, name) {
     var data = _resultMatches[idx];
     matchPoints = (data && data.matchNormalized) ? data.matchNormalized : null;
-    // redraw()는 chart.js의 loadResultChart() 내부에서
-    // fetch 완료 후 requestAnimationFrame으로 호출됨.
-    // 여기서 즉시 호출하면 D2T.matchPeriodData가 아직 null이라
-    // 잘못된 좌표로 드로잉이 렌더링되는 버그 발생.
+    // name을 _onFiwChartLoaded로 전달해 상단 패널 헤더 즉시 반영
+    D2T._pendingResultName = name || '';
     D2T.loadResultChart(ticker, periodFrom || '', periodTo || '');
   }
 
@@ -1157,7 +1155,7 @@
 
         return (
           '<div class="result-card" ' +
-            'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\')" ' +
+            'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\',\'' + nm + '\')" ' +
             'title="클릭: 패턴 유사도 기반 수학적 검색 결과입니다. 투자 권유가 아닙니다.">' +
             '<div class="result-rank">' + (idx + 1 + rankOffset) + '</div>' +
             '<div class="result-info">' +
