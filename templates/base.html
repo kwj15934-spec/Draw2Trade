@@ -884,14 +884,24 @@
       box-sizing: border-box;
       width: 100%;
     }
-    /* 제목+티커 묶음 */
+    /* 제목+티커 묶음 — 2행 레이아웃 */
     #fiw-title-group {
       display: flex;
-      align-items: baseline;
-      gap: 4px;
+      flex-direction: column;
+      gap: 3px;
       min-width: 0;
       flex: 1;
       overflow: hidden;
+    }
+    .fiw-header-top {
+      display: flex;
+      align-items: center;
+    }
+    .fiw-header-bottom {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      min-width: 0;
     }
     #fiw-title {
       font-size: 13px;
@@ -900,6 +910,17 @@
       letter-spacing: 0.2px;
       white-space: nowrap;
       flex-shrink: 0;
+    }
+    .fiw-title-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+    .fiw-title-placeholder {
+      color: #3f3f46 !important;
+      font-weight: 400 !important;
+      font-size: 11px !important;
     }
     .fiw-ticker-sub {
       font-size: 10px;
@@ -1209,7 +1230,7 @@
 
     /* ── info-side-panel: 메인 패널 헤더 ────────────────── */
     .info-panel-ticker-header {
-      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      display: flex; flex-direction: column; gap: 2px;
       padding: 8px 12px 7px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       background: #1a1a1f;
@@ -1220,11 +1241,12 @@
       font-size: 9px; font-weight: 800; color: #3f3f52;
       letter-spacing: 0.8px; text-transform: uppercase;
       white-space: nowrap; flex-shrink: 0;
-      width: 100%; /* 레이블을 첫 줄에 단독 배치 */
-      margin-bottom: 2px;
+    }
+    .info-panel-ticker-row {
+      display: flex; align-items: baseline; gap: 6px; min-width: 0;
     }
     .info-panel-ticker-name {
-      font-size: 13px; font-weight: 800; color: #e2e4f0;
+      font-size: 15px; font-weight: 800; color: #ffffff;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .info-panel-ticker-code {
@@ -1233,8 +1255,8 @@
 
     /* ── floating-info-widget: 우측 패널 헤더 레이블 ──── */
     .fiw-header-label {
-      font-size: 9px; font-weight: 800; color: #1e3a3a;
-      letter-spacing: 0.8px; text-transform: uppercase;
+      font-size: 10px; font-weight: 800; color: #26a69a;
+      letter-spacing: 0.6px; text-transform: uppercase;
       white-space: nowrap; flex-shrink: 0;
     }
     /* 우측 패널 헤더 배경: 짙은 네이비 계열로 중앙 패널과 명확 구분 */

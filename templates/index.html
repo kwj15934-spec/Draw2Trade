@@ -338,14 +338,16 @@
       <!-- 패널 헤더: 메인 차트 종목명 -->
       <div class="info-panel-ticker-header">
         <span class="info-panel-header-label">메인 종목 정보</span>
-        <span class="info-panel-ticker-name" id="info-panel-name"></span>
-        <span class="info-panel-ticker-code" id="info-panel-code"></span>
+        <div class="info-panel-ticker-row">
+          <span class="info-panel-ticker-name" id="info-panel-name">—</span>
+          <span class="info-panel-ticker-code" id="info-panel-code"></span>
+        </div>
       </div>
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
         <button class="info-tab-btn active" data-itab="finance"  onclick="switchInfoTab('finance')">재무</button>
-        <button class="info-tab-btn"        data-itab="news"     onclick="switchInfoTab('news')">속보</button>
+        <button class="info-tab-btn"        data-itab="news"     onclick="switchInfoTab('news')">뉴스</button>
         <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
       </div>
 
@@ -392,10 +394,14 @@
       <div id="floating-info-widget">
         <div id="fiw-header">
           <div id="fiw-title-group">
-            <!-- 고정 레이블 + 선택 종목명 -->
-            <span class="fiw-header-label">유사 종목 비교</span>
-            <span id="fiw-title" class="fiw-title-label"></span>
-            <span id="fiw-ticker" class="fiw-ticker-sub"></span>
+            <div class="fiw-header-top">
+              <span class="fiw-header-label">유사 종목 비교</span>
+            </div>
+            <div class="fiw-header-bottom">
+              <!-- 종목 미선택: 안내 / 선택 후: 종목명 + 티커 -->
+              <span id="fiw-title" class="fiw-title-label">종목을 선택하세요</span>
+              <span id="fiw-ticker" class="fiw-ticker-sub"></span>
+            </div>
           </div>
           <div id="fiw-controls">
             <button id="fiw-btn-min" title="최소화">─</button>
@@ -1155,21 +1161,18 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── 헤더 즉시 갱신 ───────────────────────────────────────────
+  // ── 우측 패널 헤더 즉시 갱신 ────────────────────────────────
   function _updateHeader(ticker, name) {
     var titleEl = document.getElementById('fiw-title');
     var tkSpan  = document.getElementById('fiw-ticker');
     if (!titleEl || !tkSpan) return;
-    // 고정 레이블("유사 종목 비교") 다음에 종목명 표시
-    if (name) {
-      titleEl.textContent = name;
-      tkSpan.textContent  = ticker ? '(' + ticker + ')' : '';
-    } else if (ticker) {
-      titleEl.textContent = ticker;
-      tkSpan.textContent  = '';
+    if (name || ticker) {
+      titleEl.textContent = name || ticker;
+      titleEl.classList.remove('fiw-title-placeholder');
+      tkSpan.textContent  = (name && ticker) ? '(' + ticker + ')' : '';
     } else {
-      // 미선택 상태
-      titleEl.textContent = '';
+      titleEl.textContent = '종목을 선택하세요';
+      titleEl.classList.add('fiw-title-placeholder');
       tkSpan.textContent  = '';
     }
     tkSpan.title = tkSpan.textContent;
