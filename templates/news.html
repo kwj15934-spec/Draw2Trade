@@ -118,12 +118,13 @@
       background: var(--bg3); display: flex; align-items: center; justify-content: center;
     }
     .news-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    /* 폴백: SVG 아이콘 */
+    /* 폴백: 미니 캔들차트 SVG */
     .news-thumb-svg {
       display: flex; align-items: center; justify-content: center;
       width: 100%; height: 100%;
+      background: linear-gradient(135deg, #16161a 0%, #1a1a20 100%);
     }
-    .news-thumb-svg svg { width: 28px; height: 28px; opacity: 0.25; }
+    .news-thumb-svg svg { width: 52px; height: 38px; }
 
     .news-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
     .news-source-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -219,11 +220,23 @@
 
     /* 전일 거래대금 순위 행 */
     .vol-row {
-      display: flex; align-items: center; justify-content: space-between;
+      position: relative;
+      display: flex; align-items: center;
       padding: 7px 14px; cursor: pointer;
-      transition: background .1s; border-radius: 0;
+      transition: background .1s; overflow: hidden;
     }
     .vol-row:hover { background: rgba(255,255,255,.03); }
+
+    /* Progress Bar — 거래량 비율 배경 */
+    .vol-bar {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: rgba(38,166,154,.06);
+      transition: width .4s cubic-bezier(.4,0,.2,1);
+      pointer-events: none; z-index: 0;
+      border-right: 1px solid rgba(38,166,154,.12);
+    }
+    .vol-row > * { position: relative; z-index: 1; }
+
     .vol-rank {
       font-size: 10px; font-weight: 700; color: #52525b;
       width: 18px; flex-shrink: 0; text-align: right; margin-right: 10px;
@@ -235,19 +248,21 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .vol-code { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .vol-right { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; margin-left: 8px; gap: 2px; }
     .vol-pct {
       font-size: 12px; font-weight: 700;
       font-family: 'JetBrains Mono', monospace;
-      flex-shrink: 0; margin-left: 8px;
     }
     .pct-up   { color: #ef5350; }
     .pct-down { color: var(--teal); }
-    .pct-flat { color: #666; }
+    .pct-flat { color: #555; }
+    .vol-amt  { font-size: 9px; color: #52525b; font-family: 'JetBrains Mono', monospace; }
 
     /* 사이드바 기준 텍스트 */
     .sidebar-as-of {
-      font-size: 10px; color: #52525b;
-      padding: 6px 14px 2px; text-align: right;
+      font-size: 10px; color: #3f3f46;
+      padding: 8px 14px 4px; text-align: right;
+      border-top: 1px solid rgba(255,255,255,.03);
     }
 
     /* 빠른 이동 */
@@ -495,8 +510,26 @@
     renderPagination(totalPages);
   }
 
-  /* 썸네일 폴백 SVG */
-  var _FALLBACK_SVG = '<div class="news-thumb-svg"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="none"/><path d="M3 6h18M3 10h18M3 14h12M3 18h8" stroke="#d4d8e2" stroke-width="1.5" stroke-linecap="round"/></svg></div>';
+  /* 썸네일 폴백 — 미니 캔들차트 SVG (터미널 감성) */
+  var _FALLBACK_SVG = '<div class="news-thumb-svg">' +
+    '<svg width="52" height="38" viewBox="0 0 52 38" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      /* 캔들 1 — 하락 */
+      '<line x1="8" y1="4"  x2="8" y2="32" stroke="#26a69a" stroke-width="1" opacity="0.3"/>' +
+      '<rect x="5" y="10" width="6" height="14" rx="1" fill="#26a69a" opacity="0.45"/>' +
+      /* 캔들 2 — 상승 */
+      '<line x1="18" y1="8"  x2="18" y2="34" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
+      '<rect x="15" y="14" width="6" height="16" rx="1" fill="#ef5350" opacity="0.45"/>' +
+      /* 캔들 3 — 상승 강함 */
+      '<line x1="28" y1="6"  x2="28" y2="28" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
+      '<rect x="25" y="10" width="6" height="16" rx="1" fill="#ef5350" opacity="0.6"/>' +
+      /* 캔들 4 — 하락 */
+      '<line x1="38" y1="8"  x2="38" y2="30" stroke="#26a69a" stroke-width="1" opacity="0.3"/>' +
+      '<rect x="35" y="13" width="6" height="12" rx="1" fill="#26a69a" opacity="0.45"/>' +
+      /* 캔들 5 — 상승 */
+      '<line x1="48" y1="5"  x2="48" y2="26" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
+      '<rect x="45" y="8"  width="6" height="14" rx="1" fill="#ef5350" opacity="0.55"/>' +
+    '</svg>' +
+  '</div>';
 
   function renderCard(it) {
     var title  = esc(it.title || '');
@@ -623,54 +656,84 @@
     });
   }
 
+  /* 거래량 → 읽기 좋은 단위 문자열 */
+  function _fmtVol(v) {
+    if (!v || isNaN(v)) return '';
+    if (v >= 1e8) return (v / 1e8).toFixed(1) + '억주';
+    if (v >= 1e4) return (v / 1e4).toFixed(0) + '만주';
+    return v.toLocaleString() + '주';
+  }
+
   function renderSidebar() {
     var el = document.getElementById('sidebar-vol-list');
+
     if (_sidebarMkt === 'kr') {
       if (!_krVolData) {
         el.innerHTML = '<div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>';
         return;
       }
+      /* Progress Bar용 최대 거래량 계산 */
+      var maxVol = Math.max.apply(null, _krVolData.map(function (d) { return d.volume || 0; })) || 1;
+
       var html = '';
       _krVolData.forEach(function (item, i) {
-        var rate    = parseFloat((item.change_rate || '0').replace('+', ''));
-        var isUp    = rate > 0;
-        var isDown  = rate < 0;
-        var pctClass = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
-        var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
+        var rate      = parseFloat((item.change_rate || '0').replace('+', ''));
+        var isUp      = rate > 0, isDown = rate < 0;
+        var pctClass  = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
+        var pctText   = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
         var rankClass = i < 3 ? 'vol-rank top3' : 'vol-rank';
+        var barPct    = Math.round(((item.volume || 0) / maxVol) * 100);
+        var volLabel  = _fmtVol(item.volume);
+
         html += '<div class="vol-row" onclick="goChart(\'' + esc(item.ticker) + '\',\'KR\')">' +
+          '<div class="vol-bar" style="width:' + barPct + '%"></div>' +
           '<span class="' + rankClass + '">' + (i + 1) + '</span>' +
           '<div class="vol-info">' +
             '<div class="vol-name">' + esc(item.name || item.ticker) + '</div>' +
             '<div class="vol-code">' + esc(item.ticker) + '</div>' +
           '</div>' +
-          '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+          '<div class="vol-right">' +
+            '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+            (volLabel ? '<span class="vol-amt">' + volLabel + '</span>' : '') +
+          '</div>' +
         '</div>';
       });
       html += '<div class="sidebar-as-of">전일 종가 기준 거래량 순위</div>';
       el.innerHTML = html;
+
     } else {
       var anyLoaded = Object.keys(_usRates).length > 0;
       if (!anyLoaded) {
         el.innerHTML = '<div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>';
         return;
       }
+      /* US는 거래량 정보 없으므로 |등락률| 기준 bar */
+      var maxAbs = Math.max.apply(null,
+        _US_TOP.map(function (t) { return Math.abs(parseFloat(_usRates[t.ticker] || '0')); })
+      ) || 1;
+
       var html = '';
       _US_TOP.forEach(function (t, i) {
-        var rateRaw = _usRates[t.ticker];
-        var rate    = rateRaw != null ? parseFloat(rateRaw) : NaN;
-        var isUp    = !isNaN(rate) && rate > 0;
-        var isDown  = !isNaN(rate) && rate < 0;
+        var rateRaw  = _usRates[t.ticker];
+        var rate     = rateRaw != null ? parseFloat(rateRaw) : NaN;
+        var isUp     = !isNaN(rate) && rate > 0;
+        var isDown   = !isNaN(rate) && rate < 0;
         var pctClass = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
         var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
         var rankClass = i < 3 ? 'vol-rank top3' : 'vol-rank';
+        var barPct   = isNaN(rate) ? 0 : Math.round((Math.abs(rate) / maxAbs) * 100);
+        var barColor = isDown ? 'rgba(38,166,154,.06)' : 'rgba(239,83,80,.06)';
+
         html += '<div class="vol-row" onclick="goChart(\'' + esc(t.ticker) + '\',\'US\')">' +
+          '<div class="vol-bar" style="width:' + barPct + '%;background:' + barColor + ';border-right-color:' + (isDown ? 'rgba(38,166,154,.15)' : 'rgba(239,83,80,.15)') + '"></div>' +
           '<span class="' + rankClass + '">' + (i + 1) + '</span>' +
           '<div class="vol-info">' +
             '<div class="vol-name">' + esc(t.name) + '</div>' +
             '<div class="vol-code">' + esc(t.ticker) + '</div>' +
           '</div>' +
-          '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+          '<div class="vol-right">' +
+            '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+          '</div>' +
         '</div>';
       });
       html += '<div class="sidebar-as-of">S&amp;P 500 대형주 전일 등락률</div>';
