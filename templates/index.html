@@ -1101,25 +1101,27 @@
       .catch(function (e) { console.error('[D2T] news 조회 실패', ticker, e); _errorPanel('news', '뉴스 조회 실패'); });
   }
 
-  // 뉴스 URL 저장소 — onclick 인라인에서 접근 가능하도록 window에 노출
-  window._newsUrls = [];
-
   function _renderNews(items) {
-    window._newsUrls = items.slice(0, 12).map(function (it) { return it.url || ''; });
-    var html = items.slice(0, 12).map(function (it, idx) {
+    var html = items.slice(0, 12).map(function (it) {
+      // URL: url → link → originallink 순으로 탐색
+      var rawUrl = it.url || it.link || it.originallink || '';
       var title  = _esc(it.title || '');
-      var date   = _esc(it.date || '');
+      var date   = _esc(it.date  || '');
       var source = _esc(it.source || '뉴스');
       var desc   = it.description ? _esc(it.description) : '';
-      var click  = it.url ? ' onclick="window.open(window._newsUrls[' + idx + '],\'_blank\',\'noopener,noreferrer\')"' : '';
-      return '<div class="fiw-news-card"' + click + '>' +
+      // URL이 있으면 <a>, 없으면 <div> (클릭 이벤트 없음)
+      var tag    = rawUrl ? 'a' : 'div';
+      var attrs  = rawUrl
+        ? ' href="' + rawUrl + '" target="_blank" rel="noopener noreferrer"'
+        : '';
+      return '<' + tag + ' class="fiw-news-card"' + attrs + '>' +
         '<div class="fiw-news-title">' + title + '</div>' +
         (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
         '<div class="fiw-news-meta">' +
           '<span class="fiw-news-source">' + source + '</span>' +
           (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
         '</div>' +
-      '</div>';
+      '</' + tag + '>';
     }).join('');
     _setPanel('news', html);
   }
