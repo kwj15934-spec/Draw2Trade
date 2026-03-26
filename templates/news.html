@@ -14,14 +14,16 @@
       --teal:   #26a69a;
       --orange: #ff6b35;
       --red:    #ef5350;
-      --blue:   #26a69a;
+      --blue:   #5b8def;
       --text:   #d4d8e2;
       --muted:  #7a8499;
       --border: #27272a;
     }
-    html, body { height: 100%; background: var(--bg); color: var(--text);
+    html, body {
+      height: 100%; background: var(--bg); color: var(--text);
       font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, sans-serif;
-      font-size: 13px; line-height: 1.5; }
+      font-size: 13px; line-height: 1.5;
+    }
 
     /* ── 네비 ─────────────────────────────────── */
     .d2t-nav {
@@ -60,18 +62,18 @@
     .nav-link:hover { color: #d4d8e2 !important; text-decoration: none !important; border-bottom-color: #3f3f46 !important; }
     .nav-link.active { color: var(--teal) !important; border-bottom: 2px solid var(--teal) !important; font-weight: 700 !important; }
 
-    /* ── 페이지 레이아웃 ──────────────────────── */
+    /* ── 레이아웃 ──────────────────────────────── */
     .page-layout {
-      max-width: 1080px; margin: 0 auto;
+      max-width: 1100px; margin: 0 auto;
       display: grid; grid-template-columns: 1fr 300px;
-      gap: 24px; padding: 28px 20px 60px;
+      gap: 28px; padding: 28px 20px 60px;
     }
-    @media (max-width: 760px) {
+    @media (max-width: 800px) {
       .page-layout { grid-template-columns: 1fr; }
       .news-sidebar { display: none; }
     }
 
-    /* ── 상단 헤더 ────────────────────────────── */
+    /* ── 페이지 헤더 ───────────────────────────── */
     .page-header { margin-bottom: 20px; }
     .page-header h1 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
     .page-header p  { font-size: 12px; color: var(--muted); }
@@ -79,7 +81,7 @@
     /* ── 서브탭 ───────────────────────────────── */
     .news-tabs {
       display: flex; gap: 0; border-bottom: 1px solid var(--border);
-      margin-bottom: 20px; overflow-x: auto; scrollbar-width: none;
+      margin-bottom: 16px; overflow-x: auto; scrollbar-width: none;
     }
     .news-tabs::-webkit-scrollbar { display: none; }
     .news-tab {
@@ -91,73 +93,69 @@
     .news-tab:hover  { color: #a0a8b8; }
 
     /* ── 검색바 ───────────────────────────────── */
-    .news-search-row {
-      display: flex; gap: 8px; margin-bottom: 18px;
-    }
+    .news-search-row { display: flex; gap: 8px; margin-bottom: 18px; }
     .news-search-input {
       flex: 1; background: var(--bg3); border: 1px solid var(--border);
       border-radius: 7px; padding: 8px 12px; color: var(--text);
-      font-size: 12px; outline: none;
-      transition: border-color .15s;
+      font-size: 12px; outline: none; transition: border-color .15s;
     }
     .news-search-input:focus { border-color: var(--teal); }
     .news-search-input::placeholder { color: var(--muted); }
 
     /* ── 뉴스 카드 ────────────────────────────── */
     .news-list { display: flex; flex-direction: column; gap: 0; }
-
     .news-card {
       display: flex; gap: 14px; padding: 14px 0;
       border-bottom: 1px solid rgba(255,255,255,.05);
-      text-decoration: none; color: inherit;
-      transition: background .1s;
+      text-decoration: none; color: inherit; transition: background .1s;
+      border-radius: 8px;
     }
-    .news-card:hover { background: rgba(255,255,255,.02); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
-    .news-card:first-child { padding-top: 0; }
+    .news-card:hover { background: rgba(255,255,255,.025); padding-left: 8px; padding-right: 8px; }
 
     .news-thumb {
-      flex-shrink: 0; width: 80px; height: 60px;
+      flex-shrink: 0; width: 80px; height: 62px;
       border-radius: 7px; overflow: hidden;
       background: var(--bg3); display: flex; align-items: center; justify-content: center;
     }
     .news-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .news-thumb-placeholder { font-size: 22px; color: #444; }
+    /* 폴백: SVG 아이콘 */
+    .news-thumb-svg {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+    }
+    .news-thumb-svg svg { width: 28px; height: 28px; opacity: 0.25; }
 
     .news-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-
-    .news-source-row {
-      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-    }
+    .news-source-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .news-source { font-size: 10px; font-weight: 700; color: var(--muted); }
     .news-market-badge {
       font-size: 9px; font-weight: 700; padding: 1px 5px;
       border-radius: 3px; letter-spacing: 0.3px;
     }
     .badge-kr { background: rgba(38,166,154,.15); color: var(--teal); }
-    .badge-us { background: rgba(38,100,200,.15); color: #5b8def; }
+    .badge-us { background: rgba(91,141,239,.15); color: var(--blue); }
 
     .news-title {
-      font-size: 13px; font-weight: 600; color: #d4d8e2;
-      line-height: 1.45; display: -webkit-box;
-      -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      font-size: 13px; font-weight: 600; color: #d4d8e2; line-height: 1.45;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
     .news-card:hover .news-title { color: #4dd0c4; }
 
-    .news-meta-row {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px;
-    }
+    .news-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
     .news-time { font-size: 10px; color: var(--muted); }
 
+    /* 종목 배지 */
     .news-stock-chips { display: flex; gap: 4px; flex-wrap: wrap; }
     .news-chip {
       display: inline-flex; align-items: center; gap: 3px;
-      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      font-size: 10px; padding: 2px 7px; border-radius: 4px;
       cursor: pointer; transition: opacity .15s; border: 1px solid transparent;
+      font-weight: 600; letter-spacing: 0.2px;
     }
     .news-chip:hover { opacity: 0.75; }
     .chip-up   { background: rgba(239,83,80,.12); color: #ef5350; border-color: rgba(239,83,80,.25); }
-    .chip-down { background: rgba(38,166,154,.1); color: var(--teal); border-color: rgba(38,166,154,.2); }
-    .chip-flat { background: rgba(120,120,140,.12); color: #888; border-color: rgba(120,120,140,.2); }
+    .chip-down { background: rgba(38,166,154,.10); color: var(--teal); border-color: rgba(38,166,154,.2); }
+    .chip-flat { background: rgba(120,120,140,.12); color: #9aa; border-color: rgba(120,120,140,.2); }
 
     /* ── 로딩/빈 상태 ────────────────────────── */
     .news-empty {
@@ -172,33 +170,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── 사이드바 ─────────────────────────────── */
-    .news-sidebar { display: flex; flex-direction: column; gap: 16px; }
-
-    .sidebar-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 16px;
-    }
-    .sidebar-card-title {
-      font-size: 11px; font-weight: 700; color: var(--muted);
-      letter-spacing: .8px; text-transform: uppercase; margin-bottom: 12px;
-    }
-
-    /* 인기 종목 */
-    .hot-ticker-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.04);
-    }
-    .hot-ticker-row:last-child { border-bottom: none; }
-    .hot-ticker-name { font-size: 12px; color: #d4d8e2; font-weight: 600; }
-    .hot-ticker-code { font-size: 10px; color: var(--muted); margin-top: 1px; }
-    .hot-ticker-pct {
-      font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-    }
-    .pct-up { color: #ef5350; }
-    .pct-down { color: var(--teal); }
-
-
     /* ── 페이지네이션 ─────────────────────────── */
     .news-pagination {
       display: flex; justify-content: center; gap: 6px;
@@ -209,11 +180,89 @@
       background: none; color: var(--muted); font-size: 12px; cursor: pointer;
       transition: all .15s;
     }
-    .page-btn:hover, .page-btn.active { border-color: var(--teal); color: var(--teal); background: rgba(38,166,154,.08); }
+    .page-btn:hover, .page-btn.active {
+      border-color: var(--teal); color: var(--teal); background: rgba(38,166,154,.08);
+    }
+
+    /* ── 사이드바 ─────────────────────────────── */
+    .news-sidebar { display: flex; flex-direction: column; gap: 16px; }
+    .sidebar-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .sidebar-card-head {
+      padding: 12px 14px 0;
+    }
+    .sidebar-card-title {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      letter-spacing: .8px; text-transform: uppercase; margin-bottom: 2px;
+    }
+    .sidebar-card-sub {
+      font-size: 10px; color: #52525b; margin-bottom: 10px;
+    }
+    /* 사이드바 KR/US 탭 */
+    .sidebar-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      margin: 0;
+    }
+    .sidebar-tab {
+      flex: 1; padding: 7px 0; font-size: 11px; font-weight: 700;
+      color: var(--muted); background: none; border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color .15s, border-color .15s;
+      text-align: center;
+    }
+    .sidebar-tab.active { color: #d4d8e2; border-bottom-color: var(--teal); }
+    .sidebar-tab:hover  { color: #a0a8b8; }
+
+    .sidebar-body { padding: 4px 0 8px; }
+
+    /* 전일 거래대금 순위 행 */
+    .vol-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px; cursor: pointer;
+      transition: background .1s; border-radius: 0;
+    }
+    .vol-row:hover { background: rgba(255,255,255,.03); }
+    .vol-rank {
+      font-size: 10px; font-weight: 700; color: #52525b;
+      width: 18px; flex-shrink: 0; text-align: right; margin-right: 10px;
+    }
+    .vol-rank.top3 { color: var(--teal); }
+    .vol-info { flex: 1; min-width: 0; }
+    .vol-name {
+      font-size: 12px; font-weight: 600; color: #d4d8e2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vol-code { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .vol-pct {
+      font-size: 12px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0; margin-left: 8px;
+    }
+    .pct-up   { color: #ef5350; }
+    .pct-down { color: var(--teal); }
+    .pct-flat { color: #666; }
+
+    /* 사이드바 기준 텍스트 */
+    .sidebar-as-of {
+      font-size: 10px; color: #52525b;
+      padding: 6px 14px 2px; text-align: right;
+    }
+
+    /* 빠른 이동 */
+    .quick-links { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .quick-link {
+      font-size: 12px; color: var(--muted); text-decoration: none;
+      padding: 6px 8px; background: var(--bg3); border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .quick-link:hover { color: var(--teal); background: rgba(38,166,154,.07); }
+    .quick-link.primary { color: var(--teal); background: rgba(38,166,154,.07); }
 
     footer {
       padding: 32px 20px; text-align: center; color: var(--muted); font-size: 11px;
-      border-top: 1px solid var(--border); max-width: 1080px; margin: 0 auto;
+      border-top: 1px solid var(--border); max-width: 1100px; margin: 0 auto;
     }
     footer a { color: var(--muted); text-decoration: none; }
     footer a:hover { color: var(--teal); }
@@ -247,7 +296,7 @@
   <div class="news-main">
     <div class="page-header">
       <h1>시장 뉴스</h1>
-      <p>국내·해외 주요 종목 뉴스를 실시간으로 확인하세요.</p>
+      <p>국내·해외 주요 종목 뉴스를 확인하세요.</p>
     </div>
 
     <!-- 서브탭 -->
@@ -260,15 +309,13 @@
 
     <!-- 검색 -->
     <div class="news-search-row">
-      <input class="news-search-input" id="news-search" type="text" placeholder="종목명 또는 키워드 검색…" oninput="onSearchInput()">
+      <input class="news-search-input" id="news-search" type="text"
+             placeholder="종목명 또는 키워드 검색…" oninput="onSearchInput()">
     </div>
 
     <!-- 뉴스 목록 -->
     <div class="news-list" id="news-list">
-      <div class="news-empty">
-        <div class="news-spinner"></div>
-        뉴스를 불러오는 중입니다…
-      </div>
+      <div class="news-empty"><div class="news-spinner"></div>뉴스를 불러오는 중입니다…</div>
     </div>
 
     <div class="news-pagination" id="news-pagination"></div>
@@ -277,22 +324,32 @@
   <!-- ── 우측: 사이드바 ─────────────────────────────── -->
   <aside class="news-sidebar">
 
+    <!-- 전일 거래대금 순위 -->
     <div class="sidebar-card">
-      <div class="sidebar-card-title">인기 종목</div>
-      <div id="hot-tickers">
-        <div class="news-empty" style="padding:20px 0;font-size:12px;">로딩 중…</div>
+      <div class="sidebar-card-head">
+        <div class="sidebar-card-title">전일 거래대금 TOP 10</div>
+        <div class="sidebar-card-sub" id="sidebar-asof-label">전일 종가 기준</div>
+      </div>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-mkt="kr" onclick="switchSidebarTab('kr')">국내 KR</button>
+        <button class="sidebar-tab"        data-mkt="us" onclick="switchSidebarTab('us')">해외 US</button>
+      </div>
+      <div class="sidebar-body" id="sidebar-vol-list">
+        <div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>
       </div>
     </div>
 
+    <!-- 빠른 이동 -->
     <div class="sidebar-card">
-      <div class="sidebar-card-title">빠른 이동</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <a href="/app"     style="font-size:12px;color:var(--teal);text-decoration:none;padding:6px 8px;background:rgba(38,166,154,.07);border-radius:6px;">📈 차트 앱으로</a>
-        <a href="/feed"    style="font-size:12px;color:var(--muted);text-decoration:none;padding:6px 8px;background:var(--bg3);border-radius:6px;">📊 시장 피드</a>
-        <a href="/notices" style="font-size:12px;color:var(--muted);text-decoration:none;padding:6px 8px;background:var(--bg3);border-radius:6px;">📢 공지사항</a>
+      <div class="sidebar-card-head">
+        <div class="sidebar-card-title" style="margin-bottom:0;">바로가기</div>
+      </div>
+      <div class="quick-links">
+        <a href="/app"     class="quick-link primary">차트 앱으로 →</a>
+        <a href="/feed"    class="quick-link">시장 피드</a>
+        <a href="/notices" class="quick-link">공지사항</a>
       </div>
     </div>
-
 
   </aside>
 </div>
@@ -310,25 +367,39 @@
 (function () {
   'use strict';
 
-  var _tab      = 'all';
-  var _query    = '';
-  var _page     = 1;
-  var _perPage  = 15;
-  var _allItems = [];    // 전체 캐시 (KR + US 통합)
+  /* ════════════════════════════════════════════
+     뉴스 피드
+     ════════════════════════════════════════════ */
+  var _tab     = 'all';
+  var _query   = '';
+  var _page    = 1;
+  var _perPage = 15;
+  var _allItems = [];
   var _krItems  = [];
   var _usItems  = [];
-  var _hotTickers = [
-    { name: '삼성전자', code: '005930', pct: null, market: 'KR' },
-    { name: 'SK하이닉스', code: '000660', pct: null, market: 'KR' },
-    { name: 'AAPL', code: 'AAPL', pct: null, market: 'US' },
-    { name: 'NVDA', code: 'NVDA', pct: null, market: 'US' },
-    { name: 'TSLA', code: 'TSLA', pct: null, market: 'US' },
+
+  // 전일 등락률 캐시 { ticker: "+1.23" }
+  var _rateCache      = {};
+  var _rateNeedsFetch = true;
+
+  /* KR: 섹터별 대표 종목 (삼성 편중 해소) */
+  var _KR_SYMBOLS = [
+    '005930', // 삼성전자
+    '000660', // SK하이닉스
+    '035420', // NAVER
+    '035720', // 카카오
+    '005380', // 현대차
+    '051910', // LG화학
+    '006400', // 삼성SDI
+    '028260', // 삼성물산
+    '105560', // KB금융
+    '055550', // 신한지주
   ];
 
-  /* ── 뉴스 fetch ─────────────────────────────── */
-  var _KR_SYMBOLS = ['005930', '000660', '035420', '035720', '005380'];
-  var _US_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'META', 'GOOGL'];
+  /* US: S&P 500 대형주 */
+  var _US_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'META', 'GOOGL', 'MSFT', 'AMZN', 'JPM'];
 
+  /* ── 뉴스 fetch ─────────────────────────────── */
   function _fetchAll() {
     setLoading();
     var fetches = _KR_SYMBOLS.concat(_US_SYMBOLS).map(function (sym) {
@@ -347,7 +418,6 @@
           if (isUs) _usItems.push(entry); else _krItems.push(entry);
         });
       });
-      // 날짜 파싱으로 병합 정렬
       _allItems = _krItems.concat(_usItems).sort(function (a, b) {
         return _parseDate(b.date) - _parseDate(a.date);
       });
@@ -358,15 +428,38 @@
 
   function _parseDate(s) {
     if (!s) return 0;
-    var m = s.match(/(\d{4})[.\-](\d{2})[.\-](\d{2})/);
+    var m = s.match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
     if (!m) return 0;
     return new Date(m[1] + '-' + m[2] + '-' + m[3]).getTime();
   }
 
+  /* ── 전일 등락률 fetch (scanner/rise API 사용) ── */
+  function _fetchRates(symbols) {
+    // scanner/rise에서 이미 로드된 데이터가 있으면 재활용
+    symbols.forEach(function (sym) {
+      if (_rateCache[sym] !== undefined) return;
+      // 아직 캐시 없으면 scanner/rise에서 일괄 로드 (첫 호출 시 한 번만)
+      _rateCache[sym] = null; // 중복 요청 방지용 플레이스홀더
+    });
+    if (_rateNeedsFetch) {
+      _rateNeedsFetch = false;
+      fetch('/api/v1/stock/market/scanner/rise?top_n=50')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.items) return;
+          d.items.forEach(function (item) {
+            _rateCache[item.ticker] = item.change_rate || null;
+          });
+          render();
+        })
+        .catch(function () {});
+    }
+  }
+
   /* ── 렌더 ───────────────────────────────────── */
   function getFiltered() {
-    var src = _tab === 'kr' ? _krItems
-            : _tab === 'us' ? _usItems
+    var src = _tab === 'kr'  ? _krItems
+            : _tab === 'us'  ? _usItems
             : _tab === 'hot' ? _allItems.slice().sort(function (a, b) { return (b.agree || 0) - (a.agree || 0); })
             : _allItems;
     if (_query) {
@@ -380,11 +473,17 @@
   }
 
   function render() {
-    var items = getFiltered();
-    var total = items.length;
+    var items      = getFiltered();
+    var total      = items.length;
     var totalPages = Math.max(1, Math.ceil(total / _perPage));
     if (_page > totalPages) _page = totalPages;
     var sliced = items.slice((_page - 1) * _perPage, _page * _perPage);
+
+    // 등락률 미리 fetch (KR만)
+    var krSyms = sliced.filter(function (it) { return it._market === 'KR'; })
+                       .map(function (it) { return it._symbol; })
+                       .filter(function (s, i, arr) { return arr.indexOf(s) === i; });
+    _fetchRates(krSyms);
 
     var listEl = document.getElementById('news-list');
     if (!sliced.length) {
@@ -396,33 +495,47 @@
     renderPagination(totalPages);
   }
 
+  /* 썸네일 폴백 SVG */
+  var _FALLBACK_SVG = '<div class="news-thumb-svg"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="none"/><path d="M3 6h18M3 10h18M3 14h12M3 18h8" stroke="#d4d8e2" stroke-width="1.5" stroke-linecap="round"/></svg></div>';
+
   function renderCard(it) {
     var title  = esc(it.title || '');
     var source = esc(it.source || it.type || '뉴스');
     var date   = esc(it.date || '');
-    var url    = esc(it.url || '#');
+    var url    = it.url || '#';
     var sym    = it._symbol || '';
     var mkt    = it._market || 'KR';
 
+    /* 썸네일 — 폴백 처리 */
     var thumbHtml = it.thumbnail
-      ? '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'<span class=news-thumb-placeholder>📰</span>\'">'
-      : '<span class="news-thumb-placeholder">📰</span>';
+      ? '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'' + _FALLBACK_SVG.replace(/'/g, "\\'") + '\'">'
+      : _FALLBACK_SVG;
 
     var mktBadge = mkt === 'US'
       ? '<span class="news-market-badge badge-us">US</span>'
       : '<span class="news-market-badge badge-kr">KR</span>';
 
-    var chip = sym
-      ? '<span class="news-chip chip-flat" onclick="event.preventDefault();goChart(\'' + esc(sym) + '\',\'' + mkt + '\')">' + esc(sym) + '</span>'
-      : '';
+    /* 종목 배지 + 등락률 */
+    var chip = '';
+    if (sym) {
+      var rate = _rateCache[sym];
+      var chipClass = 'chip-flat';
+      var rateText  = '';
+      if (rate != null) {
+        var rateNum = parseFloat(rate);
+        if (!isNaN(rateNum)) {
+          chipClass = rateNum > 0 ? 'chip-up' : rateNum < 0 ? 'chip-down' : 'chip-flat';
+          rateText  = ' ' + (rateNum > 0 ? '+' : '') + rateNum.toFixed(2) + '%';
+        }
+      }
+      chip = '<span class="news-chip ' + chipClass + '" onclick="event.preventDefault();goChart(\'' +
+             esc(sym) + '\',\'' + mkt + '\')">' + esc(sym) + rateText + '</span>';
+    }
 
-    return '<a class="news-card" href="' + url + '" target="_blank" rel="noopener">' +
+    return '<a class="news-card" href="' + esc(url) + '" target="_blank" rel="noopener">' +
       '<div class="news-thumb">' + thumbHtml + '</div>' +
       '<div class="news-body">' +
-        '<div class="news-source-row">' +
-          '<span class="news-source">' + source + '</span>' +
-          mktBadge +
-        '</div>' +
+        '<div class="news-source-row"><span class="news-source">' + source + '</span>' + mktBadge + '</div>' +
         '<div class="news-title">' + title + '</div>' +
         '<div class="news-meta-row">' +
           '<span class="news-time">' + date + '</span>' +
@@ -452,58 +565,162 @@
     document.getElementById('news-pagination').innerHTML = '';
   }
 
-  /* ── 인기 종목 사이드바 ─────────────────────── */
-  function renderHotTickers() {
-    var el = document.getElementById('hot-tickers');
-    el.innerHTML = _hotTickers.map(function (t) {
-      var pct = t.pct;
-      var pctHtml = pct != null
-        ? '<span class="hot-ticker-pct ' + (pct >= 0 ? 'pct-up' : 'pct-down') + '">' +
-          (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</span>'
-        : '<span class="hot-ticker-pct" style="color:#555">—</span>';
-      return '<div class="hot-ticker-row" style="cursor:pointer" onclick="goChart(\'' + esc(t.code) + '\',\'' + t.market + '\')">' +
-        '<div>' +
-          '<div class="hot-ticker-name">' + esc(t.name) + '</div>' +
-          '<div class="hot-ticker-code">' + esc(t.code) + '</div>' +
-        '</div>' +
-        pctHtml +
-      '</div>';
-    }).join('');
+  /* ════════════════════════════════════════════
+     사이드바 — 전일 거래대금 TOP 10
+     ════════════════════════════════════════════ */
+  var _sidebarMkt = 'kr';
+
+  /* US 고정 대형주 목록 (거래대금 순위 API 없음 → finance API로 등락률만 조회) */
+  var _US_TOP = [
+    { ticker: 'NVDA',  name: 'NVIDIA' },
+    { ticker: 'AAPL',  name: 'Apple' },
+    { ticker: 'TSLA',  name: 'Tesla' },
+    { ticker: 'MSFT',  name: 'Microsoft' },
+    { ticker: 'AMZN',  name: 'Amazon' },
+    { ticker: 'META',  name: 'Meta' },
+    { ticker: 'GOOGL', name: 'Alphabet' },
+    { ticker: 'JPM',   name: 'JPMorgan' },
+    { ticker: 'AMD',   name: 'AMD' },
+    { ticker: 'NFLX',  name: 'Netflix' },
+  ];
+  var _krVolData = null;
+  var _usRates   = {};   // ticker → change_rate
+
+  function switchSidebarTab(mkt) {
+    _sidebarMkt = mkt;
+    document.querySelectorAll('.sidebar-tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mkt === mkt);
+    });
+    renderSidebar();
+  }
+  window.switchSidebarTab = switchSidebarTab;
+
+  /* KR 거래량 순위 fetch */
+  function _fetchKrVol() {
+    fetch('/api/v1/stock/market/scanner/volume?top_n=10')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.items && d.items.length) {
+          _krVolData = d.items;
+          if (_sidebarMkt === 'kr') renderSidebar();
+        }
+      })
+      .catch(function () {});
   }
 
-  /* ── 유틸 ───────────────────────────────────── */
+  /* US 종목 finance fetch (등락률 수집) */
+  function _fetchUsRates() {
+    _US_TOP.forEach(function (t) {
+      fetch('/api/v1/stock/finance/' + encodeURIComponent(t.ticker))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) return;
+          var rate = d.change_rate || (d.price_info && d.price_info.change_rate) || null;
+          _usRates[t.ticker] = rate || null;
+          if (_sidebarMkt === 'us') renderSidebar();
+        })
+        .catch(function () { _usRates[t.ticker] = null; });
+    });
+  }
+
+  function renderSidebar() {
+    var el = document.getElementById('sidebar-vol-list');
+    if (_sidebarMkt === 'kr') {
+      if (!_krVolData) {
+        el.innerHTML = '<div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>';
+        return;
+      }
+      var html = '';
+      _krVolData.forEach(function (item, i) {
+        var rate    = parseFloat((item.change_rate || '0').replace('+', ''));
+        var isUp    = rate > 0;
+        var isDown  = rate < 0;
+        var pctClass = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
+        var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
+        var rankClass = i < 3 ? 'vol-rank top3' : 'vol-rank';
+        html += '<div class="vol-row" onclick="goChart(\'' + esc(item.ticker) + '\',\'KR\')">' +
+          '<span class="' + rankClass + '">' + (i + 1) + '</span>' +
+          '<div class="vol-info">' +
+            '<div class="vol-name">' + esc(item.name || item.ticker) + '</div>' +
+            '<div class="vol-code">' + esc(item.ticker) + '</div>' +
+          '</div>' +
+          '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+        '</div>';
+      });
+      html += '<div class="sidebar-as-of">전일 종가 기준 거래량 순위</div>';
+      el.innerHTML = html;
+    } else {
+      var anyLoaded = Object.keys(_usRates).length > 0;
+      if (!anyLoaded) {
+        el.innerHTML = '<div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>';
+        return;
+      }
+      var html = '';
+      _US_TOP.forEach(function (t, i) {
+        var rateRaw = _usRates[t.ticker];
+        var rate    = rateRaw != null ? parseFloat(rateRaw) : NaN;
+        var isUp    = !isNaN(rate) && rate > 0;
+        var isDown  = !isNaN(rate) && rate < 0;
+        var pctClass = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
+        var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
+        var rankClass = i < 3 ? 'vol-rank top3' : 'vol-rank';
+        html += '<div class="vol-row" onclick="goChart(\'' + esc(t.ticker) + '\',\'US\')">' +
+          '<span class="' + rankClass + '">' + (i + 1) + '</span>' +
+          '<div class="vol-info">' +
+            '<div class="vol-name">' + esc(t.name) + '</div>' +
+            '<div class="vol-code">' + esc(t.ticker) + '</div>' +
+          '</div>' +
+          '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
+        '</div>';
+      });
+      html += '<div class="sidebar-as-of">S&amp;P 500 대형주 전일 등락률</div>';
+      el.innerHTML = html;
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     공통 유틸 & 공개 함수
+     ════════════════════════════════════════════ */
   function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  /* ── 공개 핸들러 ─────────────────────────────── */
-  window.goPage = function (p) { _page = p; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-
+  /* 차트 앱 이동 — market 파라미터 정확히 전달 */
   window.goChart = function (sym, mkt) {
-    var market = mkt === 'US' ? 'US' : 'KR';
+    var market = (mkt || '').toUpperCase() === 'US' ? 'US' : 'KR';
     window.location.href = '/app?symbol=' + encodeURIComponent(sym) + '&market=' + market;
+  };
+
+  window.goPage = function (p) {
+    _page = p;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   window.onSearchInput = function () {
     _query = document.getElementById('news-search').value.trim();
-    _page = 1;
+    _page  = 1;
     render();
   };
 
-  /* ── 탭 이벤트 ───────────────────────────────── */
+  /* 탭 이벤트 */
   document.querySelectorAll('.news-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.news-tab').forEach(function (b) { b.classList.remove('active'); });
       this.classList.add('active');
-      _tab = this.dataset.tab;
+      _tab  = this.dataset.tab;
       _page = 1;
       render();
     });
   });
 
-  /* ── 초기 로드 ───────────────────────────────── */
-  renderHotTickers();
+  /* ── 초기 로드 ────────────────────────────── */
   _fetchAll();
+  _fetchKrVol();
+  _fetchUsRates();
+
 })();
 </script>
 
