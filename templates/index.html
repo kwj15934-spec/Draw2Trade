@@ -335,24 +335,10 @@
     <!-- 패널 내부 (접었을 때 숨김) -->
     <div class="info-panel-body">
 
-      <!-- ══════════════════════════════════════════════
-           실시간 주도주 위젯 (시간외 등락률 상위 5종목)
-           15:30~18:05 시간대에만 표시됨
-           ══════════════════════════════════════════════ -->
-      <div id="overtime-leaders-widget" class="overtime-widget" style="display:none;">
-        <div class="overtime-widget-header">
-          <span class="overtime-widget-title">⚡ 시간외 주도주</span>
-          <span id="overtime-widget-time" class="overtime-widget-time"></span>
-          <button class="overtime-widget-refresh" onclick="refreshOvertimeLeaders()" title="새로고침">↻</button>
-        </div>
-        <div id="overtime-leaders-list" class="overtime-leaders-list">
-          <div class="info-empty" style="padding:10px 0;">불러오는 중...</div>
-        </div>
-      </div>
-
       <!-- 패널 헤더: 메인 차트 종목명 -->
       <div class="info-panel-ticker-header">
-        <span class="info-panel-ticker-name" id="info-panel-name">메인 차트</span>
+        <span class="info-panel-header-label">메인 종목 정보</span>
+        <span class="info-panel-ticker-name" id="info-panel-name"></span>
         <span class="info-panel-ticker-code" id="info-panel-code"></span>
       </div>
 
@@ -406,8 +392,9 @@
       <div id="floating-info-widget">
         <div id="fiw-header">
           <div id="fiw-title-group">
-            <!-- 종목 미선택 시: 안내 문구 / 선택 후: 종목명 -->
-            <span id="fiw-title" class="fiw-title-label">종목을 선택하세요</span>
+            <!-- 고정 레이블 + 선택 종목명 -->
+            <span class="fiw-header-label">유사 종목 비교</span>
+            <span id="fiw-title" class="fiw-title-label"></span>
             <span id="fiw-ticker" class="fiw-ticker-sub"></span>
           </div>
           <div id="fiw-controls">
@@ -1168,16 +1155,21 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── 헤더 즉시 갱신 (코드만 알 때 / 이름 있을 때 모두) ──────
+  // ── 헤더 즉시 갱신 ───────────────────────────────────────────
   function _updateHeader(ticker, name) {
     var titleEl = document.getElementById('fiw-title');
     var tkSpan  = document.getElementById('fiw-ticker');
     if (!titleEl || !tkSpan) return;
+    // 고정 레이블("유사 종목 비교") 다음에 종목명 표시
     if (name) {
       titleEl.textContent = name;
       tkSpan.textContent  = ticker ? '(' + ticker + ')' : '';
+    } else if (ticker) {
+      titleEl.textContent = ticker;
+      tkSpan.textContent  = '';
     } else {
-      titleEl.textContent = ticker || '종목을 선택하세요';
+      // 미선택 상태
+      titleEl.textContent = '';
       tkSpan.textContent  = '';
     }
     tkSpan.title = tkSpan.textContent;
@@ -1456,8 +1448,8 @@ function _escHtml(s) {
   function _updateInfoPanelHeader(ticker, name) {
     var nameEl = document.getElementById('info-panel-name');
     var codeEl = document.getElementById('info-panel-code');
-    if (nameEl) nameEl.textContent = name || ticker || '메인 차트';
-    if (codeEl) codeEl.textContent = name && ticker ? '(' + ticker + ')' : '';
+    if (nameEl) nameEl.textContent = name || ticker || '';
+    if (codeEl) codeEl.textContent = name && ticker ? '(' + ticker + ')' : (ticker ? ticker : '');
   }
 
   // ── 재무 데이터 로드 ─────────────────────────────────────────────
@@ -1620,15 +1612,14 @@ function _escHtml(s) {
 })();
 </script>
 
-<!-- ── 시간외 주도주 위젯 JS ─────────────────────────────────── -->
+<!-- 시간외 주도주 위젯 제거됨 -->
 <script>
 (function () {
   'use strict';
 
-  var _OT_INTERVAL_MS = 120000; // 2분 자동 갱신
+  var _OT_INTERVAL_MS = 120000;
   var _otTimer = null;
 
-  // 시간외 단일가 활성 시간대 판별 (KST 15:30~18:05)
   function _isOvertimeHours() {
     try {
       var now = new Date();

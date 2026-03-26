@@ -562,8 +562,9 @@
         D2T.originState = null;
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn) backBtn.style.display = 'none';
+        // 메인 차트 로드: 중앙 패널(info-side-panel)만 갱신
         if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR');
-        if (typeof window._onFiwChartLoaded === 'function') window._onFiwChartLoaded(ticker, D2T.market || 'KR');
+        // 메인 로드 시에는 우측 패널(floating-info-widget) 건드리지 않음
       })
       .catch(function (e) {
         if (label) label.textContent = '로드 실패: ' + (e.message || e);
@@ -828,11 +829,8 @@
         // 3) 헤더바 마지막 캔들 종가/등락률 즉시 표시
         _initHeaderBar(displayCandles);
 
-        // 4) 웹소켓 재구독 + 체결/호가창 초기화 + REST 초기 데이터 로드
-        if (typeof window._onChartLoaded === 'function') {
-          window._onChartLoaded(ticker, D2T.market || 'KR');
-        }
-        // 5) 플로팅 위젯 종목 동기화 (유사 종목 클릭 시 위젯도 해당 종목으로 갱신)
+        // 4) 유사종목 결과 로드: 우측 패널(floating-info-widget)만 갱신
+        //    중앙 패널(_onChartLoaded)은 호출하지 않음 — 패널 오염 방지
         if (typeof window._onFiwChartLoaded === 'function') {
           var _pname = D2T._pendingResultName || '';
           D2T._pendingResultName = '';

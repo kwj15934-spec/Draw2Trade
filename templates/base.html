@@ -605,7 +605,8 @@
       min-width: 0;
       display: flex;
       flex-direction: row;
-      background: #16161a;
+      /* 중앙 패널: 메인 차트와 같은 계열 배경 */
+      background: #15151a;
       border-left: 1px solid #27272a;
       min-height: 0;
       overflow: hidden;
@@ -649,28 +650,31 @@
       display: none;
     }
 
-    /* 탭 헤더 */
+    /* 탭 헤더 — 중앙 패널 전용 */
     .info-panel-tabs {
       display: flex;
       flex-shrink: 0;
-      border-bottom: 1px solid #27272a;
-      background: #18181b;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: #1a1a1f;
     }
     .info-tab-btn {
       flex: 1;
-      height: 36px;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: #7a8499;
+      height: 34px;
+      background: none !important;
+      border: none !important;
+      border-bottom: 1px solid transparent !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      color: #52525b;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
-      transition: color .15s, border-color .15s;
+      transition: color .15s !important;
       white-space: nowrap;
+      letter-spacing: 0;
     }
-    .info-tab-btn:hover { color: #d4d8e2; }
-    .info-tab-btn.active { color: #26a69a; border-bottom-color: #26a69a; }
+    .info-tab-btn:hover { color: #a0a8b8 !important; background: none !important; }
+    .info-tab-btn.active { color: #26a69a !important; border-bottom-color: #26a69a !important; font-weight: 700 !important; }
 
     /* 탭 콘텐츠 */
     .info-pane {
@@ -856,9 +860,9 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      /* 메인 패널과 구분되는 아주 옅은 배경 */
-      background: #131318;
-      border-bottom: 1px solid #27272a;
+      /* 우측 패널: 네이비 계열로 중앙 패널과 명확 구분 */
+      background: #0c1018;
+      border-bottom: 1px solid rgba(38,166,154,0.1);
       box-sizing: border-box;
       width: 100%;
       min-height: 0;
@@ -1203,19 +1207,44 @@
     }
     .fiw-news-desc { display: none; } /* 공간 절약 */
 
-    /* ── info-side-panel 메인 차트 헤더 ─────────────────── */
+    /* ── info-side-panel: 메인 패널 헤더 ────────────────── */
     .info-panel-ticker-header {
-      display: flex; align-items: baseline; gap: 6px;
-      padding: 8px 12px 4px;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 12px 7px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: #1a1a1f;
       flex-shrink: 0;
     }
+    /* "메인 종목 정보" 고정 레이블 */
+    .info-panel-header-label {
+      font-size: 9px; font-weight: 800; color: #3f3f52;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      white-space: nowrap; flex-shrink: 0;
+      width: 100%; /* 레이블을 첫 줄에 단독 배치 */
+      margin-bottom: 2px;
+    }
     .info-panel-ticker-name {
-      font-size: 13px; font-weight: 800; color: #fff;
+      font-size: 13px; font-weight: 800; color: #e2e4f0;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .info-panel-ticker-code {
-      font-size: 10px; color: #7a8499; white-space: nowrap; flex-shrink: 0;
+      font-size: 10px; color: #52525b; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* ── floating-info-widget: 우측 패널 헤더 레이블 ──── */
+    .fiw-header-label {
+      font-size: 9px; font-weight: 800; color: #1e3a3a;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    /* 우측 패널 헤더 배경: 짙은 네이비 계열로 중앙 패널과 명확 구분 */
+    #fiw-header {
+      background: #080e1a !important;
+      border-bottom: 1px solid rgba(38,166,154,0.12) !important;
+    }
+    #fiw-tabs {
+      background: #0a1020 !important;
+      border-bottom: 1px solid rgba(38,166,154,0.08) !important;
     }
 
     /* ── FIW 관련 종목 행 ─────────────────────────────── */
