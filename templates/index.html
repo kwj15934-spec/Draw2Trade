@@ -1098,25 +1098,32 @@
   function _renderNews(items) {
     if (items.length) console.log('[D2T] 뉴스 item[0] 전체:', JSON.stringify(items[0]));
     var html = items.slice(0, 12).map(function (it) {
-      // URL: url → link → originallink 순으로 탐색
-      var rawUrl = it.url || it.link || it.originallink || '';
-      var title  = _esc(it.title || '');
-      var date   = _esc(it.date  || '');
-      var source = _esc(it.source || '뉴스');
+      var url    = it.url || it.link || it.originallink || '';
+      var title  = _esc(it.title  || '');
+      var date   = _esc(it.date   || '');
+      var source = _esc(it.source || it.type || '뉴스');
       var desc   = it.description ? _esc(it.description) : '';
-      // URL이 있으면 <a>, 없으면 <div> (클릭 이벤트 없음)
-      var tag    = rawUrl ? 'a' : 'div';
-      var attrs  = rawUrl
-        ? ' href="' + rawUrl + '" target="_blank" rel="noopener noreferrer"'
-        : '';
-      return '<' + tag + ' class="fiw-news-card"' + attrs + '>' +
+      // news.html renderCard()와 동일 방식: <a href=esc(url)> + stopPropagation
+      if (url) {
+        return '<a class="fiw-news-card"'
+          + ' href="' + _esc(url) + '"'
+          + ' target="_blank" rel="noopener noreferrer"'
+          + ' onclick="event.stopPropagation()">' +
+          '<div class="fiw-news-title">' + title + '</div>' +
+          (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
+          '<div class="fiw-news-meta">' +
+            '<span class="fiw-news-source">' + source + '</span>' +
+            (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
+          '</div>' +
+        '</a>';
+      }
+      return '<div class="fiw-news-card">' +
         '<div class="fiw-news-title">' + title + '</div>' +
-        (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
         '<div class="fiw-news-meta">' +
           '<span class="fiw-news-source">' + source + '</span>' +
           (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
         '</div>' +
-      '</' + tag + '>';
+      '</div>';
     }).join('');
     _setPanel('news', html);
   }

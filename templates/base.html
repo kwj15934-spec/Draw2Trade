@@ -1103,7 +1103,9 @@
       text-decoration: none !important;
       color: inherit !important;
       transition: background .12s;
-      cursor: pointer;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      user-select: none;
     }
     .fiw-news-card:last-child { border-bottom: none; }
     .fiw-news-card:hover { background: rgba(38,166,154,0.07); }
