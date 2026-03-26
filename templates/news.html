@@ -118,13 +118,14 @@
       background: var(--bg3); display: flex; align-items: center; justify-content: center;
     }
     .news-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    /* 폴백: 미니 캔들차트 SVG */
+    /* 폴백: 시장 아이콘 + 미니 캔들 SVG */
     .news-thumb-svg {
+      position: relative;
       display: flex; align-items: center; justify-content: center;
       width: 100%; height: 100%;
-      background: linear-gradient(135deg, #16161a 0%, #1a1a20 100%);
+      background: linear-gradient(135deg, #14141a 0%, #1c1c24 100%);
     }
-    .news-thumb-svg svg { width: 52px; height: 38px; }
+    .news-thumb-svg svg { width: 56px; height: 36px; }
 
     .news-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
     .news-source-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -393,23 +394,19 @@
   var _krItems  = [];
   var _usItems  = [];
 
-  // 전일 등락률 캐시 { ticker: "+1.23" }
-  var _rateCache      = {};
-  var _rateNeedsFetch = true;
+  // 전일 등락률 캐시 { ticker: rate_string }
+  var _rateCache = {};
+
+  /* KR 종목 코드 → 표시명 */
+  var _KR_NAME = {
+    '005930': '삼성전자', '000660': 'SK하이닉스', '035420': 'NAVER',
+    '035720': '카카오',   '005380': '현대차',     '051910': 'LG화학',
+    '006400': '삼성SDI',  '028260': '삼성물산',   '105560': 'KB금융',
+    '055550': '신한지주',
+  };
 
   /* KR: 섹터별 대표 종목 (삼성 편중 해소) */
-  var _KR_SYMBOLS = [
-    '005930', // 삼성전자
-    '000660', // SK하이닉스
-    '035420', // NAVER
-    '035720', // 카카오
-    '005380', // 현대차
-    '051910', // LG화학
-    '006400', // 삼성SDI
-    '028260', // 삼성물산
-    '105560', // KB금융
-    '055550', // 신한지주
-  ];
+  var _KR_SYMBOLS = Object.keys(_KR_NAME);
 
   /* US: S&P 500 대형주 */
   var _US_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'META', 'GOOGL', 'MSFT', 'AMZN', 'JPM'];
@@ -417,25 +414,48 @@
   /* ── 뉴스 fetch ─────────────────────────────── */
   function _fetchAll() {
     setLoading();
-    var fetches = _KR_SYMBOLS.concat(_US_SYMBOLS).map(function (sym) {
+    var allSyms = _KR_SYMBOLS.concat(_US_SYMBOLS);
+    var fetches = allSyms.map(function (sym) {
       return fetch('/api/v1/stock/news/' + encodeURIComponent(sym))
         .then(function (r) { return r.ok ? r.json() : null; })
         .catch(function () { return null; });
     });
     Promise.all(fetches).then(function (results) {
-      _krItems = []; _usItems = [];
+      /* 1단계: 종목별 최신 1개만 선별 */
+      var krRaw = [], usRaw = [];
       results.forEach(function (d, i) {
-        if (!d || !d.items) return;
+        if (!d || !d.items || !d.items.length) return;
         var isUs = i >= _KR_SYMBOLS.length;
-        var sym  = isUs ? _US_SYMBOLS[i - _KR_SYMBOLS.length] : _KR_SYMBOLS[i];
-        d.items.forEach(function (item) {
-          var entry = Object.assign({}, item, { _symbol: sym, _market: isUs ? 'US' : 'KR' });
-          if (isUs) _usItems.push(entry); else _krItems.push(entry);
+        var sym  = allSyms[i];
+        /* 종목의 최신 뉴스 1개만 */
+        var best = d.items.slice().sort(function (a, b) {
+          return _parseDate(b.date) - _parseDate(a.date);
+        })[0];
+        var entry = Object.assign({}, best, {
+          _symbol: sym,
+          _market: isUs ? 'US' : 'KR',
         });
+        if (isUs) usRaw.push(entry); else krRaw.push(entry);
       });
-      _allItems = _krItems.concat(_usItems).sort(function (a, b) {
+
+      /* 2단계: 제목 중복 제거 (Set으로 유니크 처리) */
+      function _dedupe(arr) {
+        var seen = {};
+        return arr.filter(function (it) {
+          var key = (it.title || '').trim().slice(0, 30); // 앞 30자로 중복 판별
+          if (seen[key]) return false;
+          seen[key] = true;
+          return true;
+        });
+      }
+
+      /* 3단계: 날짜순 정렬 후 저장 */
+      _krItems  = _dedupe(krRaw).sort(function (a, b) { return _parseDate(b.date) - _parseDate(a.date); });
+      _usItems  = _dedupe(usRaw).sort(function (a, b) { return _parseDate(b.date) - _parseDate(a.date); });
+      _allItems = _dedupe(_krItems.concat(_usItems)).sort(function (a, b) {
         return _parseDate(b.date) - _parseDate(a.date);
       });
+
       _page = 1;
       render();
     });
@@ -448,27 +468,14 @@
     return new Date(m[1] + '-' + m[2] + '-' + m[3]).getTime();
   }
 
-  /* ── 전일 등락률 fetch (scanner/rise API 사용) ── */
-  function _fetchRates(symbols) {
-    // scanner/rise에서 이미 로드된 데이터가 있으면 재활용
-    symbols.forEach(function (sym) {
-      if (_rateCache[sym] !== undefined) return;
-      // 아직 캐시 없으면 scanner/rise에서 일괄 로드 (첫 호출 시 한 번만)
-      _rateCache[sym] = null; // 중복 요청 방지용 플레이스홀더
+  /* ── 등락률 캐시 갱신 (_krVolData 로드 후 호출) ── */
+  function _syncRateFromVol() {
+    if (!_krVolData) return;
+    _krVolData.forEach(function (item) {
+      if (item.ticker && item.change_rate != null) {
+        _rateCache[item.ticker] = item.change_rate;
+      }
     });
-    if (_rateNeedsFetch) {
-      _rateNeedsFetch = false;
-      fetch('/api/v1/stock/market/scanner/rise?top_n=50')
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) {
-          if (!d || !d.items) return;
-          d.items.forEach(function (item) {
-            _rateCache[item.ticker] = item.change_rate || null;
-          });
-          render();
-        })
-        .catch(function () {});
-    }
   }
 
   /* ── 렌더 ───────────────────────────────────── */
@@ -494,11 +501,8 @@
     if (_page > totalPages) _page = totalPages;
     var sliced = items.slice((_page - 1) * _perPage, _page * _perPage);
 
-    // 등락률 미리 fetch (KR만)
-    var krSyms = sliced.filter(function (it) { return it._market === 'KR'; })
-                       .map(function (it) { return it._symbol; })
-                       .filter(function (s, i, arr) { return arr.indexOf(s) === i; });
-    _fetchRates(krSyms);
+    // 사이드바 거래량 데이터에서 등락률 동기화
+    _syncRateFromVol();
 
     var listEl = document.getElementById('news-list');
     if (!sliced.length) {
@@ -510,26 +514,40 @@
     renderPagination(totalPages);
   }
 
-  /* 썸네일 폴백 — 미니 캔들차트 SVG (터미널 감성) */
-  var _FALLBACK_SVG = '<div class="news-thumb-svg">' +
-    '<svg width="52" height="38" viewBox="0 0 52 38" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      /* 캔들 1 — 하락 */
-      '<line x1="8" y1="4"  x2="8" y2="32" stroke="#26a69a" stroke-width="1" opacity="0.3"/>' +
-      '<rect x="5" y="10" width="6" height="14" rx="1" fill="#26a69a" opacity="0.45"/>' +
-      /* 캔들 2 — 상승 */
-      '<line x1="18" y1="8"  x2="18" y2="34" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
-      '<rect x="15" y="14" width="6" height="16" rx="1" fill="#ef5350" opacity="0.45"/>' +
-      /* 캔들 3 — 상승 강함 */
-      '<line x1="28" y1="6"  x2="28" y2="28" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
-      '<rect x="25" y="10" width="6" height="16" rx="1" fill="#ef5350" opacity="0.6"/>' +
-      /* 캔들 4 — 하락 */
-      '<line x1="38" y1="8"  x2="38" y2="30" stroke="#26a69a" stroke-width="1" opacity="0.3"/>' +
-      '<rect x="35" y="13" width="6" height="12" rx="1" fill="#26a69a" opacity="0.45"/>' +
-      /* 캔들 5 — 상승 */
-      '<line x1="48" y1="5"  x2="48" y2="26" stroke="#ef5350" stroke-width="1" opacity="0.3"/>' +
-      '<rect x="45" y="8"  width="6" height="14" rx="1" fill="#ef5350" opacity="0.55"/>' +
-    '</svg>' +
-  '</div>';
+  /* ── 썸네일 폴백 SVG 생성 ────────────────────
+     KR → KRX 스타일 캔들 아이콘
+     US → NASDAQ 스타일 캔들 아이콘
+  ────────────────────────────────────────────── */
+  function _makeFallback(mkt) {
+    var accent = mkt === 'US' ? '#5b8def' : '#26a69a';
+    var accent2 = '#ef5350';
+    return '<div class="news-thumb-svg">' +
+      /* 좌상단 시장 레이블 */
+      '<div style="position:absolute;top:4px;left:5px;font-size:8px;font-weight:800;' +
+        'color:' + accent + ';opacity:0.6;font-family:monospace;letter-spacing:.5px;">' +
+        (mkt === 'US' ? 'NASDAQ' : 'KRX') +
+      '</div>' +
+      '<svg width="56" height="36" viewBox="0 0 56 36" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        /* 캔들 1 하락 */
+        '<line x1="7"  y1="5"  x2="7"  y2="30" stroke="' + accent  + '" stroke-width="1" opacity="0.25"/>' +
+        '<rect x="4"  y="11" width="6" height="12" rx="1" fill="' + accent  + '" opacity="0.5"/>' +
+        /* 캔들 2 상승 */
+        '<line x1="17" y1="8"  x2="17" y2="32" stroke="' + accent2 + '" stroke-width="1" opacity="0.25"/>' +
+        '<rect x="14" y="14" width="6" height="14" rx="1" fill="' + accent2 + '" opacity="0.5"/>' +
+        /* 캔들 3 상승 강함 */
+        '<line x1="27" y1="4"  x2="27" y2="26" stroke="' + accent2 + '" stroke-width="1" opacity="0.25"/>' +
+        '<rect x="24" y="8"  width="6" height="14" rx="1" fill="' + accent2 + '" opacity="0.65"/>' +
+        /* 캔들 4 하락 */
+        '<line x1="37" y1="7"  x2="37" y2="28" stroke="' + accent  + '" stroke-width="1" opacity="0.25"/>' +
+        '<rect x="34" y="12" width="6" height="11" rx="1" fill="' + accent  + '" opacity="0.5"/>' +
+        /* 캔들 5 상승 */
+        '<line x1="47" y1="5"  x2="47" y2="25" stroke="' + accent2 + '" stroke-width="1" opacity="0.25"/>' +
+        '<rect x="44" y="8"  width="6" height="13" rx="1" fill="' + accent2 + '" opacity="0.55"/>' +
+        /* 추세선 */
+        '<polyline points="7,23 17,21 27,15 37,18 47,11" stroke="' + accent + '" stroke-width="1" opacity="0.3" fill="none" stroke-dasharray="2,2"/>' +
+      '</svg>' +
+    '</div>';
+  }
 
   function renderCard(it) {
     var title  = esc(it.title || '');
@@ -538,35 +556,40 @@
     var url    = it.url || '#';
     var sym    = it._symbol || '';
     var mkt    = it._market || 'KR';
+    var fallback = _makeFallback(mkt);
 
-    /* 썸네일 — 폴백 처리 */
+    /* 썸네일 — 네이버 API에 thumbnail 없으므로 항상 폴백 */
     var thumbHtml = it.thumbnail
-      ? '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'' + _FALLBACK_SVG.replace(/'/g, "\\'") + '\'">'
-      : _FALLBACK_SVG;
+      ? '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" onerror="this.parentNode.innerHTML=\'' + fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\'">'
+      : fallback;
 
     var mktBadge = mkt === 'US'
       ? '<span class="news-market-badge badge-us">US</span>'
       : '<span class="news-market-badge badge-kr">KR</span>';
 
-    /* 종목 배지 + 등락률 */
+    /* 종목 배지 — 코드 대신 종목명 표시 + 등락률 */
     var chip = '';
     if (sym) {
-      var rate = _rateCache[sym];
+      var dispName  = mkt === 'KR' ? (_KR_NAME[sym] || sym) : sym;
+      var rate      = _rateCache[sym];
       var chipClass = 'chip-flat';
       var rateText  = '';
       if (rate != null) {
         var rateNum = parseFloat(rate);
         if (!isNaN(rateNum)) {
           chipClass = rateNum > 0 ? 'chip-up' : rateNum < 0 ? 'chip-down' : 'chip-flat';
-          rateText  = ' ' + (rateNum > 0 ? '+' : '') + rateNum.toFixed(2) + '%';
+          rateText  = '\u00a0' + (rateNum > 0 ? '+' : '') + rateNum.toFixed(2) + '%';
         }
       }
       chip = '<span class="news-chip ' + chipClass + '" onclick="event.preventDefault();goChart(\'' +
-             esc(sym) + '\',\'' + mkt + '\')">' + esc(sym) + rateText + '</span>';
+             esc(sym) + '\',\'' + mkt + '\')">' +
+             esc(dispName) +
+             (rateText ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;opacity:0.85;">' + rateText + '</span>' : '') +
+             '</span>';
     }
 
     return '<a class="news-card" href="' + esc(url) + '" target="_blank" rel="noopener">' +
-      '<div class="news-thumb">' + thumbHtml + '</div>' +
+      '<div class="news-thumb" style="position:relative;">' + thumbHtml + '</div>' +
       '<div class="news-body">' +
         '<div class="news-source-row"><span class="news-source">' + source + '</span>' + mktBadge + '</div>' +
         '<div class="news-title">' + title + '</div>' +
@@ -630,12 +653,14 @@
 
   /* KR 거래량 순위 fetch */
   function _fetchKrVol() {
-    fetch('/api/v1/stock/market/scanner/volume?top_n=10')
+    fetch('/api/v1/stock/market/scanner/volume?top_n=20')
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && d.items && d.items.length) {
-          _krVolData = d.items;
+          _krVolData = d.items.slice(0, 10);
+          _syncRateFromVol();  // 뉴스 배지 등락률 갱신
           if (_sidebarMkt === 'kr') renderSidebar();
+          render(); // 배지 색상 반영
         }
       })
       .catch(function () {});
