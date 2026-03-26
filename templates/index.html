@@ -1089,9 +1089,16 @@
       .then(function (d) {
         var items = (d && d.items) || [];
         if (!items.length) { _errorPanel('news', '뉴스가 없습니다'); return; }
+        console.log('[D2T] news API', ticker, '→', items.length + '건,',
+          '첫번째 아이템:', JSON.stringify({
+            title:  items[0] && items[0].title  && items[0].title.slice(0,20),
+            url:    items[0] && items[0].url,
+            source: items[0] && items[0].source,
+            date:   items[0] && items[0].date,
+          }));
         _renderNews(items);
       })
-      .catch(function () { _errorPanel('news', '뉴스 조회 실패'); });
+      .catch(function (e) { console.error('[D2T] news 조회 실패', ticker, e); _errorPanel('news', '뉴스 조회 실패'); });
   }
 
   function _renderNews(items) {
