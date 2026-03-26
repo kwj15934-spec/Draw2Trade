@@ -1564,13 +1564,23 @@ function _escHtml(s) {
           if (v >= 1e8)  return (v / 1e8).toFixed(0) + '억';
           return v.toLocaleString() + '원';
         };
+        // na:true이고 값이 0이면 실제 데이터 없음 → N/A 표시
+        var isNA = d.na === true;
+        var fmtF = function (v, suffix) {
+          if (v == null || (isNA && v === 0)) return 'N/A';
+          return (typeof v === 'number' ? v.toFixed(2) : v) + suffix;
+        };
+        var fmtI = function (v, suffix) {
+          if (v == null || (isNA && v === 0)) return 'N/A';
+          return (typeof v === 'number' ? v.toLocaleString() : v) + suffix;
+        };
         var rows = [
-          { label: 'PER',   value: d.per  != null ? d.per.toFixed(2)  + 'x' : 'N/A' },
-          { label: 'PBR',   value: d.pbr  != null ? d.pbr.toFixed(2)  + 'x' : 'N/A' },
-          { label: 'ROE',   value: d.roe  != null ? d.roe.toFixed(2)  + '%' : 'N/A' },
-          { label: 'EPS',   value: d.eps  != null ? d.eps.toLocaleString() + '원' : 'N/A' },
-          { label: 'DIV',   value: d.div_yield != null ? d.div_yield.toFixed(2) + '%' : 'N/A' },
-          { label: '시가총액', value: d.market_cap != null ? capFmt(d.market_cap) : 'N/A' },
+          { label: 'PER',   value: fmtF(d.per,       'x') },
+          { label: 'PBR',   value: fmtF(d.pbr,       'x') },
+          { label: 'ROE',   value: fmtF(d.roe,       '%') },
+          { label: 'EPS',   value: fmtI(d.eps,       '원') },
+          { label: 'DIV',   value: fmtF(d.div_yield, '%') },
+          { label: '시가총액', value: (d.market_cap && !(isNA && d.market_cap === 0)) ? capFmt(d.market_cap) : 'N/A' },
         ];
         var html = '<div class="finance-card">'
           + '<div class="finance-card-title">밸류에이션 지표</div>'
