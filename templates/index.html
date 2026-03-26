@@ -1448,11 +1448,34 @@ function _escHtml(s) {
   };
 
   // ── 메인 차트 종목 헤더 갱신 ─────────────────────────────────────
+  var _infoPanelTicker = '';
+  var _infoPanelName   = '';
+
   function _updateInfoPanelHeader(ticker, name) {
+    if (ticker) _infoPanelTicker = ticker;
+    if (name)   _infoPanelName   = name;
+    var t = _infoPanelTicker;
+    var n = _infoPanelName;
     var nameEl = document.getElementById('info-panel-name');
     var codeEl = document.getElementById('info-panel-code');
-    if (nameEl) nameEl.textContent = name || ticker || '';
-    if (codeEl) codeEl.textContent = name && ticker ? '(' + ticker + ')' : (ticker ? ticker : '');
+    // 종목명이 있으면 "삼성전자", 없으면 "005930"
+    if (nameEl) nameEl.textContent = n || t || '—';
+    // 티커는 종목명이 있을 때만 옆에 표시, 종목명과 동일하면 생략
+    if (codeEl) codeEl.textContent = (n && t && n !== t) ? '(' + t + ')' : '';
+  }
+
+  // 차트 로드 시 API에서 name 확보 후 헤더 갱신 (탭 무관)
+  function _fetchAndSetName(ticker, market) {
+    _infoPanelTicker = ticker;
+    _infoPanelName   = '';
+    _updateInfoPanelHeader(ticker, '');
+    if (!ticker || (market && market !== 'KR')) return;
+    fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d) _updateInfoPanelHeader(ticker, d.name || d.company_name || '');
+      })
+      .catch(function () { /* name 조회 실패 시 ticker만 유지 */ });
   }
 
   // ── 재무 데이터 로드 ─────────────────────────────────────────────
@@ -1461,14 +1484,12 @@ function _escHtml(s) {
     if (market && market !== 'KR') {
       document.getElementById('finance-content').innerHTML =
         '<div class="info-empty">재무 데이터는 KR 종목만 지원합니다.</div>';
-      _updateInfoPanelHeader(ticker, '');
       return;
     }
     var loadingEl = document.getElementById('finance-loading');
     var contentEl = document.getElementById('finance-content');
     if (loadingEl) loadingEl.style.display = 'flex';
     if (contentEl) contentEl.innerHTML = '';
-    _updateInfoPanelHeader(ticker, '');
 
     fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
       .then(function (r) {
@@ -1477,8 +1498,8 @@ function _escHtml(s) {
       })
       .then(function (d) {
         if (loadingEl) loadingEl.style.display = 'none';
-        // 헤더 종목명 반영
-        _updateInfoPanelHeader(d.symbol || ticker, d.name || d.company_name || '');
+        // finance 응답에서 name 확보 시 헤더 업데이트
+        _updateInfoPanelHeader(ticker, d.name || d.company_name || '');
         var capFmt = function (v) {
           if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
           if (v >= 1e8)  return (v / 1e8).toFixed(0) + '억';
@@ -1591,6 +1612,8 @@ function _escHtml(s) {
   document.addEventListener('DOMContentLoaded', function () {
     var _origOnChartLoaded = window._onChartLoaded;
     window._onChartLoaded = function (ticker, market) {
+      // 헤더 name을 API에서 가져와 설정 (탭과 무관하게 항상 실행)
+      _fetchAndSetName(ticker, market);
       var activeTab = document.querySelector('.info-tab-btn.active');
       var tab = activeTab ? activeTab.dataset.itab : 'finance';
       if (tab === 'finance')   window.loadFinanceData(ticker, market);
