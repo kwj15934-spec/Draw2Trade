@@ -19,6 +19,65 @@ logger = logging.getLogger(__name__)
 _API_URL  = "https://openapi.naver.com/v1/search/news.json"
 _TIMEOUT  = 5
 
+# 도메인 → 매체명 매핑 (자주 등장하는 주요 언론사)
+_DOMAIN_TO_PRESS: dict[str, str] = {
+    "hankyung.com":      "한국경제",
+    "mk.co.kr":          "매일경제",
+    "chosun.com":        "조선일보",
+    "joongang.co.kr":    "중앙일보",
+    "donga.com":         "동아일보",
+    "hani.co.kr":        "한겨레",
+    "yna.co.kr":         "연합뉴스",
+    "yonhapnews.co.kr":  "연합뉴스",
+    "edaily.co.kr":      "이데일리",
+    "etnews.com":        "전자신문",
+    "inews24.com":       "아이뉴스24",
+    "mt.co.kr":          "머니투데이",
+    "moneys.mt.co.kr":   "머니투데이",
+    "news1.kr":          "뉴스1",
+    "newsis.com":        "뉴시스",
+    "biz.chosun.com":    "조선비즈",
+    "thebell.co.kr":     "더벨",
+    "sedaily.com":       "서울경제",
+    "fnnews.com":        "파이낸셜뉴스",
+    "fn.co.kr":          "파이낸셜뉴스",
+    "businesspost.co.kr":"비즈니스포스트",
+    "khan.co.kr":        "경향신문",
+    "hankookilbo.com":   "한국일보",
+    "sbs.co.kr":         "SBS",
+    "kbs.co.kr":         "KBS",
+    "mbc.co.kr":         "MBC",
+    "jtbc.co.kr":        "JTBC",
+    "ytn.co.kr":         "YTN",
+    "moneynews.co.kr":   "머니뉴스",
+    "theqoo.net":        "더쿠",
+    "stockplus.com":     "스탁플러스",
+    "investing.com":     "인베스팅",
+    "bloomberg.com":     "블룸버그",
+    "reuters.com":       "로이터",
+}
+
+
+def _extract_press(url: str) -> str:
+    """URL에서 도메인을 추출해 매체명을 반환한다. 매핑 없으면 빈 문자열."""
+    if not url:
+        return ""
+    try:
+        host = urllib.parse.urlparse(url).netloc.lower()
+        # www. 제거
+        if host.startswith("www."):
+            host = host[4:]
+        # 정확히 일치하는 도메인 먼저 확인
+        if host in _DOMAIN_TO_PRESS:
+            return _DOMAIN_TO_PRESS[host]
+        # 서브도메인 포함 부분 일치 (news.mt.co.kr → mt.co.kr)
+        for domain, name in _DOMAIN_TO_PRESS.items():
+            if host.endswith("." + domain) or host == domain:
+                return name
+    except Exception:
+        pass
+    return ""
+
 
 def fetch_news(company_name: str, display: int = 10) -> list[dict]:
     """
@@ -48,10 +107,15 @@ def fetch_news(company_name: str, display: int = 10) -> list[dict]:
 
         items = []
         for item in data.get("items", []):
-            title = unescape(_strip_tags(item.get("title", ""))).strip()
-            desc  = unescape(_strip_tags(item.get("description", ""))).strip()
-            pub   = _parse_pub_date(item.get("pubDate", ""))
-            link  = item.get("link") or item.get("originallink", "")
+            title    = unescape(_strip_tags(item.get("title", ""))).strip()
+            desc     = unescape(_strip_tags(item.get("description", ""))).strip()
+            pub      = _parse_pub_date(item.get("pubDate", ""))
+            orig_url = item.get("originallink", "")
+            nav_url  = item.get("link", "")
+            # 원문 URL 우선, 없으면 네이버 뉴스 URL
+            link     = orig_url or nav_url
+            # 매체명: 원문 URL → 네이버 URL 순으로 추출
+            source   = _extract_press(orig_url) or _extract_press(nav_url)
 
             if not title:
                 continue
@@ -60,6 +124,7 @@ def fetch_news(company_name: str, display: int = 10) -> list[dict]:
                 "title":       title,
                 "date":        pub,
                 "url":         link,
+                "source":      source,
                 "description": desc,
             })
 

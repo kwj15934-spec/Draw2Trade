@@ -1096,14 +1096,19 @@
 
   function _renderNews(items) {
     var html = items.slice(0, 12).map(function (it) {
-      var url   = _esc(it.url || '#');
-      var title = _esc(it.title || '');
-      var date  = _esc(it.date || '');
-      var desc  = it.description ? _esc(it.description) : '';
-      return '<a class="fiw-news-card" href="' + url + '" target="_blank" rel="noopener">' +
+      var url    = it.url || '#';
+      var title  = _esc(it.title || '');
+      var date   = _esc(it.date || '');
+      var source = _esc(it.source || '뉴스');
+      var desc   = it.description ? _esc(it.description) : '';
+      var href   = url !== '#' ? ' href="' + _esc(url) + '"' : '';
+      return '<a class="fiw-news-card"' + href + ' target="_blank" rel="noopener noreferrer">' +
         '<div class="fiw-news-title">' + title + '</div>' +
         (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
-        '<div class="fiw-news-date">' + date + '</div>' +
+        '<div class="fiw-news-meta">' +
+          '<span class="fiw-news-source">' + source + '</span>' +
+          (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
+        '</div>' +
       '</a>';
     }).join('');
     _setPanel('news', html);
