@@ -349,10 +349,6 @@ def fetch_news(company_name: str, display: int = 20) -> list[dict]:
                     it["title"][:50], it["score"], it["source"],
                 )
 
-        # score 필드는 프론트에 노출 불필요하므로 제거
-        for it in items:
-            it.pop("score", None)
-
         return items
 
     except Exception as e:

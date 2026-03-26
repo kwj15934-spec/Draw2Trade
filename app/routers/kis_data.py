@@ -8,6 +8,7 @@ app/routers/kis_data.py — 종목 상세 컨텍스트 패널 + 대시보드용 
   GET /api/v1/market/overtime-leaders     — 시간외 등락률 상위 종목 (FHPST02340000)
   GET /api/v1/market/scanner/volume       — 거래량 순위 (FHPST01710000)
   GET /api/v1/market/scanner/rise         — 등락률 상위 (FHPST01700000)
+  GET /api/v1/market/scanner/fall         — 등락률 하위 (FHPST01700000)
   GET /api/v1/market/scanner/high         — 신고가 종목 (FHPST01040000)
 
 주의사항:
@@ -622,6 +623,45 @@ async def get_scanner_rise(top_n: int = 20):
             "FID_COND_SCR_DIV_CODE": "20170",
             "FID_INPUT_ISCD":        "0000",
             "FID_RANK_SORT_CLS_CODE":"0",
+            "FID_INPUT_CNT_1":       "0",
+            "FID_PRCG_CLS_CODE":     "0",
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_TRGT_CLS_CODE":     "0",
+            "FID_TRGT_EXLS_CLS_CODE":"0",
+            "FID_DIV_CLS_CODE":      "0",
+            "FID_RST_DVS_CDE":       "0",
+        },
+        top_n=top_n,
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+        snap_key=snap_key,
+    )
+    if result["items"]:
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)
+    return result
+
+
+@router.get("/market/scanner/fall")
+async def get_scanner_fall(top_n: int = 20):
+    """등락률 하위(하락률) 조회, 10초 캐시."""
+    cache_key = f"scanner_fall_{top_n}"
+    snap_key  = f"scanner_fall_{top_n}_snapshot"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    result = await _fetch_scanner(
+        tr_id="FHPST01700000",
+        path="/uapi/domestic-stock/v1/ranking/fluctuation",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20170",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_RANK_SORT_CLS_CODE":"1",
             "FID_INPUT_CNT_1":       "0",
             "FID_PRCG_CLS_CODE":     "0",
             "FID_INPUT_PRICE_1":     "",
