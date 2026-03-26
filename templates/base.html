@@ -81,9 +81,31 @@
       color: #52525b;
     }
 
+    /* ── 네브 텍스트 탭 링크 ──────────────────────────────── */
+    .d2t-nav-link {
+      font-size: 13px;
+      color: #71717a;
+      text-decoration: none;
+      padding: 2px 0;
+      white-space: nowrap;
+      border-bottom: 1px solid transparent;
+      transition: color .15s, border-color .15s;
+      line-height: 1.2;
+    }
+    .d2t-nav-link:hover {
+      color: #d4d8e2;
+      text-decoration: none;
+    }
+    .d2t-nav-link.active {
+      color: #26a69a;
+      border-bottom-color: #26a69a;
+    }
+
+    /* ── nav 우측 푸셔 ────────────────────────────────────── */
+    .d2t-nav-spacer { flex: 1; min-width: 0; }
+
     /* ── 시장 선택 (KR / US) ──────────────────────────────── */
     .market-selector {
-      margin-left: auto;
       display: flex;
       gap: 4px;
     }
@@ -443,7 +465,7 @@
     .d2t-main {
       display: grid;
       /* 차트(유동) | 스플리터(5px) | 호가(고정) | 컨텍스트패널(접기가능) | 사이드바스플리터(4px) | 사이드바(고정) */
-      grid-template-columns: 1fr 5px var(--quote-w, 220px) var(--info-panel-w, 350px) 4px var(--sidebar-w, 280px);
+      grid-template-columns: 1fr 5px var(--quote-w, 200px) var(--info-panel-w, 320px) 4px var(--sidebar-w, 260px);
       flex: 1;
       min-height: 0;
       overflow: hidden;
@@ -537,7 +559,7 @@
     /* ── 종목 상세 컨텍스트 패널 (CSS Grid 4번 컬럼) ────────── */
     .info-side-panel {
       grid-column: 4;
-      width: 350px;
+      width: 320px;
       min-width: 0;
       display: flex;
       flex-direction: row;

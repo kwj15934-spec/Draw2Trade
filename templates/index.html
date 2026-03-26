@@ -10,7 +10,15 @@
     <img src="/static/img/logo.png" alt="Draw2Trade" class="d2t-logo-img" onerror="this.src='/static/img/favicon.svg'">
     Draw2Trade
   </span>
-  <span id="d2t-subtitle" class="d2t-subtitle">KOSPI 패턴 유사도 검색</span>
+
+  <span style="width:1px;height:16px;background:#2d2d30;flex-shrink:0;margin:0 4px;"></span>
+
+  <a href="/news" class="d2t-nav-link">뉴스</a>
+  <a href="/feed" class="d2t-nav-link">피드</a>
+  <a href="/notices" class="d2t-nav-link">공지</a>
+
+  <div class="d2t-nav-spacer"></div>
+
   <div class="market-selector">
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
     <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button>
@@ -29,22 +37,7 @@
 
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
 
-  <a id="btn-nav-pro" href="#" onclick="return false;" title="서비스 준비 중입니다" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#555;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;cursor:not-allowed;opacity:0.5;">Pro 신청</a>
-
-  <a href="/news" title="뉴스" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
-    onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">📰 뉴스</a>
-
-  <a href="/feed" title="피드" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
-    onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">📊 피드</a>
-
-  <a href="/notices" title="공지사항" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
-    onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">📢 공지</a>
-
-  <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;" title="문의하기" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
-    onmouseover="this.style.color='#26a69a';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">✉ 문의</a>
-
-  <a id="btn-nav-home" href="/" title="메인 페이지로" style="display:flex;align-items:center;height:26px;padding:0 10px;font-size:11px;color:#7a8499;border:1px solid #2d2d30;border-radius:5px;text-decoration:none;white-space:nowrap;transition:color .15s,border-color .15s;"
-    onmouseover="this.style.color='#d4d8e2';this.style.borderColor='#26a69a'" onmouseout="this.style.color='#7a8499';this.style.borderColor='#2d2d30'">← 메인</a>
+  <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;" class="d2t-nav-link">문의</a>
 </div>
 
 <!-- ════════════════════════════════════════════════════
@@ -955,7 +948,7 @@
       resizing = true;
       startX = e.clientX;
       startW = parseInt(getComputedStyle(document.documentElement)
-                         .getPropertyValue('--sidebar-w')) || 280;
+                         .getPropertyValue('--sidebar-w')) || 260;
       document.body.style.userSelect = 'none';
       handle.classList.add('dragging');
     });
@@ -1422,7 +1415,7 @@ function _escHtml(s) {
   'use strict';
 
   var _infoPanelCollapsed = false;
-  var INFO_PANEL_W = 350; // px (열린 상태)
+  var INFO_PANEL_W = 320; // px (열린 상태)
 
   // ── 탭 전환 ─────────────────────────────────────────────────────
   window.switchInfoTab = function (tabName) {
