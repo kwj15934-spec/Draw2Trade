@@ -1447,20 +1447,38 @@ function _escHtml(s) {
     }, TRANSITION_MS);
   };
 
+  // ── 주요 종목 한글명 로컬 맵 (API 실패 시 즉시 표시용) ───────────
+  var _STOCK_NAME_MAP = {
+    '005930': '삼성전자',   '000660': 'SK하이닉스',  '035420': 'NAVER',
+    '035720': '카카오',     '005380': '현대차',       '000270': '기아',
+    '051910': 'LG화학',     '006400': '삼성SDI',      '028260': '삼성물산',
+    '207940': '삼성바이오로직스', '068270': '셀트리온', '105560': 'KB금융',
+    '055550': '신한지주',   '086790': '하나금융지주', '032830': '삼성생명',
+    '003550': 'LG',         '066570': 'LG전자',       '096770': 'SK이노베이션',
+    '017670': 'SK텔레콤',   '030200': 'KT',           '010950': 'S-Oil',
+    '011200': 'HMM',        '034020': '두산에너빌리티','009150': '삼성전기',
+    '000810': '삼성화재',   '090430': '아모레퍼시픽', '271560': '오리온',
+    '326030': 'SK바이오팜', '036570': 'NCsoft',        '251270': '넷마블',
+    '112040': '위메이드',   '263750': '펄어비스',      '047810': '한국항공우주',
+    '012450': '한화에어로스페이스', '042660': 'HD현대중공업', '329180': 'HD현대중공업',
+    '000100': '유한양행',   '128940': '한미약품',      '011070': 'LG이노텍',
+    '003670': '포스코퓨처엠', '002790': '아모레G',
+  };
+
   // ── 메인 차트 종목 헤더 갱신 ─────────────────────────────────────
   var _infoPanelTicker = '';
   var _infoPanelName   = '';
 
   function _updateInfoPanelHeader(ticker, name) {
     if (ticker) _infoPanelTicker = ticker;
-    if (name)   _infoPanelName   = name;
+    // name 우선순위: 인자 name → 로컬맵 → 기존 저장값
+    var resolved = name || _STOCK_NAME_MAP[_infoPanelTicker] || '';
+    if (resolved) _infoPanelName = resolved;
     var t = _infoPanelTicker;
     var n = _infoPanelName;
     var nameEl = document.getElementById('info-panel-name');
     var codeEl = document.getElementById('info-panel-code');
-    // 종목명이 있으면 "삼성전자", 없으면 "005930"
     if (nameEl) nameEl.textContent = n || t || '—';
-    // 티커는 종목명이 있을 때만 옆에 표시, 종목명과 동일하면 생략
     if (codeEl) codeEl.textContent = (n && t && n !== t) ? '(' + t + ')' : '';
   }
 
@@ -1468,14 +1486,22 @@ function _escHtml(s) {
   function _fetchAndSetName(ticker, market) {
     _infoPanelTicker = ticker;
     _infoPanelName   = '';
-    _updateInfoPanelHeader(ticker, '');
+    // 로컬맵에서 즉시 표시 (API 응답 전 깜빡임 방지)
+    _updateInfoPanelHeader(ticker, _STOCK_NAME_MAP[ticker] || '');
     if (!ticker || (market && market !== 'KR')) return;
     fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (d) _updateInfoPanelHeader(ticker, d.name || d.company_name || '');
+        var apiName = (d && (d.name || d.company_name)) || '';
+        console.log('[D2T] finance API', ticker, '→', JSON.stringify({
+          name: d && d.name, per: d && d.per, pbr: d && d.pbr,
+          roe: d && d.roe, eps: d && d.eps, na: d && d.na
+        }));
+        _updateInfoPanelHeader(ticker, apiName);
       })
-      .catch(function () { /* name 조회 실패 시 ticker만 유지 */ });
+      .catch(function (e) {
+        console.warn('[D2T] _fetchAndSetName 실패', ticker, e);
+      });
   }
 
   // ── 재무 데이터 로드 ─────────────────────────────────────────────
@@ -1498,6 +1524,10 @@ function _escHtml(s) {
       })
       .then(function (d) {
         if (loadingEl) loadingEl.style.display = 'none';
+        console.log('[D2T] loadFinanceData', ticker, '→', JSON.stringify({
+          name: d.name, per: d.per, pbr: d.pbr, roe: d.roe, eps: d.eps,
+          market_cap: d.market_cap, na: d.na, snapshot: d.snapshot
+        }));
         // finance 응답에서 name 확보 시 헤더 업데이트
         _updateInfoPanelHeader(ticker, d.name || d.company_name || '');
         var capFmt = function (v) {

@@ -111,9 +111,15 @@ async def get_finance(
         return snap_copy
 
     # 스냅샷도 없으면 서버 점검 중 메시지 반환 (503 대신)
+    _fallback_name = ""
+    try:
+        from app.services.data_service import get_company_name
+        _fallback_name = get_company_name(symbol) or ""
+    except Exception:
+        pass
     fallback = {
         "symbol":       symbol,
-        "name":         "",
+        "name":         _fallback_name,
         "per":          None,
         "pbr":          None,
         "roe":          None,
@@ -173,11 +179,18 @@ async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
                             except (TypeError, ValueError):
                                 pass
 
+                    # name: pykrx 직접 조회 → data_service 캐시 순으로 fallback
                     name = ""
                     try:
                         name = pkrx.get_market_ticker_name(symbol) or ""
                     except Exception:
                         pass
+                    if not name:
+                        try:
+                            from app.services.data_service import get_company_name
+                            name = get_company_name(symbol) or ""
+                        except Exception:
+                            pass
 
                     # 상장일 조회 (pykrx get_market_ticker_info 또는 KRX)
                     listing_date = ""
