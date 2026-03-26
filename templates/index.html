@@ -1096,36 +1096,46 @@
   }
 
   function _renderNews(items) {
-    if (items.length) console.log('[D2T] 뉴스 item[0] 전체:', JSON.stringify(items[0]));
-    var html = items.slice(0, 12).map(function (it) {
+    console.log('[D2T][뉴스] 렌더 시작, 아이템 수:', items.length);
+    if (items.length) {
+      var s = items[0];
+      console.log('[D2T][뉴스] item[0] keys:', Object.keys(s).join(', '));
+      console.log('[D2T][뉴스] item[0].url:', s.url, '/ .link:', s.link, '/ .originallink:', s.originallink);
+    }
+
+    var html = items.slice(0, 12).map(function (it, idx) {
       var url    = it.url || it.link || it.originallink || '';
       var title  = _esc(it.title  || '');
       var date   = _esc(it.date   || '');
       var source = _esc(it.source || it.type || '뉴스');
-      var desc   = it.description ? _esc(it.description) : '';
-      // news.html renderCard()와 동일 방식: <a href=esc(url)> + stopPropagation
+      console.log('[D2T][뉴스] item[' + idx + '] url=' + url + ' title=' + (it.title||'').slice(0,20));
       if (url) {
         return '<a class="fiw-news-card"'
-          + ' href="' + _esc(url) + '"'
+          + ' href="' + url + '"'
           + ' target="_blank" rel="noopener noreferrer"'
-          + ' onclick="event.stopPropagation()">' +
+          + ' onclick="event.stopPropagation();console.log(\'[D2T] 뉴스 클릭:\',this.href)">' +
           '<div class="fiw-news-title">' + title + '</div>' +
-          (desc ? '<div class="fiw-news-desc">' + desc + '</div>' : '') +
           '<div class="fiw-news-meta">' +
             '<span class="fiw-news-source">' + source + '</span>' +
             (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
           '</div>' +
         '</a>';
       }
-      return '<div class="fiw-news-card">' +
+      return '<div class="fiw-news-card" style="opacity:.5">' +
         '<div class="fiw-news-title">' + title + '</div>' +
-        '<div class="fiw-news-meta">' +
-          '<span class="fiw-news-source">' + source + '</span>' +
+        '<div class="fiw-news-meta"><span class="fiw-news-source">' + source + '</span>' +
           (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
-        '</div>' +
-      '</div>';
+        '</div></div>';
     }).join('');
-    _setPanel('news', html);
+
+    var panel = document.getElementById('fiw-panel-news');
+    console.log('[D2T][뉴스] #fiw-panel-news 존재:', !!panel, '/ html 길이:', html.length);
+    if (panel) {
+      panel.innerHTML = html;
+      var links = panel.querySelectorAll('a.fiw-news-card');
+      console.log('[D2T][뉴스] 삽입 후 <a> 태그 수:', links.length);
+      if (links[0]) console.log('[D2T][뉴스] 첫번째 href:', links[0].getAttribute('href'));
+    }
   }
 
   // 시장 반응 — 네이버+토스 통합 피드
