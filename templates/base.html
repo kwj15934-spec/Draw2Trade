@@ -49,60 +49,92 @@
       font-family: inherit !important;
     }
 
-    /* ── 네비게이션 바 ─────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════
+       네비게이션 바 — 완전 재작성
+       ══════════════════════════════════════════════════════ */
     .d2t-nav {
-      height: 46px;
-      background: #18181b;
-      border-bottom: 1px solid #27272a;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      gap: 8px;
-      flex-shrink: 0;
-      overflow: visible;
-      min-width: 0;
+      height: 46px !important;
+      background: #18181b !important;
+      border-bottom: 1px solid #27272a !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 0 20px !important;
+      gap: 0 !important;          /* 개별 마진으로 제어 */
+      flex-shrink: 0 !important;
+      overflow: visible !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
     }
 
     .d2t-brand {
-      font-size: 16px;
-      font-weight: 800;
-      color: #ff6b35;
-      letter-spacing: -0.2px;
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 16px !important;
+      font-weight: 800 !important;
+      color: #ff6b35 !important;
+      letter-spacing: -0.2px !important;
+      white-space: nowrap !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      text-decoration: none !important;
+      flex-shrink: 0 !important;
+      margin-right: 16px !important;
     }
-    .d2t-logo-img { height: 24px; width: 24px; object-fit: contain; }
+    .d2t-logo-img { height: 24px !important; width: 24px !important; object-fit: contain !important; }
     .btn-fav-starred { color: #26a69a !important; }
 
-    .d2t-subtitle {
-      font-size: 12px;
-      color: #52525b;
+    .d2t-subtitle { display: none !important; }  /* 완전 숨김 */
+
+    /* ── 구분선 ──────────────────────────────────────────── */
+    .d2t-nav-sep {
+      width: 1px !important;
+      height: 16px !important;
+      background: #3f3f46 !important;
+      flex-shrink: 0 !important;
+      margin: 0 20px 0 0 !important;
+    }
+
+    /* ── 뉴스/피드/공지 탭 그룹 ─────────────────────────── */
+    .d2t-nav-tabs {
+      display: flex !important;
+      align-items: center !important;
+      gap: 30px !important;
+      flex-shrink: 0 !important;
     }
 
     /* ── 네브 텍스트 탭 링크 ──────────────────────────────── */
     .d2t-nav-link {
-      font-size: 13px;
-      color: #71717a;
-      text-decoration: none;
-      padding: 2px 0;
-      white-space: nowrap;
-      border-bottom: 1px solid transparent;
-      transition: color .15s, border-color .15s;
-      line-height: 1.2;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: #71717a !important;
+      text-decoration: none !important;
+      background: none !important;
+      border: none !important;
+      border-bottom: 2px solid transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      white-space: nowrap !important;
+      transition: color .15s, border-color .15s !important;
+      line-height: 46px !important;   /* nav 높이와 맞춰 수직 중앙 */
+      display: inline-block !important;
     }
     .d2t-nav-link:hover {
-      color: #d4d8e2;
-      text-decoration: none;
+      color: #d4d8e2 !important;
+      text-decoration: none !important;
+      border-bottom-color: #3f3f46 !important;
     }
     .d2t-nav-link.active {
-      color: #26a69a;
-      border-bottom-color: #26a69a;
+      color: #26a69a !important;
+      border-bottom: 2px solid #26a69a !important;
+      font-weight: 700 !important;
+    }
+    /* 우측 단독 링크 (문의 등) */
+    .d2t-nav-link-right {
+      margin-left: 16px !important;
     }
 
     /* ── nav 우측 푸셔 ────────────────────────────────────── */
-    .d2t-nav-spacer { flex: 1; min-width: 0; }
+    .d2t-nav-spacer { flex: 1 !important; min-width: 0 !important; }
 
     /* ── 시장 선택 (KR / US) ──────────────────────────────── */
     .market-selector {

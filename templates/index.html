@@ -6,25 +6,36 @@
 {% block content %}
 
 <div class="d2t-nav">
+
+  <!-- 브랜드 로고 -->
   <span class="d2t-brand">
     <img src="/static/img/logo.png" alt="Draw2Trade" class="d2t-logo-img" onerror="this.src='/static/img/favicon.svg'">
     Draw2Trade
   </span>
 
-  <span style="width:1px;height:16px;background:#2d2d30;flex-shrink:0;margin:0 4px;"></span>
+  <!-- 구분선 -->
+  <span class="d2t-nav-sep"></span>
 
-  <a href="/news" class="d2t-nav-link">뉴스</a>
-  <a href="/feed" class="d2t-nav-link">피드</a>
-  <a href="/notices" class="d2t-nav-link">공지</a>
+  <!-- 뉴스 / 피드 / 공지 탭 -->
+  <div class="d2t-nav-tabs">
+    <a href="/news" class="d2t-nav-link">뉴스</a>
+    <a href="/feed" class="d2t-nav-link">피드</a>
+    <a href="/notices" class="d2t-nav-link">공지</a>
+  </div>
 
+  <!-- 우측 밀기 -->
   <div class="d2t-nav-spacer"></div>
 
+  <!-- KR / US 선택 -->
   <div class="market-selector">
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
     <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button>
   </div>
-  <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;"></div>
 
+  <!-- 시장 시간 칩 -->
+  <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;margin-left:8px;"></div>
+
+  <!-- 유저 박스 -->
   <div id="nav-user-box" class="nav-user-box" style="display:none;">
     <div class="nav-user-avatar" id="nav-user-avatar">?</div>
     <span class="nav-user-name" id="nav-user-name"></span>
@@ -35,9 +46,13 @@
     </button>
   </div>
 
+  <!-- 로그인 -->
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
 
-  <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;" class="d2t-nav-link">문의</a>
+  <!-- 문의 -->
+  <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;"
+     class="d2t-nav-link d2t-nav-link-right">문의</a>
+
 </div>
 
 <!-- ════════════════════════════════════════════════════
