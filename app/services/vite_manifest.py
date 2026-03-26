@@ -21,8 +21,17 @@ _is_production: bool = False
 
 
 def load_manifest():
-    """서버 시작 시 manifest.json 로드 (있으면 production 모드)."""
+    """서버 시작 시 manifest.json 로드 (있으면 production 모드).
+
+    DEV_MODE=1 환경변수가 설정되면 manifest 유무와 무관하게 개발 모드 강제.
+    """
     global _manifest, _is_production
+
+    if os.environ.get("DEV_MODE", "").strip() in ("1", "true", "yes"):
+        _manifest = None
+        _is_production = False
+        logger.info("DEV_MODE=1 — 개발 모드 강제 (원본 JS 직접 서빙)")
+        return
 
     if MANIFEST_PATH.exists():
         try:
