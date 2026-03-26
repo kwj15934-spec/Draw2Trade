@@ -979,26 +979,40 @@
     });
   })();
 
-  // ── 뉴스 카드 클릭 이벤트 위임 — innerHTML 재생성 후에도 항상 작동 ──
+  // ── fiw-body 이벤트 위임 — 뉴스/커뮤니티 카드 클릭 처리 ──────────
+  // innerHTML 재생성 후에도 항상 작동. 인라인 onclick 없이 처리.
   (function () {
     var body = document.getElementById('fiw-body');
     if (!body) return;
+
+    function closest(el, selector, root) {
+      // Element.closest() 폴리필 (구형 브라우저 대응)
+      if (el.closest) return el.closest(selector);
+      var tag = selector.replace(/[.#\[][^.#\[]+/g, '').toUpperCase() || null;
+      var cls = (selector.match(/\.([^.#\[]+)/) || [])[1] || null;
+      while (el && el !== root) {
+        if ((!tag || el.tagName === tag) && (!cls || (el.classList && el.classList.contains(cls)))) return el;
+        el = el.parentNode;
+      }
+      return null;
+    }
+
     body.addEventListener('click', function (e) {
-      // 클릭된 요소 또는 그 부모 중 .fiw-news-card 찾기
-      var card = e.target.closest ? e.target.closest('a.fiw-news-card')
-                                  : (function (el) {
-                                      while (el && el !== body) {
-                                        if (el.classList && el.classList.contains('fiw-news-card') && el.tagName === 'A') return el;
-                                        el = el.parentNode;
-                                      }
-                                      return null;
-                                    })(e.target);
-      if (!card) return;
-      e.stopPropagation();
-      var href = card.getAttribute('href');
-      console.log('[D2T] 뉴스 카드 위임 클릭, href=', href);
-      if (href && href !== '#') {
-        window.open(href, '_blank', 'noopener,noreferrer');
+      // 1) 뉴스 카드 — <a class="fiw-news-card">
+      var newsCard = closest(e.target, 'a.fiw-news-card', body);
+      if (newsCard) {
+        e.preventDefault();
+        e.stopPropagation();
+        var href = newsCard.getAttribute('href');
+        if (href && href !== '#') window.open(href, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      // 2) 커뮤니티 카드 — <div class="fiw-comm-item" data-url="...">
+      var commCard = closest(e.target, '.fiw-comm-item', body);
+      if (commCard) {
+        e.stopPropagation();
+        var url = commCard.getAttribute('data-url');
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
       }
     });
   })();
@@ -1120,24 +1134,13 @@
   }
 
   function _renderNews(items) {
-    console.log('[D2T][뉴스] 렌더 시작, 아이템 수:', items.length);
-    if (items.length) {
-      var s = items[0];
-      console.log('[D2T][뉴스] item[0] keys:', Object.keys(s).join(', '));
-      console.log('[D2T][뉴스] item[0].url:', s.url, '/ .link:', s.link, '/ .originallink:', s.originallink);
-    }
-
-    var html = items.slice(0, 12).map(function (it, idx) {
+    var html = items.slice(0, 12).map(function (it) {
       var url    = it.url || it.link || it.originallink || '';
       var title  = _esc(it.title  || '');
       var date   = _esc(it.date   || '');
       var source = _esc(it.source || it.type || '뉴스');
-      console.log('[D2T][뉴스] item[' + idx + '] url=' + url + ' title=' + (it.title||'').slice(0,20));
       if (url) {
-        return '<a class="fiw-news-card"'
-          + ' href="' + url + '"'
-          + ' target="_blank" rel="noopener noreferrer"'
-          + ' onclick="event.stopPropagation();console.log(\'[D2T] 뉴스 클릭:\',this.href)">' +
+        return '<a class="fiw-news-card" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
           '<div class="fiw-news-title">' + title + '</div>' +
           '<div class="fiw-news-meta">' +
             '<span class="fiw-news-source">' + source + '</span>' +
@@ -1152,14 +1155,7 @@
         '</div></div>';
     }).join('');
 
-    var panel = document.getElementById('fiw-panel-news');
-    console.log('[D2T][뉴스] #fiw-panel-news 존재:', !!panel, '/ html 길이:', html.length);
-    if (panel) {
-      panel.innerHTML = html;
-      var links = panel.querySelectorAll('a.fiw-news-card');
-      console.log('[D2T][뉴스] 삽입 후 <a> 태그 수:', links.length);
-      if (links[0]) console.log('[D2T][뉴스] 첫번째 href:', links[0].getAttribute('href'));
-    }
+    _setPanel('news', html);
   }
 
   // 시장 반응 — 네이버+토스 통합 피드
@@ -1193,7 +1189,7 @@
               }).join('') + '</div>';
           }
 
-          return '<div class="fiw-comm-item" onclick="window.open(\'' + _esc(url) + '\',\'_blank\')">' +
+          return '<div class="fiw-comm-item" data-url="' + url + '">' +
             '<div class="fiw-comm-title">' + badge +
               (isHot ? '🔥 ' : '') + _esc(it.title) +
             '</div>' +
@@ -1646,11 +1642,13 @@ function _escHtml(s) {
           feedEl.innerHTML = '<div class="info-empty">최근 뉴스/공시가 없습니다.</div>';
           return;
         }
+        // URL은 data-url에 저장, 클릭은 이벤트 위임으로 처리
         feedEl.innerHTML = items.map(function (n) {
-          return '<div class="news-item" onclick="window._onNewsClick && window._onNewsClick(' + JSON.stringify(n) + ')">'
+          var nUrl = n.url || n.link || '';
+          return '<div class="news-item"' + (nUrl ? ' data-url="' + nUrl + '"' : '') + '>'
             + '<div class="news-item-title">' + _esc(n.title) + '</div>'
             + '<div class="news-item-meta">'
-            + '<span class="news-item-type">' + _esc(n.type || '뉴스') + '</span>'
+            + '<span class="news-item-type">' + _esc(n.source || n.type || '뉴스') + '</span>'
             + '<span>' + _esc(n.date || '') + '</span>'
             + '</div></div>';
         }).join('');
@@ -1726,6 +1724,44 @@ function _escHtml(s) {
         if (tab === 'community' && ticker) window.loadCommunityData(ticker, market);
       });
     });
+
+    // ── info-news-feed: data-url 클릭 위임 ─────────────────────
+    var newsFeed = document.getElementById('info-news-feed');
+    if (newsFeed) {
+      newsFeed.addEventListener('click', function (e) {
+        var item = e.target.closest ? e.target.closest('[data-url]')
+          : (function (el) {
+              while (el && el !== newsFeed) {
+                if (el.getAttribute && el.getAttribute('data-url')) return el;
+                el = el.parentNode;
+              }
+            })(e.target);
+        if (item) {
+          var u = item.getAttribute('data-url');
+          if (u) { e.stopPropagation(); window.open(u, '_blank', 'noopener,noreferrer'); }
+        }
+      });
+    }
+
+    // ── overtime-leader-item: data-ticker 클릭 위임 ────────────
+    var otList = document.getElementById('overtime-leaders-list');
+    if (otList) {
+      otList.addEventListener('click', function (e) {
+        var item = e.target.closest ? e.target.closest('.overtime-leader-item')
+          : (function (el) {
+              while (el && el !== otList) {
+                if (el.classList && el.classList.contains('overtime-leader-item')) return el;
+                el = el.parentNode;
+              }
+            })(e.target);
+        if (item && window._onOvertimeLeaderClick) {
+          window._onOvertimeLeaderClick({
+            ticker: item.getAttribute('data-ticker'),
+            market: item.getAttribute('data-market') || 'KR'
+          });
+        }
+      });
+    }
   });
 
 })();
@@ -1783,7 +1819,7 @@ function _escHtml(s) {
           var rateCls  = rateNum > 0 ? 'up' : rateNum < 0 ? 'down' : 'flat';
           var priceStr = (it.price || 0).toLocaleString();
           var name     = String(it.name || it.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          return '<div class="overtime-leader-item" onclick="window._onOvertimeLeaderClick(' + JSON.stringify(it) + ')">'
+          return '<div class="overtime-leader-item" data-ticker="' + _esc(String(it.ticker||'')) + '" data-market="' + _esc(String(it.market||'KR')) + '">'
             + '<span class="ot-rank">' + (idx + 1) + '</span>'
             + '<span class="ot-name" title="' + name + '">' + name + '</span>'
             + '<span class="ot-price">' + priceStr + '</span>'
