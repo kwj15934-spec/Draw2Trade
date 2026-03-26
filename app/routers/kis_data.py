@@ -313,7 +313,7 @@ async def _fetch_news_naver(symbol: str) -> dict:
             from app.services.data_service import get_company_name
             from app.services.naver_service import fetch_news
             company = get_company_name(symbol) or symbol
-            return fetch_news(company, display=10)
+            return fetch_news(company, display=20)
         except Exception as e:
             logger.warning("Naver 뉴스 조회 실패 (%s): %s", symbol, e)
             return []

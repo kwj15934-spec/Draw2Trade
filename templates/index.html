@@ -1133,26 +1133,65 @@
       .catch(function (e) { console.error('[D2T] news 조회 실패', ticker, e); _errorPanel('news', '뉴스 조회 실패'); });
   }
 
+  function _newsDomain(url) {
+    // URL에서 핵심 도메인만 추출 후 대문자 변환
+    // https://news.naver.com/... → NAVER
+    // https://www.mk.co.kr/...  → MK
+    if (!url) return '';
+    try {
+      var host = url.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+      if (host.startsWith('www.')) host = host.slice(4);
+      // 알려진 서브도메인 제거 (news., m., finance., biz., sports., global., economy., stock. 등)
+      var subPrefixes = ['news.', 'm.', 'n.', 'finance.', 'biz.', 'sports.', 'global.', 'economy.', 'stock.', 'weekly.', 'it.', 'moneys.', 'biznews.'];
+      for (var i = 0; i < subPrefixes.length; i++) {
+        if (host.startsWith(subPrefixes[i])) { host = host.slice(subPrefixes[i].length); break; }
+      }
+      // co.kr / or.kr 등 TLD 제거 후 두 번째 뒤에서 추출
+      var parts = host.split('.');
+      var label;
+      if (parts.length >= 3 && parts[parts.length - 1] === 'kr' && ['co','or','go','ne'].indexOf(parts[parts.length - 2]) !== -1) {
+        label = parts[parts.length - 3];
+      } else {
+        label = parts[parts.length - 2] || parts[0];
+      }
+      return label ? label.toUpperCase() : '';
+    } catch (e) { return ''; }
+  }
+
+  function _newsFavicon(url) {
+    // Google S2 파비콘 img 태그
+    if (!url) return '';
+    try {
+      var m = url.match(/^(https?:\/\/[^\/]+)/i);
+      var origin = m ? m[1] : '';
+      if (!origin) return '';
+      var faviconUrl = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(origin) + '&sz=16';
+      return '<img class="fiw-news-favicon" src="' + faviconUrl + '" alt="" width="14" height="14" loading="lazy">';
+    } catch (e) { return ''; }
+  }
+
   function _renderNews(items) {
     var html = items.slice(0, 12).map(function (it) {
       var url    = it.url || it.link || it.originallink || '';
       var title  = _esc(it.title  || '');
       var date   = _esc(it.date   || '');
-      var source = _esc(it.source || it.type || '뉴스');
+      var domain = _newsDomain(url);
+      var favicon = _newsFavicon(url);
+      var metaHtml =
+        '<div class="fiw-news-meta">' +
+          favicon +
+          (domain ? '<span class="fiw-news-source">' + domain + '</span>' : '') +
+          (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
+        '</div>';
       if (url) {
         return '<a class="fiw-news-card" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
           '<div class="fiw-news-title">' + title + '</div>' +
-          '<div class="fiw-news-meta">' +
-            '<span class="fiw-news-source">' + source + '</span>' +
-            (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
-          '</div>' +
+          metaHtml +
         '</a>';
       }
       return '<div class="fiw-news-card" style="opacity:.5">' +
         '<div class="fiw-news-title">' + title + '</div>' +
-        '<div class="fiw-news-meta"><span class="fiw-news-source">' + source + '</span>' +
-          (date ? '<span class="fiw-news-date">' + date + '</span>' : '') +
-        '</div></div>';
+        metaHtml + '</div>';
     }).join('');
 
     _setPanel('news', html);

@@ -140,9 +140,28 @@
     }
     .news-thumb-svg svg { width: 56px; height: 36px; }
 
+    /* 파비콘 기반 썸네일 (큰 로고 + 그라데이션 배경) */
+    .news-thumb-fav {
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+    }
+    .news-thumb-fav img {
+      width: 28px; height: 28px;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
+    }
+
     .news-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-    .news-source-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .news-source { font-size: 10px; font-weight: 700; color: var(--muted); }
+    .news-source-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .news-source-fav {
+      display: inline-block; width: 14px; height: 14px;
+      border-radius: 2px; flex-shrink: 0; vertical-align: middle;
+      object-fit: contain;
+    }
+    .news-source {
+      font-size: 10px; font-weight: 700; color: #26a69a;
+      letter-spacing: 0.03em;
+    }
     .news-market-badge {
       font-size: 9px; font-weight: 700; padding: 1px 5px;
       border-radius: 3px; letter-spacing: 0.3px;
@@ -695,25 +714,65 @@
     '</div>';
   }
 
+  /* ── URL → 핵심 도메인 대문자 추출 ─────────────── */
+  function _newsDomain(url) {
+    if (!url) return '';
+    try {
+      var host = url.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+      if (host.startsWith('www.')) host = host.slice(4);
+      var subs = ['news.','m.','n.','finance.','biz.','sports.','global.','economy.',
+                  'stock.','weekly.','it.','moneys.','biznews.'];
+      for (var i = 0; i < subs.length; i++) {
+        if (host.startsWith(subs[i])) { host = host.slice(subs[i].length); break; }
+      }
+      var parts = host.split('.');
+      var label;
+      if (parts.length >= 3 && parts[parts.length-1] === 'kr' &&
+          ['co','or','go','ne'].indexOf(parts[parts.length-2]) !== -1) {
+        label = parts[parts.length-3];
+      } else {
+        label = parts.length >= 2 ? parts[parts.length-2] : parts[0];
+      }
+      return label ? label.toUpperCase() : '';
+    } catch(e) { return ''; }
+  }
+
+  /* ── Google S2 파비콘 URL 생성 ─────────────────── */
+  function _faviconUrl(newsUrl) {
+    if (!newsUrl) return '';
+    var m = newsUrl.match(/^(https?:\/\/[^\/]+)/i);
+    return m ? 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(m[1]) + '&sz=32' : '';
+  }
+
   function renderCard(it) {
     var title  = esc(it.title || '');
-    var source = esc(it.source || it.type || '뉴스');
     var date   = esc(it.date || '');
     var url    = it.url || '#';
     var sym    = it._symbol || '';
     var mkt    = it._market || 'KR';
-    var fallback = _makeFallback(mkt, sym);
 
-    /* 썸네일 — thumbnail이 있으면 사용, 없으면 섹터 아이콘 폴백 */
+    /* ── 썸네일: 파비콘 크게 + 레터마크 조합 ─────── */
+    var origUrl = it.orig_url || it.url || '';
+    var favUrl  = _faviconUrl(origUrl);
+    var fallback = _makeFallback(mkt, sym);
     var thumbHtml;
-    if (it.thumbnail) {
-      /* onerror: 이미지 깨지면 폴백으로 교체 (이스케이프 주의) */
+    if (favUrl) {
       var fbEsc = fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      thumbHtml = '<img src="' + esc(it.thumbnail) + '" alt="" loading="lazy" ' +
-        'onerror="this.parentNode.innerHTML=\'' + fbEsc + '\'">';
+      thumbHtml = '<div class="news-thumb-fav" style="background:linear-gradient(145deg,#14141a 0%,#1c1c24 100%);">' +
+        '<img src="' + esc(favUrl) + '" alt="" width="28" height="28" loading="lazy" ' +
+          'style="border-radius:4px;image-rendering:auto;" ' +
+          'onerror="this.parentNode.parentNode.innerHTML=\'' + fbEsc + '\'">' +
+        '</div>';
     } else {
       thumbHtml = fallback;
     }
+
+    /* ── 출처: [파비콘16] DOMAIN 대문자 ──────────── */
+    var domain   = _newsDomain(origUrl);
+    var smallFav = favUrl
+      ? '<img class="news-source-fav" src="' + esc(favUrl) + '" alt="" width="14" height="14" loading="lazy">'
+      : '';
+    var sourceHtml = smallFav + (domain ? '<span class="news-source">' + domain + '</span>' : '');
 
     var mktBadge = mkt === 'US'
       ? '<span class="news-market-badge badge-us">US</span>'
@@ -752,7 +811,7 @@
     return '<a class="news-card" href="' + esc(url) + '" target="_blank" rel="noopener">' +
       '<div class="news-thumb" style="position:relative;">' + thumbHtml + '</div>' +
       '<div class="news-body">' +
-        '<div class="news-source-row"><span class="news-source">' + source + '</span>' + mktBadge + '</div>' +
+        '<div class="news-source-row">' + sourceHtml + mktBadge + '</div>' +
         '<div class="news-title">' + title + '</div>' +
         '<div class="news-meta-row">' +
           '<span class="news-time">' + date + '</span>' +
