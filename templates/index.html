@@ -437,7 +437,6 @@
       <!-- 탭 헤더 -->
       <div class="sidebar-tabs">
         <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
-        <button class="sidebar-tab-btn" data-tab="ranking" id="sidebar-tab-ranking">랭킹</button>
         <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
         <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
       </div>
@@ -464,21 +463,6 @@
         </div>
       </div>
 
-      <!-- ── 시장 랭킹 패널 ─────────────────────── -->
-      <div id="sidebar-panel-ranking" class="sidebar-content-panel">
-        <div class="d2t-sidebar-header" style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
-          <span class="result-header-title" style="flex-shrink:0;">TOP 10</span>
-          <select id="ranking-cat-select" class="ranking-cat-select" onchange="window._switchRankingCat(this.value)">
-            <option value="volume" selected>거래대금</option>
-            <option value="rise">상승률</option>
-            <option value="fall">하락률</option>
-            <option value="vol">거래량</option>
-          </select>
-        </div>
-        <div id="ranking-list" style="padding:2px 0;">
-          <div class="fiw-loading" style="padding:16px 0;text-align:center;font-size:11px;color:#52525b;">로딩 중…</div>
-        </div>
-      </div>
 
       <!-- ── 즐겨찾기 패널 ──────────────────────── -->
       <div id="sidebar-panel-favorites" class="sidebar-content-panel">
@@ -1933,130 +1917,5 @@ function _escHtml(s) {
 })();
 </script>
 
-<!-- ── 사이드바 시장 랭킹 ────────────────────────────── -->
-<script>
-(function () {
-  'use strict';
-
-  var _rankCat   = 'volume';
-  var _rankCache = {};  // { volume: [...], rise: [...], fall: [...] }
-  var _CAT_ASOF  = {
-    volume: '거래대금 순위',
-    rise:   '상승률 순위',
-    fall:   '하락률 순위',
-    vol:    '거래량 순위',
-  };
-
-  function _esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function _fmtVol(v) {
-    if (!v || isNaN(v)) return '';
-    if (v >= 1e8) return (v / 1e8).toFixed(1) + '억';
-    if (v >= 1e4) return (v / 1e4).toFixed(0) + '만';
-    return v.toLocaleString();
-  }
-
-  window._switchRankingCat = function (cat) {
-    _rankCat = cat;
-    if (_rankCache[cat]) {
-      _renderRanking(_rankCache[cat]);
-    } else {
-      _fetchRanking(cat);
-    }
-  };
-
-  function _fetchRanking(cat) {
-    var listEl = document.getElementById('ranking-list');
-    if (!listEl) return;
-    listEl.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:11px;color:#52525b;">로딩 중…</div>';
-
-    var apiPath;
-    if (cat === 'volume') apiPath = '/api/v1/stock/market/scanner/volume?top_n=10';
-    else if (cat === 'rise') apiPath = '/api/v1/stock/market/scanner/rise?top_n=10';
-    else if (cat === 'fall') apiPath = '/api/v1/stock/market/scanner/fall?top_n=10';
-    else apiPath = '/api/v1/stock/market/scanner/volume?top_n=10';
-
-    fetch(apiPath)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (d && d.items && d.items.length) {
-          _rankCache[cat] = d.items.slice(0, 10);
-          if (_rankCat === cat) _renderRanking(_rankCache[cat]);
-        } else {
-          listEl.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:11px;color:#52525b;">데이터 없음</div>';
-        }
-      })
-      .catch(function () {
-        listEl.innerHTML = '<div style="padding:16px 0;text-align:center;font-size:11px;color:#52525b;">조회 실패</div>';
-      });
-  }
-
-  function _renderRanking(items) {
-    var listEl = document.getElementById('ranking-list');
-    if (!listEl) return;
-
-    var isRateCat = _rankCat === 'rise' || _rankCat === 'fall';
-    var isFall    = _rankCat === 'fall';
-
-    var maxVal;
-    if (isRateCat) {
-      maxVal = Math.max.apply(null, items.map(function (d) {
-        return Math.abs(parseFloat((d.change_rate || '0').toString().replace('+', '')));
-      })) || 1;
-    } else {
-      maxVal = Math.max.apply(null, items.map(function (d) { return d.volume || 0; })) || 1;
-    }
-
-    var html = '';
-    items.forEach(function (item, i) {
-      var rate     = parseFloat((item.change_rate || '0').toString().replace('+', ''));
-      var isUp     = rate > 0, isDown = rate < 0;
-      var pctCls   = isUp ? 'rnk-up' : isDown ? 'rnk-down' : 'rnk-flat';
-      var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
-      var rankCls  = i < 3 ? 'rnk-num top3' : 'rnk-num';
-
-      var barPct, barColor;
-      if (isRateCat) {
-        barPct = Math.round((Math.abs(rate) / maxVal) * 100);
-        barColor = isFall ? 'rgba(91,141,239,.06)' : 'rgba(239,83,80,.06)';
-      } else {
-        barPct = Math.round(((item.volume || 0) / maxVal) * 100);
-        barColor = 'rgba(38,166,154,.06)';
-      }
-
-      // top3 색상: 상승=빨강, 하락=파랑, 기타=teal
-      if (isRateCat && i < 3) {
-        rankCls = isFall ? 'rnk-num top3-fall' : 'rnk-num top3-rise';
-      }
-
-      var volLabel = _fmtVol(item.volume);
-      var ticker   = _esc(item.ticker || '');
-
-      html += '<div class="rnk-row" onclick="if(window.D2T&&D2T.loadChart)D2T.loadChart(\'' + ticker + '\',\'daily\')">' +
-        '<div class="rnk-bar" style="width:' + barPct + '%;background:' + barColor + '"></div>' +
-        '<span class="' + rankCls + '">' + (i + 1) + '</span>' +
-        '<div class="rnk-info">' +
-          '<div class="rnk-name">' + _esc(item.name || item.ticker) + '</div>' +
-          '<div class="rnk-code">' + ticker + '</div>' +
-        '</div>' +
-        '<div class="rnk-right">' +
-          '<span class="rnk-pct ' + pctCls + '">' + pctText + '</span>' +
-          (volLabel ? '<span class="rnk-vol">' + volLabel + '</span>' : '') +
-        '</div>' +
-      '</div>';
-    });
-    html += '<div class="rnk-asof">' + (_CAT_ASOF[_rankCat] || '') + '</div>';
-    listEl.innerHTML = html;
-  }
-
-  // 초기 로드: 랭킹 탭이 보일 때 fetch
-  document.addEventListener('DOMContentLoaded', function () {
-    _fetchRanking('volume');
-  });
-
-})();
-</script>
 
 {% endblock %}

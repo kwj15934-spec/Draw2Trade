@@ -1159,7 +1159,7 @@
             'title="클릭: 패턴 유사도 기반 수학적 검색 결과입니다. 투자 권유가 아닙니다.">' +
             '<div class="result-rank">' + (idx + 1 + rankOffset) + '</div>' +
             '<div class="result-info">' +
-              '<div class="result-name">' + nm + '</div>' +
+              '<div class="result-name" title="' + nm + '">' + nm + '</div>' +
               '<div class="result-ticker">' + tk + '</div>' +
               periodHtml +
             '</div>' +
