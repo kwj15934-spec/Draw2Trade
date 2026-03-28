@@ -474,6 +474,9 @@
           <span class="rch-name">종목</span>
           <span class="rch-score">유사도</span>
         </div>
+        <div id="result-historical-notice" style="display:none;" class="result-historical-notice">
+          과거 패턴 통계 데이터입니다 — 미래 수익을 보장하지 않습니다
+        </div>
         <div id="results-wrapper">
           <div id="results-placeholder">
             패턴을 그린 후<br>
@@ -1787,8 +1790,9 @@ function _escHtml(s) {
             html += '<div class="fund-ai-card">'
               + '<div class="fund-ai-header">'
               + '<div class="fund-ai-icon">✦</div>'
-              + '<span class="fund-ai-title">AI 재무 진단</span>'
+              + '<span class="fund-ai-title">재무 특이사항 요약</span>'
               + '</div>'
+              + '<div class="fund-ai-disclaimer">AI가 공시 수치를 요약한 참고 정보입니다. 투자 권유가 아닙니다.</div>'
               + aiRow('개요', 'fund-ai-tag-overview', ai.overview)
               + aiRow('강점', 'fund-ai-tag-strength', ai.strength)
               + aiRow('리스크', 'fund-ai-tag-risk', ai.risk)
@@ -1798,7 +1802,7 @@ function _escHtml(s) {
             html += '<div class="fund-ai-card">'
               + '<div class="fund-ai-header">'
               + '<div class="fund-ai-icon">✦</div>'
-              + '<span class="fund-ai-title">AI 재무 진단</span>'
+              + '<span class="fund-ai-title">재무 특이사항 요약</span>'
               + '</div>'
               + '<div class="fund-ai-unavailable">ANTHROPIC_API_KEY를 설정하면 AI 진단이 활성화됩니다.</div>'
               + '</div>';

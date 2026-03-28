@@ -1087,12 +1087,16 @@
       list.style.display        = 'none';
       if (countBadge) { countBadge.textContent = ''; countBadge.style.display = 'none'; }
       if (colHeader)  colHeader.style.display = 'none';
+      var hn = document.getElementById('result-historical-notice');
+      if (hn) hn.style.display = 'none';
       return;
     }
 
     placeholder.style.display = 'none';
     list.style.display        = 'block';
     if (colHeader)  colHeader.style.display = 'flex';
+    var histNotice = document.getElementById('result-historical-notice');
+    if (histNotice) histNotice.style.display = 'block';
 
     var totalCount = rankOffset + results.length;
     if (countBadge) {
@@ -1148,9 +1152,9 @@
         if (r.period_from && r.period_to) {
           var pfShort = r.period_from.substring(0, 7); // YYYY-MM
           var ptShort = r.period_to.substring(0, 7);
-          periodHtml = '<div class="result-period">' + pfShort + ' ~ ' + ptShort + '</div>';
+          periodHtml = '<div class="result-period">과거 사례 ' + pfShort + ' ~ ' + ptShort + '</div>';
         } else if (r.period) {
-          periodHtml = '<div class="result-period">' + escHtml(r.period) + '</div>';
+          periodHtml = '<div class="result-period">과거 사례 ' + escHtml(r.period) + '</div>';
         }
 
         return (
