@@ -23,6 +23,156 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
+    /* ══════════════════════════════════════════════════════
+       D2T 디자인 토큰 — Obsidian Terminal
+       ══════════════════════════════════════════════════════ */
+    :root {
+      /* 배경 계층 */
+      --d2t-bg-0:   #0a0a0c;
+      --d2t-bg-1:   #111114;
+      --d2t-bg-2:   #18181c;
+      --d2t-bg-3:   #1f1f24;
+      --d2t-bg-4:   #26262c;
+
+      /* 텍스트 계층 */
+      --d2t-text-0: #e8eaf0;
+      --d2t-text-1: #b8bcc8;
+      --d2t-text-2: #7a7f8e;
+      --d2t-text-3: #4a4f5e;
+
+      /* 강조색: 시안 — AI 분석 / 패턴 / 데이터 */
+      --d2t-cyan:        #00d4aa;
+      --d2t-cyan-dim:    rgba(0, 212, 170, 0.15);
+      --d2t-cyan-glow:   rgba(0, 212, 170, 0.06);
+
+      /* 강조색: 오렌지 — 브랜드 / CTA */
+      --d2t-orange:      #ff6b35;
+      --d2t-orange-dim:  rgba(255, 107, 53, 0.15);
+
+      /* 상태색 */
+      --d2t-rise:  #ef5350;
+      --d2t-fall:  #2196f3;
+      --d2t-warn:  #f59e0b;
+
+      /* 보더 */
+      --d2t-border-0: rgba(255,255,255,0.04);
+      --d2t-border-1: rgba(255,255,255,0.08);
+      --d2t-border-2: rgba(255,255,255,0.14);
+
+      /* 반경 */
+      --d2t-r-sm: 4px;
+      --d2t-r-md: 8px;
+      --d2t-r-lg: 12px;
+
+      /* 전환 */
+      --d2t-ease: cubic-bezier(.4,0,.2,1);
+      --d2t-dur:  200ms;
+    }
+
+    /* ── 유틸리티: 스켈레톤 로딩 ──────────────────────────── */
+    .d2t-skeleton {
+      background: linear-gradient(90deg, var(--d2t-bg-3) 25%, var(--d2t-bg-4) 50%, var(--d2t-bg-3) 75%);
+      background-size: 200% 100%;
+      animation: d2t-shimmer 1.4s infinite;
+      border-radius: var(--d2t-r-sm);
+    }
+    @keyframes d2t-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── 유틸리티: 펄스 닷 (로딩 인디케이터) ─────────────── */
+    .d2t-pulse-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--d2t-cyan);
+      animation: d2t-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes d2t-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .3; transform: scale(.75); }
+    }
+
+    /* ── 유틸리티: 가격 플래시 ───────────────────────────── */
+    @keyframes d2t-flash-rise {
+      0%   { background: rgba(239,83,80,.25); }
+      100% { background: transparent; }
+    }
+    @keyframes d2t-flash-fall {
+      0%   { background: rgba(33,150,243,.25); }
+      100% { background: transparent; }
+    }
+    .d2t-flash-rise { animation: d2t-flash-rise .6s var(--d2t-ease) forwards; }
+    .d2t-flash-fall { animation: d2t-flash-fall .6s var(--d2t-ease) forwards; }
+
+    /* ── 유틸리티: 스태거 진입 애니메이션 ───────────────── */
+    .d2t-stagger > * {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: d2t-stagger-in var(--d2t-dur) var(--d2t-ease) forwards;
+    }
+    .d2t-stagger > *:nth-child(1) { animation-delay:  40ms; }
+    .d2t-stagger > *:nth-child(2) { animation-delay:  80ms; }
+    .d2t-stagger > *:nth-child(3) { animation-delay: 120ms; }
+    .d2t-stagger > *:nth-child(4) { animation-delay: 160ms; }
+    .d2t-stagger > *:nth-child(5) { animation-delay: 200ms; }
+    .d2t-stagger > *:nth-child(6) { animation-delay: 240ms; }
+    @keyframes d2t-stagger-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── 유틸리티: 토스트 ────────────────────────────────── */
+    #d2t-toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .d2t-toast {
+      padding: 10px 16px;
+      border-radius: var(--d2t-r-md);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--d2t-text-0);
+      background: var(--d2t-bg-3);
+      border: 1px solid var(--d2t-border-2);
+      box-shadow: 0 4px 16px rgba(0,0,0,.5);
+      pointer-events: auto;
+      animation: d2t-toast-in .22s var(--d2t-ease) forwards;
+    }
+    .d2t-toast.d2t-toast-out { animation: d2t-toast-out .2s var(--d2t-ease) forwards; }
+    .d2t-toast.d2t-toast--info    { border-left: 3px solid var(--d2t-cyan); }
+    .d2t-toast.d2t-toast--success { border-left: 3px solid #4caf50; }
+    .d2t-toast.d2t-toast--warn    { border-left: 3px solid var(--d2t-warn); }
+    .d2t-toast.d2t-toast--error   { border-left: 3px solid var(--d2t-rise); }
+    @keyframes d2t-toast-in  { from { opacity:0; transform: translateX(16px); } to { opacity:1; transform: translateX(0); } }
+    @keyframes d2t-toast-out { to   { opacity:0; transform: translateX(16px); } }
+
+    /* ── 유틸리티: 탭 언더라인 슬라이드 ─────────────────── */
+    .d2t-tab-bar {
+      position: relative;
+      display: flex;
+      gap: 0;
+    }
+    .d2t-tab-bar::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 2px;
+      background: var(--d2t-cyan);
+      border-radius: 1px;
+      transition: left var(--d2t-dur) var(--d2t-ease), width var(--d2t-dur) var(--d2t-ease);
+    }
+
+    /* ── 유틸리티: 글로벌 스크롤바 (다크 테마) ──────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--d2t-bg-4); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--d2t-text-3); }
+
     /* ── 기본 레이아웃 ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -3216,6 +3366,74 @@
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
     crossorigin="anonymous"
   ></script>
+
+  <!-- D2T 토스트 컨테이너 -->
+  <div id="d2t-toast-container"></div>
+
+  <!-- D2T 유틸리티 JS -->
+  <script>
+  (function () {
+    'use strict';
+    var D2T = window.D2T || (window.D2T = {});
+
+    /* ── 토스트 시스템 ────────────────────────────────────── */
+    D2T.toast = function (msg, type, duration) {
+      var container = document.getElementById('d2t-toast-container');
+      if (!container) return;
+      var el = document.createElement('div');
+      el.className = 'd2t-toast d2t-toast--' + (type || 'info');
+      el.textContent = msg;
+      container.appendChild(el);
+      var ms = duration || 3000;
+      setTimeout(function () {
+        el.classList.add('d2t-toast-out');
+        el.addEventListener('animationend', function () { el.remove(); }, { once: true });
+      }, ms);
+    };
+
+    /* ── 스켈레톤 헬퍼 ───────────────────────────────────── */
+    D2T.skeleton = {
+      show: function (el, lines) {
+        if (!el) return;
+        var n = lines || 3;
+        var html = '';
+        for (var i = 0; i < n; i++) {
+          var w = (70 + Math.random() * 25).toFixed(0);
+          html += '<div class="d2t-skeleton" style="height:13px;width:' + w + '%;margin-bottom:8px;"></div>';
+        }
+        el.innerHTML = html;
+      },
+      hide: function (el) { /* 컨텐츠 교체 시 자동 해제 */ }
+    };
+
+    /* ── 가격 플래시 ─────────────────────────────────────── */
+    D2T.flashPrice = function (el, direction) {
+      if (!el) return;
+      el.classList.remove('d2t-flash-rise', 'd2t-flash-fall');
+      void el.offsetWidth; /* reflow */
+      el.classList.add(direction === 'rise' ? 'd2t-flash-rise' : 'd2t-flash-fall');
+    };
+
+    /* ── 스파크라인 SVG 생성기 ───────────────────────────── */
+    D2T.sparkline = function (values, opts) {
+      if (!values || values.length < 2) return '';
+      var o = opts || {};
+      var w = o.width  || 80;
+      var h = o.height || 28;
+      var min = Math.min.apply(null, values);
+      var max = Math.max.apply(null, values);
+      var range = max - min || 1;
+      var xs = values.map(function (_, i) { return (i / (values.length - 1)) * w; });
+      var ys = values.map(function (v) { return h - ((v - min) / range) * (h * .85) - h * .075; });
+      var d = xs.map(function (x, i) { return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + ys[i].toFixed(1); }).join(' ');
+      var color = o.color || (values[values.length-1] >= values[0] ? '#ef5350' : '#2196f3');
+      return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" fill="none" xmlns="http://www.w3.org/2000/svg">'
+           + '<path d="' + d + '" stroke="' + color + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+           + '</svg>';
+    };
+  })();
+  </script>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>
