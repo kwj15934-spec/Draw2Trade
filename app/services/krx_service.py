@@ -15,7 +15,7 @@ cache/krx/YYYYMMDD.json 에 저장한다.
       "close": 179700,
       "change_rate": -0.22,
       "volume": 10637589,
-      "trade_value": 29113466   ← 백만원 단위 (네이버 기준)
+      "trade_value": 29113466000000   ← 원 단위 (네이버 백만원 × 1,000,000 변환)
     },
     ...
   ]
@@ -120,7 +120,7 @@ def _scrape_market(sosok: str, market_name: str) -> list[dict]:
                     close       = int(_num(vals[2])) if len(vals) > 2 else 0
                     change_rate = _num(vals[4])      if len(vals) > 4 else 0.0
                     volume      = int(_num(vals[6])) if len(vals) > 6 else 0
-                    trade_value = int(_num(vals[7])) if len(vals) > 7 else 0
+                    trade_value = int(_num(vals[7])) * 1_000_000 if len(vals) > 7 else 0  # 백만원→원
 
                     if close <= 0:
                         continue
@@ -132,7 +132,7 @@ def _scrape_market(sosok: str, market_name: str) -> list[dict]:
                         "close":       close,
                         "change_rate": change_rate,
                         "volume":      volume,
-                        "trade_value": trade_value,  # 백만원
+                        "trade_value": trade_value,  # 원 단위
                     })
                 except Exception as e:
                     logger.debug("행 파싱 오류: %s", e)
