@@ -984,8 +984,8 @@ async def scanner_pattern_compare(body: _PatternCompareRequest):
 
 # ── 해외주식 랭킹 (KIS HHDFS762xxxxx 시리즈) ─────────────────────────────────
 
-# period → NDAY 파라미터 매핑
-_US_NDAY = {"1d": "0", "1w": "3", "1m": "5", "3m": "7"}
+# period → NDAY 파라미터 매핑 (KIS: 0=당일 … 7=60일 8=120일 9=1년)
+_US_NDAY = {"1d": "0", "1w": "3", "1m": "5", "3m": "7", "6m": "8"}
 
 # 미국 거래소 코드 목록
 _US_EXCHANGES = ["NAS", "NYS", "AMS"]
@@ -1065,7 +1065,7 @@ async def get_us_scanner(
     """
     미국 주식 전거래소 랭킹 조회.
     category: trade_value | volume | rise | fall | strength
-    period:   1d | 1w | 1m | 3m
+    period:   1d | 1w | 1m | 3m | 6m
 
     NYS + NAS + AMS 세 거래소를 병렬 호출 후 합산 정렬.
     """

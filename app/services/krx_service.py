@@ -202,7 +202,8 @@ def _load_cached_dates(n_days: int) -> list[dict]:
 
 
 def _period_to_days(period: str) -> int:
-    return {"1d": 1, "1w": 5, "1m": 22, "3m": 66}.get(period, 1)
+    """KRX 캐시 파일 개수(영업일 근사): 1d=1일, 1w≈5일, 1m≈22일, 3m≈66일, 6m≈132일."""
+    return {"1d": 1, "1w": 5, "1m": 22, "3m": 66, "6m": 132}.get(period, 1)
 
 
 def get_period_rankings(

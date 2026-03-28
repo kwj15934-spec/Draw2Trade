@@ -25,7 +25,7 @@ async def get_dashboard(
     ),
     top_n: int = Query(default=20, ge=5, le=50),
     market: str = Query(default="KR", description="KR | US"),
-    period: str = Query(default="1d", description="1d | 1w | 1m | 3m"),
+    period: str = Query(default="1d", description="1d | 1w | 1m | 3m | 6m"),
     hide_warning: int = Query(default=0, description="1=투자위험 종목 숨기기"),
 ):
     """
@@ -66,7 +66,7 @@ async def get_dashboard(
 @router.get("/spark")
 async def get_spark(
     ticker: str = Query(..., description="종목 코드 (KR: 6자리, US: AAPL 등)"),
-    period: str = Query(default="1d", description="1d | 1w | 1m | 3m"),
+    period: str = Query(default="1d", description="1d | 1w | 1m | 3m | 6m"),
     market: str = Query(default="KR", description="KR | US"),
     excd: str   = Query(default="",   description="US 거래소 코드 (NAS/NYS 등)"),
 ):

@@ -48,10 +48,10 @@ _US_WATCHLIST = [
 ]
 
 # period → 스파크라인 일봉 개수
-_PERIOD_DAYS = {"1d": 20, "1w": 5, "1m": 20, "3m": 60}
+_PERIOD_DAYS = {"1d": 20, "1w": 5, "1m": 20, "3m": 60, "6m": 120}
 
 # 기간별 거래대금 순위: 오늘(KST) 기준 시작일(FID_STRT / FID_INPUT_DATE_1) 계산용
-_RANK_LOOKBACK_DAYS = {"1d": 0, "1w": 7, "1m": 30, "3m": 90}
+_RANK_LOOKBACK_DAYS = {"1d": 0, "1w": 7, "1m": 30, "3m": 90, "6m": 180}
 
 
 def _ensure_cache_dir():
@@ -376,6 +376,7 @@ async def fetch_rankings(
     """
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
     category: trade_value | volume | rise | fall | strength
+    period:   1d | 1w | 1m | 3m | 6m (1d 초과 시 KRX 일별 캐시 집계 우선)
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
@@ -478,6 +479,7 @@ async def fetch_rankings(
         "1w":  (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
         "1m":  (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
         "3m":  (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+        "6m":  (now_kst - timedelta(days=185)).strftime("%Y%m%d"),
     }
     period_start = _period_start.get(period, _period_start["1d"])
 
@@ -783,6 +785,7 @@ async def fetch_spark(
         "1w": (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
         "1m": (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
         "3m": (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+        "6m": (now_kst - timedelta(days=185)).strftime("%Y%m%d"),
     }
     period_start = _period_start.get(period, _period_start["1d"])
 
@@ -793,8 +796,9 @@ async def fetch_spark(
         from app.services.data_service import get_ohlcv_by_timeframe
 
         if not kis_ok():
-            # KIS 미설정 → 로컬 캐시 fallback
-            data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+            # KIS 미설정 → 로컬 캐시 fallback (6M 일봉 분량 확보)
+            years_fb = 2 if period == "6m" else 1
+            data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
             if data and data.get("close"):
                 spark_days = _PERIOD_DAYS.get(period, 20)
                 closes = data["close"]
@@ -855,7 +859,7 @@ async def fetch_spark(
             except Exception as e:
                 logger.debug("fetch_spark 분봉 실패 [%s]: %s", ticker, e)
 
-        # ── KR 1w/1m/3m: 일봉 ───────────────────────────────────
+        # ── KR 1w/1m/3m/6m: 일봉 ─────────────────────────────────
         try:
             rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
             if rows and len(rows) >= 2:
@@ -873,7 +877,8 @@ async def fetch_spark(
 
         # ── 최종 fallback: 로컬 캐시 ────────────────────────────
         spark_days = _PERIOD_DAYS.get(period, 20)
-        data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+        years_fb = 2 if period == "6m" else 1
+        data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
         if data and data.get("close"):
             closes = data["close"]
             spark = closes[-spark_days:] if len(closes) >= spark_days else closes
@@ -915,6 +920,7 @@ def _enrich_krx(item: dict, period: str) -> dict:
             "1w":  (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
             "1m":  (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
             "3m":  (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+            "6m":  (now_kst - timedelta(days=185)).strftime("%Y%m%d"),
         }
         start = _period_start.get(period, (now_kst - timedelta(days=9)).strftime("%Y%m%d"))
 
@@ -938,7 +944,8 @@ def _enrich_krx(item: dict, period: str) -> dict:
 
         # fallback: 로컬 캐시
         spark_days = _PERIOD_DAYS.get(period, 20)
-        data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+        years_fb = 2 if period == "6m" else 1
+        data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
         if data and data.get("close"):
             closes = data["close"]
             spark = closes[-spark_days:] if len(closes) >= spark_days else closes
@@ -962,8 +969,8 @@ def _enrich_krx(item: dict, period: str) -> dict:
 
 def _normalize_trade_value_period(period: str) -> str:
     p = period.strip().lower()
-    if p not in ("1d", "1w", "1m", "3m"):
-        raise ValueError("period는 1D, 1W, 1M, 3M(또는 소문자)만 지원합니다.")
+    if p not in ("1d", "1w", "1m", "3m", "6m"):
+        raise ValueError("period는 1D, 1W, 1M, 3M, 6M(또는 소문자)만 지원합니다.")
     return p
 
 

@@ -154,7 +154,8 @@
         + '<td class="mkt-spark-cell">'
           + '<div class="mkt-spark-inner">'
             + '<div class="d2t-skeleton mkt-sk-cell" style="width:80px;height:28px;"></div>'
-            + '<div style="display:flex;gap:2px;margin-top:2px;">'
+            + '<div style="display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;">'
+              + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
               + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
               + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
               + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
@@ -303,8 +304,8 @@
     }
 
     // 마이크로 버튼
-    var btns = ['1D', '1W', '1M', '3M'];
-    var bMap = { '1D': '1d', '1W': '1w', '1M': '1m', '3M': '3m' };
+    var btns = ['1D', '1W', '1M', '3M', '6M'];
+    var bMap = { '1D': '1d', '1W': '1w', '1M': '1m', '3M': '3m', '6M': '6m' };
     var microHtml = '<div class="mkt-micro-btns">';
     btns.forEach(function (lbl) {
       var p    = bMap[lbl];

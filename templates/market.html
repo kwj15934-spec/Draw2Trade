@@ -57,6 +57,7 @@
           <option value="1w">1주</option>
           <option value="1m">1개월</option>
           <option value="3m">3개월</option>
+          <option value="6m">6개월</option>
         </select>
       </div>
 
@@ -556,7 +557,10 @@
 /* 마이크로 기간 버튼 그룹 */
 .mkt-micro-btns {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
+  max-width: 120px;
+  justify-content: flex-end;
 }
 .mkt-micro-btn {
   padding: 2px 5px;
