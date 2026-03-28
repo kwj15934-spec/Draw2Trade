@@ -412,7 +412,8 @@
         + ' data-color-up="' + (colorUp ? '1' : '0') + '"'
         + ' data-market="'  + _esc(market) + '"'
         + ' data-excd="'    + _esc(item.excd || '') + '"'
-        + ' onclick="window.location.href=\'' + href + '\'">'
+        + ' data-href="'    + href + '"'
+        + ' class="mkt-row-clickable">'
         + '<td class="mkt-rank' + rankCls + '">' + rank + '</td>'
         + '<td>'
           + '<div class="mkt-name" title="' + _esc(item.name) + '">' + _esc(item.name) + '</div>'
@@ -440,40 +441,51 @@
     _bindMicroBtns(tbody);
   }
 
-  // ── 마이크로 버튼 이벤트 위임 ────────────────────────────────
+  // ── 마이크로 버튼 + 행 클릭 이벤트 위임 ─────────────────────
   function _bindMicroBtns(tbody) {
     tbody.addEventListener('click', function (e) {
+      // 마이크로 버튼 클릭 → 차트 기간 변경 (행 이동 방지)
       var btn = e.target.closest('.mkt-micro-btn');
-      if (!btn) return;
-      e.stopPropagation();   // 행 클릭 차트 이동 방지
+      if (btn) {
+        e.stopPropagation();
+        e.preventDefault();
 
-      var ticker = btn.getAttribute('data-ticker');
-      var period = btn.getAttribute('data-period');
-      if (!ticker || !period) return;
+        var ticker = btn.getAttribute('data-ticker');
+        var period = btn.getAttribute('data-period');
+        if (!ticker || !period) return;
 
-      // 같은 기간 클릭 시 무시
-      if (_rowPeriod[ticker] === period) return;
-      _rowPeriod[ticker] = period;
+        // 같은 기간 클릭 시 무시
+        if (_rowPeriod[ticker] === period) return;
+        _rowPeriod[ticker] = period;
 
-      // 해당 행에서 버튼 활성화 갱신
-      var row = tbody.querySelector('tr[data-ticker="' + _escAttr(ticker) + '"]');
-      if (!row) return;
-      row.querySelectorAll('.mkt-micro-btn').forEach(function (b) {
-        b.classList.toggle('active', b.getAttribute('data-period') === period);
-      });
+        // 해당 행에서 버튼 활성화 갱신
+        var row = tbody.querySelector('tr[data-ticker="' + _escAttr(ticker) + '"]');
+        if (!row) return;
+        row.querySelectorAll('.mkt-micro-btn').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-period') === period);
+        });
 
-      // 해당 차트 셀에만 스피너 표시
-      var chartEl = document.getElementById('spark-chart-' + ticker);
-      if (chartEl) {
-        chartEl.innerHTML = '<div class="mkt-spark-loading"><div class="mkt-spark-spinner"></div></div>';
+        // 해당 차트 셀에만 스피너 표시
+        var chartEl = document.getElementById('spark-chart-' + ticker);
+        if (chartEl) {
+          chartEl.innerHTML = '<div class="mkt-spark-loading"><div class="mkt-spark-spinner"></div></div>';
+        }
+
+        // 개별 스파크 데이터 fetch
+        var market  = row.getAttribute('data-market') || 'KR';
+        var excd    = row.getAttribute('data-excd')   || '';
+        var colorUp = row.getAttribute('data-color-up') === '1';
+
+        _fetchRowSpark(ticker, period, market, excd, colorUp, chartEl, row);
+        return;
       }
 
-      // 개별 스파크 데이터 fetch
-      var market  = row.getAttribute('data-market') || 'KR';
-      var excd    = row.getAttribute('data-excd')   || '';
-      var colorUp = row.getAttribute('data-color-up') === '1';
-
-      _fetchRowSpark(ticker, period, market, excd, colorUp, chartEl, row);
+      // 행 클릭 → 차트 페이지 이동
+      var row = e.target.closest('tr.mkt-row-clickable');
+      if (row) {
+        var href = row.getAttribute('data-href');
+        if (href) window.location.href = href;
+      }
     });
   }
 
