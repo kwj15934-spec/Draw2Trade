@@ -16,28 +16,32 @@ router = APIRouter(prefix="/api/v1/market", tags=["market-dashboard"])
 
 @router.get("/dashboard")
 async def get_dashboard(
-    category: str = Query(
-        default="volume",
-        description="랭킹 카테고리: volume(거래량) | rise(상승률) | fall(하락률)",
-    ),
+    category: str = Query(default="volume", description="volume | rise | fall"),
     top_n: int = Query(default=20, ge=5, le=50),
+    market: str = Query(default="KR", description="KR | US"),
+    period: str = Query(default="1d", description="1d | 1w | 1m | 3m"),
 ):
     """
-    시장 대시보드 종합 데이터를 반환한다.
-    - KOSPI/KOSDAQ 지수 시세
-    - 카테고리별 상위 종목 + 추세 라벨 + 스파크라인
+    시장 대시보드 종합 데이터.
+    market=KR: KOSPI/KOSDAQ 지수 + 국내 랭킹
+    market=US: S&P500/NASDAQ(ETF 대용) + 미국 주요 종목 랭킹
     """
     import asyncio
 
-    # 지수 시세와 랭킹 데이터를 병렬 호출
-    index_task = market_service.fetch_index_quotes()
-    rank_task = market_service.fetch_rankings(category=category, top_n=top_n)
+    if market == "US":
+        index_task = market_service.fetch_us_index_quotes()
+        rank_task  = market_service.fetch_us_rankings(category=category, top_n=top_n, period=period)
+    else:
+        index_task = market_service.fetch_index_quotes()
+        rank_task  = market_service.fetch_rankings(category=category, top_n=top_n, period=period)
 
     indices, rankings = await asyncio.gather(index_task, rank_task)
 
     return {
         "indices": indices,
         "rankings": rankings,
+        "market": market,
+        "period": period,
     }
 
 

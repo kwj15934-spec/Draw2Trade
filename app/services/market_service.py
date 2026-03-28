@@ -18,6 +18,38 @@ _KST = timezone(timedelta(hours=9))
 # 디스크 스냅샷 경로
 _CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "market"
 
+# 미국 주요 종목 워치리스트 (symbol, excd, display_name)
+_US_WATCHLIST = [
+    ("AAPL",  "NAS", "Apple"),
+    ("MSFT",  "NAS", "Microsoft"),
+    ("NVDA",  "NAS", "NVIDIA"),
+    ("AMZN",  "NAS", "Amazon"),
+    ("GOOGL", "NAS", "Alphabet"),
+    ("META",  "NAS", "Meta"),
+    ("TSLA",  "NAS", "Tesla"),
+    ("AVGO",  "NAS", "Broadcom"),
+    ("AMD",   "NAS", "AMD"),
+    ("NFLX",  "NAS", "Netflix"),
+    ("INTC",  "NAS", "Intel"),
+    ("QCOM",  "NAS", "Qualcomm"),
+    ("MU",    "NAS", "Micron"),
+    ("ADBE",  "NAS", "Adobe"),
+    ("COST",  "NAS", "Costco"),
+    ("JPM",   "NYS", "JPMorgan"),
+    ("V",     "NYS", "Visa"),
+    ("MA",    "NYS", "Mastercard"),
+    ("WMT",   "NYS", "Walmart"),
+    ("JNJ",   "NYS", "J&J"),
+    ("XOM",   "NYS", "Exxon"),
+    ("BAC",   "NYS", "B of America"),
+    ("GS",    "NYS", "Goldman"),
+    ("DIS",   "NYS", "Disney"),
+    ("MS",    "NYS", "Morgan Stanley"),
+]
+
+# period → 스파크라인 일봉 개수
+_PERIOD_DAYS = {"1d": 20, "1w": 5, "1m": 20, "3m": 60}
+
 
 def _ensure_cache_dir():
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -264,13 +296,15 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
                 change_rate = (last_close - prev_close) / prev_close * 100 if prev_close else 0
                 last_vol = volumes[-1] if volumes else 0
 
+                spark = [float(c) for c in closes[-20:]]
                 candidates.append({
                     "ticker": ticker,
                     "name": names.get(ticker, ticker),
                     "price": int(last_close),
                     "change_rate": f"{change_rate:+.2f}",
                     "volume": int(last_vol),
-                    "sparkline": [float(c) for c in closes[-20:]],
+                    "sparkline": spark,
+                    "open_price": spark[0] if spark else int(last_close),
                     "trend": _classify_trend(closes[-20:]),
                     "_sort_vol": last_vol,
                     "_sort_rate": change_rate,
@@ -302,15 +336,17 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
     return {
         "items": items,
         "as_of": now.strftime("%H:%M:%S"),
+        "saved_at": now.isoformat(),
+        "is_realtime": False,
         "fallback": True,
-        "snapshot_time": "캐시 데이터 기반",
+        "snapshot_time": now.strftime("%m/%d %H:%M") + " 기준",
         "category": category,
     }
 
 
 # ── 종합 랭킹 데이터 ──────────────────────────────────────────────────────────
 
-async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
+async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str = "1d") -> dict:
     """
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
@@ -367,16 +403,17 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
         ticker = item["ticker"]
         try:
             from app.services.kis_client import fetch_kr_minute, is_configured as kis_ok
+            from app.services.data_service import get_ohlcv_by_timeframe
 
-            # 1) 분봉 데이터로 금일 장중 추세 분석 (우선)
-            if kis_ok():
+            spark_days = _PERIOD_DAYS.get(period, 20)
+
+            # 1) 금일(1d): 분봉 데이터로 장중 추세 분석 (우선)
+            if period == "1d" and kis_ok():
                 try:
                     min_data = fetch_kr_minute(ticker)
                     if min_data and len(min_data) >= 5:
-                        # 시간순 정렬 (API는 newest-first)
                         min_data.sort(key=lambda m: m.get("stck_cntg_hour", ""))
-                        minutes = []
-                        spark_closes = []
+                        minutes, spark_closes = [], []
                         for m in min_data:
                             c = float(m.get("stck_prpr", 0))
                             v = int(m.get("cntg_vol", 0))
@@ -386,24 +423,28 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
                         if minutes and len(minutes) >= 5:
                             item["trend"] = _classify_intraday_trend(minutes)
                             item["sparkline"] = spark_closes
+                            item["open_price"] = spark_closes[0]
                             return item
                 except Exception as e:
                     logger.debug("분봉 조회 실패 [%s]: %s", ticker, e)
 
-            # 2) 분봉 불가 시 일봉 fallback
-            from app.services.data_service import get_ohlcv_by_timeframe
+            # 2) 일봉 (period에 따라 기간 조정)
             data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
             if data and data.get("close"):
-                closes = data["close"][-20:]
-                item["trend"] = _classify_trend(closes)
-                item["sparkline"] = closes
+                closes = data["close"]
+                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                item["trend"] = _classify_trend(list(spark))
+                item["sparkline"] = list(spark)
+                item["open_price"] = float(spark[0]) if spark else item.get("price", 0)
             else:
                 item["trend"] = {"label": "데이터 부족", "direction": "neutral", "strength": 0}
                 item["sparkline"] = []
+                item["open_price"] = item.get("price", 0)
         except Exception as e:
             logger.debug("추세 분석 실패 [%s]: %s", ticker, e)
             item["trend"] = {"label": "분석 불가", "direction": "neutral", "strength": 0}
             item["sparkline"] = []
+            item["open_price"] = item.get("price", 0)
         return item
 
     def _enrich_all():
@@ -411,14 +452,184 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
 
     enriched = await loop.run_in_executor(None, _enrich_all)
 
+    now = datetime.now(_KST)
     result = {
         "items": enriched,
-        "as_of": scanner.get("as_of", ""),
+        "as_of": scanner.get("as_of", now.strftime("%H:%M:%S")),
+        "saved_at": now.isoformat(),
+        "is_realtime": True,
         "fallback": False,
         "category": category,
+        "period": period,
     }
 
     # 4) 유효 데이터를 디스크에 스냅샷 보존
     _save_snapshot(snap_name, result)
+
+    return result
+
+
+# ── 미국 주식 지수 시세 ────────────────────────────────────────────────────────
+
+async def fetch_us_index_quotes() -> dict:
+    """
+    SPY(S&P500 ETF), QQQ(NASDAQ ETF) 일봉으로 지수 대용 시세를 반환한다.
+    실패 시 디스크 스냅샷 fallback.
+    """
+    loop = asyncio.get_event_loop()
+
+    def _sync():
+        from app.services.kis_client import fetch_us_ohlcv, is_configured
+        if not is_configured():
+            return {}
+
+        now = datetime.now(_KST)
+        today = now.strftime("%Y%m%d")
+        indices = {}
+
+        proxy_map = [
+            ("SPY", "NYS", "S&P 500"),
+            ("QQQ", "NAS", "NASDAQ"),
+        ]
+        for sym, excd, label in proxy_map:
+            try:
+                rows = fetch_us_ohlcv(sym, excd, "0", today)
+                if not rows or len(rows) < 2:
+                    continue
+                # newest-first
+                last = rows[0]
+                prev = rows[1]
+                price = float(last.get("clos", 0))
+                prev_price = float(prev.get("clos", 0))
+                if price <= 0:
+                    continue
+                change = price - prev_price
+                change_rate = change / prev_price * 100 if prev_price else 0
+                indices[label] = {
+                    "name": label,
+                    "price": price,
+                    "change": round(change, 2),
+                    "change_rate": round(change_rate, 2),
+                    "volume": int(last.get("tvol", 0)),
+                    "trade_value": 0,
+                    "symbol": sym,
+                }
+            except Exception as e:
+                logger.debug("US 지수 조회 실패 [%s]: %s", sym, e)
+
+        return indices
+
+    indices = await loop.run_in_executor(None, _sync)
+
+    if indices:
+        _save_snapshot("us_indices", indices)
+    else:
+        snap = _load_snapshot("us_indices")
+        if snap and snap.get("data"):
+            indices = snap["data"]
+            for k in indices:
+                indices[k]["_snapshot"] = snap.get("saved_at", "")
+
+    return indices
+
+
+# ── 미국 주식 랭킹 ────────────────────────────────────────────────────────────
+
+async def fetch_us_rankings(category: str = "volume", top_n: int = 20, period: str = "1d") -> dict:
+    """
+    _US_WATCHLIST에서 KIS 일봉 OHLCV를 조회하여 카테고리별 랭킹을 반환한다.
+    """
+    snap_name = f"rankings_us_{category}_{period}"
+    loop = asyncio.get_event_loop()
+
+    def _sync():
+        from app.services.kis_client import fetch_us_ohlcv, is_configured
+        if not is_configured():
+            return []
+
+        now = datetime.now(_KST)
+        today = now.strftime("%Y%m%d")
+        spark_days = _PERIOD_DAYS.get(period, 20)
+        results = []
+
+        for symbol, excd, name in _US_WATCHLIST:
+            try:
+                rows = fetch_us_ohlcv(symbol, excd, "0", today)
+                if not rows or len(rows) < 2:
+                    continue
+                # newest-first → reverse for oldest-first
+                rows_asc = list(reversed(rows))
+                closes = [float(r.get("clos", 0)) for r in rows_asc if float(r.get("clos", 0)) > 0]
+                volumes = [int(r.get("tvol", 0)) for r in rows_asc]
+
+                if len(closes) < 2:
+                    continue
+
+                last_close = closes[-1]
+                prev_close = closes[-2]
+                change_rate = (last_close - prev_close) / prev_close * 100 if prev_close else 0
+                last_vol = volumes[-1] if volumes else 0
+
+                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                trend = _classify_trend(list(spark))
+
+                results.append({
+                    "ticker": symbol,
+                    "name": name,
+                    "price": round(last_close, 2),
+                    "change_rate": f"{change_rate:+.2f}",
+                    "volume": last_vol,
+                    "sparkline": list(spark),
+                    "open_price": float(spark[0]) if spark else last_close,
+                    "trend": trend,
+                    "market": "US",
+                    "excd": excd,
+                    "_sort_vol": last_vol,
+                    "_sort_rate": change_rate,
+                })
+            except Exception as e:
+                logger.debug("US 종목 조회 실패 [%s]: %s", symbol, e)
+
+        if not results:
+            return []
+
+        if category == "rise":
+            results.sort(key=lambda x: x["_sort_rate"], reverse=True)
+        elif category == "fall":
+            results.sort(key=lambda x: x["_sort_rate"])
+        else:
+            results.sort(key=lambda x: x["_sort_vol"], reverse=True)
+
+        for r in results:
+            r.pop("_sort_vol", None)
+            r.pop("_sort_rate", None)
+
+        return results[:top_n]
+
+    items = await loop.run_in_executor(None, _sync)
+
+    if not items:
+        snap = _load_snapshot(snap_name)
+        if snap and snap.get("data"):
+            d = snap["data"]
+            d["fallback"] = True
+            d["saved_at"] = snap.get("saved_at", "")
+            d["is_realtime"] = False
+            d["snapshot_time"] = snap.get("saved_at", "")
+            return d
+
+    now = datetime.now(_KST)
+    result = {
+        "items": items,
+        "as_of": now.strftime("%H:%M:%S"),
+        "saved_at": now.isoformat(),
+        "is_realtime": bool(items),
+        "fallback": not bool(items),
+        "category": category,
+        "period": period,
+    }
+
+    if items:
+        _save_snapshot(snap_name, result)
 
     return result

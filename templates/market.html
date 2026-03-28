@@ -22,10 +22,37 @@
 <!-- ── 메인 콘텐츠 ────────────────────────────────────────────── -->
 <main class="mkt-main">
 
+  <!-- 컨트롤 패널 -->
+  <div class="mkt-ctrl-bar">
+    <!-- 시장 선택 탭 -->
+    <div class="mkt-market-tabs" role="tablist" aria-label="시장 선택">
+      <button class="mkt-market-tab active" data-mkt="KR" role="tab">🇰🇷 국내</button>
+      <button class="mkt-market-tab" data-mkt="US" role="tab">🇺🇸 미국</button>
+    </div>
+
+    <div class="mkt-ctrl-divider"></div>
+
+    <!-- 기간 선택 -->
+    <div class="mkt-period-btns" role="group" aria-label="기간 선택">
+      <button class="mkt-period-btn active" data-period="1d">금일</button>
+      <button class="mkt-period-btn" data-period="1w">1주</button>
+      <button class="mkt-period-btn" data-period="1m">1개월</button>
+      <button class="mkt-period-btn" data-period="3m">3개월</button>
+    </div>
+
+    <div class="mkt-ctrl-spacer"></div>
+
+    <!-- 데이터 신선도 배지 -->
+    <div class="mkt-freshness" id="mkt-freshness">
+      <span class="mkt-freshness-dot" id="mkt-freshness-dot"></span>
+      <span class="mkt-freshness-text" id="mkt-freshness-text">—</span>
+    </div>
+  </div>
+
   <!-- 지수 카드 영역 -->
   <section class="mkt-indices" id="mkt-indices">
-    <div class="mkt-idx-card d2t-skeleton" id="idx-KOSPI" style="height:120px;"></div>
-    <div class="mkt-idx-card d2t-skeleton" id="idx-KOSDAQ" style="height:120px;"></div>
+    <div class="mkt-idx-card d2t-skeleton" id="idx-A" style="height:120px;"></div>
+    <div class="mkt-idx-card d2t-skeleton" id="idx-B" style="height:120px;"></div>
     <div class="mkt-idx-card mkt-summary-card" id="mkt-summary" style="height:120px;">
       <div class="mkt-summary-inner">
         <div class="mkt-summary-label">조회 시각</div>
@@ -53,7 +80,7 @@
             <th class="mkt-th-price">현재가</th>
             <th class="mkt-th-rate">등락률</th>
             <th class="mkt-th-vol">거래량</th>
-            <th class="mkt-th-spark">금일 추이</th>
+            <th class="mkt-th-spark" id="mkt-th-spark">금일 추이</th>
             <th class="mkt-th-trend">추세</th>
           </tr>
         </thead>
@@ -75,6 +102,89 @@
 
 <style>
   /* ── Market Dashboard 전용 스타일 ─────────────────────────── */
+
+  /* 컨트롤 바 */
+  .mkt-ctrl-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .mkt-ctrl-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--d2t-border-1, rgba(255,255,255,0.08));
+  }
+  .mkt-ctrl-spacer { flex: 1; }
+
+  /* 시장 탭 */
+  .mkt-market-tabs { display: flex; gap: 2px; }
+  .mkt-market-tab {
+    padding: 6px 14px;
+    background: none;
+    border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+    border-radius: var(--d2t-r-sm, 4px);
+    color: var(--d2t-text-2, #7a7f8e);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--d2t-dur, 200ms);
+  }
+  .mkt-market-tab:first-child { border-radius: var(--d2t-r-sm, 4px) 0 0 var(--d2t-r-sm, 4px); }
+  .mkt-market-tab:last-child  { border-radius: 0 var(--d2t-r-sm, 4px) var(--d2t-r-sm, 4px) 0; margin-left: -1px; }
+  .mkt-market-tab:hover  { color: var(--d2t-text-1, #b8bcc8); border-color: var(--d2t-border-1); }
+  .mkt-market-tab.active {
+    background: var(--d2t-cyan, #00d4aa);
+    border-color: var(--d2t-cyan, #00d4aa);
+    color: #0a0a0f;
+  }
+
+  /* 기간 버튼 */
+  .mkt-period-btns { display: flex; gap: 2px; }
+  .mkt-period-btn {
+    padding: 5px 12px;
+    background: none;
+    border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+    color: var(--d2t-text-2, #7a7f8e);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--d2t-dur, 200ms);
+    border-radius: 0;
+  }
+  .mkt-period-btn:first-child { border-radius: var(--d2t-r-sm, 4px) 0 0 var(--d2t-r-sm, 4px); }
+  .mkt-period-btn:last-child  { border-radius: 0 var(--d2t-r-sm, 4px) var(--d2t-r-sm, 4px) 0; margin-left: -1px; }
+  .mkt-period-btn:hover  { color: var(--d2t-text-1, #b8bcc8); }
+  .mkt-period-btn.active {
+    background: rgba(0,212,170,0.12);
+    border-color: var(--d2t-cyan, #00d4aa);
+    color: var(--d2t-cyan, #00d4aa);
+  }
+
+  /* 신선도 배지 */
+  .mkt-freshness {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--d2t-text-3, #4a4f5e);
+  }
+  .mkt-freshness-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--d2t-text-3, #4a4f5e);
+    flex-shrink: 0;
+  }
+  .mkt-freshness.fresh .mkt-freshness-dot {
+    background: var(--d2t-cyan, #00d4aa);
+    box-shadow: 0 0 6px var(--d2t-cyan, #00d4aa);
+  }
+  .mkt-freshness.fresh .mkt-freshness-text { color: var(--d2t-cyan, #00d4aa); }
+  .mkt-freshness.recent .mkt-freshness-dot { background: var(--d2t-orange, #f97316); }
+  .mkt-freshness.recent .mkt-freshness-text { color: var(--d2t-orange, #f97316); }
+
   .mkt-main {
     flex: 1;
     max-width: 1200px;
