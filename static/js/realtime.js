@@ -25,6 +25,7 @@
   // ── rAF 배치 렌더링 시스템 ─────────────────────────────────────────────────
   // DOM 업데이트를 requestAnimationFrame으로 모아서 한 번에 처리
 
+  var _pendingTickQueue    = [];      // 수신된 tick 순서 큐 (체결 내역 누락 방지)
   var _pendingPriceUpdate  = null;   // 최신 가격 패널 데이터 (tick 기반)
   var _pendingCandlePrice  = null;   // candle_update 기반 가격 (tick 없을 때 헤더바용)
   var _pendingOverlay      = null;   // 최신 오버레이 가격
@@ -40,6 +41,8 @@
 
   function _flushRaf() {
     _rafScheduled = false;
+    // tick 큐가 남아있으면 다음 rAF도 예약
+    if (_pendingTickQueue.length > 0) _scheduleRaf();
     try {
       // 차트 캔들 업데이트
       if (_pendingChartUpdate && window.D2T && D2T.series) {
@@ -54,6 +57,11 @@
       }
 
       // 가격 패널 DOM 업데이트 (tick 기반 — tick이 있으면 candle 가격 무시)
+      // tick 큐에서 1건씩 꺼내 처리 (체결 내역 순서 유지)
+      if (_pendingTickQueue.length > 0) {
+        var nextTick = _pendingTickQueue.shift();
+        _pendingPriceUpdate = nextTick;
+      }
       if (_pendingPriceUpdate) {
         try { _flushPricePanel(_pendingPriceUpdate); } catch (_) {}
         _pendingPriceUpdate = null;
@@ -324,8 +332,8 @@
       console.log('[RT] tick #' + _tickCount, 'price=' + price, 'candle=', JSON.stringify(_rtCandle));
     }
 
-    // rAF 배치: 가격 패널 + 오버레이도 예약
-    _pendingPriceUpdate = tick;
+    // tick 큐에 추가 (체결 내역 누락 방지 — rAF마다 1건씩 처리)
+    _pendingTickQueue.push(tick);
     _pendingOverlay = price;
     _scheduleRaf();
 
@@ -494,6 +502,7 @@
     _prevClose = null;
     _tickCount = 0;
     _lastCandleTs = 0;
+    _pendingTickQueue.length = 0;
     _setLive(false);
     _stopRestPolling();
   };
@@ -515,6 +524,7 @@
     _rtCandle      = null;
     _tickCount     = 0;
     _lastCandleTs  = 0;
+    _pendingTickQueue.length = 0;
     _setLive(false);
     // 데이터 소스 배지 리셋
     _sourceHasKrx = false; _sourceHasNxt = false; _lastSource = '';

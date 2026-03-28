@@ -130,61 +130,48 @@ async def ws_realtime(ws: WebSocket):
 
     # ── 송신 루프 (타입별 스로틀링) ────────────────────────────────────────────
     async def sender():
-        # 타입별 마지막 전송 시각 + 최신 보류 데이터
-        last_sent = {"tick": 0.0, "asking": 0.0, "candle_update": 0.0}
-        throttle = {
-            "tick": _THROTTLE_TICK_SEC,
-            "asking": _THROTTLE_ASKING_SEC,
-            "candle_update": _THROTTLE_CANDLE_SEC,
-        }
-        pending: dict[str, dict] = {}  # 타입별 최신 보류 메시지
-        flush_task: asyncio.Task | None = None
-
-        async def _flush_pending():
-            """보류된 메시지를 스로틀 간격 후에 전송."""
-            try:
-                await asyncio.sleep(0.05)  # 최소 50ms 대기 후 체크
-                while pending:
-                    now = _time.monotonic()
-                    next_flush = None
-                    keys = list(pending.keys())
-                    for msg_type in keys:
-                        interval = throttle.get(msg_type, 0.1)
-                        elapsed = now - last_sent.get(msg_type, 0.0)
-                        if elapsed >= interval:
-                            # 전송 가능
-                            data = pending.pop(msg_type)
-                            last_sent[msg_type] = now
-                            await ws.send_text(json.dumps(data, ensure_ascii=False))
-                        else:
-                            # 아직 대기 필요
-                            wait = interval - elapsed
-                            if next_flush is None or wait < next_flush:
-                                next_flush = wait
-                    if pending and next_flush:
-                        await asyncio.sleep(next_flush)
-                    elif not pending:
-                        break
-            except (WebSocketDisconnect, Exception):
-                pass
+        import collections
+        # tick: 큐에 누적 후 1건씩 순차 전송 (체결 내역 누락 방지)
+        # asking / candle_update: 최신 1건만 유지 (덮어씀)
+        tick_queue: collections.deque = collections.deque()
+        last_sent = {"asking": 0.0, "candle_update": 0.0}
+        pending: dict[str, dict] = {}   # asking / candle_update 보류
+        last_tick_sent = 0.0
 
         try:
             while True:
-                data = await q.get()
-                msg_type = data.get("type", "")
-                interval = throttle.get(msg_type, 0.0)
-                now = _time.monotonic()
-                elapsed = now - last_sent.get(msg_type, 0.0)
+                # 큐에서 꺼내기 (최대 20ms 대기 → tick 드레인 루프와 병행)
+                try:
+                    data = await asyncio.wait_for(q.get(), timeout=0.02)
+                except asyncio.TimeoutError:
+                    data = None
 
-                if interval <= 0 or elapsed >= interval:
-                    # 스로틀 간격 경과 → 즉시 전송
-                    last_sent[msg_type] = now
-                    await ws.send_text(json.dumps(data, ensure_ascii=False))
-                else:
-                    # 스로틀 내 → 최신 건으로 교체 보류 (덮어씀)
-                    pending[msg_type] = data
-                    if flush_task is None or flush_task.done():
-                        flush_task = asyncio.create_task(_flush_pending())
+                if data is not None:
+                    msg_type = data.get("type", "")
+                    if msg_type == "tick":
+                        # tick은 큐에 누적 (버리지 않음)
+                        # 큐가 100건 초과 시 오래된 것 제거 (정규장 폭발 방지)
+                        tick_queue.append(data)
+                        while len(tick_queue) > 100:
+                            tick_queue.popleft()
+                    else:
+                        # asking / candle_update: 최신 건으로 덮어씀
+                        pending[msg_type] = data
+
+                now = _time.monotonic()
+
+                # tick 1건씩 1초에 1번씩 전송
+                if tick_queue and (now - last_tick_sent) >= _THROTTLE_TICK_SEC:
+                    tick_data = tick_queue.popleft()
+                    last_tick_sent = now
+                    await ws.send_text(json.dumps(tick_data, ensure_ascii=False))
+
+                # asking / candle_update 전송
+                for msg_type in list(pending.keys()):
+                    interval = _THROTTLE_ASKING_SEC if msg_type == "asking" else _THROTTLE_CANDLE_SEC
+                    if (now - last_sent.get(msg_type, 0.0)) >= interval:
+                        await ws.send_text(json.dumps(pending.pop(msg_type), ensure_ascii=False))
+                        last_sent[msg_type] = now
 
         except WebSocketDisconnect:
             pass
