@@ -660,104 +660,99 @@ async def fetch_us_rankings(
     hide_warning: bool = False,
 ) -> dict:
     """
-    _US_WATCHLIST에서 KIS 일봉 OHLCV를 조회하여 카테고리별 랭킹을 반환한다.
+    KIS 해외주식 랭킹 API (HHDFS762xxxxx) — NYS+NAS+AMS 전종목.
+    NDAY 파라미터로 1d/1w/1m/3m 기간별 랭킹 직접 지원.
     """
+    from app.routers.kis_data import get_us_scanner
     snap_name = f"rankings_us_{category}_{period}"
-    loop = asyncio.get_event_loop()
 
-    def _sync():
-        from app.services.kis_client import fetch_us_ohlcv, is_configured
-        if not is_configured():
-            return []
-
-        now = datetime.now(_KST)
-        today = now.strftime("%Y%m%d")
-        spark_days = _PERIOD_DAYS.get(period, 20)
-        results = []
-
-        for symbol, excd, name in _US_WATCHLIST:
-            try:
-                rows = fetch_us_ohlcv(symbol, excd, "0", today)
-                if not rows or len(rows) < 2:
-                    continue
-                # newest-first → reverse for oldest-first
-                rows_asc = list(reversed(rows))
-                closes = [float(r.get("clos", 0)) for r in rows_asc if float(r.get("clos", 0)) > 0]
-                volumes = [int(r.get("tvol", 0)) for r in rows_asc]
-
-                if len(closes) < 2:
-                    continue
-
-                last_close = closes[-1]
-                prev_close = closes[-2]
-                change_rate = (last_close - prev_close) / prev_close * 100 if prev_close else 0
-                last_vol = volumes[-1] if volumes else 0
-
-                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-                trend = _classify_trend(list(spark))
-
-                results.append({
-                    "ticker": symbol,
-                    "name": name,
-                    "price": round(last_close, 2),
-                    "change_rate": f"{change_rate:+.2f}",
-                    "volume": last_vol,
-                    "sparkline": list(spark),
-                    "open_price": float(spark[0]) if spark else last_close,
-                    "baseline_price": float(spark[0]) if spark else last_close,
-                    "_color_up": change_rate >= 0,   # 색상 기준: change_rate 부호로 고정
-                    "trend": trend,
-                    "market": "US",
-                    "excd": excd,
-                    "_sort_vol": last_vol,
-                    "_sort_rate": change_rate,
-                })
-            except Exception as e:
-                logger.debug("US 종목 조회 실패 [%s]: %s", symbol, e)
-
-        if not results:
-            return []
-
-        if category == "rise":
-            results.sort(key=lambda x: x["_sort_rate"], reverse=True)
-        elif category == "fall":
-            results.sort(key=lambda x: x["_sort_rate"])
-        else:
-            results.sort(key=lambda x: x["_sort_vol"], reverse=True)
-
-        for r in results:
-            r.pop("_sort_vol", None)
-            r.pop("_sort_rate", None)
-
-        return results[:top_n]
-
-    items = await loop.run_in_executor(None, _sync)
+    scanner = await get_us_scanner(category=category, period=period, top_n=top_n)
+    items = scanner.get("items", [])
 
     if not items:
         snap = _load_snapshot(snap_name)
         if snap and snap.get("data"):
             d = snap["data"]
             d["fallback"] = True
-            d["saved_at"] = snap.get("saved_at", "")
-            d["is_realtime"] = False
             d["snapshot_time"] = snap.get("saved_at", "")
             return d
 
+    # 스파크라인 + 추세 보강
+    loop = asyncio.get_event_loop()
+
+    def _enrich_us_all():
+        return [_enrich_us(dict(it), period) for it in items]
+
+    enriched = await loop.run_in_executor(None, _enrich_us_all)
+
     now = datetime.now(_KST)
     result = {
-        "items": items,
-        "as_of": now.strftime("%H:%M:%S"),
-        "saved_at": now.isoformat(),
-        "is_realtime": bool(items),
-        "fallback": not bool(items),
-        "category": category,
-        "period": period,
+        "items":       enriched,
+        "as_of":       scanner.get("as_of", now.strftime("%H:%M:%S")),
+        "saved_at":    now.isoformat(),
+        "is_realtime": True,
+        "fallback":    False,
+        "category":    category,
+        "period":      period,
     }
 
-    if items:
+    if enriched:
         _save_snapshot(snap_name, result)
 
     return result
+
+
+def _enrich_us(item: dict, period: str) -> dict:
+    """KIS 랭킹 US 아이템에 스파크라인 + 추세 + _color_up 보강."""
+    ticker = item["ticker"]
+    excd   = item.get("excd", "NAS")
+    try:
+        from app.services.kis_client import fetch_us_ohlcv, is_configured
+        from app.services.us_data_service import get_us_ohlcv_by_timeframe
+
+        rate_num = float(str(item.get("change_rate") or "0").replace("+", ""))
+        item["_color_up"] = rate_num >= 0
+        item["market"]    = "US"
+
+        spark_days = _PERIOD_DAYS.get(period, 20)
+
+        if is_configured():
+            try:
+                now_kst = datetime.now(_KST)
+                today   = now_kst.strftime("%Y%m%d")
+                rows = fetch_us_ohlcv(ticker, excd, "0", today)
+                if rows and len(rows) >= 2:
+                    rows_asc = list(reversed(rows))
+                    closes = [float(r.get("clos") or 0) for r in rows_asc
+                              if float(r.get("clos") or 0) > 0]
+                    if len(closes) >= 2:
+                        spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                        item["sparkline"]      = spark
+                        item["baseline_price"] = float(spark[0])
+                        item["trend"]          = _classify_trend(spark)
+                        return item
+            except Exception as e:
+                logger.debug("_enrich_us OHLCV 실패 [%s]: %s", ticker, e)
+
+        # fallback: 로컬 캐시
+        data = get_us_ohlcv_by_timeframe(ticker, "daily")
+        if data and data.get("close"):
+            closes = data["close"]
+            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+            item["sparkline"]      = list(spark)
+            item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
+            item["trend"]          = _classify_trend(list(spark))
+            return item
+
+    except Exception as e:
+        logger.debug("_enrich_us 실패 [%s]: %s", ticker, e)
+
+    item.setdefault("sparkline",      [])
+    item.setdefault("baseline_price", item.get("price", 0))
+    item.setdefault("trend", {"label": "데이터 없음", "direction": "neutral",
+                               "strength": 0, "reason": ""})
+    item.setdefault("_color_up", None)
+    return item
 
 
 # ── 단일 종목 스파크라인 (in-cell 기간 전환용) ─────────────────────────────────

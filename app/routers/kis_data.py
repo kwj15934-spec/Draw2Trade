@@ -979,3 +979,158 @@ async def scanner_pattern_compare(body: _PatternCompareRequest):
     loop = asyncio.get_event_loop()
     results = await loop.run_in_executor(None, _sync)
     return {"results": results, "base_ticker": body.ticker}
+
+
+# ── 해외주식 랭킹 (KIS HHDFS762xxxxx 시리즈) ─────────────────────────────────
+
+# period → NDAY 파라미터 매핑
+_US_NDAY = {"1d": "0", "1w": "3", "1m": "5", "3m": "7"}
+
+# 미국 거래소 코드 목록
+_US_EXCHANGES = ["NAS", "NYS", "AMS"]
+
+
+def _fetch_us_ranking(
+    tr_id: str,
+    path: str,
+    excd: str,
+    nday: str,
+    extra_params: dict,
+    top_n: int,
+) -> list[dict]:
+    """
+    해외주식 랭킹 API 단일 호출 (동기).
+    반환: list of {ticker, name, excd, price, change_rate, volume, trade_value, ...}
+    """
+    from app.services.kis_client import _get, is_configured
+    if not is_configured():
+        return []
+
+    params = {
+        "EXCD":     excd,
+        "NDAY":     nday,
+        "VOL_RANG": "0",
+        "KEYB":     "",
+    }
+    params.update(extra_params)
+
+    data = _get(path=path, params=params, tr_id=tr_id)
+    if not data or data.get("rt_cd") != "0":
+        logger.debug("해외 랭킹 빈 응답 (%s/%s) rt_cd=%s", tr_id, excd, (data or {}).get("rt_cd"))
+        return []
+
+    rows = data.get("output2") or []
+    items = []
+    for row in rows:
+        try:
+            ticker = (row.get("symb") or "").strip()
+            if not ticker:
+                continue
+            price = float(row.get("last") or 0)
+            rate  = row.get("rate") or row.get("n_rate") or "0"
+            tvol  = int(str(row.get("tvol") or "0").replace(",", "") or "0")
+            tamt  = float(str(row.get("tamt") or "0").replace(",", "") or "0")
+            name  = (row.get("name") or row.get("ename") or ticker).strip()
+
+            # rate 부호 정규화
+            rate_f = float(str(rate).replace(",", "") or "0")
+            rate_str = ("+" if rate_f >= 0 else "") + f"{rate_f:.2f}"
+
+            items.append({
+                "ticker":      ticker,
+                "name":        name,
+                "excd":        excd,
+                "price":       price,
+                "change_rate": rate_str,
+                "volume":      tvol,
+                "trade_value": tamt,
+                "rank":        int(row.get("rank") or 0),
+                # 체결강도 근사 (volume-power API용)
+                "strength":    float(row.get("tpow") or row.get("strn") or 0),
+            })
+        except Exception as e:
+            logger.debug("해외 랭킹 행 파싱 오류: %s", e)
+            continue
+        if len(items) >= top_n:
+            break
+    return items
+
+
+async def get_us_scanner(
+    category: str = "trade_value",
+    period: str = "1d",
+    top_n: int = 20,
+) -> dict:
+    """
+    미국 주식 전거래소 랭킹 조회.
+    category: trade_value | volume | rise | fall | strength
+    period:   1d | 1w | 1m | 3m
+
+    NYS + NAS + AMS 세 거래소를 병렬 호출 후 합산 정렬.
+    """
+    nday = _US_NDAY.get(period, "0")
+    loop = asyncio.get_event_loop()
+
+    # TR ID / path / extra_params 결정
+    if category == "trade_value":
+        tr_id = "HHDFS76320010"
+        path  = "/uapi/overseas-stock/v1/ranking/trade-pbmn"
+        extra = {}
+    elif category == "volume":
+        tr_id = "HHDFS76310010"
+        path  = "/uapi/overseas-stock/v1/ranking/trade-vol"
+        extra = {}
+    elif category == "rise":
+        tr_id = "HHDFS76290000"
+        path  = "/uapi/overseas-stock/v1/ranking/updown-rate"
+        extra = {"GUBN": "1"}
+    elif category == "fall":
+        tr_id = "HHDFS76290000"
+        path  = "/uapi/overseas-stock/v1/ranking/updown-rate"
+        extra = {"GUBN": "0"}
+    elif category == "strength":
+        tr_id = "HHDFS76280000"
+        path  = "/uapi/overseas-stock/v1/ranking/volume-power"
+        extra = {}
+    else:
+        tr_id = "HHDFS76320010"
+        path  = "/uapi/overseas-stock/v1/ranking/trade-pbmn"
+        extra = {}
+
+    # 3개 거래소 병렬 호출
+    tasks = [
+        loop.run_in_executor(
+            None,
+            lambda ex=excd: _fetch_us_ranking(tr_id, path, ex, nday, extra, top_n * 2)
+        )
+        for excd in _US_EXCHANGES
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    all_items: list[dict] = []
+    for r in results:
+        if isinstance(r, list):
+            all_items.extend(r)
+
+    if not all_items:
+        return {"items": [], "as_of": "", "fallback": False}
+
+    # 합산 정렬
+    if category == "trade_value":
+        all_items.sort(key=lambda x: x.get("trade_value", 0), reverse=True)
+    elif category == "volume":
+        all_items.sort(key=lambda x: x.get("volume", 0), reverse=True)
+    elif category == "rise":
+        all_items.sort(key=lambda x: float(str(x.get("change_rate", "0")).replace("+", "")), reverse=True)
+    elif category == "fall":
+        all_items.sort(key=lambda x: float(str(x.get("change_rate", "0")).replace("+", "")))
+    elif category == "strength":
+        all_items.sort(key=lambda x: x.get("strength", 0), reverse=True)
+
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone(timedelta(hours=9)))
+    return {
+        "items":   all_items[:top_n],
+        "as_of":   now.strftime("%H:%M:%S"),
+        "fallback": False,
+    }
