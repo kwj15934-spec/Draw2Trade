@@ -178,6 +178,10 @@
     text-shadow: 0 0 8px rgba(0,212,170,0.4);
   }
   .mkt-freshness.recent .mkt-freshness-text { color: var(--d2t-orange, #f97316); }
+  /* 기간 선택 시 '전일 종가 기준' 고정 표시 */
+  .mkt-freshness:not(.fresh):not(.recent) .mkt-freshness-text {
+    color: var(--d2t-text-3, #4a4f5e);
+  }
 
   .mkt-main {
     flex: 1;
@@ -382,6 +386,8 @@
     font-variant-numeric: tabular-nums;
   }
   .mkt-spark { text-align: center; }
+  /* 추세 셀 */
+  .mkt-trend-cell { text-align: center; vertical-align: middle; }
   .mkt-trend-badge {
     display: inline-block;
     padding: 3px 8px;
@@ -391,8 +397,23 @@
     white-space: nowrap;
     cursor: default;
   }
-  .mkt-trend-badge[title]:hover {
-    opacity: 0.85;
+  .mkt-trend-reason {
+    font-size: 9px;
+    color: var(--d2t-text-3, #4a4f5e);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Skeleton 행 */
+  .mkt-skeleton-row td { padding: 11px 12px; }
+  .mkt-sk-cell {
+    border-radius: 3px;
+    display: block;
   }
   .mkt-trend-badge.up {
     background: rgba(239,83,80,0.12);

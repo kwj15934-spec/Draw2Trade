@@ -414,27 +414,45 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
             "category": category,
         }
 
-    # 3) 각 종목 일봉 → 추세 분석 + 스파크라인
+    # 3) 각 종목 기간별 OHLCV → 추세 분석 + 스파크라인 + 색상 기준 통일
     loop = asyncio.get_event_loop()
+    now_kst = datetime.now(_KST)
+    today_str = now_kst.strftime("%Y%m%d")
+    # 기간별 시작일 계산
+    _period_start = {
+        "1d":  (now_kst - timedelta(days=3)).strftime("%Y%m%d"),   # 당일 포함 여유
+        "1w":  (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
+        "1m":  (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
+        "3m":  (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+    }
+    period_start = _period_start.get(period, _period_start["1d"])
 
     def _enrich(item: dict) -> dict:
         ticker = item["ticker"]
         try:
-            from app.services.kis_client import fetch_kr_minute, is_configured as kis_ok
+            from app.services.kis_client import (
+                fetch_kr_minute, fetch_kr_ohlcv, is_configured as kis_ok
+            )
             from app.services.data_service import get_ohlcv_by_timeframe
 
-            spark_days = _PERIOD_DAYS.get(period, 20)
+            # ── 색상 기준: API가 준 change_rate 부호를 그대로 사용 ──────────
+            # item["change_rate"]는 스캐너에서 온 prdy_ctrt 기반 문자열 ("+2.34" 등)
+            # 이 값의 부호로 스파크라인 색상도 고정 → 텍스트와 1:1 일치
+            rate_num = float(str(item.get("change_rate") or "0").replace("+", ""))
+            item["_color_up"] = rate_num >= 0   # True=상승색, False=하락색
 
-            # 1) 금일(1d): 분봉 데이터로 장중 추세 분석 (우선)
+            # ── 금일(1d): KIS 분봉으로 장중 추세 ───────────────────────────
             if period == "1d" and kis_ok():
                 try:
                     min_data = fetch_kr_minute(ticker)
                     if min_data and len(min_data) >= 5:
-                        min_data.sort(key=lambda m: m.get("stck_cntg_hour", ""))
+                        min_data.sort(key=lambda m: (
+                            m.get("stck_bsop_date", ""), m.get("stck_cntg_hour", "")
+                        ))
                         minutes, spark_closes = [], []
                         for m in min_data:
-                            c = float(m.get("stck_prpr", 0))
-                            v = int(m.get("cntg_vol", 0))
+                            c = float(m.get("stck_prpr") or 0)
+                            v = int(m.get("cntg_vol") or 0)
                             if c > 0:
                                 minutes.append({"close": c, "volume": v})
                                 spark_closes.append(c)
@@ -442,13 +460,36 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
                             item["trend"] = _classify_intraday_trend(minutes)
                             item["sparkline"] = spark_closes
                             item["open_price"] = spark_closes[0]
-                            # baseline = 전일 종가 (스캐너가 제공하는 prev_close, 없으면 시가)
-                            item["baseline_price"] = float(item.get("prev_close") or spark_closes[0])
+                            # baseline = 전일 종가 (prev_close 없으면 시가로 근사)
+                            item["baseline_price"] = float(
+                                item.get("prev_close") or spark_closes[0]
+                            )
                             return item
                 except Exception as e:
                     logger.debug("분봉 조회 실패 [%s]: %s", ticker, e)
 
-            # 2) 일봉 (period에 따라 기간 조정)
+            # ── 1w/1m/3m: KIS 국내주식기간별시세 일봉 직접 조회 ────────────
+            if kis_ok():
+                try:
+                    rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
+                    if rows and len(rows) >= 2:
+                        rows_asc = list(reversed(rows))  # 오래된 것 → 최신 순
+                        closes = [
+                            float(r.get("stck_clpr") or 0)
+                            for r in rows_asc
+                            if float(r.get("stck_clpr") or 0) > 0
+                        ]
+                        if len(closes) >= 2:
+                            item["trend"] = _classify_trend(closes)
+                            item["sparkline"] = closes
+                            item["open_price"] = closes[0]
+                            item["baseline_price"] = closes[0]  # period 시작 종가
+                            return item
+                except Exception as e:
+                    logger.debug("일봉 직접 조회 실패 [%s]: %s", ticker, e)
+
+            # ── Fallback: 로컬 캐시 OHLCV ───────────────────────────────────
+            spark_days = _PERIOD_DAYS.get(period, 20)
             data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
             if data and data.get("close"):
                 closes = data["close"]
@@ -456,18 +497,21 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
                 item["trend"] = _classify_trend(list(spark))
                 item["sparkline"] = list(spark)
                 item["open_price"] = float(spark[0]) if spark else item.get("price", 0)
-                # baseline = period 시작 종가 (spark 첫 번째 값)
                 item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
             else:
-                item["trend"] = {"label": "데이터 부족", "direction": "neutral", "strength": 0}
+                item["trend"] = {"label": "데이터 부족", "direction": "neutral",
+                                 "strength": 0, "reason": ""}
                 item["sparkline"] = []
                 item["open_price"] = item.get("price", 0)
                 item["baseline_price"] = item.get("price", 0)
         except Exception as e:
             logger.debug("추세 분석 실패 [%s]: %s", ticker, e)
-            item["trend"] = {"label": "분석 불가", "direction": "neutral", "strength": 0}
+            item["trend"] = {"label": "분석 불가", "direction": "neutral",
+                             "strength": 0, "reason": ""}
             item["sparkline"] = []
             item["open_price"] = item.get("price", 0)
+            item["baseline_price"] = item.get("price", 0)
+            item["_color_up"] = None
         return item
 
     def _enrich_all():
@@ -605,6 +649,7 @@ async def fetch_us_rankings(category: str = "volume", top_n: int = 20, period: s
                     "sparkline": list(spark),
                     "open_price": float(spark[0]) if spark else last_close,
                     "baseline_price": float(spark[0]) if spark else last_close,
+                    "_color_up": change_rate >= 0,   # 색상 기준: change_rate 부호로 고정
                     "trend": trend,
                     "market": "US",
                     "excd": excd,
