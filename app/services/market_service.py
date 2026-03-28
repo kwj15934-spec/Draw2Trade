@@ -385,7 +385,39 @@ async def fetch_rankings(
 
     snap_name = f"rankings_{category}"
 
-    # 1) 스캐너 데이터 가져오기
+    # 1) 기간이 1d 초과이면 KRX 전종목 집계 데이터 사용
+    if period != "1d":
+        from app.services.krx_service import get_period_rankings, latest_cache_date
+        loop = asyncio.get_event_loop()
+        krx_items = await loop.run_in_executor(
+            None,
+            lambda: get_period_rankings(
+                category=category, period=period,
+                top_n=top_n, hide_warning=hide_warning,
+            )
+        )
+        if krx_items:
+            now = datetime.now(_KST)
+            cache_date = latest_cache_date() or now.strftime("%Y%m%d")
+            # _enrich로 스파크라인/추세 보강 (period 기반)
+            loop2 = asyncio.get_event_loop()
+            def _enrich_krx_all():
+                return [_enrich_krx(dict(it), period) for it in krx_items]
+            enriched = await loop2.run_in_executor(None, _enrich_krx_all)
+            return {
+                "items":       enriched,
+                "as_of":       cache_date,
+                "saved_at":    now.isoformat(),
+                "is_realtime": False,
+                "fallback":    False,
+                "category":    category,
+                "period":      period,
+                "source":      "krx_aggregate",
+            }
+        # KRX 캐시 없으면 당일 스캐너로 fallback (아래 로직 계속)
+        logger.info("KRX 집계 데이터 없음 — 당일 스캐너로 fallback [%s]", category)
+
+    # 2) 스캐너 데이터 가져오기 (1d 또는 KRX 캐시 없을 때)
     try:
         if category == "rise":
             scanner = await get_scanner_rise(top_n=top_n)
@@ -859,3 +891,70 @@ async def fetch_spark(
 
     result = await loop.run_in_executor(None, _sync)
     return result
+
+
+# ── KRX 집계 아이템 스파크라인/추세 보강 ────────────────────────────────────
+
+def _enrich_krx(item: dict, period: str) -> dict:
+    """
+    krx_service.get_period_rankings()가 반환한 아이템에
+    스파크라인 + 추세 라벨 + _color_up을 보강한다.
+    fetch_spark와 동일 로직 (동기 버전).
+    """
+    ticker = item["ticker"]
+    try:
+        from app.services.kis_client import (
+            fetch_kr_ohlcv, is_configured as kis_ok,
+        )
+        from app.services.data_service import get_ohlcv_by_timeframe
+
+        rate_num = float(str(item.get("change_rate") or "0").replace("+", ""))
+        item["_color_up"] = rate_num >= 0
+
+        now_kst = datetime.now(_KST)
+        today   = now_kst.strftime("%Y%m%d")
+        _period_start = {
+            "1w":  (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
+            "1m":  (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
+            "3m":  (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+        }
+        start = _period_start.get(period, (now_kst - timedelta(days=9)).strftime("%Y%m%d"))
+
+        if kis_ok():
+            try:
+                rows = fetch_kr_ohlcv(ticker, start, today, "D")
+                if rows and len(rows) >= 2:
+                    rows_asc = list(reversed(rows))
+                    closes = [
+                        float(r.get("stck_clpr") or 0)
+                        for r in rows_asc
+                        if float(r.get("stck_clpr") or 0) > 0
+                    ]
+                    if len(closes) >= 2:
+                        item["trend"]          = _classify_trend(closes)
+                        item["sparkline"]      = closes
+                        item["baseline_price"] = closes[0]
+                        return item
+            except Exception as e:
+                logger.debug("_enrich_krx 일봉 실패 [%s]: %s", ticker, e)
+
+        # fallback: 로컬 캐시
+        spark_days = _PERIOD_DAYS.get(period, 20)
+        data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+        if data and data.get("close"):
+            closes = data["close"]
+            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+            item["trend"]          = _classify_trend(list(spark))
+            item["sparkline"]      = list(spark)
+            item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
+            return item
+
+    except Exception as e:
+        logger.debug("_enrich_krx 실패 [%s]: %s", ticker, e)
+
+    item.setdefault("trend", {"label": "데이터 없음", "direction": "neutral",
+                               "strength": 0, "reason": ""})
+    item.setdefault("sparkline", [])
+    item.setdefault("baseline_price", item.get("price", 0))
+    item.setdefault("_color_up", None)
+    return item

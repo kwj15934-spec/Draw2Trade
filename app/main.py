@@ -107,12 +107,59 @@ async def lifespan(app: FastAPI):
     logger.info("PatternSearch ProcessPoolExecutor 시작.")
     # Vite manifest 로드 (빌드 결과물이 있으면 production 모드)
     load_manifest()
+    # KRX 전종목 시세 스케줄러 (매일 16:05 KST 자동 수집)
+    asyncio.create_task(_krx_scheduler())
     yield
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()
     await kis_stream.stop()
     await rcache.close()
     logger.info("Draw2Trade 종료.")
+
+
+async def _krx_scheduler():
+    """
+    매일 16:05 KST에 KRX 전종목 시세를 수집한다.
+    오늘치 캐시가 없으면 즉시 1회 수집 후 스케줄 대기.
+    """
+    from app.services.krx_service import fetch_all_daily, has_today_cache
+    import time as _time
+
+    # 서버 시작 시 오늘치 캐시 없으면 즉시 수집 (장 마감 후 재시작 대비)
+    try:
+        if not has_today_cache():
+            now_kst_hour = (datetime.now(timezone.utc) + timedelta(hours=9)).hour
+            if now_kst_hour >= 16:   # 장 마감 이후에만 즉시 수집
+                logger.info("KRX 캐시 없음 → 즉시 수집 시작")
+                await asyncio.get_event_loop().run_in_executor(None, fetch_all_daily)
+    except Exception as e:
+        logger.warning("KRX 초기 수집 실패: %s", e)
+
+    while True:
+        try:
+            now_utc = datetime.now(timezone.utc)
+            now_kst = now_utc + timedelta(hours=9)
+            # 다음 16:05 KST 계산
+            target = now_kst.replace(hour=16, minute=5, second=0, microsecond=0)
+            if now_kst >= target:
+                target = target + timedelta(days=1)
+            wait_sec = (target - now_kst).total_seconds()
+            logger.info("KRX 스케줄러: 다음 수집 %s KST (%.0f초 후)", target.strftime("%m-%d %H:%M"), wait_sec)
+            await asyncio.sleep(wait_sec)
+
+            # 주말(토=5, 일=6) 건너뜀
+            now_kst2 = datetime.now(timezone.utc) + timedelta(hours=9)
+            if now_kst2.weekday() >= 5:
+                logger.info("KRX 스케줄러: 주말 — 건너뜀")
+                continue
+
+            logger.info("KRX 전종목 시세 자동 수집 시작")
+            await asyncio.get_event_loop().run_in_executor(None, fetch_all_daily)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("KRX 스케줄러 오류: %s", e)
+            await asyncio.sleep(300)   # 5분 후 재시도
 
 
 # ── FastAPI 앱 ───────────────────────────────────────────────────────────────
