@@ -110,7 +110,7 @@
       var period = sel.value || '1d';
       if (period === D2T.dashboardState.period) return;
       D2T.dashboardState.period = period;
-      _rowPeriod = {};
+      // _rowPeriod 유지 — 차트 기간은 정렬 기간과 독립
       _setTableSkeleton();
       _fetchDashboard();
     });
@@ -378,8 +378,8 @@
       var colorUp = (item._color_up != null) ? item._color_up : (rateNum >= 0);
       var spColor = colorUp ? _riseColor : _fallColor;
 
-      // 초기 차트 기간: 랭킹 기준 기간과 동일하게 시작
-      var initPeriod = _rowPeriod[item.ticker] || D2T.dashboardState.period;
+      // 초기 차트 기간: 마이크로 버튼으로 이미 변경한 경우 유지, 없으면 항상 1d
+      var initPeriod = _rowPeriod[item.ticker] || '1d';
       _rowPeriod[item.ticker] = initPeriod;
 
       var baseline = item.baseline_price != null ? item.baseline_price
