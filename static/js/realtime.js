@@ -262,6 +262,9 @@
     // 실시간 데이터 도착 → REST polling 중단
     if (_restPollTimer) _stopRestPolling();
 
+    // 데이터 소스 배지 업데이트
+    _updateSourceBadge(tick.session_type || tick.session || '');
+
     // 실시간 데이터 도착 → 초기 로드 데이터 무시 플래그
     if (window._markRealtimeActive) window._markRealtimeActive();
 
@@ -444,6 +447,40 @@
     badge.style.display = on ? 'inline-flex' : 'none';
   }
 
+  // 데이터 소스 배지 — KRX / NXT / KRX+NXT 표시
+  var _lastSource = '';
+  var _sourceHasKrx = false;
+  var _sourceHasNxt = false;
+  function _updateSourceBadge(sessionType) {
+    var badge = document.getElementById('rt-source-badge');
+    if (!badge) return;
+
+    var stype = (sessionType || '').toUpperCase();
+    if (stype === 'NXT' || stype === 'PRE_MARKET') {
+      _sourceHasNxt = true;
+    } else if (stype === 'REGULAR' || stype === 'AFTER_HOURS' || stype === '') {
+      _sourceHasKrx = true;
+    }
+
+    var label = '';
+    if (_sourceHasKrx && _sourceHasNxt) {
+      label = 'KRX+NXT';
+    } else if (_sourceHasNxt) {
+      label = 'NXT';
+    } else if (_sourceHasKrx) {
+      label = 'KRX';
+    }
+
+    if (label && label !== _lastSource) {
+      _lastSource = label;
+      badge.textContent = label;
+      badge.style.display = 'inline-flex';
+      badge.className = 'thb-source-badge' + (_sourceHasNxt ? ' nxt-active' : '');
+    }
+  }
+
+  // 종목 전환 시 소스 상태 리셋은 아래 _onChartLoaded 내부에서 처리
+
   // ── 빈 캔버스 전환 시 WS 구독 해제 ──────────────────────────────────────
   window._onBlankCanvas = function () {
     console.log('[RT] 빈 캔버스 전환: WS 구독 해제');
@@ -479,6 +516,10 @@
     _tickCount     = 0;
     _lastCandleTs  = 0;
     _setLive(false);
+    // 데이터 소스 배지 리셋
+    _sourceHasKrx = false; _sourceHasNxt = false; _lastSource = '';
+    var _srcBadge = document.getElementById('rt-source-badge');
+    if (_srcBadge) _srcBadge.style.display = 'none';
     // 헤더바: _initHeaderBar(candles)에서 이미 마지막 캔들 기준 값을 설정했으므로
     // '—'으로 초기화하지 않음 → 실시간 틱이 들어오면 자연스럽게 덮어씀
     // 체결 내역 초기화 → 마지막 체결 데이터 로드 (장 마감 후에도 표시)

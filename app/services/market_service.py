@@ -165,6 +165,68 @@ def _classify_trend(closes: list[float]) -> dict:
         return {"label": "분석 불가", "direction": "neutral", "strength": 0}
 
 
+def _classify_intraday_trend(minutes: list[dict]) -> dict:
+    """
+    분봉 데이터(list of {close, volume, ...})로 금일 장중 추세를 판정한다.
+    SimilarityService 알고리즘 기반 — 피어슨 상관계수 + 기울기 + 변동성.
+    """
+    if not minutes or len(minutes) < 5:
+        return {"label": "데이터 부족", "direction": "neutral", "strength": 0}
+
+    try:
+        import numpy as np
+        closes = np.array([m["close"] for m in minutes], dtype=float)
+        n = len(closes)
+
+        # 정규화
+        base = closes[0]
+        if base <= 0:
+            return {"label": "분석 불가", "direction": "neutral", "strength": 0}
+        norm = closes / base - 1.0  # 수익률 기준
+
+        # 선형 회귀
+        x = np.arange(n, dtype=float)
+        mean_x, mean_y = x.mean(), norm.mean()
+        slope = ((x - mean_x) * (norm - mean_y)).sum() / ((x - mean_x) ** 2).sum()
+
+        # 전체 변동폭
+        total_change = norm[-1] * 100  # 시가 대비 %
+        max_drawup = norm.max() * 100
+        max_drawdown = norm.min() * 100
+
+        # 후반부 모멘텀 (마지막 30% 구간)
+        split = max(1, int(n * 0.7))
+        late_change = (norm[-1] - norm[split]) * 100
+
+        # 변동성
+        std = norm.std() * 100
+
+        # 분류 (금일 장중 특화)
+        if total_change > 3 and slope > 0.001:
+            if late_change > 1:
+                return {"label": "강한 상승", "direction": "up", "strength": 90}
+            return {"label": "상승 추세", "direction": "up", "strength": 70}
+        elif total_change > 1 and slope > 0:
+            return {"label": "완만한 상승", "direction": "up", "strength": 50}
+        elif total_change < -3 and slope < -0.001:
+            return {"label": "강한 하락", "direction": "down", "strength": 90}
+        elif total_change < -1 and slope < 0:
+            return {"label": "하락 추세", "direction": "down", "strength": 60}
+        elif max_drawup > 2 and max_drawdown < -2:
+            return {"label": "변동 박스권", "direction": "neutral", "strength": 50}
+        elif late_change > 0.5 and total_change < 0:
+            return {"label": "반등 시도", "direction": "up", "strength": 45}
+        elif late_change < -0.5 and total_change > 0:
+            return {"label": "상승 후 조정", "direction": "down", "strength": 45}
+        elif std < 0.3:
+            return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30}
+        else:
+            return {"label": "박스권", "direction": "neutral", "strength": 40}
+
+    except Exception:
+        return {"label": "분석 불가", "direction": "neutral", "strength": 0}
+
+
 # ── OHLCV 기반 자체 랭킹 (스냅샷·실시간 모두 없을 때) ─────────────────────────
 
 async def _build_fallback_rankings(category: str, top_n: int) -> dict:
@@ -304,6 +366,31 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
     def _enrich(item: dict) -> dict:
         ticker = item["ticker"]
         try:
+            from app.services.kis_client import fetch_kr_minute, is_configured as kis_ok
+
+            # 1) 분봉 데이터로 금일 장중 추세 분석 (우선)
+            if kis_ok():
+                try:
+                    min_data = fetch_kr_minute(ticker)
+                    if min_data and len(min_data) >= 5:
+                        # 시간순 정렬 (API는 newest-first)
+                        min_data.sort(key=lambda m: m.get("stck_cntg_hour", ""))
+                        minutes = []
+                        spark_closes = []
+                        for m in min_data:
+                            c = float(m.get("stck_prpr", 0))
+                            v = int(m.get("cntg_vol", 0))
+                            if c > 0:
+                                minutes.append({"close": c, "volume": v})
+                                spark_closes.append(c)
+                        if minutes and len(minutes) >= 5:
+                            item["trend"] = _classify_intraday_trend(minutes)
+                            item["sparkline"] = spark_closes
+                            return item
+                except Exception as e:
+                    logger.debug("분봉 조회 실패 [%s]: %s", ticker, e)
+
+            # 2) 분봉 불가 시 일봉 fallback
             from app.services.data_service import get_ohlcv_by_timeframe
             data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
             if data and data.get("close"):
