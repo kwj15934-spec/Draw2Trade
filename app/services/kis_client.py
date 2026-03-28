@@ -690,6 +690,44 @@ def fetch_kr_price(ticker: str) -> dict | None:
     return result.get("output") or None
 
 
+def fetch_kr_financial_ratio(
+    ticker: str,
+    fid_div_cls_code: str = "0",
+) -> list[dict] | None:
+    """
+    FHKST66430300 — 국내주식 재무비율 (연/분기).
+
+    ``fid_div_cls_code``: 0=연간, 1=분기.
+
+    반환: ``output`` 행 리스트 (결산년월·ROE·EPS 등). 실패 시 None.
+    """
+    if not is_configured():
+        return None
+
+    result = _get(
+        "/uapi/domestic-stock/v1/finance/financial-ratio",
+        {
+            "FID_DIV_CLS_CODE": fid_div_cls_code,
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": ticker,
+        },
+        "FHKST66430300",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug(
+            "KIS KR financial ratio error (%s): %s",
+            ticker,
+            (result or {}).get("msg1", "no resp"),
+        )
+        return None
+    out = result.get("output")
+    if out is None:
+        return []
+    if isinstance(out, dict):
+        return [out]
+    return list(out)
+
+
 def fetch_nxt_price(ticker: str) -> dict | None:
     """
     FHKST03010100 — NXT 주식현재가 시세.

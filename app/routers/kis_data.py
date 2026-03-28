@@ -12,6 +12,7 @@ app/routers/kis_data.py — 종목 상세 컨텍스트 패널 + 대시보드용 
   GET /api/v1/market/scanner/high         — 신고가 종목 (FHPST01040000)
 
 주의사항:
+  - 재무(/finance): KIS 설정 시 주식현재가 시세·재무비율 우선, pykrx로 보강(배당 등).
   - KIS API 미설정 시 pykrx 폴백 / 빈 응답으로 부드럽게 처리한다.
   - Redis 캐시 적용 (재무 30분, 뉴스 10분, 매물대 5분, 주도주 2분, 스캐너 10초).
   - 현재 KR 종목(6자리 숫자)만 정식 지원. US 요청 시 422 반환.
@@ -95,7 +96,11 @@ async def get_finance(
     if cached:
         return cached
 
-    result = await _fetch_finance_pykrx(symbol)
+    loop = asyncio.get_running_loop()
+    kis_task = loop.run_in_executor(None, _fetch_finance_kis, symbol)
+    pykrx_task = loop.run_in_executor(None, _fetch_finance_pykrx_sync, symbol)
+    kis_result, pykrx_result = await asyncio.gather(kis_task, pykrx_task)
+    result = _merge_finance_kis_pykrx(kis_result, pykrx_result)
 
     # na=False(실제 데이터)면 즉시 캐싱 후 반환
     if result and not result.get("na"):
@@ -129,129 +134,286 @@ def _nearest_weekday(dt_str: str) -> str:
     return d.strftime("%Y%m%d")
 
 
-async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
-    """pykrx를 사용해 재무 지표를 조회한다."""
-    import asyncio
+def _finance_default(symbol: str, name: str = "", dt: str = "") -> dict:
+    """모든 조회 실패 시 0-기본값 dict (프론트엔드 N/A)."""
+    return {
+        "symbol":       symbol,
+        "name":         name,
+        "per":          0.0,
+        "pbr":          0.0,
+        "roe":          0.0,
+        "eps":          0,
+        "div_yield":    0.0,
+        "dps":          0,
+        "market_cap":   0,
+        "shares":       None,
+        "listing_date": "",
+        "date":         dt,
+        "na":           True,
+    }
 
-    def _make_default(name: str = "", dt: str = "") -> dict:
-        """모든 조회 실패 시 0-기본값 dict 반환 (프론트엔드가 N/A 표시)."""
-        return {
-            "symbol":       symbol,
-            "name":         name,
-            "per":          0.0,
-            "pbr":          0.0,
-            "roe":          0.0,
-            "eps":          0,
-            "div_yield":    0.0,
-            "dps":          0,
-            "market_cap":   0,
-            "shares":       None,
-            "listing_date": "",
-            "date":         dt,
-            "na":           True,   # 프론트: 기본값 데이터임을 표시
-        }
 
-    def _sync() -> dict:
-        fallback_name = ""
-        last_dt = ""
+def _parse_kis_numeric(v) -> Optional[float]:
+    """KIS 숫자 문자열(콤마 포함) → float."""
+    if v is None:
+        return None
+    s = str(v).replace(",", "").strip()
+    if not s:
+        return None
+    try:
+        f = float(s)
+        if f != f or f == float("inf"):
+            return None
+        return f
+    except (TypeError, ValueError):
+        return None
+
+
+def _hts_avls_to_won(raw) -> int:
+    """
+    HTS 시가총액 필드를 원 단위 정수로 변환.
+    KIS는 억 단위(값이 상대적으로 작음) 또는 원 단위를 반환할 수 있다.
+    """
+    f = _parse_kis_numeric(raw)
+    if f is None or f <= 0:
+        return 0
+    if f < 1e11:
+        return int(f * 100_000_000)
+    return int(f)
+
+
+def _fin_row_sort_key(row: dict) -> str:
+    s = str(row.get("stac_yymm") or "").replace(".", "").replace("/", "").strip()
+    return (s[:6] if len(s) >= 6 else s.zfill(6)) if s else ""
+
+
+def _fetch_finance_kis(symbol: str) -> Optional[dict]:
+    """
+    KIS 주식현재가 시세(FHKST01010100) + 재무비율(FHKST66430300).
+    미설정·API 실패 시 None.
+    """
+    try:
+        from app.services.kis_client import (
+            fetch_kr_financial_ratio,
+            fetch_kr_price,
+            is_configured,
+        )
+    except Exception:
+        return None
+    if not is_configured():
+        return None
+    price = fetch_kr_price(symbol)
+    if not price:
+        return None
+
+    name = (price.get("hts_kor_isnm") or price.get("bstp_kor_isnm") or "").strip()
+    if not name:
         try:
-            from pykrx import stock as pkrx
-            from datetime import timedelta as td
-            import json as _json
+            from app.services.data_service import get_company_name
+            name = get_company_name(symbol) or ""
+        except Exception:
+            name = ""
 
-            # name 선조회 (fundamental 실패해도 이름은 보여주기 위해)
+    per = _safe_float(_parse_kis_numeric(price.get("per")))
+    pbr = _safe_float(_parse_kis_numeric(price.get("pbr")))
+    eps_p = _parse_kis_numeric(price.get("eps"))
+    eps = int(eps_p) if eps_p is not None else 0
+
+    mcap = _hts_avls_to_won(price.get("hts_avls"))
+    sh_raw = _parse_kis_numeric(price.get("lstn_stcn"))
+    shares = int(sh_raw) if sh_raw is not None else None
+
+    ratios = fetch_kr_financial_ratio(symbol) or []
+    rows = sorted(
+        [r for r in ratios if isinstance(r, dict)],
+        key=_fin_row_sort_key,
+        reverse=True,
+    )
+    r0 = rows[0] if rows else {}
+    roe = _safe_float(_parse_kis_numeric(r0.get("roe_val"))) or 0.0
+    if not eps and r0.get("eps") is not None:
+        eps_r = _parse_kis_numeric(r0.get("eps"))
+        if eps_r is not None:
+            eps = int(eps_r)
+
+    dt = datetime.now(_KST).strftime("%Y%m%d")
+    fin_yymm = _fin_row_sort_key(r0)
+    if fin_yymm:
+        dt = fin_yymm + "01" if len(fin_yymm) == 6 else dt
+
+    core = (
+        (per or 0) > 0
+        or (pbr or 0) > 0
+        or roe > 0
+        or eps != 0
+        or mcap > 0
+    )
+    if not core:
+        return None
+
+    return {
+        "symbol":       symbol,
+        "name":         name,
+        "per":          per or 0.0,
+        "pbr":          pbr or 0.0,
+        "roe":          roe,
+        "eps":          eps,
+        "div_yield":    0.0,
+        "dps":          0,
+        "market_cap":   mcap,
+        "shares":       shares,
+        "listing_date": "",
+        "date":         dt,
+        "na":           False,
+    }
+
+
+def _merge_finance_kis_pykrx(kis: Optional[dict], pykrx: dict) -> dict:
+    """KIS 우선, 부족한 항목은 pykrx로 보강 (특히 배당)."""
+    out = dict(pykrx)
+    if not kis:
+        if "na" not in out:
+            out["na"] = not _finance_has_core(out)
+        return out
+
+    for k in ("per", "pbr", "roe", "eps", "market_cap", "name", "shares", "date"):
+        v = kis.get(k)
+        if v is None:
+            continue
+        if k in ("per", "pbr", "roe"):
+            if isinstance(v, (int, float)) and v != 0:
+                out[k] = v
+        elif k == "eps" and v != 0:
+            out[k] = v
+        elif k == "market_cap" and v != 0:
+            out[k] = v
+        elif k == "name" and isinstance(v, str) and v.strip():
+            out[k] = v.strip()
+        elif k == "shares" and v:
+            out[k] = v
+        elif k == "date" and v:
+            out[k] = v
+
+    if (kis.get("div_yield") or 0) > 0:
+        out["div_yield"] = kis["div_yield"]
+    if (kis.get("dps") or 0) > 0:
+        out["dps"] = kis["dps"]
+    if (out.get("div_yield") or 0) == 0 and (pykrx.get("div_yield") or 0) > 0:
+        out["div_yield"] = pykrx["div_yield"]
+    if (out.get("dps") or 0) == 0 and (pykrx.get("dps") or 0) > 0:
+        out["dps"] = pykrx["dps"]
+
+    out["na"] = not _finance_has_core(out)
+    return out
+
+
+def _finance_has_core(d: dict) -> bool:
+    return bool(
+        (d.get("per") or 0) > 0
+        or (d.get("pbr") or 0) > 0
+        or (d.get("roe") or 0) > 0
+        or (d.get("eps") or 0) != 0
+        or (d.get("market_cap") or 0) > 0
+    )
+
+
+def _fetch_finance_pykrx_sync(symbol: str) -> dict:
+    """pykrx 동기 조회 (executor용)."""
+    fallback_name = ""
+    last_dt = ""
+    try:
+        from pykrx import stock as pkrx
+        from datetime import timedelta as td
+        import json as _json
+
+        try:
+            fallback_name = pkrx.get_market_ticker_name(symbol) or ""
+        except Exception:
+            pass
+        if not fallback_name:
             try:
-                fallback_name = pkrx.get_market_ticker_name(symbol) or ""
+                from app.services.data_service import get_company_name
+                fallback_name = get_company_name(symbol) or ""
             except Exception:
                 pass
-            if not fallback_name:
+
+        for offset in range(7):
+            raw_dt = (datetime.now(_KST) - td(days=offset)).strftime("%Y%m%d")
+            dt = _nearest_weekday(raw_dt)
+            last_dt = dt
+            try:
+                df = pkrx.get_market_fundamental(dt, dt, symbol)
+            except _json.JSONDecodeError as e:
+                logger.warning("pykrx JSONDecodeError %s %s: %s", symbol, dt, e)
+                continue
+            except Exception as e:
+                logger.debug("pykrx fundamental 조회 실패 %s %s: %s", symbol, dt, e)
+                continue
+
+            if df is None or (hasattr(df, "empty") and df.empty):
+                continue
+
+            if hasattr(df, "iloc"):
+                row = df.iloc[-1]
+            elif isinstance(df, list) and df:
+                row = df[-1]
+            else:
+                continue
+            if hasattr(row, "to_dict"):
+                row = row.to_dict()
+            if not isinstance(row, dict):
+                continue
+
+            vals = [row.get("PER"), row.get("PBR"), row.get("ROE"), row.get("EPS")]
+            if all((v is None or v == 0 or v != v) for v in vals):
+                logger.debug("pykrx 전부 0/None %s %s, 소급 시도", symbol, dt)
+                continue
+
+            market_cap, shares = None, None
+            try:
+                cap_df = pkrx.get_market_cap(dt, dt, symbol)
+                if cap_df is not None and not cap_df.empty:
+                    cap_row = cap_df.iloc[-1]
+                    market_cap = int(cap_row.get("시가총액", 0) or 0)
+                    sr = cap_row.get("상장주식수") or cap_row.get("shares")
+                    if sr is not None:
+                        try:
+                            shares = int(sr)
+                        except (TypeError, ValueError):
+                            pass
+            except Exception as e:
+                logger.debug("pykrx market_cap 실패 %s %s: %s", symbol, dt, e)
+
+            name = fallback_name
+            if not name:
                 try:
-                    from app.services.data_service import get_company_name
-                    fallback_name = get_company_name(symbol) or ""
+                    name = pkrx.get_market_ticker_name(symbol) or ""
                 except Exception:
                     pass
 
-            # 최근 거래일 탐색: 주말 보정 후 최대 7일 소급
-            for offset in range(7):
-                raw_dt = (datetime.now(_KST) - td(days=offset)).strftime("%Y%m%d")
-                dt = _nearest_weekday(raw_dt)   # 주말이면 직전 금요일
-                last_dt = dt
-                try:
-                    df = pkrx.get_market_fundamental(dt, dt, symbol)
-                except _json.JSONDecodeError as e:
-                    logger.warning("pykrx JSONDecodeError %s %s: %s", symbol, dt, e)
-                    continue
-                except Exception as e:
-                    logger.debug("pykrx fundamental 조회 실패 %s %s: %s", symbol, dt, e)
-                    continue
+            return {
+                "symbol":       symbol,
+                "name":         name,
+                "per":          _safe_float(row.get("PER")) or 0.0,
+                "pbr":          _safe_float(row.get("PBR")) or 0.0,
+                "roe":          _safe_float(row.get("ROE")) or 0.0,
+                "eps":          int(_safe_float(row.get("EPS")) or 0),
+                "div_yield":    _safe_float(row.get("DIV")) or 0.0,
+                "dps":          int(_safe_float(row.get("DPS")) or 0),
+                "market_cap":   market_cap or 0,
+                "shares":       shares,
+                "listing_date": "",
+                "date":         dt,
+                "na":           False,
+            }
 
-                if df is None or (hasattr(df, 'empty') and df.empty):
-                    continue
+    except ImportError as e:
+        logger.warning("pykrx import 실패: %s", e)
+    except Exception as e:
+        logger.warning("_fetch_finance_pykrx_sync 예상치 못한 오류 (%s): %s", symbol, e)
 
-                # DataFrame→Series→dict 변환
-                if hasattr(df, 'iloc'):
-                    row = df.iloc[-1]
-                elif isinstance(df, list) and df:
-                    row = df[-1]
-                else:
-                    continue
-                if hasattr(row, 'to_dict'):
-                    row = row.to_dict()
-                if not isinstance(row, dict):
-                    continue
-
-                # PER/PBR/ROE/EPS 모두 0이면 실제 데이터 없는 날 — 다음 날 시도
-                vals = [row.get("PER"), row.get("PBR"), row.get("ROE"), row.get("EPS")]
-                if all((v is None or v == 0 or v != v) for v in vals):
-                    logger.debug("pykrx 전부 0/None %s %s, 소급 시도", symbol, dt)
-                    continue
-
-                # 시가총액
-                market_cap, shares = None, None
-                try:
-                    cap_df = pkrx.get_market_cap(dt, dt, symbol)
-                    if cap_df is not None and not cap_df.empty:
-                        cap_row = cap_df.iloc[-1]
-                        market_cap = int(cap_row.get("시가총액", 0) or 0)
-                        sr = cap_row.get("상장주식수") or cap_row.get("shares")
-                        if sr is not None:
-                            try: shares = int(sr)
-                            except (TypeError, ValueError): pass
-                except Exception as e:
-                    logger.debug("pykrx market_cap 실패 %s %s: %s", symbol, dt, e)
-
-                # name: fundamental 성공한 뒤 재확인
-                name = fallback_name
-                if not name:
-                    try: name = pkrx.get_market_ticker_name(symbol) or ""
-                    except Exception: pass
-
-                return {
-                    "symbol":       symbol,
-                    "name":         name,
-                    "per":          _safe_float(row.get("PER"))      or 0.0,
-                    "pbr":          _safe_float(row.get("PBR"))      or 0.0,
-                    "roe":          _safe_float(row.get("ROE"))      or 0.0,
-                    "eps":          int(_safe_float(row.get("EPS")) or 0),
-                    "div_yield":    _safe_float(row.get("DIV"))      or 0.0,
-                    "dps":          int(_safe_float(row.get("DPS")) or 0),
-                    "market_cap":   market_cap or 0,
-                    "shares":       shares,
-                    "listing_date": "",
-                    "date":         dt,
-                }
-
-        except ImportError as e:
-            logger.warning("pykrx import 실패: %s", e)
-        except Exception as e:
-            logger.warning("_fetch_finance_pykrx 예상치 못한 오류 (%s): %s", symbol, e)
-
-        # 모든 시도 실패 → 기본값 반환 (서버 중단 없음)
-        logger.info("pykrx 재무 조회 실패, 기본값 반환 (%s)", symbol)
-        return _make_default(name=fallback_name, dt=last_dt)
-
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _sync)
+    logger.info("pykrx 재무 조회 실패, 기본값 반환 (%s)", symbol)
+    return _finance_default(symbol, name=fallback_name, dt=last_dt)
 
 
 def _safe_float(v) -> Optional[float]:
