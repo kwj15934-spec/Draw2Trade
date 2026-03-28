@@ -89,7 +89,7 @@ async def fetch_index_quotes() -> dict:
     KOSPI(0001), KOSDAQ(1001) 지수 현재가·등락률·등락폭을 반환한다.
     실패 시 디스크 스냅샷으로 fallback.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def _sync():
         from app.services.kis_client import _get, is_configured
@@ -285,7 +285,7 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
     - rise: 최근 거래일 등락률 상위
     - fall: 최근 거래일 등락률 하위
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def _sync():
         from app.services.data_service import get_ohlcv_by_timeframe, all_names, get_kospi_tickers
@@ -388,7 +388,7 @@ async def fetch_rankings(
     # 1) 기간이 1d 초과이면 KRX 전종목 집계 데이터 사용
     if period != "1d":
         from app.services.krx_service import get_period_rankings, latest_cache_date
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         krx_items = await loop.run_in_executor(
             None,
             lambda: get_period_rankings(
@@ -400,7 +400,7 @@ async def fetch_rankings(
             now = datetime.now(_KST)
             cache_date = latest_cache_date() or now.strftime("%Y%m%d")
             # _enrich로 스파크라인/추세 보강 (period 기반)
-            loop2 = asyncio.get_event_loop()
+            loop2 = asyncio.get_running_loop()
             def _enrich_krx_all():
                 return [_enrich_krx(dict(it), period) for it in krx_items]
             enriched = await loop2.run_in_executor(None, _enrich_krx_all)
@@ -466,7 +466,7 @@ async def fetch_rankings(
         }
 
     # 3) 각 종목 기간별 OHLCV → 추세 분석 + 스파크라인 + 색상 기준 통일
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     now_kst = datetime.now(_KST)
     today_str = now_kst.strftime("%Y%m%d")
     # 기간별 시작일 계산
@@ -594,7 +594,7 @@ async def fetch_us_index_quotes() -> dict:
     SPY(S&P500 ETF), QQQ(NASDAQ ETF) 일봉으로 지수 대용 시세를 반환한다.
     실패 시 디스크 스냅샷 fallback.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def _sync():
         from app.services.kis_client import fetch_us_ohlcv, is_configured
@@ -678,7 +678,7 @@ async def fetch_us_rankings(
             return d
 
     # 스파크라인 + 추세 보강
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def _enrich_us_all():
         return [_enrich_us(dict(it), period) for it in items]
@@ -771,7 +771,7 @@ async def fetch_spark(
       US     → fetch_us_ohlcv   (일봉)
     색상 기준(baseline_price)도 함께 반환한다.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     now_kst = datetime.now(_KST)
     today_str = now_kst.strftime("%Y%m%d")
 

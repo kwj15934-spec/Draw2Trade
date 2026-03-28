@@ -249,7 +249,7 @@ async def _fetch_finance_pykrx(symbol: str) -> Optional[dict]:
         logger.info("pykrx 재무 조회 실패, 기본값 반환 (%s)", symbol)
         return _make_default(name=fallback_name, dt=last_dt)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _sync)
 
 
@@ -319,7 +319,7 @@ async def _fetch_news_naver(symbol: str) -> dict:
             logger.warning("Naver 뉴스 조회 실패 (%s): %s", symbol, e)
             return []
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     items = await loop.run_in_executor(None, _sync)
     return {"symbol": symbol, "items": items}
 
@@ -420,7 +420,7 @@ async def _fetch_supply_kis(symbol: str) -> dict:
             logger.warning("KIS 매물대 조회 실패 (%s): %s", symbol, e)
             return []
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     levels = await loop.run_in_executor(None, _sync)
     return {"symbol": symbol, "levels": levels}
 
@@ -455,7 +455,7 @@ async def get_community(
 
     import asyncio
     from app.services.community_service import fetch_community_posts
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     items = await loop.run_in_executor(None, fetch_community_posts, symbol, 10)
 
     result = {
@@ -563,7 +563,7 @@ async def _fetch_overtime_leaders(top_n: int) -> dict:
             logger.warning("KIS 시간외 주도주 조회 실패: %s", e)
             return []
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     items = await loop.run_in_executor(None, _sync)
     as_of = datetime.now(_KST).strftime("%H:%M")
     return {"items": items, "as_of": as_of}
@@ -893,7 +893,7 @@ async def _fetch_scanner(
             logger.warning("KIS 스캐너 조회 실패 (%s): %s", tr_id, e)
             return []
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     items = await loop.run_in_executor(None, _sync)
     as_of = datetime.now(_KST).strftime("%H:%M:%S")
 
@@ -976,7 +976,7 @@ async def scanner_pattern_compare(body: _PatternCompareRequest):
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[: body.top_n]
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     results = await loop.run_in_executor(None, _sync)
     return {"results": results, "base_ticker": body.ticker}
 
@@ -1069,7 +1069,7 @@ async def get_us_scanner(
     NYS + NAS + AMS 세 거래소를 병렬 호출 후 합산 정렬.
     """
     nday = _US_NDAY.get(period, "0")
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     # TR ID / path / extra_params 결정
     if category == "trade_value":

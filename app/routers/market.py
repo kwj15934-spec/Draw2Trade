@@ -48,7 +48,12 @@ async def get_dashboard(
             category=category, top_n=top_n, period=period, hide_warning=hw
         )
 
-    indices, rankings = await asyncio.gather(index_task, rank_task)
+    try:
+        indices, rankings = await asyncio.gather(index_task, rank_task)
+    except Exception as e:
+        logger.error("dashboard 조회 오류 (market=%s): %s", market, e, exc_info=True)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "indices":  indices,
