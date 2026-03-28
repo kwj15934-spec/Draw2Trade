@@ -741,6 +741,100 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
+    /* ── Fundamental Panel (연간 실적 + AI 요약) ──────────────────────── */
+
+    /* 연간 실적 테이블 */
+    .fund-table {
+      width: 100%; border-collapse: collapse; font-size: 11px;
+    }
+    .fund-table th {
+      color: #52525b; font-weight: 600; text-align: right;
+      padding: 4px 6px 6px; border-bottom: 1px solid #27272a;
+    }
+    .fund-table th:first-child { text-align: left; }
+    .fund-table td {
+      text-align: right; padding: 5px 6px;
+      color: #d4d8e2; font-family: 'JetBrains Mono', monospace;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .fund-table td:first-child {
+      text-align: left; color: #7a8499; font-family: inherit;
+    }
+    .fund-table tr:last-child td { border-bottom: none; }
+    .fund-val-pos { color: #ef5350 !important; }   /* 양수 강조 */
+    .fund-val-neg { color: #5b8def !important; }   /* 음수 강조 */
+    .fund-val-warn { color: #ff9800 !important; }  /* 경고 */
+
+    /* 성장률 배지 */
+    .fund-growth-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 5px; border-radius: 3px; margin-left: 4px;
+    }
+    .fund-growth-pos { background: rgba(239,83,80,.12); color: #ef5350; }
+    .fund-growth-neg { background: rgba(91,141,239,.12); color: #5b8def; }
+
+    /* 안정성 지표 행 */
+    .fund-stability-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 11px;
+    }
+    .fund-stability-row:last-child { border-bottom: none; }
+    .fund-stability-label { color: #7a8499; }
+    .fund-stability-value {
+      font-weight: 600; color: #d4d8e2;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .fund-streak-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(38,166,154,.12); color: #26a69a;
+      border: 1px solid rgba(38,166,154,.2);
+      border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700;
+    }
+    .fund-streak-badge.warn {
+      background: rgba(255,152,0,.12); color: #ff9800;
+      border-color: rgba(255,152,0,.25);
+    }
+
+    /* AI 요약 카드 */
+    .fund-ai-card {
+      background: linear-gradient(135deg, rgba(38,166,154,.06) 0%, rgba(91,141,239,.04) 100%);
+      border: 1px solid rgba(38,166,154,.18);
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .fund-ai-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+    }
+    .fund-ai-icon {
+      width: 18px; height: 18px; border-radius: 4px;
+      background: linear-gradient(135deg, #26a69a, #5b8def);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; flex-shrink: 0;
+    }
+    .fund-ai-title {
+      font-size: 10px; font-weight: 700; color: #26a69a;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .fund-ai-row {
+      display: flex; gap: 6px; margin-bottom: 7px; font-size: 11px; line-height: 1.5;
+    }
+    .fund-ai-row:last-child { margin-bottom: 0; }
+    .fund-ai-tag {
+      flex-shrink: 0; font-size: 9px; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; margin-top: 2px; height: fit-content;
+    }
+    .fund-ai-tag-overview  { background: rgba(148,163,184,.12); color: #94a3b8; }
+    .fund-ai-tag-strength  { background: rgba(38,166,154,.12);  color: #26a69a; }
+    .fund-ai-tag-risk      { background: rgba(239,83,80,.12);   color: #ef5350; }
+    .fund-ai-text          { color: #b0b8c8; }
+    .fund-ai-loading {
+      display: flex; align-items: center; gap: 8px;
+      color: #52525b; font-size: 11px; padding: 4px 0;
+    }
+    .fund-ai-unavailable { color: #3f3f52; font-size: 11px; font-style: italic; }
+
+    /* ── end Fundamental Panel ────────────────────────────────────────── */
+
     /* 시간외 주도주 위젯 */
     .overtime-widget {
       flex-shrink: 0;

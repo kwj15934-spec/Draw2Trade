@@ -1610,51 +1610,183 @@ function _escHtml(s) {
     if (loadingEl) loadingEl.style.display = 'flex';
     if (contentEl) contentEl.innerHTML = '';
 
-    fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(function (d) {
+    // ── 밸류에이션(KIS) + 연간실적/AI요약(DART) 병렬 호출 ────────────────
+    var kisPromise = fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+
+    var dartPromise = fetch('/api/v1/fundamental/' + encodeURIComponent(ticker) + '/analysis')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+
+    Promise.all([kisPromise, dartPromise])
+      .then(function (results) {
         if (loadingEl) loadingEl.style.display = 'none';
-        console.log('[D2T] loadFinanceData', ticker, '→', JSON.stringify({
-          name: d.name, per: d.per, pbr: d.pbr, roe: d.roe, eps: d.eps,
-          market_cap: d.market_cap, na: d.na, snapshot: d.snapshot
-        }));
-        // finance 응답에서 name 확보 시 헤더 업데이트
-        _updateInfoPanelHeader(ticker, d.name || d.company_name || '');
-        var capFmt = function (v) {
-          if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
-          if (v >= 1e8)  return (v / 1e8).toFixed(0) + '억';
-          return v.toLocaleString() + '원';
-        };
-        // na:true이고 값이 0이면 실제 데이터 없음 → N/A 표시
-        var isNA = d.na === true;
-        var fmtF = function (v, suffix) {
-          if (v == null || (isNA && v === 0)) return 'N/A';
-          return (typeof v === 'number' ? v.toFixed(2) : v) + suffix;
-        };
-        var fmtI = function (v, suffix) {
-          if (v == null || (isNA && v === 0)) return 'N/A';
-          return (typeof v === 'number' ? v.toLocaleString() : v) + suffix;
-        };
-        var rows = [
-          { label: 'PER',   value: fmtF(d.per,       'x') },
-          { label: 'PBR',   value: fmtF(d.pbr,       'x') },
-          { label: 'ROE',   value: fmtF(d.roe,       '%') },
-          { label: 'EPS',   value: fmtI(d.eps,       '원') },
-          { label: 'DIV',   value: fmtF(d.div_yield, '%') },
-          { label: '시가총액', value: (d.market_cap && !(isNA && d.market_cap === 0)) ? capFmt(d.market_cap) : 'N/A' },
-        ];
-        var html = '<div class="finance-card">'
-          + '<div class="finance-card-title">밸류에이션 지표</div>'
-          + rows.map(function (r) {
-              return '<div class="finance-row">'
-                + '<span class="finance-row-label">' + r.label + '</span>'
-                + '<span class="finance-row-value">' + r.value + '</span>'
+        var kis  = results[0];
+        var dart = results[1];
+
+        // 종목명 헤더 업데이트 (KIS 응답 우선)
+        _updateInfoPanelHeader(ticker, (kis && (kis.name || kis.company_name)) || '');
+
+        var html = '';
+
+        // ── ① 밸류에이션 카드 (KIS 데이터) ──────────────────────────
+        if (kis) {
+          var capFmt = function (v) {
+            if (v >= 1e12) return (v / 1e12).toFixed(1) + '조';
+            if (v >= 1e8)  return (v / 1e8).toFixed(0) + '억';
+            return v.toLocaleString() + '원';
+          };
+          var isNA = kis.na === true;
+          var fmtF = function (v, suffix) {
+            if (v == null || (isNA && v === 0)) return 'N/A';
+            return (typeof v === 'number' ? v.toFixed(2) : v) + suffix;
+          };
+          var fmtI = function (v, suffix) {
+            if (v == null || (isNA && v === 0)) return 'N/A';
+            return (typeof v === 'number' ? v.toLocaleString() : v) + suffix;
+          };
+          var rows = [
+            { label: 'PER',    value: fmtF(kis.per,       'x') },
+            { label: 'PBR',    value: fmtF(kis.pbr,       'x') },
+            { label: 'ROE',    value: fmtF(kis.roe,       '%') },
+            { label: 'EPS',    value: fmtI(kis.eps,       '원') },
+            { label: 'DIV',    value: fmtF(kis.div_yield, '%') },
+            { label: '시가총액', value: (kis.market_cap && !(isNA && kis.market_cap === 0)) ? capFmt(kis.market_cap) : 'N/A' },
+          ];
+          html += '<div class="finance-card">'
+            + '<div class="finance-card-title">밸류에이션 지표</div>'
+            + rows.map(function (r) {
+                return '<div class="finance-row">'
+                  + '<span class="finance-row-label">' + r.label + '</span>'
+                  + '<span class="finance-row-value">' + r.value + '</span>'
+                  + '</div>';
+              }).join('')
+            + '</div>';
+        }
+
+        // ── ② 연간 실적 테이블 (DART 데이터) ────────────────────────
+        if (dart && dart.years && dart.summary) {
+          var years  = dart.years;
+          var summ   = dart.summary;
+          var anal   = dart.analysis || {};
+
+          var fmtBil = function (v) {
+            if (v == null) return '<span style="color:#3f3f52">—</span>';
+            var abs = Math.abs(v);
+            var str = abs >= 10000 ? (v / 10000).toFixed(0) + '조' :
+                      (v >= 0 ? '' : '-') + abs.toFixed(0) + '억';
+            var cls = v > 0 ? 'fund-val-pos' : v < 0 ? 'fund-val-neg' : '';
+            return cls ? '<span class="' + cls + '">' + str + '</span>' : str;
+          };
+
+          var fmtPct = function (v) {
+            if (v == null) return '<span style="color:#3f3f52">—</span>';
+            var cls = v > 0 ? 'fund-val-pos' : v < 0 ? 'fund-val-neg' : '';
+            var str = (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+            return cls ? '<span class="' + cls + '">' + str + '</span>' : str;
+          };
+
+          // 성장률 배지 (최근연도 YoY)
+          var growthBadge = function (pct) {
+            if (pct == null) return '';
+            var cls = pct >= 0 ? 'fund-growth-pos' : 'fund-growth-neg';
+            return '<span class="fund-growth-badge ' + cls + '">'
+              + (pct >= 0 ? '▲' : '▼') + Math.abs(pct).toFixed(1) + '%</span>';
+          };
+
+          var thHtml = years.map(function (y) {
+            return '<th>' + y.slice(2) + '년</th>';
+          }).join('');
+
+          var trRow = function (label, key, badge) {
+            var vals = summ[key] || {};
+            var tds  = years.map(function (y) {
+              return '<td>' + fmtBil(vals[y]) + '</td>';
+            }).join('');
+            var lastYear = years[years.length - 1];
+            return '<tr><td>' + label + (badge ? growthBadge(badge) : '') + '</td>' + tds + '</tr>';
+          };
+
+          html += '<div class="finance-card" style="padding:10px 12px;">'
+            + '<div class="finance-card-title">연간 실적 <span style="font-weight:400;color:#3f3f52;font-size:9px;">(억원)</span></div>'
+            + '<table class="fund-table">'
+            + '<thead><tr><th></th>' + thHtml + '</tr></thead>'
+            + '<tbody>'
+            + trRow('매출액',   '매출액_억원',   anal.revenue_growth_pct)
+            + trRow('영업이익', '영업이익_억원', anal.op_income_growth_pct)
+            + trRow('순이익',   '당기순이익_억원', null)
+            + '</tbody>'
+            + '</table>'
+            + '</div>';
+
+          // ── ③ 안정성 지표 카드 ─────────────────────────────────
+          var latestYear = years[years.length - 1];
+          var debtPct    = (summ['부채비율_pct'] || {})[latestYear];
+          var streakOk   = anal.is_profitable;
+          var streak     = anal.profit_streak || 0;
+          var debtWarn   = anal.debt_warning;
+
+          var streakHtml = '<span class="fund-streak-badge' + (streakOk ? '' : ' warn') + '">'
+            + (streakOk ? '✓' : '!') + ' ' + streak + '년 연속 ' + (streakOk ? '흑자' : '포함 적자')
+            + '</span>';
+
+          html += '<div class="finance-card">'
+            + '<div class="finance-card-title">안정성</div>'
+            + '<div class="fund-stability-row">'
+              + '<span class="fund-stability-label">영업이익</span>'
+              + '<span class="fund-stability-value">' + streakHtml + '</span>'
+            + '</div>'
+            + '<div class="fund-stability-row">'
+              + '<span class="fund-stability-label">부채비율 (' + latestYear + ')</span>'
+              + '<span class="fund-stability-value '
+              + (debtWarn ? 'fund-val-warn' : '') + '">'
+              + (debtPct != null ? debtPct.toFixed(1) + '%' : '—')
+              + (debtWarn ? ' ⚠' : '') + '</span>'
+            + '</div>'
+            + (anal.revenue_growth_pct != null ?
+              '<div class="fund-stability-row">'
+              + '<span class="fund-stability-label">매출 성장률(YoY)</span>'
+              + '<span class="fund-stability-value">' + fmtPct(anal.revenue_growth_pct) + '</span>'
+              + '</div>' : '')
+            + '</div>';
+        }
+
+        // ── ④ AI 요약 카드 (Claude) ──────────────────────────────
+        if (dart) {
+          var ai = dart.ai_summary || {};
+          if (ai.overview || ai.strength || ai.risk) {
+            var aiRow = function (tag, tagCls, text) {
+              if (!text) return '';
+              return '<div class="fund-ai-row">'
+                + '<span class="fund-ai-tag ' + tagCls + '">' + tag + '</span>'
+                + '<span class="fund-ai-text">' + text + '</span>'
                 + '</div>';
-            }).join('')
-          + '</div>';
+            };
+            html += '<div class="fund-ai-card">'
+              + '<div class="fund-ai-header">'
+              + '<div class="fund-ai-icon">✦</div>'
+              + '<span class="fund-ai-title">AI 재무 진단</span>'
+              + '</div>'
+              + aiRow('개요', 'fund-ai-tag-overview', ai.overview)
+              + aiRow('강점', 'fund-ai-tag-strength', ai.strength)
+              + aiRow('리스크', 'fund-ai-tag-risk', ai.risk)
+              + '</div>';
+          } else if (dart.years) {
+            // DART 성공했지만 AI 키 미설정
+            html += '<div class="fund-ai-card">'
+              + '<div class="fund-ai-header">'
+              + '<div class="fund-ai-icon">✦</div>'
+              + '<span class="fund-ai-title">AI 재무 진단</span>'
+              + '</div>'
+              + '<div class="fund-ai-unavailable">ANTHROPIC_API_KEY를 설정하면 AI 진단이 활성화됩니다.</div>'
+              + '</div>';
+          }
+        }
+
+        if (!html) {
+          html = '<div class="info-empty">재무 데이터를 불러오지 못했습니다.</div>';
+        }
         if (contentEl) contentEl.innerHTML = html;
       })
       .catch(function (e) {
