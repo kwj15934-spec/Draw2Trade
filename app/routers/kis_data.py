@@ -18,6 +18,7 @@ app/routers/kis_data.py — 종목 상세 컨텍스트 패널 + 대시보드용 
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import datetime, timezone, timedelta
