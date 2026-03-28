@@ -615,6 +615,60 @@ def fetch_nxt_tick_history(ticker: str) -> list[dict]:
     return result.get("output") or []
 
 
+def fetch_kr_trade_value_rank_by_period(
+    fid_strt_date: str,
+    fid_end_date: str,
+    *,
+    top_n: int = 30,
+) -> list[dict]:
+    """
+    국내주식 거래대금(거래금액) 순위 (기간 앵커).
+
+    KIS 공식 예제·가이드(거래량순위 v1_국내주식-047): TR **FHPST01710000**,
+    URL ``/uapi/domestic-stock/v1/quotations/volume-rank``.
+    소속 구분 **FID_BLNG_CLS_CODE=3** → 거래금액순(거래대금 순).
+
+    요청하신 별도 TR(HHKST01010100) 및 FID_STRT_DATE 명칭은 문서상 본 API의
+    **FID_INPUT_DATE_1**(기간 시작일, YYYYMMDD)에 매핑하여 전달한다.
+    당일만 볼 때(시작일=종료일)는 FID_INPUT_DATE_1을 공란으로 둔다.
+
+    반환: KIS ``output`` 행 그대로의 list (최대 top_n).
+    """
+    if not is_configured():
+        return []
+
+    fid_input_date_1 = ""
+    if fid_strt_date and fid_strt_date != fid_end_date:
+        fid_input_date_1 = fid_strt_date
+
+    result = _get(
+        "/uapi/domestic-stock/v1/quotations/volume-rank",
+        {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_COND_SCR_DIV_CODE": "20171",
+            "FID_INPUT_ISCD": "0000",
+            "FID_DIV_CLS_CODE": "0",
+            "FID_BLNG_CLS_CODE": "3",
+            "FID_TRGT_CLS_CODE": "111111111",
+            "FID_TRGT_EXLS_CLS_CODE": "0000000000",
+            "FID_INPUT_PRICE_1": "",
+            "FID_INPUT_PRICE_2": "",
+            "FID_VOL_CNT": "",
+            "FID_INPUT_DATE_1": fid_input_date_1,
+        },
+        "FHPST01710000",
+    )
+    if not result or result.get("rt_cd") != "0":
+        logger.debug(
+            "KIS KR trade-value rank error: %s",
+            (result or {}).get("msg1", "no resp"),
+        )
+        return []
+
+    rows = result.get("output") or []
+    return rows[:top_n]
+
+
 def fetch_kr_price(ticker: str) -> dict | None:
     """
     FHKST01010100 — 주식현재가 시세.

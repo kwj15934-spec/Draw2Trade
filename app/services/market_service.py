@@ -50,6 +50,9 @@ _US_WATCHLIST = [
 # period → 스파크라인 일봉 개수
 _PERIOD_DAYS = {"1d": 20, "1w": 5, "1m": 20, "3m": 60}
 
+# 기간별 거래대금 순위: 오늘(KST) 기준 시작일(FID_STRT / FID_INPUT_DATE_1) 계산용
+_RANK_LOOKBACK_DAYS = {"1d": 0, "1w": 7, "1m": 30, "3m": 90}
+
 
 def _ensure_cache_dir():
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -953,3 +956,115 @@ def _enrich_krx(item: dict, period: str) -> dict:
     item.setdefault("baseline_price", item.get("price", 0))
     item.setdefault("_color_up", None)
     return item
+
+
+# ── 기간별 거래대금 순위 (대시보드용 정제) ────────────────────────────────────
+
+def _normalize_trade_value_period(period: str) -> str:
+    p = period.strip().lower()
+    if p not in ("1d", "1w", "1m", "3m"):
+        raise ValueError("period는 1D, 1W, 1M, 3M(또는 소문자)만 지원합니다.")
+    return p
+
+
+def _kst_strt_end_dates_for_rank(period: str) -> tuple[str, str]:
+    """(시작일, 종료일) YYYYMMDD KST. FID_STRT_DATE / 종료일 계산에 사용."""
+    p = _normalize_trade_value_period(period)
+    today = datetime.now(_KST).date()
+    end = today.strftime("%Y%m%d")
+    back = _RANK_LOOKBACK_DAYS[p]
+    start = (today - timedelta(days=back)).strftime("%Y%m%d")
+    return start, end
+
+
+def _kr_raw_row_to_dashboard(row: dict) -> dict:
+    """거래량/금액 순위 API output 행 → {종목코드, 종목명, 현재가, 등락률, 거래대금}."""
+    rate = (row.get("prdy_ctrt") or "0").strip()
+    if rate and not rate.startswith(("+", "-")):
+        try:
+            rate = ("+" if float(str(rate).replace(",", "")) >= 0 else "") + str(rate)
+        except ValueError:
+            rate = str(rate)
+    price = int(str(row.get("stck_prpr", "0")).replace(",", "") or "0")
+    tv = int(str(row.get("acml_tr_pbmn", "0")).replace(",", "") or "0")
+    return {
+        "종목코드": (row.get("mksc_shrn_iscd") or "").strip(),
+        "종목명":   (row.get("hts_kor_isnm") or "").strip(),
+        "현재가":   price,
+        "등락률":   rate,
+        "거래대금": tv,
+    }
+
+
+def _us_item_to_dashboard(item: dict) -> dict:
+    """get_us_scanner 아이템 → 동일 키."""
+    return {
+        "종목코드": (item.get("ticker") or "").strip(),
+        "종목명":   (item.get("name") or "").strip(),
+        "현재가":   float(item.get("price") or 0),
+        "등락률":   str(item.get("change_rate") or "0"),
+        "거래대금": float(item.get("trade_value") or 0),
+    }
+
+
+async def fetch_trade_value_rank_by_period(
+    period: str,
+    market: str = "KR",
+    top_n: int = 30,
+) -> dict:
+    """
+    국내(KR) 또는 미국(US) 기간별 거래대금 순위.
+
+    - **KR**: FHPST01710000 (거래량순위 API) + FID_BLNG_CLS_CODE=3(거래금액순).
+      시작일은 ``FID_INPUT_DATE_1``에 전달(당일만 볼 때는 공란).
+    - **US**: HHDFS76320010 ``/uapi/overseas-stock/v1/ranking/trade-pbmn`` + NDAY
+      (프로젝트 ``get_us_scanner``와 동일).
+
+    반환:
+        ``items``: ``{종목코드, 종목명, 현재가, 등락률, 거래대금}`` 리스트
+        ``period``, ``market``, ``fid_strt_date``, ``fid_end_date`` (KR),
+        ``source`` (tr_id 요약)
+    """
+    p = _normalize_trade_value_period(period)
+    start, end = _kst_strt_end_dates_for_rank(p)
+    loop = asyncio.get_running_loop()
+    mkt = (market or "KR").strip().upper()
+
+    if mkt == "KR":
+
+        def _sync_kr():
+            from app.services.kis_client import fetch_kr_trade_value_rank_by_period, is_configured
+            if not is_configured():
+                return []
+            rows = fetch_kr_trade_value_rank_by_period(start, end, top_n=top_n)
+            return [_kr_raw_row_to_dashboard(r) for r in rows if (r.get("mksc_shrn_iscd") or "").strip()]
+
+        items = await loop.run_in_executor(None, _sync_kr)
+        return {
+            "items": items,
+            "period": p,
+            "market": "KR",
+            "fid_strt_date": start,
+            "fid_end_date":  end,
+            "source": "FHPST01710000/volume-rank FID_BLNG_CLS_CODE=3",
+        }
+
+    if mkt == "US":
+        from app.routers.kis_data import get_us_scanner
+
+        scanner = await get_us_scanner(
+            category="trade_value", period=p, top_n=top_n,
+        )
+        raw = scanner.get("items") or []
+        items = [_us_item_to_dashboard(dict(x)) for x in raw]
+        return {
+            "items":           items,
+            "period":          p,
+            "market":          "US",
+            "fid_strt_date":   start,
+            "fid_end_date":    end,
+            "source":          "HHDFS76320010/trade-pbmn (NDAY 매핑)",
+            "as_of":           scanner.get("as_of", ""),
+        }
+
+    raise ValueError("market는 KR 또는 US만 지원합니다.")
