@@ -27,9 +27,8 @@
 
     <!-- 좌측: 시장 탭 -->
     <div class="mkt-market-seg" role="tablist" aria-label="시장 선택">
-      <button class="mkt-seg-btn active" data-mkt="ALL" role="tab">전체</button>
-      <button class="mkt-seg-btn" data-mkt="KR"  role="tab">국내</button>
-      <button class="mkt-seg-btn" data-mkt="US"  role="tab">해외</button>
+      <button class="mkt-seg-btn active" data-mkt="KR" role="tab">국내</button>
+      <button class="mkt-seg-btn" data-mkt="US" role="tab">해외</button>
     </div>
 
     <!-- 중앙: 순위 기준 칩 (가로 스크롤) -->
@@ -51,12 +50,13 @@
       </div>
 
       <!-- 랭킹 기준 기간 드롭다운 -->
-      <div class="mkt-period-wrap" title="순위 산정 기준 기간 (거래량·상승률 누적 기간)">
-        <select class="mkt-period-select" id="mkt-period-select" aria-label="랭킹 기준 기간">
-          <option value="1d" selected>1일 기준</option>
-          <option value="1w">1주 기준</option>
-          <option value="1m">1개월 기준</option>
-          <option value="3m">3개월 기준</option>
+      <div class="mkt-period-wrap" title="거래대금·거래량·급상승·급하락·체결강도 정렬 기간 (차트 기간과 무관)">
+        <span class="mkt-period-label">정렬 기간</span>
+        <select class="mkt-period-select" id="mkt-period-select" aria-label="랭킹 정렬 기간">
+          <option value="1d" selected>1일</option>
+          <option value="1w">1주</option>
+          <option value="1m">1개월</option>
+          <option value="3m">3개월</option>
         </select>
       </div>
 
@@ -239,7 +239,8 @@
 .mkt-freshness.recent .mkt-freshness-text { color: var(--d2t-orange, #f97316); }
 
 /* 기간 드롭다운 */
-.mkt-period-wrap { position: relative; }
+.mkt-period-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+.mkt-period-label { font-size: 11px; color: var(--d2t-text-3, #7a8499); white-space: nowrap; }
 .mkt-period-select {
   appearance: none;
   -webkit-appearance: none;

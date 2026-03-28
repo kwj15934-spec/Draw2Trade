@@ -19,7 +19,7 @@
 
   // ── 전역 대시보드 상태 ───────────────────────────────────────
   D2T.dashboardState = {
-    market:      'ALL',         // ALL | KR | US
+    market:      'KR',          // KR | US
     category:    'trade_value', // 랭킹 기준
     period:      '1d',          // 랭킹 기준 기간 (차트 기간 아님)
     hideWarning: false,
@@ -174,7 +174,7 @@
     _fetching = true;
 
     var s      = D2T.dashboardState;
-    var market = s.market === 'ALL' ? 'KR' : s.market;
+    var market = s.market;
 
     var url = '/api/v1/market/dashboard'
       + '?category='     + encodeURIComponent(s.category)
