@@ -726,3 +726,136 @@ async def fetch_us_rankings(
         _save_snapshot(snap_name, result)
 
     return result
+
+
+# ── 단일 종목 스파크라인 (in-cell 기간 전환용) ─────────────────────────────────
+
+async def fetch_spark(
+    ticker: str,
+    period: str = "1d",
+    market: str = "KR",
+    excd: str = "",
+) -> dict:
+    """
+    단일 종목의 스파크라인 + 추세 분석을 반환한다.
+    기간별 데이터 소스:
+      KR 1d  → fetch_kr_minute  (분봉)
+      KR 1w+ → fetch_kr_ohlcv   (일봉 기간별시세)
+      US     → fetch_us_ohlcv   (일봉)
+    색상 기준(baseline_price)도 함께 반환한다.
+    """
+    loop = asyncio.get_event_loop()
+    now_kst = datetime.now(_KST)
+    today_str = now_kst.strftime("%Y%m%d")
+
+    _period_start = {
+        "1d": (now_kst - timedelta(days=3)).strftime("%Y%m%d"),
+        "1w": (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
+        "1m": (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
+        "3m": (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
+    }
+    period_start = _period_start.get(period, _period_start["1d"])
+
+    def _sync():
+        from app.services.kis_client import (
+            fetch_kr_minute, fetch_kr_ohlcv, fetch_us_ohlcv, is_configured as kis_ok
+        )
+        from app.services.data_service import get_ohlcv_by_timeframe
+
+        if not kis_ok():
+            # KIS 미설정 → 로컬 캐시 fallback
+            data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+            if data and data.get("close"):
+                spark_days = _PERIOD_DAYS.get(period, 20)
+                closes = data["close"]
+                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                return {
+                    "sparkline": list(spark),
+                    "baseline_price": float(spark[0]) if spark else 0,
+                    "trend": _classify_trend(list(spark)),
+                }
+            return {"sparkline": [], "baseline_price": 0,
+                    "trend": {"label": "데이터 없음", "direction": "neutral",
+                              "strength": 0, "reason": ""}}
+
+        # ── US 종목 ─────────────────────────────────────────────
+        if market == "US":
+            try:
+                ex = excd or "NAS"
+                rows = fetch_us_ohlcv(ticker, ex, "0", today_str)
+                if rows and len(rows) >= 2:
+                    spark_days = _PERIOD_DAYS.get(period, 20)
+                    rows_asc = list(reversed(rows))
+                    closes = [float(r.get("clos") or 0) for r in rows_asc
+                              if float(r.get("clos") or 0) > 0]
+                    if len(closes) >= 2:
+                        spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                        return {
+                            "sparkline": list(spark),
+                            "baseline_price": float(spark[0]),
+                            "trend": _classify_trend(list(spark)),
+                        }
+            except Exception as e:
+                logger.debug("fetch_spark US 실패 [%s]: %s", ticker, e)
+            return {"sparkline": [], "baseline_price": 0,
+                    "trend": {"label": "데이터 없음", "direction": "neutral",
+                              "strength": 0, "reason": ""}}
+
+        # ── KR 1d: 분봉 ─────────────────────────────────────────
+        if period == "1d":
+            try:
+                min_data = fetch_kr_minute(ticker)
+                if min_data and len(min_data) >= 5:
+                    min_data.sort(key=lambda m: (
+                        m.get("stck_bsop_date", ""), m.get("stck_cntg_hour", "")
+                    ))
+                    minutes, spark_closes = [], []
+                    for m in min_data:
+                        c = float(m.get("stck_prpr") or 0)
+                        v = int(m.get("cntg_vol") or 0)
+                        if c > 0:
+                            minutes.append({"close": c, "volume": v})
+                            spark_closes.append(c)
+                    if minutes and len(minutes) >= 5:
+                        return {
+                            "sparkline": spark_closes,
+                            "baseline_price": spark_closes[0],
+                            "trend": _classify_intraday_trend(minutes),
+                        }
+            except Exception as e:
+                logger.debug("fetch_spark 분봉 실패 [%s]: %s", ticker, e)
+
+        # ── KR 1w/1m/3m: 일봉 ───────────────────────────────────
+        try:
+            rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
+            if rows and len(rows) >= 2:
+                rows_asc = list(reversed(rows))
+                closes = [float(r.get("stck_clpr") or 0) for r in rows_asc
+                          if float(r.get("stck_clpr") or 0) > 0]
+                if len(closes) >= 2:
+                    return {
+                        "sparkline": closes,
+                        "baseline_price": float(closes[0]),
+                        "trend": _classify_trend(closes),
+                    }
+        except Exception as e:
+            logger.debug("fetch_spark 일봉 실패 [%s]: %s", ticker, e)
+
+        # ── 최종 fallback: 로컬 캐시 ────────────────────────────
+        spark_days = _PERIOD_DAYS.get(period, 20)
+        data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+        if data and data.get("close"):
+            closes = data["close"]
+            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+            return {
+                "sparkline": list(spark),
+                "baseline_price": float(spark[0]) if spark else 0,
+                "trend": _classify_trend(list(spark)),
+            }
+
+        return {"sparkline": [], "baseline_price": 0,
+                "trend": {"label": "데이터 없음", "direction": "neutral",
+                          "strength": 0, "reason": ""}}
+
+    result = await loop.run_in_executor(None, _sync)
+    return result

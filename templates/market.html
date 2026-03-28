@@ -50,13 +50,13 @@
         <span class="mkt-freshness-text" id="mkt-freshness-text">—</span>
       </div>
 
-      <!-- 기간 드롭다운 -->
-      <div class="mkt-period-wrap">
-        <select class="mkt-period-select" id="mkt-period-select" aria-label="기간 선택">
-          <option value="1d" selected>1일</option>
-          <option value="1w">1주</option>
-          <option value="1m">1개월</option>
-          <option value="3m">3개월</option>
+      <!-- 랭킹 기준 기간 드롭다운 -->
+      <div class="mkt-period-wrap" title="순위 산정 기준 기간 (거래량·상승률 누적 기간)">
+        <select class="mkt-period-select" id="mkt-period-select" aria-label="랭킹 기준 기간">
+          <option value="1d" selected>1일 기준</option>
+          <option value="1w">1주 기준</option>
+          <option value="1m">1개월 기준</option>
+          <option value="3m">3개월 기준</option>
         </select>
       </div>
 
@@ -96,7 +96,7 @@
             <th class="mkt-th-price">현재가</th>
             <th class="mkt-th-rate">등락률</th>
             <th class="mkt-th-vol" id="mkt-th-vol">거래대금</th>
-            <th class="mkt-th-spark" id="mkt-th-spark">추이</th>
+            <th class="mkt-th-spark" id="mkt-th-spark">추이 분석</th>
             <th class="mkt-th-trend">추세</th>
           </tr>
         </thead>
@@ -417,7 +417,7 @@
 .mkt-th-price { width: 100px; text-align: right; }
 .mkt-th-rate  { width: 80px;  text-align: right; }
 .mkt-th-vol   { width: 110px; text-align: right; }
-.mkt-th-spark { width: 100px; text-align: center; }
+.mkt-th-spark { width: 130px; text-align: center; }
 .mkt-th-trend { width: 130px; text-align: center; }
 
 .mkt-table tbody tr {
@@ -511,6 +511,74 @@
   max-width: 130px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* ── 추이 분석 셀 (스파크라인 + 마이크로 버튼) ──────────────── */
+.mkt-spark-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 8px 10px !important;
+  min-width: 120px;
+}
+.mkt-spark-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mkt-spark-chart {
+  line-height: 0;
+  min-height: 28px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 스파크 로딩 스피너 */
+.mkt-spark-loading {
+  width: 80px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mkt-spark-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+  border-top-color: var(--d2t-cyan, #00d4aa);
+  border-radius: 50%;
+  animation: mkt-spin 0.6s linear infinite;
+}
+@keyframes mkt-spin { to { transform: rotate(360deg); } }
+
+/* 마이크로 기간 버튼 그룹 */
+.mkt-micro-btns {
+  display: flex;
+  gap: 2px;
+}
+.mkt-micro-btn {
+  padding: 2px 5px;
+  background: none;
+  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.06));
+  border-radius: 3px;
+  color: var(--d2t-text-3, #4a4f5e);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 120ms;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
+.mkt-micro-btn:hover {
+  border-color: var(--d2t-cyan, #00d4aa);
+  color: var(--d2t-text-1, #b8bcc8);
+}
+.mkt-micro-btn.active {
+  background: rgba(0,212,170,0.1);
+  border-color: var(--d2t-cyan, #00d4aa);
+  color: var(--d2t-cyan, #00d4aa);
 }
 
 /* Skeleton 행 */

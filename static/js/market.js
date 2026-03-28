@@ -1,10 +1,16 @@
 /**
- * Market Dashboard — 시장 대시보드 클라이언트 v4
+ * Market Dashboard — 시장 대시보드 클라이언트 v5
  *
- * 필터 구조: 시장 세그먼트(전체/국내/해외) + 순위 칩 + 기간 드롭다운 + 위험종목 토글
- * 전역 상태: window.D2T.dashboardState
- * 색상 강제: change_rate 부호 → _color_up 플래그 (_color_up true=빨강, false=파랑)
- * Skeleton UI: 필터 변경 시 즉시 표시
+ * ■ 글로벌 필터 (상단): 시장 세그먼트 + 순위 칩 + 랭킹 기준 기간 드롭다운
+ *   → 선택된 기간은 "누적 거래량/상승률 순위 산정 기준"이며, 차트 모양과 무관
+ *
+ * ■ In-Cell 추이 분석: 각 행에 [1D | 1W | 1M | 3M] 마이크로 버튼
+ *   → 버튼 클릭 시 해당 행의 스파크라인만 비동기 업데이트
+ *   → 로딩 중 해당 차트 영역에만 스피너 표시
+ *   → 다른 행 불변
+ *
+ * ■ 색상 고정: 항상 prdy_ctrt 등락률 부호 기준 (상승=빨강, 하락=파랑)
+ * ■ 추세 문구: in-cell 기간 변경 시 해당 기간 데이터 기반으로 업데이트
  */
 (function () {
   'use strict';
@@ -13,11 +19,14 @@
 
   // ── 전역 대시보드 상태 ───────────────────────────────────────
   D2T.dashboardState = {
-    market:      'ALL',      // ALL | KR | US
-    category:    'trade_value',
-    period:      '1d',
+    market:      'ALL',         // ALL | KR | US
+    category:    'trade_value', // 랭킹 기준
+    period:      '1d',          // 랭킹 기준 기간 (차트 기간 아님)
     hideWarning: false,
   };
+
+  // 행별 현재 차트 기간 추적 (ticker → period)
+  var _rowPeriod = {};
 
   var _pollTimer = null;
   var POLL_MS    = 30000;
@@ -36,19 +45,13 @@
     } catch (_) {}
   }
 
-  // ── 카테고리별 거래량 컬럼 헤더 ─────────────────────────────
+  // ── 컬럼 헤더 맵 ─────────────────────────────────────────────
   var _volHeader = {
     'trade_value': '거래대금',
     'volume':      '거래량',
     'rise':        '등락률',
     'fall':        '등락률',
     'strength':    '체결강도',
-  };
-  var _sparkHeader = {
-    '1d': '금일 추이',
-    '1w': '1주 추이',
-    '1m': '1개월',
-    '3m': '3개월',
   };
 
   // ── 초기화 ──────────────────────────────────────────────────
@@ -62,7 +65,7 @@
     _pollTimer = setInterval(_fetchDashboard, POLL_MS);
   });
 
-  // ── 이벤트 바인딩 ───────────────────────────────────────────
+  // ── 글로벌 필터 바인딩 ───────────────────────────────────────
 
   function _bindSegBtns() {
     document.querySelectorAll('.mkt-seg-btn').forEach(function (btn) {
@@ -74,6 +77,7 @@
         });
         btn.classList.add('active');
         D2T.dashboardState.market = mkt;
+        _rowPeriod = {};
         _setAllSkeletons();
         _fetchDashboard();
       });
@@ -90,9 +94,9 @@
         });
         chip.classList.add('active');
         D2T.dashboardState.category = cat;
-        // 거래량 컬럼 헤더 갱신
         var th = document.getElementById('mkt-th-vol');
         if (th) th.textContent = _volHeader[cat] || '거래량';
+        _rowPeriod = {};
         _setTableSkeleton();
         _fetchDashboard();
       });
@@ -106,9 +110,7 @@
       var period = sel.value || '1d';
       if (period === D2T.dashboardState.period) return;
       D2T.dashboardState.period = period;
-      // 스파크라인 헤더 갱신
-      var th = document.getElementById('mkt-th-spark');
-      if (th) th.textContent = _sparkHeader[period] || '추이';
+      _rowPeriod = {};
       _setTableSkeleton();
       _fetchDashboard();
     });
@@ -119,6 +121,7 @@
     if (!chk) return;
     chk.addEventListener('change', function () {
       D2T.dashboardState.hideWarning = chk.checked;
+      _rowPeriod = {};
       _setTableSkeleton();
       _fetchDashboard();
     });
@@ -148,20 +151,29 @@
         + '<td><div class="d2t-skeleton mkt-sk-cell" style="width:70px;height:13px;margin-left:auto;"></div></td>'
         + '<td><div class="d2t-skeleton mkt-sk-cell" style="width:52px;height:13px;margin-left:auto;"></div></td>'
         + '<td><div class="d2t-skeleton mkt-sk-cell" style="width:60px;height:13px;margin-left:auto;"></div></td>'
-        + '<td><div class="d2t-skeleton mkt-sk-cell" style="width:80px;height:28px;margin:0 auto;"></div></td>'
+        + '<td class="mkt-spark-cell">'
+          + '<div class="mkt-spark-inner">'
+            + '<div class="d2t-skeleton mkt-sk-cell" style="width:80px;height:28px;"></div>'
+            + '<div style="display:flex;gap:2px;margin-top:2px;">'
+              + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
+              + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
+              + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
+              + '<div class="d2t-skeleton mkt-sk-cell" style="width:22px;height:14px;border-radius:3px;"></div>'
+            + '</div>'
+          + '</div>'
+        + '</td>'
         + '<td><div class="d2t-skeleton mkt-sk-cell" style="width:70px;height:20px;margin:0 auto;border-radius:4px;"></div></td>'
         + '</tr>';
     }
     tbody.innerHTML = rows;
   }
 
-  // ── API 호출 ─────────────────────────────────────────────────
+  // ── 메인 대시보드 fetch ──────────────────────────────────────
   function _fetchDashboard() {
     if (_fetching) return;
     _fetching = true;
 
-    var s = D2T.dashboardState;
-    // 시장이 ALL이면 KR로 요청 (서버에서 ALL 처리 없으면 KR 기본)
+    var s      = D2T.dashboardState;
     var market = s.market === 'ALL' ? 'KR' : s.market;
 
     var url = '/api/v1/market/dashboard'
@@ -178,7 +190,7 @@
       })
       .then(function (data) {
         _renderIndices(data.indices || {}, data.market || 'KR');
-        _renderRankings(data.rankings || {});
+        _renderRankings(data.rankings || {}, data.market || 'KR');
         _renderFreshness(data.rankings || {}, data.period || '1d');
       })
       .catch(function (e) {
@@ -275,8 +287,45 @@
     }
   }
 
+  // ── 스파크 셀 HTML 생성 ──────────────────────────────────────
+  // activePeriod: 마이크로 버튼 중 현재 활성 기간
+  // spColor: 색상 (항상 등락률 기준으로 caller가 결정)
+  // sparkline/baseline: 데이터
+  function _buildSparkCell(ticker, activePeriod, spColor, sparkline, baseline) {
+    // 차트 SVG
+    var chartHtml = '';
+    if (sparkline && sparkline.length >= 2 && D2T.sparkline) {
+      chartHtml = D2T.sparkline(sparkline, {
+        width: 80, height: 28, color: spColor, baseline: baseline
+      });
+    } else {
+      chartHtml = '<div style="width:80px;height:28px;"></div>';
+    }
+
+    // 마이크로 버튼
+    var btns = ['1D', '1W', '1M', '3M'];
+    var bMap = { '1D': '1d', '1W': '1w', '1M': '1m', '3M': '3m' };
+    var microHtml = '<div class="mkt-micro-btns">';
+    btns.forEach(function (lbl) {
+      var p    = bMap[lbl];
+      var act  = (p === activePeriod) ? ' active' : '';
+      microHtml += '<button class="mkt-micro-btn' + act + '"'
+        + ' data-ticker="' + _esc(ticker) + '"'
+        + ' data-period="' + p + '"'
+        + '>' + lbl + '</button>';
+    });
+    microHtml += '</div>';
+
+    return '<td class="mkt-spark-cell">'
+      + '<div class="mkt-spark-inner">'
+        + '<div class="mkt-spark-chart" id="spark-chart-' + _esc(ticker) + '">' + chartHtml + '</div>'
+        + microHtml
+      + '</div>'
+      + '</td>';
+  }
+
   // ── 랭킹 테이블 렌더링 ───────────────────────────────────────
-  function _renderRankings(rankings) {
+  function _renderRankings(rankings, market) {
     var tbody = document.getElementById('mkt-tbody');
     var asOf  = document.getElementById('mkt-as-of');
     if (!tbody) return;
@@ -307,9 +356,8 @@
     }
 
     if (!items.length) {
-      var mkt = D2T.dashboardState.market;
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--d2t-text-3);">'
-        + (mkt === 'US'
+        + (D2T.dashboardState.market === 'US'
           ? 'KIS API를 통해 미국 주식 데이터를 불러오는 중이거나, API 설정을 확인하세요.'
           : '현재 조회 가능한 데이터가 없습니다.<br><small style="opacity:.6;">장 마감 후에는 데이터가 제한될 수 있습니다.</small>')
         + '</td></tr>';
@@ -321,39 +369,37 @@
       var rank    = idx + 1;
       var rankCls = rank <= 3 ? ' mkt-rank-top3' : '';
 
-      // ── 등락률: change_rate 부호 기반 ─────────────────────────
+      // 등락률 (change_rate 부호 기반 — 항상 고정)
       var rateNum     = parseFloat(String(item.change_rate || '0').replace('+', ''));
       var rateCls     = rateNum > 0 ? 'up' : rateNum < 0 ? 'down' : 'flat';
       var rateDisplay = (rateNum > 0 ? '+' : '') + rateNum.toFixed(2) + '%';
 
-      // ── 스파크라인 색상: _color_up 플래그로 강제 고정 ──────────
+      // 스파크 색상: _color_up 또는 rateNum 부호 — 항상 등락률 기준
       var colorUp = (item._color_up != null) ? item._color_up : (rateNum >= 0);
       var spColor = colorUp ? _riseColor : _fallColor;
 
-      var sparkHtml = '';
-      if (item.sparkline && item.sparkline.length >= 2 && D2T.sparkline) {
-        var baseline = item.baseline_price != null ? item.baseline_price
-                     : (item.open_price    != null ? item.open_price    : item.sparkline[0]);
-        sparkHtml = D2T.sparkline(item.sparkline, {
-          width: 80, height: 28, color: spColor, baseline: baseline
-        });
-      }
+      // 초기 차트 기간: 랭킹 기준 기간과 동일하게 시작
+      var initPeriod = _rowPeriod[item.ticker] || D2T.dashboardState.period;
+      _rowPeriod[item.ticker] = initPeriod;
 
-      // ── 거래량/거래대금/체결강도 컬럼 값 ───────────────────────
+      var baseline = item.baseline_price != null ? item.baseline_price
+                   : (item.open_price    != null ? item.open_price    : (item.sparkline || [])[0]);
+
+      // 거래량 컬럼 값
       var cat = D2T.dashboardState.category;
       var volDisplay;
       if (cat === 'trade_value') {
         volDisplay = _formatVal(item.trade_value || item.volume || 0);
       } else if (cat === 'strength') {
-        var str = parseFloat(item.strength || item.volume || 0);
+        var str = parseFloat(item.strength || 0);
         volDisplay = isNaN(str) ? '—' : str.toFixed(0) + '%';
       } else if (cat === 'rise' || cat === 'fall') {
-        volDisplay = rateDisplay;   // 등락률 반복 표시
+        volDisplay = rateDisplay;
       } else {
         volDisplay = _formatVol(item.volume || 0);
       }
 
-      // ── 추세 ─────────────────────────────────────────────────
+      // 추세
       var trend       = item.trend    || {};
       var trendDir    = trend.direction || 'neutral';
       var trendLbl    = trend.label    || '—';
@@ -361,31 +407,122 @@
 
       var href = '/app?ticker=' + encodeURIComponent(item.ticker);
 
-      html += '<tr onclick="window.location.href=\'' + href + '\'">'
+      html += '<tr'
+        + ' data-ticker="' + _esc(item.ticker) + '"'
+        + ' data-color-up="' + (colorUp ? '1' : '0') + '"'
+        + ' data-market="'  + _esc(market) + '"'
+        + ' data-excd="'    + _esc(item.excd || '') + '"'
+        + ' onclick="window.location.href=\'' + href + '\'">'
         + '<td class="mkt-rank' + rankCls + '">' + rank + '</td>'
         + '<td>'
           + '<div class="mkt-name" title="' + _esc(item.name) + '">' + _esc(item.name) + '</div>'
           + '<div class="mkt-ticker">' + _esc(item.ticker) + '</div>'
         + '</td>'
         + '<td class="mkt-price">'
-          + (D2T.dashboardState.market === 'US' ? '$' : '')
-          + _formatNum(item.price, D2T.dashboardState.market === 'US' ? 2 : 0)
+          + (market === 'US' ? '$' : '')
+          + _formatNum(item.price, market === 'US' ? 2 : 0)
         + '</td>'
         + '<td class="mkt-rate ' + rateCls + '">' + rateDisplay + '</td>'
         + '<td class="mkt-vol">' + volDisplay + '</td>'
-        + '<td class="mkt-spark">' + sparkHtml + '</td>'
-        + '<td class="mkt-trend-cell">'
+        + _buildSparkCell(item.ticker, initPeriod, spColor, item.sparkline || [], baseline)
+        + '<td class="mkt-trend-cell" id="trend-cell-' + _esc(item.ticker) + '">'
           + '<span class="mkt-trend-badge ' + trendDir + '" title="' + _esc(trendReason) + '">'
             + _esc(trendLbl)
           + '</span>'
-          + (trendReason
-            ? '<div class="mkt-trend-reason">' + _esc(trendReason) + '</div>'
-            : '')
+          + (trendReason ? '<div class="mkt-trend-reason">' + _esc(trendReason) + '</div>' : '')
         + '</td>'
         + '</tr>';
     });
 
     tbody.innerHTML = html;
+
+    // 마이크로 버튼 이벤트 위임
+    _bindMicroBtns(tbody);
+  }
+
+  // ── 마이크로 버튼 이벤트 위임 ────────────────────────────────
+  function _bindMicroBtns(tbody) {
+    tbody.addEventListener('click', function (e) {
+      var btn = e.target.closest('.mkt-micro-btn');
+      if (!btn) return;
+      e.stopPropagation();   // 행 클릭 차트 이동 방지
+
+      var ticker = btn.getAttribute('data-ticker');
+      var period = btn.getAttribute('data-period');
+      if (!ticker || !period) return;
+
+      // 같은 기간 클릭 시 무시
+      if (_rowPeriod[ticker] === period) return;
+      _rowPeriod[ticker] = period;
+
+      // 해당 행에서 버튼 활성화 갱신
+      var row = tbody.querySelector('tr[data-ticker="' + _escAttr(ticker) + '"]');
+      if (!row) return;
+      row.querySelectorAll('.mkt-micro-btn').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-period') === period);
+      });
+
+      // 해당 차트 셀에만 스피너 표시
+      var chartEl = document.getElementById('spark-chart-' + ticker);
+      if (chartEl) {
+        chartEl.innerHTML = '<div class="mkt-spark-loading"><div class="mkt-spark-spinner"></div></div>';
+      }
+
+      // 개별 스파크 데이터 fetch
+      var market  = row.getAttribute('data-market') || 'KR';
+      var excd    = row.getAttribute('data-excd')   || '';
+      var colorUp = row.getAttribute('data-color-up') === '1';
+
+      _fetchRowSpark(ticker, period, market, excd, colorUp, chartEl, row);
+    });
+  }
+
+  // ── 개별 행 스파크 비동기 fetch ──────────────────────────────
+  function _fetchRowSpark(ticker, period, market, excd, colorUp, chartEl, row) {
+    var url = '/api/v1/market/spark'
+      + '?ticker=' + encodeURIComponent(ticker)
+      + '&period=' + encodeURIComponent(period)
+      + '&market=' + encodeURIComponent(market)
+      + (excd ? '&excd=' + encodeURIComponent(excd) : '');
+
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        var spColor  = colorUp ? _riseColor : _fallColor;
+        var sparkline = data.sparkline || [];
+        var baseline  = data.baseline_price;
+        var trend     = data.trend || {};
+
+        // 차트 업데이트
+        if (chartEl) {
+          var svgHtml = (sparkline.length >= 2 && D2T.sparkline)
+            ? D2T.sparkline(sparkline, { width: 80, height: 28, color: spColor, baseline: baseline })
+            : '<div style="width:80px;height:28px;color:var(--d2t-text-3);font-size:9px;line-height:28px;">—</div>';
+          chartEl.innerHTML = svgHtml;
+        }
+
+        // 추세 셀 업데이트
+        var trendCell = document.getElementById('trend-cell-' + ticker);
+        if (trendCell && trend.label) {
+          var dir    = trend.direction || 'neutral';
+          var lbl    = trend.label    || '—';
+          var reason = trend.reason   || '';
+          trendCell.innerHTML =
+            '<span class="mkt-trend-badge ' + dir + '" title="' + _esc(reason) + '">'
+              + _esc(lbl)
+            + '</span>'
+            + (reason ? '<div class="mkt-trend-reason">' + _esc(reason) + '</div>' : '');
+        }
+      })
+      .catch(function (e) {
+        console.warn('[Market] spark fetch 실패 [' + ticker + ']:', e);
+        if (chartEl) {
+          chartEl.innerHTML = '<div style="width:80px;height:28px;color:var(--d2t-text-3);font-size:9px;line-height:28px;text-align:center;">오류</div>';
+        }
+      });
   }
 
   // ── 유틸리티 ──────────────────────────────────────────────────
@@ -412,6 +549,10 @@
   function _esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  // HTML 속성 선택자용 이스케이프 (큰따옴표 제거)
+  function _escAttr(s) {
+    return String(s || '').replace(/"/g, '');
   }
 
 })();

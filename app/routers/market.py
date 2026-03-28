@@ -3,6 +3,7 @@ Market Dashboard API 라우터
 
 GET /api/v1/market/dashboard      — 지수 시세 + 종합 랭킹 (추세 라벨 포함)
 GET /api/v1/market/index-quotes   — KOSPI/KOSDAQ 지수 시세만
+GET /api/v1/market/spark          — 단일 종목 스파크라인 + 추세 (in-cell 기간 전환용)
 """
 import logging
 
@@ -53,6 +54,26 @@ async def get_dashboard(
         "market":   market,
         "period":   period,
     }
+
+
+@router.get("/spark")
+async def get_spark(
+    ticker: str = Query(..., description="종목 코드 (KR: 6자리, US: AAPL 등)"),
+    period: str = Query(default="1d", description="1d | 1w | 1m | 3m"),
+    market: str = Query(default="KR", description="KR | US"),
+    excd: str   = Query(default="",   description="US 거래소 코드 (NAS/NYS 등)"),
+):
+    """
+    단일 종목의 스파크라인 데이터 + 추세 분석.
+    in-cell 기간 버튼 클릭 시 해당 행만 비동기 업데이트하는 데 사용.
+    반환: { sparkline: [...], trend: {...}, baseline_price: float }
+    """
+    return await market_service.fetch_spark(
+        ticker=ticker,
+        period=period,
+        market=market,
+        excd=excd,
+    )
 
 
 @router.get("/index-quotes")
