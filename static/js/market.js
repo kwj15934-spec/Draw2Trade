@@ -80,12 +80,15 @@
       var volStr = _formatVol(d.volume);
       var tvStr = _formatVal(d.trade_value);
 
+      var snapLabel = d._snapshot ? '<div class="mkt-idx-snap">' + d._snapshot + ' 기준</div>' : '';
+
       el.classList.remove('d2t-skeleton');
       el.innerHTML =
         '<div class="mkt-idx-name">' + name + '</div>'
         + '<div class="mkt-idx-price">' + _formatNum(d.price, 2) + '</div>'
         + '<div class="mkt-idx-change ' + sign + '">' + changeStr + ' (' + rateStr + ')</div>'
-        + '<div class="mkt-idx-sub"><span>거래량 ' + volStr + '</span><span>거래대금 ' + tvStr + '</span></div>';
+        + '<div class="mkt-idx-sub"><span>거래량 ' + volStr + '</span><span>거래대금 ' + tvStr + '</span></div>'
+        + snapLabel;
     });
   }
 
@@ -96,7 +99,34 @@
     if (!tbody) return;
 
     var items = rankings.items || [];
-    if (asOf) asOf.textContent = rankings.as_of || '—';
+    var isFallback = rankings.fallback || false;
+    var snapTime = rankings.snapshot_time || '';
+
+    // 시각 표시: 실시간이면 as_of, 스냅샷이면 스냅샷 시점
+    if (asOf) {
+      if (isFallback && snapTime) {
+        asOf.textContent = snapTime;
+        asOf.title = '장 마감 후 마지막 데이터 (스냅샷)';
+      } else {
+        asOf.textContent = rankings.as_of || '—';
+      }
+    }
+
+    // 스냅샷 배너
+    var notice = document.getElementById('mkt-snapshot-notice');
+    if (isFallback) {
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'mkt-snapshot-notice';
+        notice.className = 'mkt-snapshot-notice';
+        var wrap = document.getElementById('mkt-table-wrap');
+        if (wrap) wrap.parentNode.insertBefore(notice, wrap);
+      }
+      notice.textContent = '장 마감 후 마지막 거래 데이터입니다 (' + snapTime + ' 기준)';
+      notice.style.display = 'block';
+    } else if (notice) {
+      notice.style.display = 'none';
+    }
 
     if (!items.length) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--d2t-text-3);">'

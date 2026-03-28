@@ -3,13 +3,51 @@ Market Dashboard Service
 
 기존 KIS 스캐너 API를 통합 호출하여 시장 대시보드용 종합 랭킹 데이터를 반환한다.
 KOSPI/KOSDAQ 지수 시세 + 거래량/등락률 상·하위 + 각 종목 추세 라벨을 포함한다.
+
+장 마감/주말에도 마지막 유효 데이터를 디스크 스냅샷으로 보존하여 항상 표시한다.
 """
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 _KST = timezone(timedelta(hours=9))
+
+# 디스크 스냅샷 경로
+_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "market"
+
+
+def _ensure_cache_dir():
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_snapshot(name: str, data: dict):
+    """디스크에 스냅샷 저장 (JSON). 장중 유효 데이터를 보존한다."""
+    try:
+        _ensure_cache_dir()
+        path = _CACHE_DIR / f"{name}.json"
+        payload = {
+            "saved_at": datetime.now(_KST).strftime("%Y-%m-%d %H:%M:%S"),
+            "data": data,
+        }
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        logger.warning("스냅샷 저장 실패 [%s]: %s", name, e)
+
+
+def _load_snapshot(name: str) -> dict | None:
+    """디스크에서 스냅샷 로드. 없으면 None."""
+    try:
+        path = _CACHE_DIR / f"{name}.json"
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload
+    except Exception as e:
+        logger.warning("스냅샷 로드 실패 [%s]: %s", name, e)
+        return None
 
 
 # ── 지수 시세 조회 ─────────────────────────────────────────────────────────────
@@ -17,7 +55,7 @@ _KST = timezone(timedelta(hours=9))
 async def fetch_index_quotes() -> dict:
     """
     KOSPI(0001), KOSDAQ(1001) 지수 현재가·등락률·등락폭을 반환한다.
-    KIS API: /uapi/domestic-stock/v1/quotations/inquire-index-price (FHPUP02100000)
+    실패 시 디스크 스냅샷으로 fallback.
     """
     loop = asyncio.get_event_loop()
 
@@ -37,11 +75,6 @@ async def fetch_index_quotes() -> dict:
                     },
                     tr_id="FHPUP02100000",
                 )
-                logger.info("지수 API 응답 [%s]: rt_cd=%s msg=%s keys=%s",
-                            code,
-                            (data or {}).get("rt_cd"),
-                            (data or {}).get("msg1", ""),
-                            list((data or {}).keys()))
                 if not data or data.get("rt_cd") != "0":
                     continue
                 out = data.get("output") or {}
@@ -65,7 +98,22 @@ async def fetch_index_quotes() -> dict:
                 logger.warning("지수 조회 실패 (%s): %s", code, e)
         return indices
 
-    return await loop.run_in_executor(None, _sync)
+    indices = await loop.run_in_executor(None, _sync)
+
+    # 유효 데이터가 있으면 스냅샷 저장
+    if indices:
+        _save_snapshot("indices", indices)
+    else:
+        # API 실패 시 디스크 스냅샷 fallback
+        snap = _load_snapshot("indices")
+        if snap and snap.get("data"):
+            indices = snap["data"]
+            # 스냅샷 시점 표기 추가
+            for k in indices:
+                indices[k]["_snapshot"] = snap.get("saved_at", "")
+            logger.info("지수 스냅샷 fallback 사용 (%s)", snap.get("saved_at"))
+
+    return indices
 
 
 # ── 추세 라벨 판정 ─────────────────────────────────────────────────────────────
@@ -73,37 +121,31 @@ async def fetch_index_quotes() -> dict:
 def _classify_trend(closes: list[float]) -> dict:
     """
     최근 종가 배열(최소 5개)로 추세 라벨을 판정한다.
-    - 기울기, 변동성, 최근 돌파 여부를 종합 판단
-    - 투자 추천이 아닌 통계적 분류임
+    투자 추천이 아닌 통계적 분류.
     """
     if not closes or len(closes) < 5:
         return {"label": "데이터 부족", "direction": "neutral", "strength": 0}
 
     try:
         import numpy as np
-        arr = np.array(closes[-20:], dtype=float)  # 최근 20봉
+        arr = np.array(closes[-20:], dtype=float)
         n = len(arr)
 
-        # 선형 회귀 기울기 (정규화)
         x = np.arange(n, dtype=float)
         mean_x, mean_y = x.mean(), arr.mean()
         slope = ((x - mean_x) * (arr - mean_y)).sum() / ((x - mean_x) ** 2).sum()
         norm_slope = slope / mean_y if mean_y != 0 else 0
 
-        # 변동성 (CV)
         std = arr.std()
         cv = std / mean_y if mean_y != 0 else 0
 
-        # 최근 vs 이전 구간 비교
         recent = arr[-5:].mean()
         older = arr[:5].mean()
         pct_change = (recent - older) / older * 100 if older != 0 else 0
 
-        # 20봉 고점 대비 위치
         high = arr.max()
         near_high = (arr[-1] / high) >= 0.97 if high > 0 else False
 
-        # 분류
         if norm_slope > 0.003 and pct_change > 5:
             if near_high:
                 return {"label": "강한 돌파", "direction": "up", "strength": 90}
@@ -123,19 +165,101 @@ def _classify_trend(closes: list[float]) -> dict:
         return {"label": "분석 불가", "direction": "neutral", "strength": 0}
 
 
+# ── OHLCV 기반 자체 랭킹 (스냅샷·실시간 모두 없을 때) ─────────────────────────
+
+async def _build_fallback_rankings(category: str, top_n: int) -> dict:
+    """
+    서버에 캐시된 일봉 OHLCV 데이터로 자체 랭킹을 생성한다.
+    - volume: 최근 거래일 거래량 상위
+    - rise: 최근 거래일 등락률 상위
+    - fall: 최근 거래일 등락률 하위
+    """
+    loop = asyncio.get_event_loop()
+
+    def _sync():
+        from app.services.data_service import get_ohlcv_by_timeframe, all_names, get_kospi_tickers
+
+        names = all_names()
+        tickers = get_kospi_tickers()
+        if not tickers:
+            return []
+
+        candidates = []
+        # 전 종목 스캔은 너무 무거우므로 캐시에 있는 것만 (최대 300개 샘플)
+        import random
+        sample = tickers[:300] if len(tickers) > 300 else tickers
+
+        for ticker in sample:
+            try:
+                data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
+                if not data or not data.get("close") or len(data["close"]) < 5:
+                    continue
+                closes = data["close"]
+                volumes = data.get("volume", [])
+
+                last_close = closes[-1]
+                prev_close = closes[-2] if len(closes) >= 2 else last_close
+                change_rate = (last_close - prev_close) / prev_close * 100 if prev_close else 0
+                last_vol = volumes[-1] if volumes else 0
+
+                candidates.append({
+                    "ticker": ticker,
+                    "name": names.get(ticker, ticker),
+                    "price": int(last_close),
+                    "change_rate": f"{change_rate:+.2f}",
+                    "volume": int(last_vol),
+                    "sparkline": [float(c) for c in closes[-20:]],
+                    "trend": _classify_trend(closes[-20:]),
+                    "_sort_vol": last_vol,
+                    "_sort_rate": change_rate,
+                })
+            except Exception:
+                continue
+
+        if not candidates:
+            return []
+
+        # 정렬
+        if category == "rise":
+            candidates.sort(key=lambda x: x["_sort_rate"], reverse=True)
+        elif category == "fall":
+            candidates.sort(key=lambda x: x["_sort_rate"])
+        else:
+            candidates.sort(key=lambda x: x["_sort_vol"], reverse=True)
+
+        # 정렬 키 제거
+        result = []
+        for c in candidates[:top_n]:
+            c.pop("_sort_vol", None)
+            c.pop("_sort_rate", None)
+            result.append(c)
+        return result
+
+    items = await loop.run_in_executor(None, _sync)
+    now = datetime.now(_KST)
+    return {
+        "items": items,
+        "as_of": now.strftime("%H:%M:%S"),
+        "fallback": True,
+        "snapshot_time": "캐시 데이터 기반",
+        "category": category,
+    }
+
+
 # ── 종합 랭킹 데이터 ──────────────────────────────────────────────────────────
 
 async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
     """
-    카테고리별 상위 종목 + 각 종목의 추세 라벨 + 스파크라인 데이터를 반환한다.
-
-    category: "volume" | "rise" | "fall"
+    카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
+    KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
         get_scanner_volume,
         get_scanner_rise,
         get_scanner_fall,
     )
+
+    snap_name = f"rankings_{category}"
 
     # 1) 스캐너 데이터 가져오기
     try:
@@ -150,11 +274,31 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
         scanner = {"items": [], "as_of": "", "fallback": False}
 
     items = scanner.get("items", [])
-    logger.info("스캐너 결과 [%s]: %d건, fallback=%s", category, len(items), scanner.get("fallback"))
-    if not items:
-        return scanner
 
-    # 2) 각 종목 일봉 데이터 → 추세 분석 + 스파크라인
+    # 2) 실시간 데이터 없으면 디스크 스냅샷 fallback
+    if not items:
+        snap = _load_snapshot(snap_name)
+        if snap and snap.get("data"):
+            snap_data = snap["data"]
+            snap_data["fallback"] = True
+            snap_data["snapshot_time"] = snap.get("saved_at", "")
+            logger.info("랭킹 스냅샷 fallback [%s] (%s)", category, snap.get("saved_at"))
+            return snap_data
+
+        # 디스크 스냅샷도 없으면 → 캐시된 OHLCV에서 자체 랭킹 생성
+        logger.info("스냅샷 미존재 → OHLCV 기반 자체 랭킹 생성 [%s]", category)
+        fallback = await _build_fallback_rankings(category, top_n)
+        if fallback.get("items"):
+            return fallback
+
+        return {
+            "items": [],
+            "as_of": "",
+            "fallback": False,
+            "category": category,
+        }
+
+    # 3) 각 종목 일봉 → 추세 분석 + 스파크라인
     loop = asyncio.get_event_loop()
 
     def _enrich(item: dict) -> dict:
@@ -163,9 +307,8 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
             from app.services.data_service import get_ohlcv_by_timeframe
             data = get_ohlcv_by_timeframe(ticker, "daily", years=1)
             if data and data.get("close"):
-                closes = data["close"][-20:]  # 최근 20 거래일
+                closes = data["close"][-20:]
                 item["trend"] = _classify_trend(closes)
-                # 스파크라인용 최근 20개 종가
                 item["sparkline"] = closes
             else:
                 item["trend"] = {"label": "데이터 부족", "direction": "neutral", "strength": 0}
@@ -181,9 +324,14 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
 
     enriched = await loop.run_in_executor(None, _enrich_all)
 
-    return {
+    result = {
         "items": enriched,
         "as_of": scanner.get("as_of", ""),
-        "fallback": scanner.get("fallback", False),
+        "fallback": False,
         "category": category,
     }
+
+    # 4) 유효 데이터를 디스크에 스냅샷 보존
+    _save_snapshot(snap_name, result)
+
+    return result
