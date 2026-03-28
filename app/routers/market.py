@@ -9,7 +9,7 @@ GET  /api/v1/market/krx-status     — KRX 캐시 현황 조회
 """
 import logging
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, Query
 
 from app.services import market_service
 
@@ -85,25 +85,18 @@ async def get_index_quotes():
 
 
 @router.post("/krx-sync")
-async def krx_sync(date: str = Query(default="", description="YYYYMMDD (비우면 오늘)")):
+async def krx_sync(
+    background_tasks: BackgroundTasks,
+    date: str = Query(default="", description="YYYYMMDD (비우면 오늘)"),
+):
     """
-    KRX 전종목 시세 수동 수집 트리거.
+    KRX 전종목 시세 수집 트리거 (백그라운드 실행, 즉시 응답).
     네이버 금융에서 KOSPI/KOSDAQ 전종목 일별 시세를 스크래핑하여
     cache/krx/{date}.json 에 저장한다. (약 30~60초 소요)
     """
-    import asyncio
     from app.services.krx_service import fetch_all_daily
-
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None,
-        lambda: fetch_all_daily(date or None)
-    )
-    return {
-        "ok":    True,
-        "date":  result["date"],
-        "count": len(result.get("items", [])),
-    }
+    background_tasks.add_task(fetch_all_daily, date or None)
+    return {"ok": True, "message": "수집 시작됨 (백그라운드). 로그에서 완료 확인 가능."}
 
 
 @router.get("/krx-status")
