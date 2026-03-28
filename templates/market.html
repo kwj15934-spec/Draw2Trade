@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}시장 대시보드 — Draw2Trade{% endblock %}
+
+{% block content %}
+<!-- ── 네비게이션 바 ──────────────────────────────────────────── -->
+<nav class="d2t-nav">
+  <a href="/" class="d2t-brand" style="text-decoration:none;">
+    <img src="/static/img/logo.png" alt="Draw2Trade" class="d2t-logo-img" onerror="this.src='/static/img/favicon.svg'">
+    Draw2Trade
+  </a>
+  <span class="d2t-nav-sep"></span>
+  <div class="d2t-nav-tabs">
+    <a href="/news" class="d2t-nav-link">뉴스</a>
+    <a href="/feed" class="d2t-nav-link">피드</a>
+    <a href="/notices" class="d2t-nav-link">공지</a>
+    <a href="/market" class="d2t-nav-link active">시장</a>
+  </div>
+  <div class="d2t-nav-spacer" style="flex:1;"></div>
+  <a href="/app" class="d2t-nav-link-right" style="font-size:12px;color:#7a8499;text-decoration:none;margin-right:12px;">패턴 분석 →</a>
+</nav>
+
+<!-- ── 메인 콘텐츠 ────────────────────────────────────────────── -->
+<main class="mkt-main">
+
+  <!-- 지수 카드 영역 -->
+  <section class="mkt-indices" id="mkt-indices">
+    <div class="mkt-idx-card d2t-skeleton" id="idx-KOSPI" style="height:120px;"></div>
+    <div class="mkt-idx-card d2t-skeleton" id="idx-KOSDAQ" style="height:120px;"></div>
+    <div class="mkt-idx-card mkt-summary-card" id="mkt-summary" style="height:120px;">
+      <div class="mkt-summary-inner">
+        <div class="mkt-summary-label">조회 시각</div>
+        <div class="mkt-summary-value" id="mkt-as-of">—</div>
+        <div class="mkt-summary-label" style="margin-top:12px;">자동 갱신</div>
+        <div class="mkt-summary-value"><span class="d2t-pulse-dot"></span> 30초</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 카테고리 탭 + 테이블 -->
+  <section class="mkt-rankings-section">
+    <div class="mkt-tabs">
+      <button class="mkt-tab active" data-cat="volume">거래량</button>
+      <button class="mkt-tab" data-cat="rise">상승률</button>
+      <button class="mkt-tab" data-cat="fall">하락률</button>
+    </div>
+
+    <div class="mkt-table-wrap" id="mkt-table-wrap">
+      <table class="mkt-table">
+        <thead>
+          <tr>
+            <th class="mkt-th-rank">#</th>
+            <th class="mkt-th-name">종목</th>
+            <th class="mkt-th-price">현재가</th>
+            <th class="mkt-th-rate">등락률</th>
+            <th class="mkt-th-vol">거래량</th>
+            <th class="mkt-th-spark">20일 추이</th>
+            <th class="mkt-th-trend">추세</th>
+          </tr>
+        </thead>
+        <tbody id="mkt-tbody">
+          <tr><td colspan="7" class="mkt-loading">
+            <div class="d2t-skeleton" style="height:14px;width:60%;margin:8px auto;"></div>
+            <div class="d2t-skeleton" style="height:14px;width:45%;margin:8px auto;"></div>
+            <div class="d2t-skeleton" style="height:14px;width:55%;margin:8px auto;"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mkt-disclaimer">
+      과거 통계 기반 추세 분류이며, 투자 권유가 아닙니다.
+    </div>
+  </section>
+</main>
+
+<style>
+  /* ── Market Dashboard 전용 스타일 ─────────────────────────── */
+  .mkt-main {
+    flex: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    width: 100%;
+  }
+
+  /* 지수 카드 */
+  .mkt-indices {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .mkt-idx-card {
+    background: var(--d2t-bg-3, #1f1f24);
+    border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+    border-radius: var(--d2t-r-md, 8px);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mkt-idx-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--d2t-text-2, #7a7f8e);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .mkt-idx-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--d2t-text-0, #e8eaf0);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .mkt-idx-change {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .mkt-idx-change.up   { color: var(--d2t-rise, #ef5350); }
+  .mkt-idx-change.down { color: var(--d2t-fall, #2196f3); }
+  .mkt-idx-change.flat { color: var(--d2t-text-2, #7a7f8e); }
+  .mkt-idx-sub {
+    font-size: 11px;
+    color: var(--d2t-text-3, #4a4f5e);
+    margin-top: 8px;
+  }
+  .mkt-idx-sub span { margin-right: 12px; }
+
+  .mkt-summary-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--d2t-bg-2, #18181c);
+  }
+  .mkt-summary-inner { text-align: center; }
+  .mkt-summary-label { font-size: 10px; color: var(--d2t-text-3, #4a4f5e); text-transform: uppercase; letter-spacing: 0.5px; }
+  .mkt-summary-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--d2t-text-1, #b8bcc8);
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  /* 카테고리 탭 */
+  .mkt-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+  }
+  .mkt-tab {
+    flex: 0 0 auto;
+    padding: 10px 24px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--d2t-text-2, #7a7f8e);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color var(--d2t-dur, 200ms) var(--d2t-ease, ease),
+                border-color var(--d2t-dur, 200ms) var(--d2t-ease, ease);
+  }
+  .mkt-tab:hover { color: var(--d2t-text-1, #b8bcc8); }
+  .mkt-tab.active {
+    color: var(--d2t-cyan, #00d4aa);
+    border-bottom-color: var(--d2t-cyan, #00d4aa);
+  }
+
+  /* 테이블 */
+  .mkt-table-wrap {
+    overflow-x: auto;
+    background: var(--d2t-bg-2, #18181c);
+    border: 1px solid var(--d2t-border-0, rgba(255,255,255,0.04));
+    border-top: none;
+    border-radius: 0 0 var(--d2t-r-md, 8px) var(--d2t-r-md, 8px);
+  }
+  .mkt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .mkt-table thead th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--d2t-text-3, #4a4f5e);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--d2t-bg-2, #18181c);
+  }
+  .mkt-th-rank  { width: 36px; text-align: center; }
+  .mkt-th-name  { min-width: 120px; }
+  .mkt-th-price { width: 100px; text-align: right; }
+  .mkt-th-rate  { width: 80px; text-align: right; }
+  .mkt-th-vol   { width: 100px; text-align: right; }
+  .mkt-th-spark { width: 100px; text-align: center; }
+  .mkt-th-trend { width: 110px; text-align: center; }
+
+  .mkt-table tbody tr {
+    border-bottom: 1px solid var(--d2t-border-0, rgba(255,255,255,0.04));
+    transition: background var(--d2t-dur, 200ms);
+    cursor: pointer;
+  }
+  .mkt-table tbody tr:hover {
+    background: var(--d2t-bg-3, #1f1f24);
+  }
+  .mkt-table tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.01);
+  }
+  .mkt-table tbody tr:nth-child(even):hover {
+    background: var(--d2t-bg-3, #1f1f24);
+  }
+  .mkt-table td {
+    padding: 9px 12px;
+    vertical-align: middle;
+  }
+
+  .mkt-rank {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--d2t-text-3, #4a4f5e);
+    text-align: center;
+  }
+  .mkt-rank-top3 { color: var(--d2t-cyan, #00d4aa); }
+  .mkt-name-cell {}
+  .mkt-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--d2t-text-0, #e8eaf0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .mkt-ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--d2t-text-3, #4a4f5e);
+    margin-top: 1px;
+  }
+  .mkt-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--d2t-text-0, #e8eaf0);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mkt-rate {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mkt-rate.up   { color: var(--d2t-rise, #ef5350); }
+  .mkt-rate.down { color: var(--d2t-fall, #2196f3); }
+  .mkt-rate.flat { color: var(--d2t-text-2, #7a7f8e); }
+  .mkt-vol {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--d2t-text-2, #7a7f8e);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mkt-spark { text-align: center; }
+  .mkt-trend-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: var(--d2t-r-sm, 4px);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .mkt-trend-badge.up {
+    background: rgba(239,83,80,0.12);
+    color: #ef5350;
+  }
+  .mkt-trend-badge.down {
+    background: rgba(33,150,243,0.12);
+    color: #2196f3;
+  }
+  .mkt-trend-badge.neutral {
+    background: rgba(255,255,255,0.06);
+    color: var(--d2t-text-2, #7a7f8e);
+  }
+
+  .mkt-loading {
+    text-align: center;
+    padding: 24px !important;
+  }
+
+  .mkt-disclaimer {
+    text-align: center;
+    font-size: 10px;
+    color: var(--d2t-text-3, #4a4f5e);
+    margin-top: 12px;
+    padding: 8px;
+  }
+
+  /* 반응형 */
+  @media (max-width: 768px) {
+    .mkt-main { padding: 16px 12px; }
+    .mkt-indices { grid-template-columns: 1fr 1fr; }
+    .mkt-summary-card { display: none; }
+    .mkt-idx-price { font-size: 22px; }
+    .mkt-tab { padding: 8px 16px; font-size: 12px; }
+    .mkt-th-spark, .mkt-spark { display: none; }
+  }
+  @media (max-width: 480px) {
+    .mkt-indices { grid-template-columns: 1fr; }
+    .mkt-th-vol, .mkt-vol { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/market.js"></script>
+{% endblock %}
