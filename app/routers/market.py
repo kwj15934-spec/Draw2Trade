@@ -1,15 +1,16 @@
 """
 Market Dashboard API 라우터
 
-GET  /api/v1/market/dashboard      — 지수 시세 + 종합 랭킹 (추세 라벨 포함)
-GET  /api/v1/market/index-quotes   — KOSPI/KOSDAQ 지수 시세만
-GET  /api/v1/market/spark          — 단일 종목 스파크라인 + 추세 (in-cell 기간 전환용)
-POST /api/v1/market/krx-sync       — KRX 전종목 시세 수동 수집 트리거
-GET  /api/v1/market/krx-status     — KRX 캐시 현황 조회
+GET  /api/v1/market/dashboard           — 지수 시세 + 종합 랭킹 (추세 라벨 포함)
+GET  /api/v1/market/trade-value-rank    — 기간별 거래대금 순위 (KR: KIS, US: 해외 랭킹)
+GET  /api/v1/market/index-quotes        — KOSPI/KOSDAQ 지수 시세만
+GET  /api/v1/market/spark               — 단일 종목 스파크라인 + 추세 (in-cell 기간 전환용)
+POST /api/v1/market/krx-sync            — KRX 전종목 시세 수동 수집 트리거
+GET  /api/v1/market/krx-status          — KRX 캐시 현황 조회
 """
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from app.services import market_service
 
@@ -61,6 +62,31 @@ async def get_dashboard(
         "market":   market,
         "period":   period,
     }
+
+
+@router.get("/trade-value-rank")
+async def get_trade_value_rank_by_period(
+    period: str = Query(
+        default="3m",
+        description="1d | 1w | 1m | 3m | 6m (KST 기준 시작일=오늘−lookback)",
+    ),
+    market: str = Query(default="KR", description="KR | US"),
+    top_n: int = Query(default=30, ge=5, le=100),
+):
+    """
+    기간별 거래대금 순위.
+
+    - **KR**: KIS ``FHPST01710000`` (volume-rank, ``FID_BLNG_CLS_CODE=3``) + ``FID_INPUT_DATE_1``.
+    - **US**: ``HHDFS76320010`` trade-pbmn (``get_us_scanner``와 동일 NDAY 매핑).
+
+    대시보드 ``fetch_rankings``의 KIS 폴백과 동일 데이터 소스.
+    """
+    try:
+        return await market_service.fetch_trade_value_rank_by_period(
+            period, market, top_n=top_n
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.get("/spark")

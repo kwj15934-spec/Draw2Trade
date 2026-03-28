@@ -377,6 +377,7 @@ async def fetch_rankings(
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
     category: trade_value | volume | rise | fall | strength
     period:   1d | 1w | 1m | 3m | 6m (1d 초과 시 KRX 일별 캐시 집계 우선)
+    trade_value + KRX 없음: KIS 기간 거래대금 순위(FHPST01710000) 시도 후 당일 스캐너.
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
@@ -388,6 +389,10 @@ async def fetch_rankings(
     )
 
     snap_name = f"rankings_{category}"
+
+    use_kis_period_rank = False
+    kis_period_meta: dict | None = None
+    scanner: dict = {"items": [], "as_of": "", "fallback": False}
 
     # 1) 기간이 1d 초과이면 KRX 전종목 집계 데이터 사용
     if period != "1d":
@@ -418,24 +423,55 @@ async def fetch_rankings(
                 "period":      period,
                 "source":      "krx_aggregate",
             }
-        # KRX 캐시 없으면 당일 스캐너로 fallback (아래 로직 계속)
-        logger.info("KRX 집계 데이터 없음 — 당일 스캐너로 fallback [%s]", category)
 
-    # 2) 스캐너 데이터 가져오기 (1d 또는 KRX 캐시 없을 때)
-    try:
-        if category == "rise":
-            scanner = await get_scanner_rise(top_n=top_n)
-        elif category == "fall":
-            scanner = await get_scanner_fall(top_n=top_n)
-        elif category == "strength":
-            scanner = await get_scanner_strength(top_n=top_n)
-        elif category == "trade_value":
-            scanner = await get_scanner_trade_value(top_n=top_n)
-        else:
-            scanner = await get_scanner_volume(top_n=top_n)
-    except Exception as e:
-        logger.error("스캐너 호출 실패 (%s): %s", category, e)
-        scanner = {"items": [], "as_of": "", "fallback": False}
+        # KRX 없음 + 거래대금 순위 → KIS 기간 앵커 거래대금 순위 (FHPST01710000)
+        if category == "trade_value":
+            try:
+                kis_rank = await fetch_trade_value_rank_by_period(period, "KR", top_n=top_n)
+                kr_list = kis_rank.get("items") or []
+                if kr_list:
+                    mapped = [_kr_dashboard_row_to_scanner_item(x) for x in kr_list]
+                    if hide_warning and mapped:
+                        mapped = [
+                            it for it in mapped
+                            if not any(
+                                kw in (it.get("name") or "")
+                                for kw in ("관리", "경고", "정지", "위험")
+                            )
+                        ]
+                    if mapped:
+                        kis_period_meta = kis_rank
+                        scanner = {
+                            "items":    mapped,
+                            "as_of":    f"{kis_rank.get('fid_end_date', '')} (KIS)",
+                            "fallback": False,
+                        }
+                        use_kis_period_rank = True
+            except Exception as e:
+                logger.warning(
+                    "KIS 기간 거래대금 순위 실패 (%s %s): %s",
+                    period, category, e,
+                )
+
+        if not use_kis_period_rank:
+            logger.info("KRX 집계 데이터 없음 — 당일 스캐너로 fallback [%s]", category)
+
+    # 2) 스캐너 데이터 가져오기 (1d 또는 KRX·KIS 기간 순위 없을 때)
+    if not use_kis_period_rank:
+        try:
+            if category == "rise":
+                scanner = await get_scanner_rise(top_n=top_n)
+            elif category == "fall":
+                scanner = await get_scanner_fall(top_n=top_n)
+            elif category == "strength":
+                scanner = await get_scanner_strength(top_n=top_n)
+            elif category == "trade_value":
+                scanner = await get_scanner_trade_value(top_n=top_n)
+            else:
+                scanner = await get_scanner_volume(top_n=top_n)
+        except Exception as e:
+            logger.error("스캐너 호출 실패 (%s): %s", category, e)
+            scanner = {"items": [], "as_of": "", "fallback": False}
 
     items = scanner.get("items", [])
 
@@ -585,6 +621,10 @@ async def fetch_rankings(
         "category": category,
         "period": period,
     }
+    if kis_period_meta:
+        result["source"] = "kis_period_trade_value"
+        result["fid_strt_date"] = kis_period_meta.get("fid_strt_date")
+        result["fid_end_date"] = kis_period_meta.get("fid_end_date")
 
     # 4) 유효 데이터를 디스크에 스냅샷 보존
     _save_snapshot(snap_name, result)
@@ -982,6 +1022,18 @@ def _kst_strt_end_dates_for_rank(period: str) -> tuple[str, str]:
     back = _RANK_LOOKBACK_DAYS[p]
     start = (today - timedelta(days=back)).strftime("%Y%m%d")
     return start, end
+
+
+def _kr_dashboard_row_to_scanner_item(row: dict) -> dict:
+    """`_kr_raw_row_to_dashboard` 결과 → 스캐너·`_enrich` 가 기대하는 키 형식."""
+    return {
+        "ticker":      (row.get("종목코드") or "").strip(),
+        "name":        (row.get("종목명") or "").strip(),
+        "price":       int(row.get("현재가") or 0),
+        "change_rate": str(row.get("등락률") or "0"),
+        "volume":      0,
+        "trade_value": int(row.get("거래대금") or 0),
+    }
 
 
 def _kr_raw_row_to_dashboard(row: dict) -> dict:
