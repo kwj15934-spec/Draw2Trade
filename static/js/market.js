@@ -337,7 +337,33 @@
 
     if (asOf) {
       asOf.textContent = (isFallback && snapTime) ? snapTime : (rankings.as_of || '—');
-      asOf.title       = isFallback ? '장 마감 후 마지막 데이터' : '';
+      var src = rankings.source || '';
+      var srcHint = src === 'krx_aggregate' ? 'KRX 일별 캐시 합산'
+        : (src && src.indexOf('kis_period') === 0) ? '한국투자 API 기간 순위'
+        : (src && src.indexOf('HHDFS') === 0) ? src
+        : (src || '');
+      var usNote = rankings.us_nday_note || '';
+      var dateRange = (rankings.fid_strt_date && (market !== 'US' || rankings.period !== '1d'))
+        ? (' · ' + rankings.fid_strt_date + '~' + (rankings.fid_end_date || ''))
+        : '';
+      asOf.title = isFallback ? '장 마감 후 마지막 데이터'
+        : (srcHint ? '출처: ' + srcHint + dateRange + (usNote ? ' · ' + usNote : '') : (usNote || ''));
+    }
+
+    var srcHintEl = document.getElementById('mkt-source-hint');
+    if (srcHintEl) {
+      if (market === 'US' && !isFallback) {
+        var parts = [];
+        if (rankings.source) parts.push(rankings.source);
+        if (rankings.us_nday != null && rankings.us_nday !== '') parts.push('NDAY=' + rankings.us_nday);
+        if (rankings.us_nday_note) parts.push(rankings.us_nday_note);
+        srcHintEl.textContent = parts.join(' · ');
+      } else if (market === 'KR' && !isFallback && rankings.fid_strt_date
+          && rankings.source && String(rankings.source).indexOf('kis_period') === 0) {
+        srcHintEl.textContent = '기간: ' + rankings.fid_strt_date + ' ~ ' + (rankings.fid_end_date || '');
+      } else {
+        srcHintEl.textContent = '';
+      }
     }
 
     // 스냅샷 배너

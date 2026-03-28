@@ -376,9 +376,9 @@ async def fetch_rankings(
     """
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
     category: trade_value | volume | rise | fall | strength
-    period:   1d | 1w | 1m | 3m | 6m (1d 초과 시 KRX 일별 캐시 집계 우선)
-    trade_value·volume·rise·fall·strength + KRX 없음: KIS 기간 순위
-    (FHPST01710000 / FHPST01700000 등) 후 당일 스캐너. strength는 vol_inrt 근사.
+    period:   1d | 1w | 1m | 3m | 6m
+    기간≠1d: **KIS 기간 순위 우선** → 캐시 일수 충족 시 KRX 합산 → 당일 스캐너.
+    KRX는 요청 일수만큼 cache/krx 일파일이 있을 때만 집계(부족 시 스킵).
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
@@ -395,38 +395,14 @@ async def fetch_rankings(
     kis_period_meta: dict | None = None
     scanner: dict = {"items": [], "as_of": "", "fallback": False}
 
-    # 1) 기간이 1d 초과이면 KRX 전종목 집계 데이터 사용
+    # 1) 기간이 1d 초과: KIS 기간 순위 우선(HTS와 동일 API)·이후 KRX 일별 캐시 합산
     if period != "1d":
         from app.services.krx_service import get_period_rankings, latest_cache_date
-        loop = asyncio.get_running_loop()
-        krx_items = await loop.run_in_executor(
-            None,
-            lambda: get_period_rankings(
-                category=category, period=period,
-                top_n=top_n, hide_warning=hide_warning,
-            )
-        )
-        if krx_items:
-            now = datetime.now(_KST)
-            cache_date = latest_cache_date() or now.strftime("%Y%m%d")
-            # _enrich로 스파크라인/추세 보강 (period 기반)
-            loop2 = asyncio.get_running_loop()
-            def _enrich_krx_all():
-                return [_enrich_krx(dict(it), period) for it in krx_items]
-            enriched = await loop2.run_in_executor(None, _enrich_krx_all)
-            return {
-                "items":       enriched,
-                "as_of":       cache_date,
-                "saved_at":    now.isoformat(),
-                "is_realtime": False,
-                "fallback":    False,
-                "category":    category,
-                "period":      period,
-                "source":      "krx_aggregate",
-            }
 
-        # KRX 없음 → KIS 기간 앵커 순위 (카테고리별 TR)
+        loop = asyncio.get_running_loop()
         start, end = _kst_strt_end_dates_for_rank(period)
+
+        # 1-A) KIS 기간 앵커 순위 (키 설정 시 최우선)
         try:
             from app.services.kis_client import (
                 fetch_kr_fluctuation_rank_by_period,
@@ -521,10 +497,39 @@ async def fetch_rankings(
                 period, category, e,
             )
 
+        # 1-B) KIS 실패·미설정 시 KRX 일별 캐시 집계 (캐시 일수 충분할 때만)
         if not use_kis_period_rank:
-            logger.info("KRX 집계 데이터 없음 — 당일 스캐너로 fallback [%s]", category)
+            krx_items = await loop.run_in_executor(
+                None,
+                lambda: get_period_rankings(
+                    category=category, period=period,
+                    top_n=top_n, hide_warning=hide_warning,
+                ),
+            )
+            if krx_items:
+                now = datetime.now(_KST)
+                cache_date = latest_cache_date() or now.strftime("%Y%m%d")
+                loop2 = asyncio.get_running_loop()
 
-    # 2) 스캐너 데이터 가져오기 (1d 또는 KRX·KIS 기간 순위 없을 때)
+                def _enrich_krx_all():
+                    return [_enrich_krx(dict(it), period) for it in krx_items]
+
+                enriched = await loop2.run_in_executor(None, _enrich_krx_all)
+                return {
+                    "items":       enriched,
+                    "as_of":       cache_date,
+                    "saved_at":    now.isoformat(),
+                    "is_realtime": False,
+                    "fallback":    False,
+                    "category":    category,
+                    "period":      period,
+                    "source":      "krx_aggregate",
+                }
+
+        if not use_kis_period_rank:
+            logger.info("KIS·KRX 기간 순위 없음 — 당일 스캐너로 fallback [%s]", category)
+
+    # 2) 스캐너 데이터 가져오기 (1d 또는 KIS 기간·KRX 집계 없을 때)
     if not use_kis_period_rank:
         try:
             if category == "rise":
@@ -800,13 +805,16 @@ async def fetch_us_rankings(
 
     now = datetime.now(_KST)
     result = {
-        "items":       enriched,
-        "as_of":       scanner.get("as_of", now.strftime("%H:%M:%S")),
-        "saved_at":    now.isoformat(),
-        "is_realtime": True,
-        "fallback":    False,
-        "category":    category,
-        "period":      period,
+        "items":          enriched,
+        "as_of":          scanner.get("as_of", now.strftime("%H:%M:%S")),
+        "saved_at":       now.isoformat(),
+        "is_realtime":    True,
+        "fallback":       False,
+        "category":       category,
+        "period":         period,
+        "source":         scanner.get("kis_source") or "",
+        "us_nday":        scanner.get("nday"),
+        "us_nday_note":   scanner.get("nday_note") or "",
     }
 
     if enriched:
@@ -1202,8 +1210,11 @@ async def fetch_trade_value_rank_by_period(
             "market":          "US",
             "fid_strt_date":   start,
             "fid_end_date":    end,
-            "source":          "HHDFS76320010/trade-pbmn (NDAY 매핑)",
+            "source":          scanner.get("kis_source")
+                or "HHDFS76320010 해외 거래대금순위 (trade-pbmn)",
             "as_of":           scanner.get("as_of", ""),
+            "us_nday":         scanner.get("nday"),
+            "us_nday_note":    scanner.get("nday_note") or "",
         }
 
     raise ValueError("market는 KR 또는 US만 지원합니다.")

@@ -1146,8 +1146,26 @@ async def scanner_pattern_compare(body: _PatternCompareRequest):
 
 # ── 해외주식 랭킹 (KIS HHDFS762xxxxx 시리즈) ─────────────────────────────────
 
-# period → NDAY 파라미터 매핑 (KIS: 0=당일 … 7=60일 8=120일 9=1년)
-_US_NDAY = {"1d": "0", "1w": "3", "1m": "5", "3m": "7", "6m": "8"}
+# period → NDAY (해외 랭킹 공통, KIS 문서: 0=당일 … 5=20일 6=30일 7=60일 8=120일 9=1년)
+# 1w→3(약 5일), 1m→6(30일), 3m→7(60일), 6m→8(120일) — 캘린더 기간과 1:1은 아님
+_US_NDAY = {"1d": "0", "1w": "3", "1m": "6", "3m": "7", "6m": "8"}
+
+_US_NDAY_NOTE = {
+    "1d": "당일(NDAY=0)",
+    "1w": "약 5거래일 구간(NDAY=3) · 캘린더 1주와 다를 수 있음",
+    "1m": "약 30일(NDAY=6)",
+    "3m": "약 60일(NDAY=7) · 캘린더 3개월과 다를 수 있음",
+    "6m": "약 120일(NDAY=8) · 캘린더 6개월과 다를 수 있음",
+}
+
+# 카테고리별 TR (미국 시장 /market 노출용)
+_KIS_US_API_LABEL = {
+    "trade_value": "HHDFS76320010 해외 거래대금순위 (trade-pbmn)",
+    "volume":      "HHDFS76310010 해외 거래량순위 (trade-vol)",
+    "rise":        "HHDFS76290000 해외 상승률 (updown-rate, GUBN=1)",
+    "fall":        "HHDFS76290000 해외 하락률 (updown-rate, GUBN=0)",
+    "strength":    "HHDFS76280000 해외 매수체결강도 (volume-power)",
+}
 
 # 미국 거래소 코드 목록
 _US_EXCHANGES = ["NAS", "NYS", "AMS"]
@@ -1276,7 +1294,14 @@ async def get_us_scanner(
             all_items.extend(r)
 
     if not all_items:
-        return {"items": [], "as_of": "", "fallback": False}
+        return {
+            "items":      [],
+            "as_of":      "",
+            "fallback":   False,
+            "nday":       nday,
+            "nday_note":  _US_NDAY_NOTE.get(period, ""),
+            "kis_source": _KIS_US_API_LABEL.get(category, _KIS_US_API_LABEL["trade_value"]),
+        }
 
     # 합산 정렬
     if category == "trade_value":
@@ -1293,7 +1318,10 @@ async def get_us_scanner(
     from datetime import datetime, timezone, timedelta
     now = datetime.now(timezone(timedelta(hours=9)))
     return {
-        "items":   all_items[:top_n],
-        "as_of":   now.strftime("%H:%M:%S"),
-        "fallback": False,
+        "items":        all_items[:top_n],
+        "as_of":        now.strftime("%H:%M:%S"),
+        "fallback":     False,
+        "nday":         nday,
+        "nday_note":    _US_NDAY_NOTE.get(period, ""),
+        "kis_source":   _KIS_US_API_LABEL.get(category, _KIS_US_API_LABEL["trade_value"]),
     }

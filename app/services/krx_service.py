@@ -227,6 +227,19 @@ def get_period_rankings(
     if not daily:
         return []
 
+    # 거래대금·거래량·급등락은 n_days일치 파일이 있어야 기간 합산·시작가 대비율이 맞음.
+    # 파일이 부족하면 짧은 구간만 합쳐져 HTS/실제 기간과 어긋남 → 빈 배열로 KIS 등으로 넘김.
+    _need_full_span = (
+        period != "1d"
+        and category in ("trade_value", "volume", "rise", "fall")
+    )
+    if _need_full_span and len(daily) < n_days:
+        logger.debug(
+            "KRX 기간 캐시 부족 (%s): 필요 %d일치, 실제 %d파일",
+            period, n_days, len(daily),
+        )
+        return []
+
     latest_day  = daily[-1]   # 가장 최신 하루
     oldest_day  = daily[0]    # 기간 시작일
 

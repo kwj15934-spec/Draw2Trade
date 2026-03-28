@@ -50,7 +50,7 @@
       </div>
 
       <!-- 랭킹 기준 기간 드롭다운 -->
-      <div class="mkt-period-wrap" title="거래대금·거래량·급상승·급하락·체결강도 정렬 기간 (차트 기간과 무관)">
+      <div class="mkt-period-wrap" title="거래대금·거래량·급상승·급하락·체결강도 정렬 기간(차트와 무관). 해외(US)는 KIS NDAY 구간(당일·약5일·30일·60일·120일 등)으로 근사합니다.">
         <span class="mkt-period-label">정렬 기간</span>
         <select class="mkt-period-select" id="mkt-period-select" aria-label="랭킹 정렬 기간">
           <option value="1d" selected>1일</option>
@@ -80,6 +80,7 @@
       <div class="mkt-summary-inner">
         <div class="mkt-summary-label">조회 시각</div>
         <div class="mkt-summary-value" id="mkt-as-of">—</div>
+        <div class="mkt-summary-hint" id="mkt-source-hint" style="font-size:11px;line-height:1.35;color:var(--d2t-text-3);margin-top:6px;min-height:14px;"></div>
         <div class="mkt-summary-label" style="margin-top:10px;">자동 갱신</div>
         <div class="mkt-summary-value"><span class="d2t-pulse-dot"></span> 30초</div>
       </div>
