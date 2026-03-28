@@ -377,7 +377,8 @@ async def fetch_rankings(
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
     category: trade_value | volume | rise | fall | strength
     period:   1d | 1w | 1m | 3m | 6m (1d 초과 시 KRX 일별 캐시 집계 우선)
-    trade_value + KRX 없음: KIS 기간 거래대금 순위(FHPST01710000) 시도 후 당일 스캐너.
+    trade_value·volume·rise·fall·strength + KRX 없음: KIS 기간 순위
+    (FHPST01710000 / FHPST01700000 등) 후 당일 스캐너. strength는 vol_inrt 근사.
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
@@ -424,34 +425,101 @@ async def fetch_rankings(
                 "source":      "krx_aggregate",
             }
 
-        # KRX 없음 + 거래대금 순위 → KIS 기간 앵커 거래대금 순위 (FHPST01710000)
-        if category == "trade_value":
-            try:
-                kis_rank = await fetch_trade_value_rank_by_period(period, "KR", top_n=top_n)
-                kr_list = kis_rank.get("items") or []
-                if kr_list:
-                    mapped = [_kr_dashboard_row_to_scanner_item(x) for x in kr_list]
-                    if hide_warning and mapped:
-                        mapped = [
-                            it for it in mapped
-                            if not any(
-                                kw in (it.get("name") or "")
-                                for kw in ("관리", "경고", "정지", "위험")
-                            )
-                        ]
-                    if mapped:
-                        kis_period_meta = kis_rank
-                        scanner = {
-                            "items":    mapped,
-                            "as_of":    f"{kis_rank.get('fid_end_date', '')} (KIS)",
-                            "fallback": False,
-                        }
-                        use_kis_period_rank = True
-            except Exception as e:
-                logger.warning(
-                    "KIS 기간 거래대금 순위 실패 (%s %s): %s",
-                    period, category, e,
-                )
+        # KRX 없음 → KIS 기간 앵커 순위 (카테고리별 TR)
+        start, end = _kst_strt_end_dates_for_rank(period)
+        try:
+            from app.services.kis_client import (
+                fetch_kr_fluctuation_rank_by_period,
+                fetch_kr_trade_value_rank_by_period as kis_kr_tv_rows,
+                fetch_kr_volume_rank_by_period as kis_kr_vol_rows,
+                is_configured as kis_ok,
+            )
+
+            if kis_ok():
+                mapped: list[dict] = []
+                meta_src = ""
+
+                if category == "trade_value":
+                    rows = await loop.run_in_executor(
+                        None,
+                        lambda: kis_kr_tv_rows(start, end, top_n=top_n),
+                    )
+                    mapped = [
+                        _kis_volume_rank_api_row_to_scanner(r)
+                        for r in rows
+                        if (r.get("mksc_shrn_iscd") or "").strip()
+                    ]
+                    meta_src = "kis_period_trade_value"
+
+                elif category == "volume":
+                    rows = await loop.run_in_executor(
+                        None,
+                        lambda: kis_kr_vol_rows(start, end, top_n=top_n),
+                    )
+                    mapped = [
+                        _kis_volume_rank_api_row_to_scanner(r)
+                        for r in rows
+                        if (r.get("mksc_shrn_iscd") or "").strip()
+                    ]
+                    meta_src = "kis_period_volume"
+
+                elif category in ("rise", "fall"):
+                    rows = await loop.run_in_executor(
+                        None,
+                        lambda: fetch_kr_fluctuation_rank_by_period(
+                            start, end, top_n=top_n, sort_rise=(category == "rise")
+                        ),
+                    )
+                    mapped = [
+                        _kis_volume_rank_api_row_to_scanner(r)
+                        for r in rows
+                        if (r.get("mksc_shrn_iscd") or "").strip()
+                    ]
+                    if not mapped:
+                        # fluctuation 기간 파라미터 미지원 시 당일 등락만 반환될 수 있음 → 재시도 없음
+                        pass
+                    meta_src = "kis_period_fluctuation"
+
+                elif category == "strength":
+                    rows = await loop.run_in_executor(
+                        None,
+                        lambda: kis_kr_vol_rows(start, end, top_n=max(top_n * 3, 30)),
+                    )
+                    mapped = [
+                        _kis_volume_rank_api_row_to_scanner(r)
+                        for r in rows
+                        if (r.get("mksc_shrn_iscd") or "").strip()
+                    ]
+                    mapped.sort(key=lambda x: x.get("strength", 0), reverse=True)
+                    mapped = mapped[:top_n]
+                    meta_src = "kis_period_strength_vol_inrt"
+
+                if hide_warning and mapped:
+                    mapped = [
+                        it for it in mapped
+                        if not any(
+                            kw in (it.get("name") or "")
+                            for kw in ("관리", "경고", "정지", "위험")
+                        )
+                    ]
+
+                if mapped:
+                    kis_period_meta = {
+                        "fid_strt_date": start,
+                        "fid_end_date":  end,
+                        "source":        meta_src,
+                    }
+                    scanner = {
+                        "items":    mapped,
+                        "as_of":    f"{end} (KIS)",
+                        "fallback": False,
+                    }
+                    use_kis_period_rank = True
+        except Exception as e:
+            logger.warning(
+                "KIS 기간 순위 실패 (%s %s): %s",
+                period, category, e,
+            )
 
         if not use_kis_period_rank:
             logger.info("KRX 집계 데이터 없음 — 당일 스캐너로 fallback [%s]", category)
@@ -622,7 +690,7 @@ async def fetch_rankings(
         "period": period,
     }
     if kis_period_meta:
-        result["source"] = "kis_period_trade_value"
+        result["source"] = kis_period_meta.get("source", "kis_period")
         result["fid_strt_date"] = kis_period_meta.get("fid_strt_date")
         result["fid_end_date"] = kis_period_meta.get("fid_end_date")
 
@@ -1034,6 +1102,18 @@ def _kr_dashboard_row_to_scanner_item(row: dict) -> dict:
         "volume":      0,
         "trade_value": int(row.get("거래대금") or 0),
     }
+
+
+def _kis_volume_rank_api_row_to_scanner(row: dict) -> dict:
+    """FHPST01710000 output 행 → 스캐너 아이템 (거래량·거래대금·vol_inrt→strength)."""
+    dash = _kr_raw_row_to_dashboard(row)
+    out = _kr_dashboard_row_to_scanner_item(dash)
+    out["volume"] = int(str(row.get("acml_vol", "0")).replace(",", "") or "0")
+    try:
+        out["strength"] = float(str(row.get("vol_inrt", "0")).replace(",", "") or "0")
+    except (TypeError, ValueError):
+        out["strength"] = 0.0
+    return out
 
 
 def _kr_raw_row_to_dashboard(row: dict) -> dict:
