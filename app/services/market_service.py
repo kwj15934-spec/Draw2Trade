@@ -180,21 +180,28 @@ def _classify_trend(closes: list[float]) -> dict:
 
         if norm_slope > 0.003 and pct_change > 5:
             if near_high:
-                return {"label": "강한 돌파", "direction": "up", "strength": 90}
-            return {"label": "상승 추세", "direction": "up", "strength": 70}
+                return {"label": "강한 돌파", "direction": "up", "strength": 90,
+                        "reason": f"최근 {n}일 고점 부근에서 지속 상승 중"}
+            return {"label": "상승 추세", "direction": "up", "strength": 70,
+                    "reason": f"최근 {n}일 종가 기준 우상향 흐름"}
         elif norm_slope > 0.001 and pct_change > 1:
-            return {"label": "완만한 상승", "direction": "up", "strength": 50}
+            return {"label": "완만한 상승", "direction": "up", "strength": 50,
+                    "reason": f"최근 {n}일 완만한 기울기의 상승 흐름"}
         elif norm_slope < -0.003 and pct_change < -5:
-            return {"label": "강한 하락", "direction": "down", "strength": 90}
+            return {"label": "강한 하락", "direction": "down", "strength": 90,
+                    "reason": f"최근 {n}일 종가 기준 가파른 하락세"}
         elif norm_slope < -0.001 and pct_change < -1:
-            return {"label": "하락 추세", "direction": "down", "strength": 60}
+            return {"label": "하락 추세", "direction": "down", "strength": 60,
+                    "reason": f"최근 {n}일 완만한 기울기의 하락 흐름"}
         elif cv < 0.02:
-            return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30}
+            return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30,
+                    "reason": f"최근 {n}일 가격 변동폭 {cv*100:.1f}% 이하 박스권"}
         else:
-            return {"label": "횡보", "direction": "neutral", "strength": 40}
+            return {"label": "횡보", "direction": "neutral", "strength": 40,
+                    "reason": f"방향성 없이 상하 반복 중 (변동폭 {cv*100:.1f}%)"}
 
     except Exception:
-        return {"label": "분석 불가", "direction": "neutral", "strength": 0}
+        return {"label": "분석 불가", "direction": "neutral", "strength": 0, "reason": ""}
 
 
 def _classify_intraday_trend(minutes: list[dict]) -> dict:
@@ -236,27 +243,37 @@ def _classify_intraday_trend(minutes: list[dict]) -> dict:
         # 분류 (금일 장중 특화)
         if total_change > 3 and slope > 0.001:
             if late_change > 1:
-                return {"label": "강한 상승", "direction": "up", "strength": 90}
-            return {"label": "상승 추세", "direction": "up", "strength": 70}
+                return {"label": "강한 상승", "direction": "up", "strength": 90,
+                        "reason": f"시가 대비 +{total_change:.1f}%, 후반 모멘텀 지속"}
+            return {"label": "상승 추세", "direction": "up", "strength": 70,
+                    "reason": f"시가 대비 +{total_change:.1f}% 상승 유지"}
         elif total_change > 1 and slope > 0:
-            return {"label": "완만한 상승", "direction": "up", "strength": 50}
+            return {"label": "완만한 상승", "direction": "up", "strength": 50,
+                    "reason": f"시가 대비 +{total_change:.1f}% 완만한 우상향"}
         elif total_change < -3 and slope < -0.001:
-            return {"label": "강한 하락", "direction": "down", "strength": 90}
+            return {"label": "강한 하락", "direction": "down", "strength": 90,
+                    "reason": f"시가 대비 {total_change:.1f}%, 하락 압력 지속"}
         elif total_change < -1 and slope < 0:
-            return {"label": "하락 추세", "direction": "down", "strength": 60}
+            return {"label": "하락 추세", "direction": "down", "strength": 60,
+                    "reason": f"시가 대비 {total_change:.1f}% 하락 흐름"}
         elif max_drawup > 2 and max_drawdown < -2:
-            return {"label": "변동 박스권", "direction": "neutral", "strength": 50}
+            return {"label": "변동 박스권", "direction": "neutral", "strength": 50,
+                    "reason": f"고점 +{max_drawup:.1f}% / 저점 {max_drawdown:.1f}% 큰 폭 등락"}
         elif late_change > 0.5 and total_change < 0:
-            return {"label": "반등 시도", "direction": "up", "strength": 45}
+            return {"label": "반등 시도", "direction": "up", "strength": 45,
+                    "reason": f"장중 저점 후 후반 +{late_change:.1f}% 반등 중"}
         elif late_change < -0.5 and total_change > 0:
-            return {"label": "상승 후 조정", "direction": "down", "strength": 45}
+            return {"label": "상승 후 조정", "direction": "down", "strength": 45,
+                    "reason": f"고점 이후 후반 {late_change:.1f}% 조정"}
         elif std < 0.3:
-            return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30}
+            return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30,
+                    "reason": f"장중 변동폭 {std:.2f}% 이내 — 극히 낮은 변동성"}
         else:
-            return {"label": "박스권", "direction": "neutral", "strength": 40}
+            return {"label": "박스권", "direction": "neutral", "strength": 40,
+                    "reason": f"시가 대비 {total_change:+.1f}%, 방향성 불명확"}
 
     except Exception:
-        return {"label": "분석 불가", "direction": "neutral", "strength": 0}
+        return {"label": "분석 불가", "direction": "neutral", "strength": 0, "reason": ""}
 
 
 # ── OHLCV 기반 자체 랭킹 (스냅샷·실시간 모두 없을 때) ─────────────────────────
@@ -305,6 +322,7 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
                     "volume": int(last_vol),
                     "sparkline": spark,
                     "open_price": spark[0] if spark else int(last_close),
+                    "baseline_price": spark[0] if spark else int(last_close),
                     "trend": _classify_trend(closes[-20:]),
                     "_sort_vol": last_vol,
                     "_sort_rate": change_rate,
@@ -424,6 +442,8 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
                             item["trend"] = _classify_intraday_trend(minutes)
                             item["sparkline"] = spark_closes
                             item["open_price"] = spark_closes[0]
+                            # baseline = 전일 종가 (스캐너가 제공하는 prev_close, 없으면 시가)
+                            item["baseline_price"] = float(item.get("prev_close") or spark_closes[0])
                             return item
                 except Exception as e:
                     logger.debug("분봉 조회 실패 [%s]: %s", ticker, e)
@@ -436,10 +456,13 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
                 item["trend"] = _classify_trend(list(spark))
                 item["sparkline"] = list(spark)
                 item["open_price"] = float(spark[0]) if spark else item.get("price", 0)
+                # baseline = period 시작 종가 (spark 첫 번째 값)
+                item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
             else:
                 item["trend"] = {"label": "데이터 부족", "direction": "neutral", "strength": 0}
                 item["sparkline"] = []
                 item["open_price"] = item.get("price", 0)
+                item["baseline_price"] = item.get("price", 0)
         except Exception as e:
             logger.debug("추세 분석 실패 [%s]: %s", ticker, e)
             item["trend"] = {"label": "분석 불가", "direction": "neutral", "strength": 0}
@@ -581,6 +604,7 @@ async def fetch_us_rankings(category: str = "volume", top_n: int = 20, period: s
                     "volume": last_vol,
                     "sparkline": list(spark),
                     "open_price": float(spark[0]) if spark else last_close,
+                    "baseline_price": float(spark[0]) if spark else last_close,
                     "trend": trend,
                     "market": "US",
                     "excd": excd,

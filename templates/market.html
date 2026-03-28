@@ -166,23 +166,17 @@
   .mkt-freshness {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 0;
     font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
     color: var(--d2t-text-3, #4a4f5e);
+    letter-spacing: 0.3px;
   }
-  .mkt-freshness-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--d2t-text-3, #4a4f5e);
-    flex-shrink: 0;
+  .mkt-freshness-dot { display: none; } /* ● 불릿을 textContent에 포함 */
+  .mkt-freshness.fresh  .mkt-freshness-text {
+    color: var(--d2t-cyan, #00d4aa);
+    text-shadow: 0 0 8px rgba(0,212,170,0.4);
   }
-  .mkt-freshness.fresh .mkt-freshness-dot {
-    background: var(--d2t-cyan, #00d4aa);
-    box-shadow: 0 0 6px var(--d2t-cyan, #00d4aa);
-  }
-  .mkt-freshness.fresh .mkt-freshness-text { color: var(--d2t-cyan, #00d4aa); }
-  .mkt-freshness.recent .mkt-freshness-dot { background: var(--d2t-orange, #f97316); }
   .mkt-freshness.recent .mkt-freshness-text { color: var(--d2t-orange, #f97316); }
 
   .mkt-main {
@@ -334,7 +328,7 @@
     background: var(--d2t-bg-3, #1f1f24);
   }
   .mkt-table td {
-    padding: 9px 12px;
+    padding: 11px 12px;
     vertical-align: middle;
   }
 
@@ -395,6 +389,10 @@
     font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
+    cursor: default;
+  }
+  .mkt-trend-badge[title]:hover {
+    opacity: 0.85;
   }
   .mkt-trend-badge.up {
     background: rgba(239,83,80,0.12);

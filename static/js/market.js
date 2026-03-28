@@ -164,13 +164,13 @@
 
   // ── 신선도 배지 ─────────────────────────────────────────────
   function _renderFreshness(rankings) {
-    var badge     = document.getElementById('mkt-freshness');
-    var dot       = document.getElementById('mkt-freshness-dot');
-    var textEl    = document.getElementById('mkt-freshness-text');
+    var badge  = document.getElementById('mkt-freshness');
+    var textEl = document.getElementById('mkt-freshness-text');
     if (!badge || !textEl) return;
 
-    var savedAt   = rankings.saved_at;    // ISO string
+    var savedAt    = rankings.saved_at;      // ISO string
     var isRealtime = rankings.is_realtime;
+    var isFallback = rankings.fallback;
 
     if (!savedAt) {
       badge.className = 'mkt-freshness';
@@ -178,21 +178,43 @@
       return;
     }
 
-    var ageMs = Date.now() - new Date(savedAt).getTime();
+    var ageMs  = Date.now() - new Date(savedAt).getTime();
     var ageSec = Math.max(0, Math.floor(ageMs / 1000));
+    var ageMin = Math.round(ageSec / 60);
+    var ageHr  = Math.floor(ageSec / 3600);
 
-    if (isRealtime && ageSec < 300) {       // 5분 이내 → fresh (cyan)
+    // KST 현재 시각으로 장 상태 추정
+    var now = new Date();
+    var kstH = (now.getUTCHours() + 9) % 24;
+    var kstM = now.getUTCMinutes();
+    var kstHM = kstH * 100 + kstM;
+    var isKR  = _currentMarket === 'KR';
+    // 한국 정규장: 09:00~15:30 | 미국 야간(한국시각 23:30~06:00)
+    var krMarketOpen  = kstHM >= 900 && kstHM < 1530;
+    var usNightOpen   = kstHM >= 2330 || kstHM < 600;
+
+    if (isRealtime && ageSec < 300) {
+      // 5분 이내 실시간 데이터
       badge.className = 'mkt-freshness fresh';
-      textEl.textContent = 'KIS 실시간';
-    } else if (ageSec < 3600) {             // 1시간 이내 → recent (orange)
+      textEl.textContent = '● 실시간(KIS)';
+    } else if (!isFallback && ageSec < 3600) {
+      // 1시간 이내 — 장 마감 직후
       badge.className = 'mkt-freshness recent';
-      var minAgo = Math.round(ageSec / 60);
-      textEl.textContent = minAgo + '분 전';
-    } else {                                // 오래된 스냅샷 → gray
+      if (isKR && !krMarketOpen && kstHM >= 1530 && kstHM < 1800) {
+        textEl.textContent = '● 장 마감(15:30)';
+      } else if (!isKR && !usNightOpen) {
+        textEl.textContent = '● 장 마감';
+      } else {
+        textEl.textContent = '● ' + ageMin + '분 전';
+      }
+    } else if (ageSec < 86400) {
+      // 하루 이내
+      badge.className = 'mkt-freshness recent';
+      textEl.textContent = '● 어제 데이터';
+    } else {
+      // 오래된 스냅샷
       badge.className = 'mkt-freshness';
-      var hrAgo  = Math.floor(ageSec / 3600);
-      var minRem = Math.round((ageSec % 3600) / 60);
-      textEl.textContent = hrAgo + '시간 ' + (minRem > 0 ? minRem + '분 ' : '') + '전';
+      textEl.textContent = '● ' + ageHr + '시간 전';
     }
   }
 
@@ -250,19 +272,21 @@
       // 거래량
       var volStr = _formatVol(item.volume || 0);
 
-      // 스파크라인 — 당일 시가(open_price) 대비 현재가로 색상 결정
+      // 스파크라인 — baseline_price 대비 현재가로 색상 결정
       var sparkHtml = '';
       if (item.sparkline && item.sparkline.length >= 2 && D2T.sparkline) {
-        var openPx  = item.open_price != null ? item.open_price : item.sparkline[0];
+        var baselinePx = item.baseline_price != null ? item.baseline_price
+                       : (item.open_price != null ? item.open_price : item.sparkline[0]);
         var lastPx  = item.sparkline[item.sparkline.length - 1];
-        var spColor = lastPx >= openPx ? _riseColor : _fallColor;
-        sparkHtml   = D2T.sparkline(item.sparkline, { width: 80, height: 28, color: spColor });
+        var spColor = lastPx >= baselinePx ? _riseColor : _fallColor;
+        sparkHtml   = D2T.sparkline(item.sparkline, { width: 80, height: 28, color: spColor, baseline: baselinePx });
       }
 
       // 추세 라벨
       var trend    = item.trend    || {};
       var trendDir = trend.direction || 'neutral';
       var trendLbl = trend.label    || '—';
+      var trendReason = trend.reason || '';
 
       // 종목 클릭 → 차트 페이지 (US는 ticker 그대로)
       var href = '/app?ticker=' + encodeURIComponent(item.ticker);
@@ -280,7 +304,7 @@
         + '<td class="mkt-vol">' + volStr + '</td>'
         + '<td class="mkt-spark">' + sparkHtml + '</td>'
         + '<td style="text-align:center;">'
-          + '<span class="mkt-trend-badge ' + trendDir + '">' + _esc(trendLbl) + '</span>'
+          + '<span class="mkt-trend-badge ' + trendDir + '" title="' + _esc(trendReason) + '">' + _esc(trendLbl) + '</span>'
         + '</td>'
         + '</tr>';
     });

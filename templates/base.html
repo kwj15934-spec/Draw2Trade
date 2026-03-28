@@ -3459,14 +3459,31 @@
       var o = opts || {};
       var w = o.width  || 80;
       var h = o.height || 28;
-      var min = Math.min.apply(null, values);
-      var max = Math.max.apply(null, values);
+      // baseline: 비교 기준가 (전일 종가 / period 시작가). 있으면 0% 선을 그린다.
+      var baseline = (o.baseline != null && o.baseline > 0) ? o.baseline : null;
+
+      // 범위 계산: baseline이 있으면 포함시켜 척도를 맞춤
+      var allVals = baseline != null ? values.concat([baseline]) : values;
+      var min = Math.min.apply(null, allVals);
+      var max = Math.max.apply(null, allVals);
       var range = max - min || 1;
+
+      function toY(v) { return h - ((v - min) / range) * (h * .85) - h * .075; }
+
       var xs = values.map(function (_, i) { return (i / (values.length - 1)) * w; });
-      var ys = values.map(function (v) { return h - ((v - min) / range) * (h * .85) - h * .075; });
+      var ys = values.map(function (v) { return toY(v); });
       var d = xs.map(function (x, i) { return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + ys[i].toFixed(1); }).join(' ');
       var color = o.color || (values[values.length-1] >= values[0] ? '#ef5350' : '#2196f3');
+
+      var baselineSvg = '';
+      if (baseline != null) {
+        var by = toY(baseline).toFixed(1);
+        baselineSvg = '<line x1="0" y1="' + by + '" x2="' + w + '" y2="' + by
+          + '" stroke="rgba(255,255,255,0.15)" stroke-width="0.8" stroke-dasharray="2 2"/>';
+      }
+
       return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" fill="none" xmlns="http://www.w3.org/2000/svg">'
+           + baselineSvg
            + '<path d="' + d + '" stroke="' + color + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
            + '</svg>';
     };
