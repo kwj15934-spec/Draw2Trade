@@ -16,6 +16,7 @@ TR 코드:
   H0STASV0  — 국내주식 시간외 실시간 호가 (KRX)
   H0NXCNT0  — 국내주식 NXT 실시간 체결  (장전 08:00~09:00 + 야간 18:00~20:00)
   H0NXASP0  — 국내주식 NXT 실시간 호가  (장전 08:00~09:00 + 야간 18:00~20:00)
+  H0UNCNT0  — 국내주식 실시간 체결가 (통합) — KRX 정규장+NXT 야간 통합 구독
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
@@ -454,6 +455,15 @@ def _parse_nxt_asking(raw: str) -> Optional[dict]:
     return asking
 
 
+def _parse_unified(raw: str) -> Optional[dict]:
+    """H0UNCNT0 통합 체결 파싱. 필드 구조는 H0STCNT0과 동일.
+    시간 기반으로 KRX/NXT 자동 구분 (_parse_kr의 session_type 사용)."""
+    tick = _parse_kr(raw)
+    if tick:
+        tick["source"] = "unified"
+    return tick
+
+
 def _parse_us(raw: str) -> Optional[dict]:
     """HDFSCNT0 체결 데이터 파싱. '^' 구분 필드.
     f[0]=RSYM, f[1]=SYMB, f[4]=XYMD(현지일자), f[5]=XHMS(현지시간),
@@ -537,6 +547,15 @@ async def subscribe_nxt_asking(ticker: str) -> None:
 
 async def unsubscribe_nxt_asking(ticker: str) -> None:
     await _unsubscribe("H0NXASP0", ticker)
+
+
+async def subscribe_unified(ticker: str) -> None:
+    """H0UNCNT0 — KRX 정규장 + NXT 야간 통합 체결. 단일 구독으로 전 세션 커버."""
+    await _subscribe("H0UNCNT0", ticker)
+
+
+async def unsubscribe_unified(ticker: str) -> None:
+    await _unsubscribe("H0UNCNT0", ticker)
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
@@ -662,6 +681,13 @@ async def _on_message(msg: str) -> None:
         asking = _parse_nxt_asking(raw)
         if asking:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
+    elif tr_id == "H0UNCNT0":
+        tick = _parse_unified(raw)
+        if tick:
+            _cache_tick(tick)
+            asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
+            _merge_tick_to_candle(tick)
+            asyncio.create_task(_throttled_broadcast(tick["ticker"]))
     elif tr_id == "HDFSCNT0":
         tick = _parse_us(raw)
         if tick:

@@ -96,26 +96,24 @@ async def ws_realtime(ws: WebSocket):
                         session = _kr_session_now()
                         logger.info("WS sub: %s (KR, session=%s)", ticker, session)
                         if session == "nxt_pre" or session == "nxt_night":
-                            # NXT 장전/야간 → NXT 체결+호가 + 정규 호가(fallback)
-                            await kis_stream.subscribe_nxt(ticker)
+                            # NXT 장전/야간 → 통합 체결(KRX+NXT) + 호가
+                            await kis_stream.subscribe_unified(ticker)
                             await kis_stream.subscribe_nxt_asking(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
                         elif session == "overtime":
-                            # 시간외 단일가 + NXT 야간 → 끊김 없는 실시간 체결
+                            # 시간외 단일가(15:30~18:00) + 통합 체결 → 끊김 없는 실시간
                             await kis_stream.subscribe_kr_overtime(ticker)
                             await kis_stream.subscribe_kr_asking_overtime(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
-                            await kis_stream.subscribe_nxt(ticker)
+                            await kis_stream.subscribe_unified(ticker)
                             await kis_stream.subscribe_nxt_asking(ticker)
                         else:
-                            # 정규장/closed/transition → 체결+시간외체결+호가 + NXT 모두 구독
-                            # 정규장 중 구독해도 15:30 이후 시간외 단일가까지 끊김 없이 수신
-                            # NXT는 08:00~09:00(장전) + 18:00~20:00(야간) 모두 커버
-                            await kis_stream.subscribe_kr(ticker)
+                            # 정규장/closed — H0UNCNT0(통합)이 KRX+NXT 전 세션 커버
+                            # H0STCVT0: 시간외 단일가(15:30~18:00) 별도 구독 유지
+                            await kis_stream.subscribe_unified(ticker)
                             await kis_stream.subscribe_kr_overtime(ticker)
                             await kis_stream.subscribe_kr_asking(ticker)
                             await kis_stream.subscribe_kr_asking_overtime(ticker)
-                            await kis_stream.subscribe_nxt(ticker)
                             await kis_stream.subscribe_nxt_asking(ticker)
                     else:
                         await kis_stream.subscribe_us(excd, ticker)
@@ -126,11 +124,10 @@ async def ws_realtime(ws: WebSocket):
                     await _hub.hub.unsubscribe(ticker, q)
                     if _hub.hub.subscriber_count(ticker) == 0:
                         if market == "KR":
-                            await kis_stream.unsubscribe_kr(ticker)
+                            await kis_stream.unsubscribe_unified(ticker)
                             await kis_stream.unsubscribe_kr_overtime(ticker)
                             await kis_stream.unsubscribe_kr_asking(ticker)
                             await kis_stream.unsubscribe_kr_asking_overtime(ticker)
-                            await kis_stream.unsubscribe_nxt(ticker)
                             await kis_stream.unsubscribe_nxt_asking(ticker)
                         else:
                             await kis_stream.unsubscribe_us(excd, ticker)
