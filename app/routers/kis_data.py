@@ -600,11 +600,100 @@ async def get_scanner_volume(top_n: int = 20):
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
         vol_key="acml_vol",
+        trade_value_key="acml_tr_pbmn",
         snap_key=snap_key,
     )
     if result["items"]:
         await _cache_set(cache_key, result, ttl=10)
         await _cache_set(snap_key, result, ttl=3600)  # 스냅샷 1시간 보관
+    return result
+
+
+@router.get("/market/scanner/trade-value")
+async def get_scanner_trade_value(top_n: int = 20):
+    """거래대금 순위 조회 (FHPST01710000, acml_tr_pbmn 기준 정렬), 10초 캐시."""
+    # 거래량 스캐너와 동일 API — 결과에서 acml_tr_pbmn 포함
+    cache_key = f"scanner_trade_value_{top_n}"
+    snap_key  = f"scanner_trade_value_{top_n}_snapshot"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    result = await _fetch_scanner(
+        tr_id="FHPST01710000",
+        path="/uapi/domestic-stock/v1/ranking/volume",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20171",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_DIV_CLS_CODE":      "0",
+            "FID_BLNG_CLS_CODE":     "0",
+            "FID_TRGT_CLS_CODE":     "111111111",
+            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_INPUT_DATE_1":      "",
+        },
+        top_n=top_n,
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+        trade_value_key="acml_tr_pbmn",
+        snap_key=snap_key,
+    )
+    # acml_tr_pbmn 기준 재정렬
+    if result.get("items"):
+        result["items"].sort(
+            key=lambda x: x.get("trade_value", x.get("volume", 0)), reverse=True
+        )
+        result["items"] = result["items"][:top_n]
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)
+    return result
+
+
+@router.get("/market/scanner/strength")
+async def get_scanner_strength(top_n: int = 20):
+    """체결강도 순위 — 거래량 스캐너 데이터에서 체결강도(seln_cnqn_smtn) 기준 정렬."""
+    cache_key = f"scanner_strength_{top_n}"
+    snap_key  = f"scanner_strength_{top_n}_snapshot"
+    cached = await _cache_get(cache_key)
+    if cached:
+        return cached
+    # 거래량 스캐너 API에서 체결강도 필드 추출 (seln_cnqn_smtn = 매도체결량 / shnu_cnqn_smtn = 매수체결량)
+    result = await _fetch_scanner(
+        tr_id="FHPST01710000",
+        path="/uapi/domestic-stock/v1/ranking/volume",
+        extra_params={
+            "FID_COND_SCR_DIV_CODE": "20171",
+            "FID_INPUT_ISCD":        "0000",
+            "FID_DIV_CLS_CODE":      "0",
+            "FID_BLNG_CLS_CODE":     "0",
+            "FID_TRGT_CLS_CODE":     "111111111",
+            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_INPUT_PRICE_1":     "",
+            "FID_INPUT_PRICE_2":     "",
+            "FID_VOL_CNT":           "",
+            "FID_INPUT_DATE_1":      "",
+        },
+        top_n=top_n * 2,  # 정렬 여유
+        ticker_key="stck_shrn_iscd",
+        name_key="hts_kor_isnm",
+        price_key="stck_prpr",
+        rate_key="prdy_ctrt",
+        vol_key="acml_vol",
+        trade_value_key="acml_tr_pbmn",
+        strength_key="acml_prdy_vrss_rate",   # 대용: 전일비등락률 → 체결강도 근사
+        snap_key=snap_key,
+    )
+    if result.get("items"):
+        result["items"].sort(
+            key=lambda x: x.get("strength", 0), reverse=True
+        )
+        result["items"] = result["items"][:top_n]
+        await _cache_set(cache_key, result, ttl=10)
+        await _cache_set(snap_key, result, ttl=3600)
     return result
 
 
@@ -734,6 +823,8 @@ async def _fetch_scanner(
     rate_key: str,
     vol_key: str,
     snap_key: str = "",
+    trade_value_key: str = "",   # 거래대금 필드 (acml_tr_pbmn 등)
+    strength_key: str = "",      # 체결강도 필드 (seln_cnqn_smtn 등)
 ) -> dict:
     """공통 스캐너 fetch 로직. KIS 실패 시 스냅샷 Fallback."""
     import asyncio
@@ -769,13 +860,30 @@ async def _fetch_scanner(
                         except ValueError:
                             pass
                     name = (row.get(name_key) or "").strip()
-                    items.append({
+                    entry: dict = {
                         "ticker":      ticker,
                         "name":        name,
                         "price":       price,
                         "change_rate": rate,
                         "volume":      vol,
-                    })
+                    }
+                    # 거래대금 (옵션)
+                    if trade_value_key:
+                        try:
+                            entry["trade_value"] = int(
+                                str(row.get(trade_value_key, "0")).replace(",", "") or "0"
+                            )
+                        except (ValueError, TypeError):
+                            entry["trade_value"] = 0
+                    # 체결강도 (옵션)
+                    if strength_key:
+                        try:
+                            entry["strength"] = float(
+                                str(row.get(strength_key, "0")).replace(",", "") or "0"
+                            )
+                        except (ValueError, TypeError):
+                            entry["strength"] = 0.0
+                    items.append(entry)
                 except (ValueError, TypeError):
                     continue
                 if len(items) >= top_n:

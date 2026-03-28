@@ -364,15 +364,23 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
 
 # ── 종합 랭킹 데이터 ──────────────────────────────────────────────────────────
 
-async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str = "1d") -> dict:
+async def fetch_rankings(
+    category: str = "trade_value",
+    top_n: int = 20,
+    period: str = "1d",
+    hide_warning: bool = False,
+) -> dict:
     """
     카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
+    category: trade_value | volume | rise | fall | strength
     KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
     """
     from app.routers.kis_data import (
         get_scanner_volume,
         get_scanner_rise,
         get_scanner_fall,
+        get_scanner_trade_value,
+        get_scanner_strength,
     )
 
     snap_name = f"rankings_{category}"
@@ -383,6 +391,10 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
             scanner = await get_scanner_rise(top_n=top_n)
         elif category == "fall":
             scanner = await get_scanner_fall(top_n=top_n)
+        elif category == "strength":
+            scanner = await get_scanner_strength(top_n=top_n)
+        elif category == "trade_value":
+            scanner = await get_scanner_trade_value(top_n=top_n)
         else:
             scanner = await get_scanner_volume(top_n=top_n)
     except Exception as e:
@@ -390,6 +402,13 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20, period: str 
         scanner = {"items": [], "as_of": "", "fallback": False}
 
     items = scanner.get("items", [])
+
+    # 투자위험 종목 숨기기 (6자리 코드 중 투자경고/관리 종목은 이름에 '관리'/'경고' 포함)
+    if hide_warning and items:
+        items = [
+            it for it in items
+            if not any(kw in (it.get("name") or "") for kw in ("관리", "경고", "정지", "위험"))
+        ]
 
     # 2) 실시간 데이터 없으면 디스크 스냅샷 fallback
     if not items:
@@ -602,7 +621,12 @@ async def fetch_us_index_quotes() -> dict:
 
 # ── 미국 주식 랭킹 ────────────────────────────────────────────────────────────
 
-async def fetch_us_rankings(category: str = "volume", top_n: int = 20, period: str = "1d") -> dict:
+async def fetch_us_rankings(
+    category: str = "trade_value",
+    top_n: int = 20,
+    period: str = "1d",
+    hide_warning: bool = False,
+) -> dict:
     """
     _US_WATCHLIST에서 KIS 일봉 OHLCV를 조회하여 카테고리별 랭킹을 반환한다.
     """

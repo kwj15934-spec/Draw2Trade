@@ -16,10 +16,14 @@ router = APIRouter(prefix="/api/v1/market", tags=["market-dashboard"])
 
 @router.get("/dashboard")
 async def get_dashboard(
-    category: str = Query(default="volume", description="volume | rise | fall"),
+    category: str = Query(
+        default="trade_value",
+        description="trade_value | volume | rise | fall | strength",
+    ),
     top_n: int = Query(default=20, ge=5, le=50),
     market: str = Query(default="KR", description="KR | US"),
     period: str = Query(default="1d", description="1d | 1w | 1m | 3m"),
+    hide_warning: int = Query(default=0, description="1=투자위험 종목 숨기기"),
 ):
     """
     시장 대시보드 종합 데이터.
@@ -28,20 +32,26 @@ async def get_dashboard(
     """
     import asyncio
 
+    hw = bool(hide_warning)
+
     if market == "US":
         index_task = market_service.fetch_us_index_quotes()
-        rank_task  = market_service.fetch_us_rankings(category=category, top_n=top_n, period=period)
+        rank_task  = market_service.fetch_us_rankings(
+            category=category, top_n=top_n, period=period, hide_warning=hw
+        )
     else:
         index_task = market_service.fetch_index_quotes()
-        rank_task  = market_service.fetch_rankings(category=category, top_n=top_n, period=period)
+        rank_task  = market_service.fetch_rankings(
+            category=category, top_n=top_n, period=period, hide_warning=hw
+        )
 
     indices, rankings = await asyncio.gather(index_task, rank_task)
 
     return {
-        "indices": indices,
+        "indices":  indices,
         "rankings": rankings,
-        "market": market,
-        "period": period,
+        "market":   market,
+        "period":   period,
     }
 
 
