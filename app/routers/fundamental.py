@@ -1,8 +1,9 @@
 """
 Fundamental 라우터
 
-GET /api/v1/fundamental/{symbol}          — 종목 재무 요약 (수익성·성장성·안정성)
-GET /api/v1/fundamental/{symbol}/analysis — 재무 요약 + AI 3줄 진단 통합 반환
+GET /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·성장성·안정성)
+GET /api/v1/fundamental/{symbol}/analysis  — 재무 요약 + AI 3줄 진단 통합 반환
+GET /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
 """
 import logging
 from datetime import datetime, timezone, timedelta
@@ -140,3 +141,78 @@ async def get_fundamental_analysis(
         "analysis":   fundamental["analysis"],
         "ai_summary": ai_summary,
     }
+
+
+# ── 전체 재무제표 (IS / BS / CF 계정 전체) ───────────────────────────────────
+
+_REPRT_CODE_MAP = {
+    "annual": "11011",   # 사업보고서
+    "half":   "11012",   # 반기보고서
+    "q1":     "11013",   # 1분기보고서
+    "q3":     "11014",   # 3분기보고서
+}
+
+
+@router.get("/{symbol}/detailed")
+async def get_detailed_financials(
+    symbol: str,
+    year: int = Query(
+        default=None,
+        description="기준 사업연도 (기본: 직전 완성 사업연도).",
+    ),
+    report: str = Query(
+        default="annual",
+        description="보고서 유형: annual(사업), half(반기), q1(1분기), q3(3분기)",
+    ),
+):
+    """
+    전체 재무제표를 반환합니다 (손익계산서 / 재무상태표 / 현금흐름표 / 포괄손익계산서).
+
+    - **symbol**: 종목코드 6자리 (예: `005930`)
+    - **year**: 기준 사업연도 (미입력 시 자동 설정)
+    - **report**: 보고서 유형 (기본: `annual`)
+
+    반환 JSON 구조:
+    ```json
+    {
+      "stock_code": "005930",
+      "years": ["2022", "2023", "2024"],
+      "statements": {
+        "손익계산서": [
+          {
+            "account_nm": "매출액",
+            "indent": 0,
+            "amounts": {
+              "2022": {"당기": 2796048000000, "전기": null},
+              "2023": {"당기": ..., "전기": ...},
+              "2024": {"당기": ..., "전기": ...}
+            }
+          }
+        ],
+        "재무상태표": [...],
+        "현금흐름표": [...]
+      }
+    }
+    ```
+    """
+    _check_configured()
+
+    reprt_code = _REPRT_CODE_MAP.get(report, "11011")
+
+    try:
+        result = await dart_service.fetch_detailed_financials(
+            stock_code=symbol,
+            base_year=year,
+            reprt_code=reprt_code,
+        )
+    except Exception as e:
+        logger.exception("detailed financials 오류 [%s]: %s", symbol, e)
+        raise HTTPException(status_code=502, detail="DART API 호출에 실패했습니다.")
+
+    if not result or not result.get("statements"):
+        raise HTTPException(
+            status_code=404,
+            detail=f"'{symbol}'의 상세 재무제표를 찾을 수 없습니다.",
+        )
+
+    return result

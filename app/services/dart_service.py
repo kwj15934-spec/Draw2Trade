@@ -440,3 +440,178 @@ async def fetch_fundamental_summary(
         "summary":    summary,
         "analysis":   analysis,
     }
+
+
+# ── 전체 재무제표 (fnlttSinglAcntAll) ────────────────────────────────────────
+
+# sj_div 코드 → 한글 재무제표명
+_FS_TYPE_LABEL: dict[str, str] = {
+    "IS":  "손익계산서",
+    "CIS": "포괄손익계산서",
+    "BS":  "재무상태표",
+    "CF":  "현금흐름표",
+    "SCE": "자본변동표",
+}
+
+# 표시 순서 우선순위
+_FS_TYPE_ORDER = ["IS", "CIS", "BS", "CF", "SCE"]
+
+
+async def _fetch_all_acnt(
+    corp_code: str,
+    year: str,
+    reprt_code: str = "11011",
+) -> list[dict]:
+    """
+    fnlttSinglAcntAll 호출 → raw list 반환.
+    연결(CFS) 우선, 없으면 별도(OFS) fallback.
+    """
+    client = get_dart_client()
+    for fs_div in ("CFS", "OFS"):
+        try:
+            data = await client.get(
+                "/fnlttSinglAcntAll.json",
+                corp_code=corp_code,
+                bsns_year=year,
+                reprt_code=reprt_code,
+                fs_div=fs_div,
+            )
+            if isinstance(data, dict) and data.get("status") == "000":
+                return data.get("list") or []
+        except Exception as e:
+            logger.warning("fnlttSinglAcntAll 오류 corp=%s year=%s fs_div=%s: %s",
+                           corp_code, year, fs_div, e)
+    return []
+
+
+def _build_fs_table(
+    rows_by_year: dict[str, list[dict]],
+    years: list[str],
+) -> dict[str, list[dict]]:
+    """
+    연도별 raw rows를 재무제표 유형별로 정리.
+
+    반환:
+      {
+        "손익계산서": [
+          {
+            "account_id":   "ifrs-full_Revenue",
+            "account_nm":   "매출액",
+            "indent":       0,          # 계정 들여쓰기 깊이
+            "amounts": {
+              "2022": {"당기": int, "전기": int},
+              "2023": {"당기": int, "전기": int},
+              "2024": {"당기": int, "전기": int},
+            }
+          }, ...
+        ],
+        "재무상태표": [...],
+        ...
+      }
+    """
+    # 재무제표별 계정 순서 보존용 OrderedDict 역할
+    # key: sj_div → { account_id: {account_nm, indent, amounts:{year:{당기,전기}}} }
+    fs_map: dict[str, dict[str, dict]] = {}
+
+    for year in years:
+        for row in rows_by_year.get(year, []):
+            sj_div   = row.get("sj_div", "")
+            acct_id  = row.get("account_id",  "").strip()
+            acct_nm  = (row.get("account_nm") or "").strip()
+            indent   = int(row.get("indent_cnt") or 0)
+
+            if not acct_nm or sj_div not in _FS_TYPE_LABEL:
+                continue
+
+            # 재무제표 그룹 초기화
+            if sj_div not in fs_map:
+                fs_map[sj_div] = {}
+
+            # 계정 키: account_id 우선, 없으면 account_nm 사용
+            key = acct_id or acct_nm
+            if key not in fs_map[sj_div]:
+                fs_map[sj_div][key] = {
+                    "account_id": acct_id,
+                    "account_nm": acct_nm,
+                    "indent":     indent,
+                    "amounts":    {y: {"당기": None, "전기": None} for y in years},
+                }
+
+            fs_map[sj_div][key]["amounts"][year] = {
+                "당기": _parse_amount(row.get("thstrm_amount")),
+                "전기": _parse_amount(row.get("frmtrm_amount")),
+            }
+
+    # 최종 정렬: _FS_TYPE_ORDER 순서, 각 재무제표 내 순서는 삽입 순 유지
+    result: dict[str, list[dict]] = {}
+    for sj_div in _FS_TYPE_ORDER:
+        if sj_div not in fs_map:
+            continue
+        label = _FS_TYPE_LABEL[sj_div]
+        result[label] = list(fs_map[sj_div].values())
+
+    return result
+
+
+async def fetch_detailed_financials(
+    stock_code: str,
+    base_year: Optional[int] = None,
+    reprt_code: str = "11011",
+) -> dict:
+    """
+    최근 3개 사업연도 전체 재무제표를 수집·정리하여 반환.
+
+    반환 형태:
+      {
+        "stock_code": "005930",
+        "corp_code":  "00126380",
+        "years":      ["2022", "2023", "2024"],
+        "statements": {
+          "손익계산서": [
+            {
+              "account_id": "ifrs-full_Revenue",
+              "account_nm": "매출액",
+              "indent":     0,
+              "amounts": {
+                "2022": {"당기": 2796048000000, "전기": 2796048000000},
+                "2023": {"당기": ...,           "전기": ...},
+                "2024": {"당기": ...,           "전기": ...},
+              }
+            }, ...
+          ],
+          "재무상태표": [...],
+          "현금흐름표": [...],
+        }
+      }
+    """
+    corp_code = await stock_code_to_corp_code(stock_code)
+    if not corp_code:
+        return {}
+
+    if base_year is None:
+        base_year = datetime.now(_KST).year - 1
+
+    years = [str(base_year - 2), str(base_year - 1), str(base_year)]
+
+    import asyncio
+    raw_list = await asyncio.gather(
+        *[_fetch_all_acnt(corp_code, y, reprt_code) for y in years],
+        return_exceptions=True,
+    )
+
+    rows_by_year: dict[str, list[dict]] = {}
+    for y, raw in zip(years, raw_list):
+        if isinstance(raw, list):
+            rows_by_year[y] = raw
+        else:
+            logger.warning("detailed financials 연도 %s 오류: %s", y, raw)
+            rows_by_year[y] = []
+
+    statements = _build_fs_table(rows_by_year, years)
+
+    return {
+        "stock_code": stock_code,
+        "corp_code":  corp_code,
+        "years":      years,
+        "statements": statements,
+    }

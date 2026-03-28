@@ -833,6 +833,74 @@
     }
     .fund-ai-unavailable { color: #3f3f52; font-size: 11px; font-style: italic; }
 
+    /* ── Detailed Financials 테이블 ──────────────────────────────────── */
+    .detfin-fs-title {
+      font-size: 11px; font-weight: 700; color: #26a69a;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 10px 0 6px; margin-top: 4px;
+      border-bottom: 1px solid rgba(38,166,154,.2);
+    }
+    .detfin-fs-title:first-child { margin-top: 0; padding-top: 4px; }
+    .detfin-table {
+      width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 4px;
+    }
+    .detfin-table th {
+      color: #52525b; font-weight: 600; font-size: 10px;
+      text-align: right; padding: 4px 6px 5px;
+      border-bottom: 1px solid #27272a; white-space: nowrap;
+    }
+    .detfin-table th:first-child { text-align: left; min-width: 120px; }
+    /* Zebra striping */
+    .detfin-table tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.015); }
+    .detfin-table tbody tr:nth-child(even) { background: transparent; }
+    .detfin-table tbody tr:hover           { background: rgba(38,166,154,.06); }
+    .detfin-table td {
+      text-align: right; padding: 4px 6px;
+      color: #d4d8e2;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      white-space: nowrap;
+    }
+    .detfin-table td:first-child {
+      text-align: left; color: #a0a8b8;
+      font-family: inherit; font-size: 11px;
+    }
+    /* 들여쓰기 깊이 */
+    .detfin-indent-0 td:first-child { font-weight: 700; color: #d4d8e2; }
+    .detfin-indent-1 td:first-child { padding-left: 14px !important; }
+    .detfin-indent-2 td:first-child { padding-left: 24px !important; color: #7a8499; }
+    .detfin-indent-3 td:first-child { padding-left: 34px !important; color: #52525b; }
+    /* 양수/음수 색상 */
+    .detfin-pos { color: #ef5350 !important; }
+    .detfin-neg { color: #5b8def !important; }
+    /* 보고서 탭 */
+    .detfin-report-tabs {
+      display: flex; gap: 4px; padding: 8px 0 6px; flex-shrink: 0;
+    }
+    .detfin-report-tab {
+      font-size: 10px; font-weight: 600; padding: 3px 8px;
+      border: 1px solid #27272a; border-radius: 4px;
+      background: transparent; color: #52525b; cursor: pointer;
+      transition: all .12s;
+    }
+    .detfin-report-tab:hover  { border-color: #26a69a; color: #26a69a; }
+    .detfin-report-tab.active { border-color: #26a69a; color: #26a69a; background: rgba(38,166,154,.08); }
+    /* 재무제표 유형 탭 */
+    .detfin-type-tabs {
+      display: flex; gap: 0; border-bottom: 1px solid #27272a;
+      flex-shrink: 0; margin-bottom: 4px;
+    }
+    .detfin-type-tab {
+      font-size: 11px; padding: 6px 10px; cursor: pointer;
+      color: #52525b; background: transparent; border: none;
+      border-bottom: 2px solid transparent; transition: all .12s;
+    }
+    .detfin-type-tab:hover  { color: #a0a8b8; }
+    .detfin-type-tab.active { color: #26a69a; border-bottom-color: #26a69a; font-weight: 700; }
+
+    /* ── end Detailed Financials ──────────────────────────────────────── */
+
     /* ── end Fundamental Panel ────────────────────────────────────────── */
 
     /* 시간외 주도주 위젯 */

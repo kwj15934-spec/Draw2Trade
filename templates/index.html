@@ -346,8 +346,9 @@
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
-        <button class="info-tab-btn active" data-itab="finance"  onclick="switchInfoTab('finance')">재무</button>
-        <button class="info-tab-btn"        data-itab="news"     onclick="switchInfoTab('news')">뉴스</button>
+        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">재무</button>
+        <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
+        <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
         <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
       </div>
 
@@ -358,6 +359,26 @@
         </div>
         <div id="finance-content">
           <div class="info-empty">종목을 로드하면 재무 지표가 표시됩니다.</div>
+        </div>
+      </div>
+
+      <!-- ── 상세 재무제표 탭 ──────────────────────────── -->
+      <div id="info-pane-detailed" class="info-pane" style="display:none;flex-direction:column;padding:8px 10px;">
+        <!-- 보고서 유형 선택 -->
+        <div class="detfin-report-tabs" id="detfin-report-tabs">
+          <button class="detfin-report-tab active" data-report="annual">사업</button>
+          <button class="detfin-report-tab"        data-report="half">반기</button>
+          <button class="detfin-report-tab"        data-report="q1">1분기</button>
+          <button class="detfin-report-tab"        data-report="q3">3분기</button>
+        </div>
+        <!-- 재무제표 유형 탭 -->
+        <div class="detfin-type-tabs" id="detfin-type-tabs"></div>
+        <!-- 테이블 영역 -->
+        <div id="detfin-loading" class="info-pane-loading" style="display:none;">
+          <div class="info-spinner"></div><span>재무제표 불러오는 중…</span>
+        </div>
+        <div id="detfin-table-wrap" style="flex:1;overflow-y:auto;min-height:0;">
+          <div class="info-empty">종목을 로드하면 상세 재무제표가 표시됩니다.</div>
         </div>
       </div>
 
@@ -1875,6 +1896,137 @@ function _escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // ── 상세 재무제표 로드 ───────────────────────────────────────────
+  (function () {
+    var _detfinData   = null;   // 마지막으로 받은 API 응답 캐시
+    var _detfinTicker = '';
+    var _detfinReport = 'annual';
+    var _detfinType   = '';     // 현재 선택된 재무제표 유형(한글)
+
+    // 금액 포맷: 원 단위 정수 → 억원 콤마 표기
+    function _fmtAmt(v) {
+      if (v == null) return '<span style="color:#3f3f52">—</span>';
+      var billions = v / 1e8;
+      var str = (billions >= 0 ? '' : '-') + Math.abs(billions).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      var cls = v > 0 ? 'detfin-pos' : v < 0 ? 'detfin-neg' : '';
+      return cls
+        ? '<span class="' + cls + '">' + str + '</span>'
+        : '<span style="color:#7a8499">' + str + '</span>';
+    }
+
+    // 재무제표 유형 탭 렌더링
+    function _renderTypeTabs(types) {
+      var tabWrap = document.getElementById('detfin-type-tabs');
+      if (!tabWrap) return;
+      tabWrap.innerHTML = types.map(function (t) {
+        return '<button class="detfin-type-tab' + (t === _detfinType ? ' active' : '') + '"'
+          + ' data-fstype="' + t + '">' + t + '</button>';
+      }).join('');
+      tabWrap.querySelectorAll('.detfin-type-tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          _detfinType = btn.dataset.fstype;
+          tabWrap.querySelectorAll('.detfin-type-tab').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          _renderTable();
+        });
+      });
+    }
+
+    // 테이블 렌더링
+    function _renderTable() {
+      var wrap = document.getElementById('detfin-table-wrap');
+      if (!wrap || !_detfinData) return;
+      var stmts = _detfinData.statements || {};
+      var years = _detfinData.years || [];
+      var rows  = stmts[_detfinType];
+      if (!rows || !rows.length) {
+        wrap.innerHTML = '<div class="info-empty">데이터 없음</div>';
+        return;
+      }
+
+      // 헤더: 빈칸 + 연도별 "당기"
+      var thHtml = years.map(function (y) {
+        return '<th>' + y + '년<br><span style="color:#3f3f52;font-weight:400;">당기(억원)</span></th>';
+      }).join('');
+
+      var tbodyHtml = rows.map(function (row) {
+        var indent = Math.min(row.indent || 0, 3);
+        var tdAmt  = years.map(function (y) {
+          var amt = row.amounts && row.amounts[y] && row.amounts[y]['당기'];
+          return '<td>' + _fmtAmt(amt) + '</td>';
+        }).join('');
+        return '<tr class="detfin-indent-' + indent + '">'
+          + '<td>' + row.account_nm + '</td>'
+          + tdAmt
+          + '</tr>';
+      }).join('');
+
+      wrap.innerHTML = '<table class="detfin-table">'
+        + '<thead><tr><th></th>' + thHtml + '</tr></thead>'
+        + '<tbody>' + tbodyHtml + '</tbody>'
+        + '</table>';
+    }
+
+    // API 호출 및 전체 렌더
+    function _loadDetailed(ticker, report) {
+      if (!ticker) return;
+      _detfinTicker = ticker;
+      _detfinReport = report || 'annual';
+
+      var loadEl = document.getElementById('detfin-loading');
+      var wrap   = document.getElementById('detfin-table-wrap');
+      var typeTabWrap = document.getElementById('detfin-type-tabs');
+      if (loadEl) loadEl.style.display = 'flex';
+      if (wrap)   wrap.innerHTML = '';
+      if (typeTabWrap) typeTabWrap.innerHTML = '';
+
+      fetch('/api/v1/fundamental/' + encodeURIComponent(ticker) + '/detailed?report=' + _detfinReport)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
+        .then(function (d) {
+          if (loadEl) loadEl.style.display = 'none';
+          _detfinData = d;
+          var types = Object.keys(d.statements || {});
+          if (!types.length) {
+            if (wrap) wrap.innerHTML = '<div class="info-empty">재무제표 데이터가 없습니다.</div>';
+            return;
+          }
+          // 기존 선택 유지 or 첫 번째로
+          if (!types.includes(_detfinType)) _detfinType = types[0];
+          _renderTypeTabs(types);
+          _renderTable();
+        })
+        .catch(function (e) {
+          if (loadEl) loadEl.style.display = 'none';
+          if (wrap)   wrap.innerHTML = '<div class="info-empty">재무제표를 불러오지 못했습니다.<br><small>' + e + '</small></div>';
+        });
+    }
+
+    // 보고서 유형 탭 이벤트
+    document.addEventListener('DOMContentLoaded', function () {
+      var reportTabs = document.getElementById('detfin-report-tabs');
+      if (reportTabs) {
+        reportTabs.addEventListener('click', function (e) {
+          var btn = e.target.closest('.detfin-report-tab');
+          if (!btn) return;
+          reportTabs.querySelectorAll('.detfin-report-tab').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          _detfinReport = btn.dataset.report;
+          if (_detfinTicker) _loadDetailed(_detfinTicker, _detfinReport);
+        });
+      }
+    });
+
+    window.loadDetailedFinancials = function (ticker, market) {
+      if (!ticker) return;
+      if (market && market !== 'KR') {
+        var wrap = document.getElementById('detfin-table-wrap');
+        if (wrap) wrap.innerHTML = '<div class="info-empty">상세 재무제표는 KR 종목만 지원합니다.</div>';
+        return;
+      }
+      _loadDetailed(ticker, _detfinReport);
+    };
+  })();
+
   // ── 차트 로드 시 자동으로 패널 데이터 갱신 ──────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     var _origOnChartLoaded = window._onChartLoaded;
@@ -1884,6 +2036,7 @@ function _escHtml(s) {
       var activeTab = document.querySelector('.info-tab-btn.active');
       var tab = activeTab ? activeTab.dataset.itab : 'finance';
       if (tab === 'finance')   window.loadFinanceData(ticker, market);
+      if (tab === 'detailed')  window.loadDetailedFinancials(ticker, market);
       if (tab === 'news')      window.loadNewsData(ticker, market);
       if (tab === 'community') window.loadCommunityData(ticker, market);
       if (typeof _origOnChartLoaded === 'function') _origOnChartLoaded(ticker, market);
@@ -1896,6 +2049,7 @@ function _escHtml(s) {
         var ticker = window.D2T && D2T.ticker;
         var market = window.D2T && D2T.market;
         if (tab === 'finance'   && ticker) window.loadFinanceData(ticker, market);
+        if (tab === 'detailed'  && ticker) window.loadDetailedFinancials(ticker, market);
         if (tab === 'news'      && ticker) window.loadNewsData(ticker, market);
         if (tab === 'community' && ticker) window.loadCommunityData(ticker, market);
       });
