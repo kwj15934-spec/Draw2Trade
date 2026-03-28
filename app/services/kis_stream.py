@@ -14,8 +14,8 @@ TR 코드:
   H0STCVT0  — 국내주식 시간외 단일가 체결
   H0STASP0  — 국내주식 실시간 호가
   H0STASV0  — 국내주식 시간외 실시간 호가 (KRX)
-  H0NMCNT0  — 국내주식 NXT 실시간 체결  (장전 08:00~09:00 + 야간 18:00~20:00)
-  H0NMASP0  — 국내주식 NXT 실시간 호가  (장전 08:00~09:00 + 야간 18:00~20:00)
+  H0NXCNT0  — 국내주식 NXT 실시간 체결  (장전 08:00~09:00 + 야간 18:00~20:00)
+  H0NXASP0  — 국내주식 NXT 실시간 호가  (장전 08:00~09:00 + 야간 18:00~20:00)
   HDFSCNT0  — 해외주식 실시간 체결  (tr_key: {EXCD}_{SYMB})
 """
 import asyncio
@@ -317,7 +317,7 @@ async def _get_approval_key() -> Optional[str]:
 # ── 데이터 파싱 ──────────────────────────────────────────────────────────────
 
 def _parse_kr(raw: str) -> Optional[dict]:
-    """H0STCNT0 / H0NMCNT0 / H0STCVT0 체결 데이터 파싱. '^' 구분 필드.
+    """H0STCNT0 / H0NXCNT0 / H0STCVT0 체결 데이터 파싱. '^' 구분 필드.
     KIS 공식 필드 순서 (0-indexed):
     f[0] =STCK_SHRN_ISCD           종목코드
     f[1] =STCK_CNTG_HOUR           체결시간 HHMMSS
@@ -438,7 +438,7 @@ def _parse_kr_asking_overtime(raw: str) -> Optional[dict]:
 
 
 def _parse_nxt(raw: str) -> Optional[dict]:
-    """H0NMCNT0 NXT 야간거래소 체결 파싱. 필드 구조는 H0STCNT0과 동일."""
+    """H0NXCNT0 NXT 야간거래소 체결 파싱. 필드 구조는 H0STCNT0과 동일."""
     tick = _parse_kr(raw)
     if tick:
         tick["session"] = "nxt"
@@ -447,7 +447,7 @@ def _parse_nxt(raw: str) -> Optional[dict]:
 
 
 def _parse_nxt_asking(raw: str) -> Optional[dict]:
-    """H0NMASP0 NXT 야간거래소 호가 파싱. 필드 구조는 H0STASP0과 동일."""
+    """H0NXASP0 NXT 야간거래소 호가 파싱. 필드 구조는 H0STASP0과 동일."""
     asking = _parse_kr_asking(raw)
     if asking:
         asking["session"] = "nxt"
@@ -524,19 +524,19 @@ async def unsubscribe_kr_asking_overtime(ticker: str) -> None:
 
 
 async def subscribe_nxt(ticker: str) -> None:
-    await _subscribe("H0NMCNT0", ticker)
+    await _subscribe("H0NXCNT0", ticker)
 
 
 async def unsubscribe_nxt(ticker: str) -> None:
-    await _unsubscribe("H0NMCNT0", ticker)
+    await _unsubscribe("H0NXCNT0", ticker)
 
 
 async def subscribe_nxt_asking(ticker: str) -> None:
-    await _subscribe("H0NMASP0", ticker)
+    await _subscribe("H0NXASP0", ticker)
 
 
 async def unsubscribe_nxt_asking(ticker: str) -> None:
-    await _unsubscribe("H0NMASP0", ticker)
+    await _unsubscribe("H0NXASP0", ticker)
 
 
 async def subscribe_us(excd: str, symbol: str) -> None:
@@ -620,7 +620,7 @@ async def _on_message(msg: str) -> None:
 
     # 암호화 플래그 "1"인 경우 — 현재 복호화 미구현이므로 로그만 남김
     if parts[0] == "1":
-        logger.debug("[WS DATA] 암호화 데이터 수신 (tr_id=%s), 복호화 필요", parts[1])
+        logger.info("[WS DATA] 암호화 데이터 수신 (tr_id=%s), 복호화 필요", parts[1])
         return
 
     _, tr_id, _cnt, raw = parts
@@ -650,14 +650,15 @@ async def _on_message(msg: str) -> None:
         asking = _parse_kr_asking_overtime(raw)
         if asking:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))
-    elif tr_id == "H0NMCNT0":
+    elif tr_id == "H0NXCNT0":
         tick = _parse_nxt(raw)
         if tick:
+            logger.debug("[NXT] tick: %s price=%s time=%s", tick["ticker"], tick.get("price"), tick.get("time"))
             _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
             _merge_tick_to_candle(tick)
             asyncio.create_task(_throttled_broadcast(tick["ticker"]))
-    elif tr_id == "H0NMASP0":
+    elif tr_id == "H0NXASP0":
         asking = _parse_nxt_asking(raw)
         if asking:
             asyncio.create_task(_hub.hub.broadcast(asking["ticker"], asking))

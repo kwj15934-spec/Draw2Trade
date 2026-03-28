@@ -51,11 +51,11 @@ KIS_TR_REGISTRY: dict[str, KisTrInfo] = {
         asset_type=AssetType.STOCK_KR,
         description="당일 tick 데이터 (시간 + 체결가 + 체결량)",
     ),
-    "FHKST03010300": KisTrInfo(
-        tr_id="FHKST03010300",
+    "FHKST01010300_NX": KisTrInfo(
+        tr_id="FHKST01010300",
         name="NXT 체결 조회",
         asset_type=AssetType.STOCK_KR,
-        description="NXT 시장 tick 데이터",
+        description="NXT 시장 tick 데이터 (FID_COND_MRKT_DIV_CODE=NX)",
     ),
     "FHPST01130000": KisTrInfo(
         tr_id="FHPST01130000",

@@ -593,9 +593,9 @@ def fetch_kr_tick_history(ticker: str) -> list[dict]:
 
 def fetch_nxt_tick_history(ticker: str) -> list[dict]:
     """
-    FHKST03010300 — NXT 주식현재가 체결 (당일 NXT 체결 내역).
-    최신 → 과거 순 최대 30건 반환. 필드는 FHKST01010300과 동일.
-    NXT 시장: FID_COND_MRKT_DIV_CODE = "NX"
+    FHKST01010300 — 주식현재가 체결 (NXT 시장).
+    FID_COND_MRKT_DIV_CODE = "NX" 로 NXT 체결 내역 조회.
+    최신 → 과거 순 최대 30건 반환.
     """
     if not is_configured():
         return []
@@ -606,7 +606,7 @@ def fetch_nxt_tick_history(ticker: str) -> list[dict]:
             "FID_COND_MRKT_DIV_CODE": "NX",
             "FID_INPUT_ISCD": ticker,
         },
-        "FHKST03010300",
+        "FHKST01010300",
     )
     if not result or result.get("rt_cd") != "0":
         logger.debug("KIS NXT tick history error (%s): %s",
