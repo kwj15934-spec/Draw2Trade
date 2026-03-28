@@ -37,6 +37,11 @@ async def fetch_index_quotes() -> dict:
                     },
                     tr_id="FHPUP02100000",
                 )
+                logger.info("지수 API 응답 [%s]: rt_cd=%s msg=%s keys=%s",
+                            code,
+                            (data or {}).get("rt_cd"),
+                            (data or {}).get("msg1", ""),
+                            list((data or {}).keys()))
                 if not data or data.get("rt_cd") != "0":
                     continue
                 out = data.get("output") or {}
@@ -133,14 +138,19 @@ async def fetch_rankings(category: str = "volume", top_n: int = 20) -> dict:
     )
 
     # 1) 스캐너 데이터 가져오기
-    if category == "rise":
-        scanner = await get_scanner_rise(top_n=top_n)
-    elif category == "fall":
-        scanner = await get_scanner_fall(top_n=top_n)
-    else:
-        scanner = await get_scanner_volume(top_n=top_n)
+    try:
+        if category == "rise":
+            scanner = await get_scanner_rise(top_n=top_n)
+        elif category == "fall":
+            scanner = await get_scanner_fall(top_n=top_n)
+        else:
+            scanner = await get_scanner_volume(top_n=top_n)
+    except Exception as e:
+        logger.error("스캐너 호출 실패 (%s): %s", category, e)
+        scanner = {"items": [], "as_of": "", "fallback": False}
 
     items = scanner.get("items", [])
+    logger.info("스캐너 결과 [%s]: %d건, fallback=%s", category, len(items), scanner.get("fallback"))
     if not items:
         return scanner
 

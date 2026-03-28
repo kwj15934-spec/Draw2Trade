@@ -47,7 +47,13 @@
       })
       .catch(function (e) {
         console.warn('[Market] fetch 실패:', e);
-        if (D2T.toast) D2T.toast('시장 데이터 조회 실패', 'warn');
+        if (D2T.toast) D2T.toast('시장 데이터 조회 실패: ' + (e.message || ''), 'warn');
+        // 에러 시 테이블에 메시지 표시
+        var tbody = document.getElementById('mkt-tbody');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--d2t-text-3);">'
+            + '데이터 조회에 실패했습니다: ' + (e.message || 'unknown') + '</td></tr>';
+        }
       });
   }
 
@@ -60,7 +66,7 @@
       if (!d) {
         el.innerHTML = '<div class="mkt-idx-name">' + name + '</div>'
           + '<div class="mkt-idx-price" style="color:var(--d2t-text-3);">—</div>'
-          + '<div class="mkt-idx-change flat">KIS API 미설정</div>';
+          + '<div class="mkt-idx-change flat">장 마감 또는 API 미설정</div>';
         el.classList.remove('d2t-skeleton');
         return;
       }
@@ -94,7 +100,8 @@
 
     if (!items.length) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--d2t-text-3);">'
-        + 'KIS API 키를 설정하면 실시간 시장 데이터가 표시됩니다.</td></tr>';
+        + '현재 조회 가능한 데이터가 없습니다.<br>'
+        + '<small style="color:var(--d2t-text-3);">장 마감 후에는 데이터가 제한될 수 있습니다. KIS API 설정을 확인하세요.</small></td></tr>';
       return;
     }
 
