@@ -1151,13 +1151,32 @@ def _normalize_trade_value_period(period: str) -> str:
 
 
 def _kst_strt_end_dates_for_rank(period: str) -> tuple[str, str]:
-    """(시작일, 종료일) YYYYMMDD KST. FID_STRT_DATE / 종료일 계산에 사용."""
+    """(시작일, 종료일) YYYYMMDD KST. 월 단위 기간은 달 역산 후 주말 스냅."""
+    import pandas as pd
     p = _normalize_trade_value_period(period)
     today = datetime.now(_KST).date()
-    end = today.strftime("%Y%m%d")
-    back = _RANK_LOOKBACK_DAYS[p]
-    start = (today - timedelta(days=back)).strftime("%Y%m%d")
-    return start, end
+    end_date = today
+
+    # end: 오늘이 주말이면 직전 금요일로 스냅
+    end_pd = pd.Timestamp(end_date) - pd.offsets.BusinessDay(0)
+    end_date = end_pd.date()
+
+    _MONTH_OFFSETS = {"1w": None, "1m": 1, "3m": 3, "6m": 6}
+    if p == "1d":
+        start_date = end_date
+    elif p == "1w":
+        start_date = end_date - timedelta(weeks=1)
+    else:
+        months = _MONTH_OFFSETS[p]
+        # 정확히 N개월 전 같은 날 (달력 기준 — Toss 방식)
+        start_pd = pd.Timestamp(end_date) - pd.DateOffset(months=months)
+        start_date = start_pd.date()
+
+    # start: 주말이면 직전 금요일로 스냅
+    start_pd = pd.Timestamp(start_date) - pd.offsets.BusinessDay(0)
+    start_date = start_pd.date()
+
+    return start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d")
 
 
 def _kr_dashboard_row_to_scanner_item(row: dict) -> dict:
