@@ -823,7 +823,9 @@ async def get_scanner_strength(top_n: int = 20):
     cached = await _cache_get(cache_key)
     if cached:
         return cached
-    # 거래량 스캐너 API에서 체결강도 필드 추출 (seln_cnqn_smtn = 매도체결량 / shnu_cnqn_smtn = 매수체결량)
+    # 거래량 스캐너 API에서 매수/매도 체결량으로 실제 체결강도 계산
+    # shnu_cnqn_smtn = 매수체결량합계, seln_cnqn_smtn = 매도체결량합계
+    # 체결강도 = 매수체결량 / 매도체결량 * 100
     result = await _fetch_scanner(
         tr_id="FHPST01710000",
         path="/uapi/domestic-stock/v1/quotations/volume-rank",
@@ -846,7 +848,8 @@ async def get_scanner_strength(top_n: int = 20):
         rate_key="prdy_ctrt",
         vol_key="acml_vol",
         trade_value_key="acml_tr_pbmn",
-        strength_key="acml_prdy_vrss_rate",   # 대용: 전일비등락률 → 체결강도 근사
+        strength_buy_key="shnu_cnqn_smtn",   # 매수체결량합계
+        strength_sell_key="seln_cnqn_smtn",  # 매도체결량합계
         snap_key=snap_key,
     )
     if result.get("items"):
@@ -986,7 +989,10 @@ async def _fetch_scanner(
     vol_key: str,
     snap_key: str = "",
     trade_value_key: str = "",   # 거래대금 필드 (acml_tr_pbmn 등)
-    strength_key: str = "",      # 체결강도 필드 (seln_cnqn_smtn 등)
+    strength_key: str = "",      # 체결강도 단일 필드 (deprecated — buy/sell 쌍 권장)
+    strength_buy_key: str = "",  # 매수체결량 필드 (shnu_cnqn_smtn)
+    strength_sell_key: str = "", # 매도체결량 필드 (seln_cnqn_smtn)
+                                 # 체결강도 = 매수 / 매도 * 100
 ) -> dict:
     """공통 스캐너 fetch 로직. KIS 실패 시 스냅샷 Fallback."""
     import asyncio
@@ -1038,7 +1044,15 @@ async def _fetch_scanner(
                         except (ValueError, TypeError):
                             entry["trade_value"] = 0
                     # 체결강도 (옵션)
-                    if strength_key:
+                    if strength_buy_key and strength_sell_key:
+                        # 실제 체결강도 = 매수체결량 / 매도체결량 * 100
+                        try:
+                            buy  = float(str(row.get(strength_buy_key,  "0")).replace(",", "") or "0")
+                            sell = float(str(row.get(strength_sell_key, "0")).replace(",", "") or "0")
+                            entry["strength"] = round(buy / sell * 100, 1) if sell > 0 else 100.0
+                        except (ValueError, TypeError):
+                            entry["strength"] = 0.0
+                    elif strength_key:
                         try:
                             entry["strength"] = float(
                                 str(row.get(strength_key, "0")).replace(",", "") or "0"

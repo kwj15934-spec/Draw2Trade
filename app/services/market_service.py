@@ -434,7 +434,7 @@ async def fetch_rankings(
             except Exception as e:
                 logger.warning("pykrx 기간 순위 실패 (%s %s): %s", period, category, e)
 
-        # 1-A) KIS 기간 앵커 순위 (키 설정 시 최우선)
+        # 1-A) KIS 기간 앵커 순위 — pykrx 실패 시에만 사용 (pykrx가 더 정확)
         try:
             from app.services.kis_client import (
                 fetch_kr_fluctuation_rank_by_period,
@@ -511,7 +511,8 @@ async def fetch_rankings(
                         )
                     ]
 
-                if mapped:
+                # pykrx가 이미 성공한 경우엔 KIS로 덮어쓰지 않음 (pykrx 데이터가 더 정확)
+                if mapped and not use_kis_period_rank:
                     kis_period_meta = {
                         "fid_strt_date": start,
                         "fid_end_date":  end,
@@ -1192,12 +1193,21 @@ def _kr_dashboard_row_to_scanner_item(row: dict) -> dict:
 
 
 def _kis_volume_rank_api_row_to_scanner(row: dict) -> dict:
-    """FHPST01710000 output 행 → 스캐너 아이템 (거래량·거래대금·vol_inrt→strength)."""
+    """FHPST01710000 output 행 → 스캐너 아이템.
+    체결강도 = 매수체결량(shnu_cnqn_smtn) / 매도체결량(seln_cnqn_smtn) * 100.
+    두 필드 모두 없을 때는 vol_inrt(거래증가율)로 대체.
+    """
     dash = _kr_raw_row_to_dashboard(row)
     out = _kr_dashboard_row_to_scanner_item(dash)
     out["volume"] = int(str(row.get("acml_vol", "0")).replace(",", "") or "0")
     try:
-        out["strength"] = float(str(row.get("vol_inrt", "0")).replace(",", "") or "0")
+        buy  = float(str(row.get("shnu_cnqn_smtn", "0")).replace(",", "") or "0")
+        sell = float(str(row.get("seln_cnqn_smtn", "0")).replace(",", "") or "0")
+        if buy > 0 or sell > 0:
+            out["strength"] = round(buy / sell * 100, 1) if sell > 0 else 100.0
+        else:
+            # 체결량 필드 없을 때 vol_inrt(거래증가율) fallback
+            out["strength"] = float(str(row.get("vol_inrt", "0")).replace(",", "") or "0")
     except (TypeError, ValueError):
         out["strength"] = 0.0
     return out
@@ -1312,10 +1322,28 @@ def _fetch_pykrx_period_rankings(
     pykrx로 KRX 공식 기간 누적 데이터를 조회해 랭킹을 반환한다.
     category: trade_value | volume | rise | fall
     start/end: YYYYMMDD
+
+    성능 최적화: 종목별 개별 API 호출 없이 벌크 조회만 사용.
+    - 종목명: data_service.all_names() 캐시 사용 (HTTP 호출 없음)
+    - 현재가/등락률: get_market_ohlcv_by_ticker(end, market="ALL") 단일 벌크 호출
     """
     from pykrx import stock as pykrx_stock
 
     warning_kws = ("관리", "경고", "정지", "위험")
+
+    # 이름 캐시 (한 번만 로드 — HTTP 호출 없음)
+    try:
+        from app.services.data_service import all_names as _all_names
+        _names_cache = _all_names()
+    except Exception:
+        _names_cache = {}
+
+    def _get_name(ticker_str: str) -> str:
+        return (
+            _names_cache.get(ticker_str)
+            or _names_cache.get(ticker_str.lstrip("0") or ticker_str)
+            or ticker_str
+        )
 
     if category in ("trade_value", "volume"):
         # 기간 누적 거래대금 / 거래량
@@ -1325,14 +1353,28 @@ def _fetch_pykrx_period_rankings(
             return []
 
         sort_col = "거래대금" if category == "trade_value" else "거래량"
-        df = df.sort_values(sort_col, ascending=False).head(top_n * 2)
+        if sort_col not in df.columns:
+            logger.warning("pykrx column '%s' 없음. 사용가능 컬럼: %s", sort_col, df.columns.tolist())
+            # 거래량 컬럼 대체 시도
+            if category == "volume":
+                vol_cols = [c for c in df.columns if "거래량" in c]
+                sort_col = vol_cols[0] if vol_cols else None
+            if not sort_col:
+                return []
+
+        df_top = df.sort_values(sort_col, ascending=False).head(top_n * 2)
+
+        # 현재가·등락률: end 날짜 전종목 벌크 조회 (단일 HTTP 요청)
+        price_df_all = None
+        try:
+            price_df_all = pykrx_stock.get_market_ohlcv_by_ticker(end, market="ALL")
+        except Exception as e:
+            logger.debug("pykrx 전종목 OHLCV 벌크 조회 실패: %s", e)
 
         items = []
-        for ticker, row in df.iterrows():
-            try:
-                name = pykrx_stock.get_market_ticker_name(str(ticker))
-            except Exception:
-                name = str(ticker)
+        for ticker, row in df_top.iterrows():
+            ticker_str = str(ticker)
+            name = _get_name(ticker_str)
 
             if hide_warning and any(kw in name for kw in warning_kws):
                 continue
@@ -1340,16 +1382,17 @@ def _fetch_pykrx_period_rankings(
             tv  = int(row.get("거래대금", 0))
             vol = int(row.get("거래량",   0))
 
-            # 현재가·등락률: 기간 마지막 거래일 종가
-            try:
-                price_df = pykrx_stock.get_market_ohlcv(end, end, str(ticker))
-                price    = int(price_df["종가"].iloc[-1]) if not price_df.empty else 0
-                chg_rate = float(price_df["등락률"].iloc[-1]) if not price_df.empty else 0.0
-            except Exception:
-                price, chg_rate = 0, 0.0
+            # 가격/등락률: 벌크 결과에서 조회 (개별 HTTP 호출 없음)
+            price, chg_rate = 0, 0.0
+            if price_df_all is not None and ticker_str in price_df_all.index:
+                try:
+                    price    = int(price_df_all.loc[ticker_str, "종가"])
+                    chg_rate = float(price_df_all.loc[ticker_str, "등락률"])
+                except Exception:
+                    pass
 
             items.append({
-                "ticker":      str(ticker),
+                "ticker":      ticker_str,
                 "name":        name,
                 "price":       price,
                 "change_rate": f"{chg_rate:+.2f}",
@@ -1364,6 +1407,7 @@ def _fetch_pykrx_period_rankings(
 
     if category in ("rise", "fall"):
         # 기간 등락률: 시작일 종가 → 종료일 종가
+        # 두 날짜 모두 전종목 벌크 조회 (HTTP 요청 2건)
         try:
             df = pykrx_stock.get_market_ohlcv_by_ticker(end, market="ALL")
         except Exception:
@@ -1381,8 +1425,9 @@ def _fetch_pykrx_period_rankings(
             close_end = float(row.get("종가", 0))
             if close_end <= 0:
                 continue
-            if df_start is not None and str(ticker) in df_start.index:
-                close_start = float(df_start.loc[str(ticker), "종가"] or 0)
+            ticker_str = str(ticker)
+            if df_start is not None and ticker_str in df_start.index:
+                close_start = float(df_start.loc[ticker_str, "종가"] or 0)
             else:
                 close_start = close_end
             if close_start <= 0:
@@ -1390,16 +1435,14 @@ def _fetch_pykrx_period_rankings(
 
             chg = (close_end - close_start) / close_start * 100
 
-            try:
-                name = pykrx_stock.get_market_ticker_name(str(ticker))
-            except Exception:
-                name = str(ticker)
+            # 이름: 캐시에서 조회 (개별 HTTP 호출 없음)
+            name = _get_name(ticker_str)
 
             if hide_warning and any(kw in name for kw in warning_kws):
                 continue
 
             items.append({
-                "ticker":      str(ticker),
+                "ticker":      ticker_str,
                 "name":        name,
                 "price":       int(close_end),
                 "change_rate": f"{chg:+.2f}",
