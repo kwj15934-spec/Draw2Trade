@@ -390,6 +390,7 @@ async def tick_history(ticker: str, market: str = Query("KR")):
                 "bs":           bs_val,
                 "session":      t.get("session", ""),
                 "session_type": t.get("session_type", "REGULAR"),
+                "venue":        t.get("venue", ""),
             })
         ticks.sort(key=lambda x: x["time"], reverse=True)
         return {"ticker": ticker, "ticks": ticks[:30], "quote": None}
@@ -458,6 +459,7 @@ async def tick_history(ticker: str, market: str = Query("KR")):
                         bs_val = "5"
                     else:
                         bs_val = ""
+                vnu = "NXT" if session_tag == "nxt" else "KRX"
                 ticks.append({
                     "time":    tick_time,
                     "price":   int(r.get("stck_prpr", "0").replace(",", "")),
@@ -468,6 +470,7 @@ async def tick_history(ticker: str, market: str = Query("KR")):
                     "bs":      bs_val,
                     "session": session_tag,
                     "session_type": _session_type_from_time(tick_time, session_tag),
+                    "venue":   vnu,
                 })
             except (ValueError, TypeError):
                 continue
@@ -487,8 +490,8 @@ async def tick_history(ticker: str, market: str = Query("KR")):
         logger.warning("KR tick API 실패 (%s): %s", ticker, e)
 
     # ── 소스 3: 서버 캐시 (메모리+디스크) — 실시간 WS 수신 틱 보완
-    # 중복 키: (time, price, cvol) 조합으로 정밀 중복 제거
-    existing_keys = {(t["time"], t["price"], t["cvol"]) for t in ticks}
+    # 중복 키: (time, price, cvol, venue) — KRX/NXT 동일 체결 구분
+    existing_keys = {(t["time"], t["price"], t["cvol"], t.get("venue") or "") for t in ticks}
     cached = get_cached_ticks(ticker)
     for t in cached:
         if t.get("type") != "tick":
@@ -498,7 +501,8 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             continue
         tick_time = t.get("time", "")
         price = int(float(t.get("price", 0)))
-        key = (tick_time, price, cvol)
+        venu = t.get("venue") or ""
+        key = (tick_time, price, cvol, venu)
         if key in existing_keys:
             continue
         existing_keys.add(key)
@@ -519,6 +523,7 @@ async def tick_history(ticker: str, market: str = Query("KR")):
             "bs":           t.get("bs", ""),
             "session":      s_tag,
             "session_type": t.get("session_type", "") or _session_type_from_time(tick_time, s_tag),
+            "venue":        venu,
         })
 
     # 시간순 내림차순 정렬 후 최신 50건 반환

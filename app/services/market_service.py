@@ -317,17 +317,22 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
                 last_vol = volumes[-1] if volumes else 0
 
                 spark = [float(c) for c in closes[-20:]]
+                prices = data.get("close", [])
+                # 거래대금 근사: 가격 × 거래량 (원 단위)
+                last_tv = int(last_close * last_vol) if last_vol and last_close else 0
                 candidates.append({
                     "ticker": ticker,
                     "name": names.get(ticker, ticker),
                     "price": int(last_close),
                     "change_rate": f"{change_rate:+.2f}",
                     "volume": int(last_vol),
+                    "trade_value": last_tv,
                     "sparkline": spark,
                     "open_price": spark[0] if spark else int(last_close),
                     "baseline_price": spark[0] if spark else int(last_close),
                     "trend": _classify_trend(closes[-20:]),
                     "_sort_vol": last_vol,
+                    "_sort_tv": last_tv,
                     "_sort_rate": change_rate,
                 })
             except Exception:
@@ -341,6 +346,8 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
             candidates.sort(key=lambda x: x["_sort_rate"], reverse=True)
         elif category == "fall":
             candidates.sort(key=lambda x: x["_sort_rate"])
+        elif category == "trade_value":
+            candidates.sort(key=lambda x: x["_sort_tv"], reverse=True)
         else:
             candidates.sort(key=lambda x: x["_sort_vol"], reverse=True)
 
@@ -348,6 +355,7 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
         result = []
         for c in candidates[:top_n]:
             c.pop("_sort_vol", None)
+            c.pop("_sort_tv", None)
             c.pop("_sort_rate", None)
             result.append(c)
         return result
@@ -389,7 +397,7 @@ async def fetch_rankings(
         get_scanner_strength,
     )
 
-    snap_name = f"rankings_{category}"
+    snap_name = f"rankings_{category}_{period}"
 
     use_kis_period_rank = False
     kis_period_meta: dict | None = None
@@ -1133,7 +1141,8 @@ def _kr_raw_row_to_dashboard(row: dict) -> dict:
         except ValueError:
             rate = str(rate)
     price = int(str(row.get("stck_prpr", "0")).replace(",", "") or "0")
-    tv = int(str(row.get("acml_tr_pbmn", "0")).replace(",", "") or "0")
+    # acml_tr_pbmn: KIS FHPST01710000 API는 만원 단위로 반환 → 원 단위로 변환
+    tv = int(str(row.get("acml_tr_pbmn", "0")).replace(",", "") or "0") * 10_000
     return {
         "종목코드": (row.get("mksc_shrn_iscd") or "").strip(),
         "종목명":   (row.get("hts_kor_isnm") or "").strip(),

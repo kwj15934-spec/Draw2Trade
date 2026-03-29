@@ -744,21 +744,21 @@ async def get_scanner_volume(top_n: int = 20):
         return cached
     result = await _fetch_scanner(
         tr_id="FHPST01710000",
-        path="/uapi/domestic-stock/v1/ranking/volume",
+        path="/uapi/domestic-stock/v1/quotations/volume-rank",
         extra_params={
             "FID_COND_SCR_DIV_CODE": "20171",
             "FID_INPUT_ISCD":        "0000",
             "FID_DIV_CLS_CODE":      "0",
             "FID_BLNG_CLS_CODE":     "0",
             "FID_TRGT_CLS_CODE":     "111111111",
-            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_TRGT_EXLS_CLS_CODE":"0000000000",
             "FID_INPUT_PRICE_1":     "",
             "FID_INPUT_PRICE_2":     "",
             "FID_VOL_CNT":           "",
             "FID_INPUT_DATE_1":      "",
         },
         top_n=top_n,
-        ticker_key="stck_shrn_iscd",
+        ticker_key="mksc_shrn_iscd",
         name_key="hts_kor_isnm",
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
@@ -775,7 +775,6 @@ async def get_scanner_volume(top_n: int = 20):
 @router.get("/market/scanner/trade-value")
 async def get_scanner_trade_value(top_n: int = 20):
     """거래대금 순위 조회 (FHPST01710000, acml_tr_pbmn 기준 정렬), 10초 캐시."""
-    # 거래량 스캐너와 동일 API — 결과에서 acml_tr_pbmn 포함
     cache_key = f"scanner_trade_value_{top_n}"
     snap_key  = f"scanner_trade_value_{top_n}_snapshot"
     cached = await _cache_get(cache_key)
@@ -783,21 +782,21 @@ async def get_scanner_trade_value(top_n: int = 20):
         return cached
     result = await _fetch_scanner(
         tr_id="FHPST01710000",
-        path="/uapi/domestic-stock/v1/ranking/volume",
+        path="/uapi/domestic-stock/v1/quotations/volume-rank",
         extra_params={
             "FID_COND_SCR_DIV_CODE": "20171",
             "FID_INPUT_ISCD":        "0000",
             "FID_DIV_CLS_CODE":      "0",
-            "FID_BLNG_CLS_CODE":     "0",
+            "FID_BLNG_CLS_CODE":     "3",
             "FID_TRGT_CLS_CODE":     "111111111",
-            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_TRGT_EXLS_CLS_CODE":"0000000000",
             "FID_INPUT_PRICE_1":     "",
             "FID_INPUT_PRICE_2":     "",
             "FID_VOL_CNT":           "",
             "FID_INPUT_DATE_1":      "",
         },
         top_n=top_n,
-        ticker_key="stck_shrn_iscd",
+        ticker_key="mksc_shrn_iscd",
         name_key="hts_kor_isnm",
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
@@ -827,21 +826,21 @@ async def get_scanner_strength(top_n: int = 20):
     # 거래량 스캐너 API에서 체결강도 필드 추출 (seln_cnqn_smtn = 매도체결량 / shnu_cnqn_smtn = 매수체결량)
     result = await _fetch_scanner(
         tr_id="FHPST01710000",
-        path="/uapi/domestic-stock/v1/ranking/volume",
+        path="/uapi/domestic-stock/v1/quotations/volume-rank",
         extra_params={
             "FID_COND_SCR_DIV_CODE": "20171",
             "FID_INPUT_ISCD":        "0000",
             "FID_DIV_CLS_CODE":      "0",
             "FID_BLNG_CLS_CODE":     "0",
             "FID_TRGT_CLS_CODE":     "111111111",
-            "FID_TRGT_EXLS_CLS_CODE":"000000",
+            "FID_TRGT_EXLS_CLS_CODE":"0000000000",
             "FID_INPUT_PRICE_1":     "",
             "FID_INPUT_PRICE_2":     "",
             "FID_VOL_CNT":           "",
             "FID_INPUT_DATE_1":      "",
         },
         top_n=top_n * 2,  # 정렬 여유
-        ticker_key="stck_shrn_iscd",
+        ticker_key="mksc_shrn_iscd",
         name_key="hts_kor_isnm",
         price_key="stck_prpr",
         rate_key="prdy_ctrt",
@@ -1030,12 +1029,13 @@ async def _fetch_scanner(
                         "change_rate": rate,
                         "volume":      vol,
                     }
-                    # 거래대금 (옵션)
+                    # 거래대금 (옵션) — acml_tr_pbmn은 만원 단위 → 원 단위로 변환
                     if trade_value_key:
                         try:
-                            entry["trade_value"] = int(
+                            tv_raw = int(
                                 str(row.get(trade_value_key, "0")).replace(",", "") or "0"
                             )
+                            entry["trade_value"] = tv_raw * 10_000
                         except (ValueError, TypeError):
                             entry["trade_value"] = 0
                     # 체결강도 (옵션)

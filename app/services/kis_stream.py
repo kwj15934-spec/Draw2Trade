@@ -193,6 +193,7 @@ def _persist_ticks_sync(ticker: str) -> None:
                 "volume":  t.get("volume", 0),
                 "bs":      t.get("bs", ""),
                 "session": t.get("session", ""),
+                "venue":   t.get("venue", ""),
             })
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     except Exception as e:
@@ -667,6 +668,8 @@ async def _on_message(msg: str) -> None:
     if tr_id == "H0STCNT0":
         tick = _parse_kr(raw)
         if tick:
+            tick["venue"] = "KRX"
+            tick["tr_channel"] = "H0STCNT0"
             _cache_tick(tick)
             # 원본 틱도 브로드캐스트 (체결 내역 표시용)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))
@@ -691,6 +694,8 @@ async def _on_message(msg: str) -> None:
     elif tr_id == "H0NXCNT0":
         tick = _parse_nxt(raw)
         if tick:
+            tick["venue"] = "NXT"
+            tick["tr_channel"] = "H0NXCNT0"
             logger.debug("[NXT] tick: %s price=%s time=%s", tick["ticker"], tick.get("price"), tick.get("time"))
             _cache_tick(tick)
             asyncio.create_task(_hub.hub.broadcast(tick["ticker"], tick))

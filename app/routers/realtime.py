@@ -3,6 +3,9 @@
 
 GET /ws/realtime
 
+국내(KR) 체결: KIS H0STCNT0(KRX) + H0NXCNT0(NXT) 이중 구독.
+호가: H0UNASP0 통합.
+
 ── 클라이언트 → 서버 메시지 ──────────────────────────────────
   {"action": "subscribe",   "ticker": "AAPL", "market": "US", "excd": "NAS"}
   {"action": "subscribe",   "ticker": "005930", "market": "KR"}
@@ -95,9 +98,10 @@ async def ws_realtime(ws: WebSocket):
                     if market == "KR":
                         session = _kr_session_now()
                         logger.info("WS sub: %s (KR, session=%s)", ticker, session)
-                        # H0UNCNT0(통합 체결): KRX 정규장+NXT 야간 전 세션 커버
-                        # H0UNASP0(통합 호가): KRX+NXT 호가 단일 구독으로 커버
-                        await kis_stream.subscribe_unified(ticker)
+                        # 체결: H0STCNT0(KRX) + H0NXCNT0(NXT) 이중 구독 — 건별 구분
+                        # 호가: H0UNASP0 통합 (구독 한도·호가 동기화)
+                        await kis_stream.subscribe_kr(ticker)
+                        await kis_stream.subscribe_nxt(ticker)
                         await kis_stream.subscribe_unified_asking(ticker)
                         if session == "overtime":
                             # 시간외 단일가(15:30~18:00) 체결/호가 추가 구독
@@ -112,7 +116,8 @@ async def ws_realtime(ws: WebSocket):
                     await _hub.hub.unsubscribe(ticker, q)
                     if _hub.hub.subscriber_count(ticker) == 0:
                         if market == "KR":
-                            await kis_stream.unsubscribe_unified(ticker)
+                            await kis_stream.unsubscribe_kr(ticker)
+                            await kis_stream.unsubscribe_nxt(ticker)
                             await kis_stream.unsubscribe_unified_asking(ticker)
                             await kis_stream.unsubscribe_kr_overtime(ticker)
                             await kis_stream.unsubscribe_kr_asking_overtime(ticker)
@@ -194,7 +199,8 @@ async def ws_realtime(ws: WebSocket):
             await _hub.hub.unsubscribe(ticker, q)
             if _hub.hub.subscriber_count(ticker) == 0:
                 if market == "KR":
-                    await kis_stream.unsubscribe_unified(ticker)
+                    await kis_stream.unsubscribe_kr(ticker)
+                    await kis_stream.unsubscribe_nxt(ticker)
                     await kis_stream.unsubscribe_unified_asking(ticker)
                     await kis_stream.unsubscribe_kr_overtime(ticker)
                     await kis_stream.unsubscribe_kr_asking_overtime(ticker)

@@ -206,16 +206,16 @@
     var cvol = parseInt(tick.cvol, 10) || 0;
     if (cvol <= 0) return;
 
-    // 실시간 중복 방어: 이미 과거 데이터로 표시된 틱은 스킵
+    // 실시간 중복 방어: 이미 과거 데이터로 표시된 틱은 스킵 (KRX/NXT 동일 시각·가격이면 구분)
     var rawTime = _normalizeTime(tick.time || '');
-    var key = rawTime + '|' + tick.price + '|' + cvol;
+    var key = (tick.venue || '') + '|' + rawTime + '|' + tick.price + '|' + cvol;
     if (_renderedKeys[key]) return;
     _renderedKeys[key] = true;
 
     var r = _buildRowData(
       { price: tick.price, volume: tick.volume, cvol: tick.cvol,
         time: rawTime, bs: tick.bs || '', session: tick.session || '',
-        session_type: tick.session_type || '' },
+        session_type: tick.session_type || '', venue: tick.venue || '' },
       chgPct, sign, color
     );
 
@@ -419,7 +419,7 @@
     for (var i = 0; i < limit; i++) {
       var t = ticks[i];
       var rawTime = _normalizeTime(t.time);
-      var key = rawTime + '|' + t.price + '|' + t.cvol;
+      var key = (t.venue || '') + '|' + rawTime + '|' + t.price + '|' + t.cvol;
       if (_renderedKeys[key]) continue;
       _renderedKeys[key] = true;   // 실시간 틱 중복 방어용으로 미리 등록
       newItems.push({ t: t, rawTime: rawTime, key: key });
@@ -466,6 +466,7 @@
       var rowData = _buildRowData({
         price: t2.price, volume: t2.accvol, cvol: t2.cvol,
         time: rt, bs: bs, session: t2.session || '', session_type: sType,
+        venue: t2.venue || '',
       }, Math.abs(chgRate).toFixed(2),
          chgRate >= 0 ? '+' : '-',
          chgRate >= 0 ? '#26a69a' : '#ef5350');
@@ -535,8 +536,13 @@
       else if (h6 >= 160001 && h6 <= 180000) sType = 'AFTER_HOURS';
       else if (h6 >= 180001 && h6 <= 200100) sType = 'NXT';
     }
+    var venue = tick.venue || '';
     var sessionBadge = '';
-    if      (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
+    if (venue === 'KRX') {
+      sessionBadge = '<span class="tr-session venue-krx" title="KRX 실시간 체결 (H0STCNT0)">KRX</span>';
+    } else if (venue === 'NXT') {
+      sessionBadge = '<span class="tr-session venue-nxt" title="NXT 실시간 체결 (H0NXCNT0)">NXT</span>';
+    } else if (sType === 'NXT'         || session === 'nxt') sessionBadge = '<span class="tr-session nxt" title="NXT 야간거래소 (18:00~20:00)">야간</span>';
     else if (sType === 'PRE_MARKET'  || session === '5')   sessionBadge = '<span class="tr-session pre">장전</span>';
     else if (sType === 'POST_MARKET')                      sessionBadge = '';
     else if (sType === 'AFTER_HOURS' || session === '2')   sessionBadge = '<span class="tr-session after">단일가</span>';
