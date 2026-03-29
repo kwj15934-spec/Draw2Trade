@@ -403,12 +403,36 @@ async def fetch_rankings(
     kis_period_meta: dict | None = None
     scanner: dict = {"items": [], "as_of": "", "fallback": False}
 
-    # 1) 기간이 1d 초과: KIS 기간 순위 우선(HTS와 동일 API)·이후 KRX 일별 캐시 합산
+    # 1) 기간이 1d 초과: pykrx → KIS → KRX 캐시 순으로 시도
     if period != "1d":
         from app.services.krx_service import get_period_rankings, latest_cache_date
 
         loop = asyncio.get_running_loop()
         start, end = _kst_strt_end_dates_for_rank(period)
+
+        # 1-0) pykrx: KRX 공식 기간 누적 거래대금 (가장 정확)
+        if category in ("trade_value", "volume", "rise", "fall"):
+            try:
+                pykrx_items = await loop.run_in_executor(
+                    None, lambda: _fetch_pykrx_period_rankings(
+                        start, end, category, top_n, hide_warning
+                    )
+                )
+                if pykrx_items:
+                    scanner = {
+                        "items":    pykrx_items,
+                        "as_of":    f"{end} (pykrx/KRX)",
+                        "fallback": False,
+                    }
+                    kis_period_meta = {
+                        "fid_strt_date": start,
+                        "fid_end_date":  end,
+                        "source":        "pykrx",
+                    }
+                    use_kis_period_rank = True
+                    logger.info("pykrx 기간 순위 성공 (%s %s): %d건", period, category, len(pykrx_items))
+            except Exception as e:
+                logger.warning("pykrx 기간 순위 실패 (%s %s): %s", period, category, e)
 
         # 1-A) KIS 기간 앵커 순위 (키 설정 시 최우선)
         try:
@@ -1254,3 +1278,121 @@ async def fetch_trade_value_rank_by_period(
         }
 
     raise ValueError("market는 KR 또는 US만 지원합니다.")
+
+
+# ── pykrx 기반 기간 랭킹 ──────────────────────────────────────────────────────
+
+def _fetch_pykrx_period_rankings(
+    start: str,
+    end: str,
+    category: str,
+    top_n: int,
+    hide_warning: bool,
+) -> list[dict]:
+    """
+    pykrx로 KRX 공식 기간 누적 데이터를 조회해 랭킹을 반환한다.
+    category: trade_value | volume | rise | fall
+    start/end: YYYYMMDD
+    """
+    from pykrx import stock as pykrx_stock
+
+    warning_kws = ("관리", "경고", "정지", "위험")
+
+    if category in ("trade_value", "volume"):
+        # 기간 누적 거래대금 / 거래량
+        df = pykrx_stock.get_market_trading_value_by_ticker(start, end, market="ALL")
+        # 컬럼: 매도거래량, 매수거래량, 거래량, 매도거래대금, 매수거래대금, 거래대금
+        if df is None or df.empty:
+            return []
+
+        sort_col = "거래대금" if category == "trade_value" else "거래량"
+        df = df.sort_values(sort_col, ascending=False).head(top_n * 2)
+
+        items = []
+        for ticker, row in df.iterrows():
+            try:
+                name = pykrx_stock.get_market_ticker_name(str(ticker))
+            except Exception:
+                name = str(ticker)
+
+            if hide_warning and any(kw in name for kw in warning_kws):
+                continue
+
+            tv  = int(row.get("거래대금", 0))
+            vol = int(row.get("거래량",   0))
+
+            # 현재가·등락률: 기간 마지막 거래일 종가
+            try:
+                price_df = pykrx_stock.get_market_ohlcv(end, end, str(ticker))
+                price    = int(price_df["종가"].iloc[-1]) if not price_df.empty else 0
+                chg_rate = float(price_df["등락률"].iloc[-1]) if not price_df.empty else 0.0
+            except Exception:
+                price, chg_rate = 0, 0.0
+
+            items.append({
+                "ticker":      str(ticker),
+                "name":        name,
+                "price":       price,
+                "change_rate": f"{chg_rate:+.2f}",
+                "volume":      vol,
+                "trade_value": tv,
+                "strength":    0.0,
+            })
+            if len(items) >= top_n:
+                break
+
+        return items
+
+    if category in ("rise", "fall"):
+        # 기간 등락률: 시작일 종가 → 종료일 종가
+        try:
+            df = pykrx_stock.get_market_ohlcv_by_ticker(end, market="ALL")
+        except Exception:
+            return []
+        if df is None or df.empty:
+            return []
+
+        try:
+            df_start = pykrx_stock.get_market_ohlcv_by_ticker(start, market="ALL")
+        except Exception:
+            df_start = None
+
+        items = []
+        for ticker, row in df.iterrows():
+            close_end = float(row.get("종가", 0))
+            if close_end <= 0:
+                continue
+            if df_start is not None and str(ticker) in df_start.index:
+                close_start = float(df_start.loc[str(ticker), "종가"] or 0)
+            else:
+                close_start = close_end
+            if close_start <= 0:
+                continue
+
+            chg = (close_end - close_start) / close_start * 100
+
+            try:
+                name = pykrx_stock.get_market_ticker_name(str(ticker))
+            except Exception:
+                name = str(ticker)
+
+            if hide_warning and any(kw in name for kw in warning_kws):
+                continue
+
+            items.append({
+                "ticker":      str(ticker),
+                "name":        name,
+                "price":       int(close_end),
+                "change_rate": f"{chg:+.2f}",
+                "volume":      int(row.get("거래량", 0)),
+                "trade_value": int(row.get("거래대금", 0)),
+                "strength":    0.0,
+                "_sort_rate":  chg,
+            })
+
+        items.sort(key=lambda x: x["_sort_rate"], reverse=(category == "rise"))
+        for it in items:
+            it.pop("_sort_rate", None)
+        return items[:top_n]
+
+    return []
