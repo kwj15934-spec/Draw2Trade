@@ -1029,13 +1029,12 @@ async def _fetch_scanner(
                         "change_rate": rate,
                         "volume":      vol,
                     }
-                    # 거래대금 (옵션) — acml_tr_pbmn은 만원 단위 → 원 단위로 변환
+                    # 거래대금 (옵션)
                     if trade_value_key:
                         try:
-                            tv_raw = int(
+                            entry["trade_value"] = int(
                                 str(row.get(trade_value_key, "0")).replace(",", "") or "0"
                             )
-                            entry["trade_value"] = tv_raw * 10_000
                         except (ValueError, TypeError):
                             entry["trade_value"] = 0
                     # 체결강도 (옵션)

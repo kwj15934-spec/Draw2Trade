@@ -641,7 +641,7 @@ async def fetch_rankings(
                 except Exception as e:
                     logger.debug("분봉 조회 실패 [%s]: %s", ticker, e)
 
-            # ── 1w/1m/3m: KIS 국내주식기간별시세 일봉 직접 조회 ────────────
+            # ── 1w/1m/3m/6m: KIS 국내주식기간별시세 일봉 직접 조회 ──────────
             if kis_ok():
                 try:
                     rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
@@ -653,6 +653,14 @@ async def fetch_rankings(
                             if float(r.get("stck_clpr") or 0) > 0
                         ]
                         if len(closes) >= 2:
+                            # 기간 누적 거래대금 = sum(종가 × 거래량) — 원 단위
+                            period_tv = sum(
+                                float(r.get("stck_clpr") or 0) * int(r.get("acml_vol") or 0)
+                                for r in rows_asc
+                                if float(r.get("stck_clpr") or 0) > 0
+                            )
+                            if period_tv > 0:
+                                item["trade_value"] = int(period_tv)
                             item["trend"] = _classify_trend(closes)
                             item["sparkline"] = closes
                             item["open_price"] = closes[0]
@@ -1141,8 +1149,7 @@ def _kr_raw_row_to_dashboard(row: dict) -> dict:
         except ValueError:
             rate = str(rate)
     price = int(str(row.get("stck_prpr", "0")).replace(",", "") or "0")
-    # acml_tr_pbmn: KIS FHPST01710000 API는 만원 단위로 반환 → 원 단위로 변환
-    tv = int(str(row.get("acml_tr_pbmn", "0")).replace(",", "") or "0") * 10_000
+    tv = int(str(row.get("acml_tr_pbmn", "0")).replace(",", "") or "0")
     return {
         "종목코드": (row.get("mksc_shrn_iscd") or "").strip(),
         "종목명":   (row.get("hts_kor_isnm") or "").strip(),
