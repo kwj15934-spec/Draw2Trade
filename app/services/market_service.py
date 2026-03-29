@@ -645,6 +645,16 @@ async def fetch_rankings(
             if kis_ok():
                 try:
                     rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
+                    # FHKST03010100 최대 100건 — 6m(≈125일) 초과 시 추가 페이지
+                    if rows and len(rows) == 100:
+                        oldest = rows[-1].get("stck_bsop_date", "")
+                        if oldest and oldest > period_start:
+                            prev_day = (
+                                datetime.strptime(oldest, "%Y%m%d") - timedelta(days=1)
+                            ).strftime("%Y%m%d")
+                            extra = fetch_kr_ohlcv(ticker, period_start, prev_day, "D")
+                            if extra:
+                                rows = rows + extra
                     if rows and len(rows) >= 2:
                         rows_asc = list(reversed(rows))  # 오래된 것 → 최신 순
                         closes = [
@@ -653,12 +663,17 @@ async def fetch_rankings(
                             if float(r.get("stck_clpr") or 0) > 0
                         ]
                         if len(closes) >= 2:
-                            # trade_value는 FHPST01710000의 acml_tr_pbmn(기간 누적 거래대금)
-                            # 을 그대로 사용 — OHLCV 합산으로 덮어쓰지 않음
+                            # 기간 누적 거래대금: OHLCV 일별 acml_tr_pbmn 합산 (원 단위)
+                            period_tv = sum(
+                                int(str(r.get("acml_tr_pbmn") or "0").replace(",", "") or 0)
+                                for r in rows_asc
+                            )
+                            if period_tv > 0:
+                                item["trade_value"] = period_tv
                             item["trend"] = _classify_trend(closes)
                             item["sparkline"] = closes
                             item["open_price"] = closes[0]
-                            item["baseline_price"] = closes[0]  # period 시작 종가
+                            item["baseline_price"] = closes[0]
                             return item
                 except Exception as e:
                     logger.debug("일봉 직접 조회 실패 [%s]: %s", ticker, e)
