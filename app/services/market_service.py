@@ -645,16 +645,6 @@ async def fetch_rankings(
             if kis_ok():
                 try:
                     rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
-                    # FHKST03010100 최대 100건 — 6m(≈125일) 초과 시 1페이지 추가
-                    if rows and len(rows) == 100:
-                        oldest = rows[-1].get("stck_bsop_date", "")
-                        if oldest and oldest > period_start:
-                            prev_day = (
-                                datetime.strptime(oldest, "%Y%m%d") - timedelta(days=1)
-                            ).strftime("%Y%m%d")
-                            extra = fetch_kr_ohlcv(ticker, period_start, prev_day, "D")
-                            if extra:
-                                rows = rows + extra
                     if rows and len(rows) >= 2:
                         rows_asc = list(reversed(rows))  # 오래된 것 → 최신 순
                         closes = [
@@ -663,13 +653,8 @@ async def fetch_rankings(
                             if float(r.get("stck_clpr") or 0) > 0
                         ]
                         if len(closes) >= 2:
-                            # 기간 누적 거래대금: OHLCV의 acml_tr_pbmn(일별 거래대금) 합산
-                            period_tv = sum(
-                                int(str(r.get("acml_tr_pbmn") or "0").replace(",", "") or 0)
-                                for r in rows_asc
-                            )
-                            if period_tv > 0:
-                                item["trade_value"] = int(period_tv)
+                            # trade_value는 FHPST01710000의 acml_tr_pbmn(기간 누적 거래대금)
+                            # 을 그대로 사용 — OHLCV 합산으로 덮어쓰지 않음
                             item["trend"] = _classify_trend(closes)
                             item["sparkline"] = closes
                             item["open_price"] = closes[0]
