@@ -663,13 +663,24 @@ async def fetch_rankings(
                             if float(r.get("stck_clpr") or 0) > 0
                         ]
                         if len(closes) >= 2:
-                            # 기간 누적 거래대금: OHLCV 일별 acml_tr_pbmn 합산 (원 단위)
+                            # 기간 누적 거래대금: 일별 acml_tr_pbmn 합산 (원 단위)
+                            # acml_tr_pbmn 없으면 close × acml_vol 근사값 사용
                             period_tv = sum(
                                 int(str(r.get("acml_tr_pbmn") or "0").replace(",", "") or 0)
                                 for r in rows_asc
                             )
+                            if period_tv == 0:
+                                period_tv = sum(
+                                    int(float(r.get("stck_clpr") or 0)) *
+                                    int(str(r.get("acml_vol") or "0").replace(",", "") or 0)
+                                    for r in rows_asc
+                                )
                             if period_tv > 0:
                                 item["trade_value"] = period_tv
+                            logger.debug(
+                                "period_tv [%s] %s: %s건 합산 → %.1f조",
+                                ticker, period, len(rows_asc), period_tv / 1e12
+                            )
                             item["trend"] = _classify_trend(closes)
                             item["sparkline"] = closes
                             item["open_price"] = closes[0]
