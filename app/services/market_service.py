@@ -1377,30 +1377,30 @@ def _fetch_pykrx_period_rankings(
         )
 
     if category in ("trade_value", "volume"):
-        # 기간 누적 거래대금 / 거래량
-        df = pykrx_stock.get_market_trading_value_by_ticker(start, end, market="ALL")
-        # 컬럼: 매도거래량, 매수거래량, 거래량, 매도거래대금, 매수거래대금, 거래대금
+        # end 날짜 기준 전종목 OHLCV 벌크 조회 (시가·고가·저가·종가·거래량·거래대금·등락률)
+        # pykrx 1.2.x 기간 누적 API(get_market_trading_value_by_ticker) 미지원으로
+        # end 날짜 당일 거래대금/거래량 기준 순위를 사용 (기간 누적보다 가용 API로 대체)
+        try:
+            df = pykrx_stock.get_market_ohlcv_by_ticker(end, market="ALL")
+        except Exception as e:
+            logger.warning("pykrx OHLCV 벌크 조회 실패 (%s): %s", end, e)
+            return []
         if df is None or df.empty:
             return []
 
-        sort_col = "거래대금" if category == "trade_value" else "거래량"
-        if sort_col not in df.columns:
-            logger.warning("pykrx column '%s' 없음. 사용가능 컬럼: %s", sort_col, df.columns.tolist())
-            # 거래량 컬럼 대체 시도
-            if category == "volume":
-                vol_cols = [c for c in df.columns if "거래량" in c]
-                sort_col = vol_cols[0] if vol_cols else None
-            if not sort_col:
-                return []
+        # 컬럼명이 cp949 인코딩으로 깨질 수 있으므로 위치 인덱스로 접근
+        # get_market_ohlcv_by_ticker 반환 컬럼 순서: 시가(0) 고가(1) 저가(2) 종가(3) 거래량(4) 거래대금(5) 등락률(6)
+        cols = df.columns.tolist()
+        if len(cols) < 6:
+            logger.warning("pykrx OHLCV 컬럼 부족: %s", cols)
+            return []
+        col_close    = cols[3]
+        col_volume   = cols[4]
+        col_tv       = cols[5]
+        col_chg      = cols[6] if len(cols) > 6 else None
 
+        sort_col = col_tv if category == "trade_value" else col_volume
         df_top = df.sort_values(sort_col, ascending=False).head(top_n * 2)
-
-        # 현재가·등락률: end 날짜 전종목 벌크 조회 (단일 HTTP 요청)
-        price_df_all = None
-        try:
-            price_df_all = pykrx_stock.get_market_ohlcv_by_ticker(end, market="ALL")
-        except Exception as e:
-            logger.debug("pykrx 전종목 OHLCV 벌크 조회 실패: %s", e)
 
         items = []
         for ticker, row in df_top.iterrows():
@@ -1410,17 +1410,14 @@ def _fetch_pykrx_period_rankings(
             if hide_warning and any(kw in name for kw in warning_kws):
                 continue
 
-            tv  = int(row.get("거래대금", 0))
-            vol = int(row.get("거래량",   0))
-
-            # 가격/등락률: 벌크 결과에서 조회 (개별 HTTP 호출 없음)
-            price, chg_rate = 0, 0.0
-            if price_df_all is not None and ticker_str in price_df_all.index:
-                try:
-                    price    = int(price_df_all.loc[ticker_str, "종가"])
-                    chg_rate = float(price_df_all.loc[ticker_str, "등락률"])
-                except Exception:
-                    pass
+            try:
+                tv       = int(row.iloc[5])
+                vol      = int(row.iloc[4])
+                price    = int(row.iloc[3])
+                chg_rate = float(row.iloc[6]) if len(row) > 6 else 0.0
+            except Exception:
+                tv = vol = price = 0
+                chg_rate = 0.0
 
             items.append({
                 "ticker":      ticker_str,
@@ -1453,12 +1450,20 @@ def _fetch_pykrx_period_rankings(
 
         items = []
         for ticker, row in df.iterrows():
-            close_end = float(row.get("종가", 0))
+            # 컬럼명 cp949 인코딩 문제 → 위치 인덱스로 접근
+            # get_market_ohlcv_by_ticker: 시가(0) 고가(1) 저가(2) 종가(3) 거래량(4) 거래대금(5) 등락률(6)
+            try:
+                close_end = float(row.iloc[3])
+            except Exception:
+                continue
             if close_end <= 0:
                 continue
             ticker_str = str(ticker)
             if df_start is not None and ticker_str in df_start.index:
-                close_start = float(df_start.loc[ticker_str, "종가"] or 0)
+                try:
+                    close_start = float(df_start.loc[ticker_str].iloc[3])
+                except Exception:
+                    close_start = close_end
             else:
                 close_start = close_end
             if close_start <= 0:
@@ -1472,13 +1477,19 @@ def _fetch_pykrx_period_rankings(
             if hide_warning and any(kw in name for kw in warning_kws):
                 continue
 
+            try:
+                vol = int(row.iloc[4])
+                tv  = int(row.iloc[5])
+            except Exception:
+                vol = tv = 0
+
             items.append({
                 "ticker":      ticker_str,
                 "name":        name,
                 "price":       int(close_end),
                 "change_rate": f"{chg:+.2f}",
-                "volume":      int(row.get("거래량", 0)),
-                "trade_value": int(row.get("거래대금", 0)),
+                "volume":      vol,
+                "trade_value": tv,
                 "strength":    0.0,
                 "_sort_rate":  chg,
             })
