@@ -523,6 +523,7 @@
 
         D2T.series.setData(paintedCandles);
         D2T.candles = paintedCandles;
+        D2T.prevClose = data.prevClose || 0;
         setVolumeData(paintedCandles);
         D2T.chart.timeScale().fitContent();
         // 오른쪽에 여백을 두어 실시간 캔들이 바로 보이도록
@@ -708,6 +709,7 @@
         D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;
+        D2T.prevClose = data.prevClose || 0;
         setVolumeData(displayCandles);
         D2T.ticker = ticker;
 
@@ -1359,6 +1361,7 @@
             });
             D2T.candles = data.candles;
             if (data.prevClose) D2T.prevClose = data.prevClose;
+            _initHeaderBar(data.candles);
             // NXT 배경 음영 갱신
             if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
           } else {
@@ -1376,6 +1379,7 @@
                 });
               }
               D2T.candles[D2T.candles.length - 1] = latest;
+              _initHeaderBar(D2T.candles);
             }
           }
         })
