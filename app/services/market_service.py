@@ -192,24 +192,24 @@ def _classify_trend(closes: list[float]) -> dict:
         if norm_slope > 0.003 and pct_change > 5:
             if near_high:
                 return {"label": "강한 돌파", "direction": "up", "strength": 90,
-                        "reason": f"최근 {n}일 고점 부근에서 지속 상승 중"}
+                        "reason": "최근 1개월 고점 부근에서 지속 상승 중"}
             return {"label": "상승 추세", "direction": "up", "strength": 70,
-                    "reason": f"최근 {n}일 종가 기준 우상향 흐름"}
+                    "reason": "최근 1개월 종가 기준 우상향 흐름"}
         elif norm_slope > 0.001 and pct_change > 1:
             return {"label": "완만한 상승", "direction": "up", "strength": 50,
-                    "reason": f"최근 {n}일 완만한 기울기의 상승 흐름"}
+                    "reason": "최근 1개월 완만한 기울기의 상승 흐름"}
         elif norm_slope < -0.003 and pct_change < -5:
             return {"label": "강한 하락", "direction": "down", "strength": 90,
-                    "reason": f"최근 {n}일 종가 기준 가파른 하락세"}
+                    "reason": "최근 1개월 종가 기준 가파른 하락세"}
         elif norm_slope < -0.001 and pct_change < -1:
             return {"label": "하락 추세", "direction": "down", "strength": 60,
-                    "reason": f"최근 {n}일 완만한 기울기의 하락 흐름"}
+                    "reason": "최근 1개월 완만한 기울기의 하락 흐름"}
         elif cv < 0.02:
             return {"label": "횡보 (저변동)", "direction": "neutral", "strength": 30,
-                    "reason": f"최근 {n}일 가격 변동폭 {cv*100:.1f}% 이하 박스권"}
+                    "reason": f"최근 1개월 가격 변동폭 {cv*100:.1f}% 이하 박스권"}
         else:
             return {"label": "횡보", "direction": "neutral", "strength": 40,
-                    "reason": f"방향성 없이 상하 반복 중 (변동폭 {cv*100:.1f}%)"}
+                    "reason": f"최근 1개월 방향성 없이 상하 반복 (변동폭 {cv*100:.1f}%)"}
 
     except Exception:
         return {"label": "분석 불가", "direction": "neutral", "strength": 0, "reason": ""}
