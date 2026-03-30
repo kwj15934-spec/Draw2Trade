@@ -624,12 +624,12 @@
     if (session !== 'regular' && session !== 'nxt_pre' && session !== 'nxt_night' && session !== 'overtime') return;
     var elapsed = Date.now() - _lastTickTime;
 
-    // 20초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신
-    if (elapsed > 20000 && !_restPollTimer) {
+    // 10초 이상 틱 미수신 → REST polling으로 데이터 강제 갱신
+    if (elapsed > 10000 && !_restPollTimer) {
       _startRestPolling();
     }
-    // 시간외 단일가(10분 간격)는 12분, 그 외는 3분 타임아웃
-    var staleLimit = (session === 'overtime') ? 720000 : 180000;
+    // 시간외 단일가(10분 간격)는 10분, 그 외는 2분 타임아웃 (더 빨리 재연결)
+    var staleLimit = (session === 'overtime') ? 600000 : 120000;
     if (elapsed > staleLimit) {
       _stopRestPolling();
       _forceReconnect('스테일 감지: ' + Math.round(elapsed / 1000) + '초');
@@ -657,11 +657,11 @@
     }
   }
 
-  // 15초마다 세션 + 스테일 체크
+  // 5초마다 세션 + 스테일 체크 (데이터 끊김 빨리 감지)
   setInterval(function () {
     _checkSessionChange();
     _checkStaleConnection();
-  }, 15000);
+  }, 5000);
 
   // ── 초기 연결 ─────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
