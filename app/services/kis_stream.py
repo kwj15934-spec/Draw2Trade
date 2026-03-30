@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 _KST = _tz(_td(hours=9))
 _CANDLE_INTERVAL = 60  # 1분봉 (초)
-_THROTTLE_MS = 500     # 브로드캐스트 간격 (ms)
+_THROTTLE_MS = 1000    # 브로드캐스트 간격 (ms) — 초 단위 업데이트
 
 # ticker → 현재 병합 중인 캔들 dict
 _rt_candles: dict[str, dict] = {}
