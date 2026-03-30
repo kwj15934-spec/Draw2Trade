@@ -867,6 +867,7 @@
     D2T.candles   = o.candles;
     D2T.ticker    = o.ticker;
     D2T.timeframe = o.timeframe;
+    D2T.prevClose = o.prevClose || 0;
     setVolumeData(o.candles);
     D2T.chart.timeScale().fitContent();
     D2T.matchPeriodData = null;
@@ -1261,15 +1262,18 @@
   function _initHeaderBar(candles) {
     if (!candles || candles.length < 1) return;
     var last = candles[candles.length - 1];
-    var prev = candles.length > 1 ? candles[candles.length - 2] : null;
     var close = last.close;
     var vol   = last.volume || 0;
 
+    // 등락률 기준: API prevClose(어제 종가) → 이전 캔들 → 없음
+    var baseClose = (D2T.prevClose && D2T.prevClose > 0) ? D2T.prevClose
+                  : (candles.length > 1 ? candles[candles.length - 2].close : 0);
+
     var dispPrice = close >= 1000 ? close.toLocaleString() : close;
     var color = '#888', sign = '', chgAmt = '', chgPct = '';
-    if (prev && prev.close) {
-      var pct = ((close - prev.close) / prev.close * 100).toFixed(2);
-      var amt = (close - prev.close).toFixed(close >= 1000 ? 0 : 2);
+    if (baseClose > 0) {
+      var pct = ((close - baseClose) / baseClose * 100).toFixed(2);
+      var amt = (close - baseClose).toFixed(close >= 1000 ? 0 : 2);
       sign = pct >= 0 ? '+' : '';
       color = pct >= 0 ? '#26a69a' : '#ef5350';
       chgAmt = amt; chgPct = pct;
@@ -1354,6 +1358,7 @@
               }
             });
             D2T.candles = data.candles;
+            if (data.prevClose) D2T.prevClose = data.prevClose;
             // NXT 배경 음영 갱신
             if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
           } else {

@@ -348,7 +348,7 @@
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
-        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">재무</button>
+        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')"><span class="tab-breadcrumb-parent">재무</span> <span class="tab-breadcrumb-sep">›</span> <span class="tab-breadcrumb-child">개요</span></button>
         <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
         <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
         <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
@@ -379,7 +379,7 @@
         <div id="detfin-loading" class="info-pane-loading" style="display:none;">
           <div class="info-spinner"></div><span>재무제표 불러오는 중…</span>
         </div>
-        <div id="detfin-table-wrap" style="flex:1;overflow-y:auto;min-height:0;">
+        <div id="detfin-table-wrap" style="flex:1;overflow-y:auto;overflow-x:auto;min-height:0;">
           <div class="info-empty">종목을 로드하면 상세 재무제표가 표시됩니다.</div>
         </div>
       </div>

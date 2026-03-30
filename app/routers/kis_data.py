@@ -206,7 +206,7 @@ def _fetch_finance_kis(symbol: str) -> Optional[dict]:
     if not price:
         return None
 
-    name = (price.get("hts_kor_isnm") or price.get("bstp_kor_isnm") or "").strip()
+    name = (price.get("hts_kor_isnm") or price.get("prdt_name") or "").strip()
     if not name:
         try:
             from app.services.data_service import get_company_name

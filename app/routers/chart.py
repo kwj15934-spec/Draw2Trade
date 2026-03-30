@@ -162,6 +162,16 @@ async def chart_data(
     """
     tf = timeframe.lower()
 
+    # ── 전일 종가 (등락률 기준 통일) ──────────────────────────────────────────
+    prev_close = 0
+    try:
+        _pdata = fetch_kr_price(ticker)
+        if _pdata:
+            _cur = int(_pdata.get("stck_prpr", "0").replace(",", ""))
+            prev_close = _cur - int(_pdata.get("prdy_vrss", "0").replace(",", ""))
+    except (ValueError, TypeError):
+        pass
+
     # ── 분봉 / 시간봉 ─────────────────────────────────────────────────────────
     _INTRADAY = {"1m", "5m", "15m", "30m", "60m", "240m"}
     if tf in _INTRADAY:
@@ -175,6 +185,7 @@ async def chart_data(
                 "name":      data_service.get_company_name(ticker),
                 "candles":   cached_resp,
                 "timeframe": tf,
+                "prevClose": prev_close,
             }
 
         candles = data_service.get_kr_intraday(ticker, interval_min, poll_only=bool(poll))
@@ -256,6 +267,7 @@ async def chart_data(
             "name":      data_service.get_company_name(ticker),
             "candles":   candles,
             "timeframe": tf,
+            "prevClose": prev_close,
         }
 
     # ── 일봉 / 주봉 / 월봉 ───────────────────────────────────────────────────
@@ -270,6 +282,7 @@ async def chart_data(
             "name":      data_service.get_company_name(ticker),
             "candles":   cached_long,
             "timeframe": tf,
+            "prevClose": prev_close,
         }
 
     years = max(1, (months // 12) + 1)
@@ -342,6 +355,7 @@ async def chart_data(
         "name": data_service.get_company_name(ticker),
         "candles": candles,
         "timeframe": tf,
+        "prevClose": prev_close,
     }
 
 

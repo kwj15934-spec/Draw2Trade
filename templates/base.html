@@ -826,6 +826,11 @@
     .info-tab-btn:hover { color: #a0a8b8 !important; background: none !important; }
     .info-tab-btn.active { color: #26a69a !important; border-bottom-color: #26a69a !important; font-weight: 700 !important; }
 
+    /* 탭 브레드크럼 */
+    .tab-breadcrumb-parent { opacity: 0.7; }
+    .tab-breadcrumb-sep { opacity: 0.4; font-size: 10px; margin: 0 1px; }
+    .tab-breadcrumb-child { font-weight: 700; }
+
     /* 탭 콘텐츠 */
     .info-pane {
       flex: 1;
@@ -1014,7 +1019,7 @@
     .detfin-table tbody tr:nth-child(even) { background: transparent; }
     .detfin-table tbody tr:hover           { background: rgba(38,166,154,.06); }
     .detfin-table td {
-      text-align: right; padding: 4px 6px;
+      text-align: right; padding: 4px 10px;
       color: #d4d8e2;
       font-family: 'JetBrains Mono', monospace;
       font-size: 10.5px;
@@ -1598,7 +1603,7 @@
     }
     /* "메인 종목 정보" 고정 레이블 */
     .info-panel-header-label {
-      font-size: 9px; font-weight: 800; color: #3f3f52;
+      font-size: 9px; font-weight: 800; color: #8b8ba0;
       letter-spacing: 0.8px; text-transform: uppercase;
       white-space: nowrap; flex-shrink: 0;
     }

@@ -334,6 +334,8 @@
 
     // tick 큐에 추가 (체결 내역 누락 방지 — rAF마다 1건씩 처리)
     _pendingTickQueue.push(tick);
+    // 큐 크기 제한: 200건 초과 시 오래된 항목 버림
+    while (_pendingTickQueue.length > 200) _pendingTickQueue.shift();
     _pendingOverlay = price;
     _scheduleRaf();
 
@@ -539,13 +541,18 @@
       if (window._loadInitialTrades) window._loadInitialTrades();
     }, 300);
 
-    // prevClose: D2T.candles 마지막 종가 저장
+    // prevClose: API에서 받은 어제 종가 우선, 없으면 캔들에서 추정
     _prevClose = null;
-    if (window.D2T && D2T.candles && D2T.candles.length) {
+    if (window.D2T && D2T.prevClose && D2T.prevClose > 0) {
+      _prevClose = D2T.prevClose;
+    } else if (window.D2T && D2T.candles && D2T.candles.length) {
       var last = D2T.candles[D2T.candles.length - 1];
-      // 오늘 날짜와 같은 캔들이면 그 전 캔들을 prevClose로
+      // 인트라데이(Unix timestamp)와 일봉(날짜 문자열) 모두 대응
       var today = new Date().toISOString().slice(0, 10);
-      if (last.time >= today && D2T.candles.length >= 2) {
+      var lastTimeStr = typeof last.time === 'number'
+        ? new Date(last.time * 1000).toISOString().slice(0, 10)
+        : String(last.time).slice(0, 10);
+      if (lastTimeStr >= today && D2T.candles.length >= 2) {
         _prevClose = D2T.candles[D2T.candles.length - 2].close;
       } else {
         _prevClose = last.close;

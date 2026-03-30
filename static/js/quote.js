@@ -17,7 +17,7 @@
 (function () {
   'use strict';
 
-  var MAX_TRADES = 50;
+  var MAX_TRADES = 100;
   var _lastTradePrice = 0;  // 직전 체결가 (매수/매도 fallback용)
   var _lastCvolDir = true;  // 직전 체결량 방향 (동가 시 유지용)
 
@@ -225,6 +225,14 @@
       chgStr: r.chgStr, timeDisp: r.timeDisp, sessionBadge: r.sessionBadge,
       tickId: key,
     });
+
+    // 큐 크기 제한: 오래된 항목 버림
+    var MAX_QUEUE = 200;
+    while (renderingQueue.length > MAX_QUEUE) renderingQueue.shift();
+
+    // _renderedKeys 메모리 누수 방지: 일정 크기 초과 시 초기화
+    var MAX_KEYS = MAX_TRADES * 3;
+    if (Object.keys(_renderedKeys).length > MAX_KEYS) _renderedKeys = {};
 
     _startWorker();
   };
