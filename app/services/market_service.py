@@ -120,12 +120,20 @@ async def fetch_index_quotes() -> dict:
                 acml_vol = out.get("acml_vol", "0")
                 acml_tr_pbmn = out.get("acml_tr_pbmn", "0")
 
-                sign = 1 if prdy_vrss_sign in ("1", "2") else -1 if prdy_vrss_sign in ("4", "5") else 0
+                sign_code = str(prdy_vrss_sign)
+                sign = 1 if sign_code in ("1", "2") else -1 if sign_code in ("4", "5") else 0
+                # NOTE:
+                # - KIS는 prdy_vrss_sign(부호 코드)와 함께 prdy_vrss/prdy_ctrt가 "절대값+부호코드" 형태일 때도 있고,
+                #   "숫자 자체에 부호가 이미 포함"되는 형태일 때도 있습니다.
+                # - 현재는 부호 코드를 곱해서 change/change_rate의 부호가 뒤집히는 현상이 있어,
+                #   항상 절대값에 부호 코드를 적용하도록 고정합니다.
+                raw_change = float(bstp_nmix_prdy_vrss.replace(",", "") or "0")
+                raw_rate = float(bstp_nmix_prdy_ctrt.replace(",", "") or "0")
                 indices[name] = {
                     "name": name,
                     "price": float(bstp_nmix_prpr.replace(",", "") or "0"),
-                    "change": float(bstp_nmix_prdy_vrss.replace(",", "") or "0") * (sign if sign != 0 else 1),
-                    "change_rate": float(bstp_nmix_prdy_ctrt.replace(",", "") or "0") * (sign if sign != 0 else 1),
+                    "change": (abs(raw_change) * sign) if sign != 0 else raw_change,
+                    "change_rate": (abs(raw_rate) * sign) if sign != 0 else raw_rate,
                     "volume": int(acml_vol.replace(",", "") or "0"),
                     "trade_value": int(acml_tr_pbmn.replace(",", "") or "0"),
                 }
@@ -744,6 +752,29 @@ async def fetch_rankings(
         return [_enrich(dict(item)) for item in items]
 
     enriched = await loop.run_in_executor(None, _enrich_all)
+
+    # NOTE:
+    # - 기간별 랭킹은 스캐너/KRX/KIS에서 이미 정렬돼 오지만,
+    #   이후 _enrich() 과정에서 `trade_value`(기간 누적 거래대금)를 다시 계산해 덮어쓰기 때문에
+    #   "Ranking 번호(배열 순서) vs 화면에 표시되는 거래대금 크기"가 어긋날 수 있습니다.
+    # - 카테고리 기준 표시 지표로 다시 정렬해 항상 정합성을 보장합니다.
+    if enriched:
+        if category == "trade_value":
+            enriched.sort(key=lambda x: int(x.get("trade_value") or 0), reverse=True)
+        elif category == "volume":
+            enriched.sort(key=lambda x: int(x.get("volume") or 0), reverse=True)
+        elif category == "rise":
+            enriched.sort(
+                key=lambda x: float(str(x.get("change_rate") or "0").replace("+", "")),
+                reverse=True,
+            )
+        elif category == "fall":
+            enriched.sort(
+                key=lambda x: float(str(x.get("change_rate") or "0").replace("+", "")),
+                reverse=False,
+            )
+        elif category == "strength":
+            enriched.sort(key=lambda x: float(x.get("strength") or 0), reverse=True)
 
     now = datetime.now(_KST)
     result = {

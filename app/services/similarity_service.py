@@ -304,7 +304,9 @@ def search_similar(
                 best_i      = max(0, n - win)
                 best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
 
-            d_from = dates[best_i] if best_i < len(dates) else ""
+            # sw>1이면 arr가 유효구간으로 잘리며(date_shift=sw-1), arr 인덱스는 원본 dates 인덱스에 date_shift 만큼 오프셋됩니다.
+            # period_from/period_to가 실제 매칭 구간과 어긋나면 이후 구간 기반 거래대금/지표 추출에서 정합성이 깨질 수 있습니다.
+            d_from = dates[best_i + date_shift] if (best_i + date_shift) < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
         else:
@@ -389,7 +391,7 @@ def search_similar(
                 continue
 
             orig_end = best_i + win - 1 + date_shift
-            d_from = dates[best_i] if best_i < len(dates) else ""
+            d_from = dates[best_i + date_shift] if (best_i + date_shift) < len(dates) else ""
             d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
 
         # 최종 선정된 구간의 거래량 급증 점수 + 컴포넌트 점수 계산
