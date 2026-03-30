@@ -261,7 +261,8 @@ async def notices_page(request: Request):
 
 @app.get("/news", response_class=HTMLResponse)
 async def news_page(request: Request):
-    return templates.TemplateResponse("news.html", {"request": request})
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/app", status_code=302)
 
 
 @app.get("/feed", response_class=HTMLResponse)
@@ -271,7 +272,8 @@ async def feed_page(request: Request):
 
 @app.get("/market", response_class=HTMLResponse)
 async def market_page(request: Request):
-    return templates.TemplateResponse("market.html", {"request": request})
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/app", status_code=302)
 
 
 @app.get("/blank", response_class=HTMLResponse)
