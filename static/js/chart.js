@@ -543,8 +543,7 @@
         if (thbName) thbName.textContent = ticker;
         var thbFullname = document.getElementById('thb-fullname');
         if (thbFullname) thbFullname.textContent = data.name || '';
-        // 헤더바 마지막 캔들 종가/등락률 표시 (실시간 틱 전까지 유지)
-        _initHeaderBar(data.candles);
+        // 헤더바 마지막 캔들 종가/등락률은 실시간 데이터 수신 후 표시 (초기 로드 시 prevClose 미확정이므로 안 뜸)
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
         if (searchInp && window.getComputedStyle(searchInp).display !== 'none') {
@@ -828,8 +827,7 @@
           searchInp.value = '';
         }
 
-        // 3) 헤더바 마지막 캔들 종가/등락률 즉시 표시
-        _initHeaderBar(displayCandles);
+        // 3) 헤더바는 실시간 데이터 수신 후 표시 (prevClose 확정 후)
 
         // 4) 유사종목 결과 로드: 우측 패널(floating-info-widget)만 갱신
         //    중앙 패널(_onChartLoaded)은 호출하지 않음 — 패널 오염 방지
