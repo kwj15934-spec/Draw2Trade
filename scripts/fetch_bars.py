@@ -333,7 +333,7 @@ def run(mode: str, target_markets: set[str]) -> None:
     processed = start_idx
     errors    = 0
 
-    _log_interval = 50   # N종목마다 진행 상황 출력
+    _log_interval = 10   # N종목마다 진행 상황 출력
     _last_market  = ""
 
     for idx in range(start_idx, total):
@@ -386,12 +386,13 @@ def run(mode: str, target_markets: set[str]) -> None:
                 bars["collected_at_utc"] = _now_utc()
                 batch.append(bars.drop_duplicates(subset=["trade_date"]))
 
-            # 종목별 1줄 로그 (50종목마다 or 오류 시)
+            # 종목별 로그
+            now_str = datetime.now().strftime("%H:%M:%S")
+            pct = (processed + 1) / total * 100
+            print(f"  [{now_str}] {processed+1:,}/{total:,} ({pct:.1f}%) "
+                  f"{market} {symbol} {name} → {rows_cnt}건", flush=True)
             if (processed - start_idx + 1) % _log_interval == 0:
-                pct = (processed + 1) / total * 100
-                now_str = datetime.now().strftime("%H:%M:%S")
-                print(f"  [{now_str}] {processed+1:,}/{total:,} ({pct:.1f}%) | "
-                      f"최근: {market} {symbol}({name}) {rows_cnt}건 | 오류: {errors}")
+                print(f"  --- 오류 누계: {errors} ---", flush=True)
 
         except Exception as exc:
             errors += 1
