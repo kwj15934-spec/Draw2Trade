@@ -54,7 +54,8 @@ def get_daily_bars(
     try:
         rows = conn.execute(
             """
-            SELECT trade_date, open, high, low, close, volume
+            SELECT trade_date, open, high, low, close, volume,
+                   trade_value, change_rate
             FROM daily_bars
             WHERE market_group = ? AND symbol = ?
               AND trade_date >= ? AND trade_date <= ?
@@ -64,12 +65,14 @@ def get_daily_bars(
         ).fetchall()
         return [
             {
-                "trade_date": r[0],
-                "open":       r[1],
-                "high":       r[2],
-                "low":        r[3],
-                "close":      r[4],
-                "volume":     r[5],
+                "trade_date":   r[0],
+                "open":         r[1],
+                "high":         r[2],
+                "low":          r[3],
+                "close":        r[4],
+                "volume":       r[5],
+                "trade_value":  r[6],
+                "change_rate":  r[7],
             }
             for r in rows
             if r[4] and r[4] > 0  # close > 0 인 유효 데이터만
