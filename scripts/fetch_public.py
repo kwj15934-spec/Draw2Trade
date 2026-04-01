@@ -303,7 +303,7 @@ def fetch_bars(mode: str, markets: list[str]) -> None:
     """날짜별로 전 종목 일봉 수집."""
     now    = datetime.now()
     end    = now.strftime("%Y%m%d")
-    start  = (now - timedelta(days=365 * 5 + 10)).strftime("%Y%m%d")
+    start  = "19900101"  # 전체 기간 (상장 이후 전체)
 
     if mode == "update":
         last = _last_date_in_db()
