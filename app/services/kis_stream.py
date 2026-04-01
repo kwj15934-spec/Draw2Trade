@@ -88,23 +88,27 @@ def _merge_tick_to_candle(tick: dict) -> Optional[dict]:
 
     # 시장 구분 기록 (candle_update broadcast에서 사용)
     _rt_market[ticker] = tick.get("market", "KR")
+    session_type = tick.get("session_type", "")
 
     candle = _rt_candles.get(ticker)
     if candle is None or candle["time"] != bucket_ts:
         # 새 캔들 시작
         _rt_candles[ticker] = {
-            "time":   bucket_ts,
-            "open":   price,
-            "high":   price,
-            "low":    price,
-            "close":  price,
-            "volume": cvol,
+            "time":         bucket_ts,
+            "open":         price,
+            "high":         price,
+            "low":          price,
+            "close":        price,
+            "volume":       cvol,
+            "session_type": session_type,
         }
     else:
         candle["close"] = price
         candle["high"] = max(candle["high"], price)
         candle["low"] = min(candle["low"], price)
         candle["volume"] += cvol
+        if session_type:
+            candle["session_type"] = session_type
 
     return _rt_candles[ticker]
 

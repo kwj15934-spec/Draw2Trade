@@ -117,15 +117,6 @@ def _persist_bucket(bucket: int, count: int) -> None:
         pass
 
 
-# DB 초기화 + 오늘 버킷 로드 + 동기화 스레드 시작
-try:
-    _init_bucket_db()
-    _load_buckets_from_db()
-    _ensure_bucket_sync()
-except Exception as e:
-    logger.warning("KIS 버킷 DB 초기화 실패: %s", e)
-
-
 def _record_call() -> None:
     """현재 분 버킷에 호출 1건 기록 (메모리만, DB 영속화는 _bucket_sync_loop가 담당)."""
     global _api_call_count
@@ -171,6 +162,15 @@ def _ensure_bucket_sync() -> None:
         return
     _bucket_sync_started = True
     threading.Thread(target=_bucket_sync_loop, daemon=True, name="kis-bucket-sync").start()
+
+
+# DB 초기화 + 오늘 버킷 로드 + 동기화 스레드 시작
+try:
+    _init_bucket_db()
+    _load_buckets_from_db()
+    _ensure_bucket_sync()
+except Exception as e:
+    logger.warning("KIS 버킷 DB 초기화 실패: %s", e)
 
 
 def get_api_usage() -> dict:

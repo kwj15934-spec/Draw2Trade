@@ -30,6 +30,7 @@ from app.services.kis_client import (
 )
 from app.services.kis_stream import get_cached_ticks
 from app.services.redis_cache import rcache
+from app.services import bar_db
 
 import calendar
 
@@ -291,27 +292,37 @@ async def chart_data(
     elif tf == "weekly":
         years = min(years, 10)
 
-    ohlcv = data_service.get_ohlcv_by_timeframe(ticker, tf, years=min(years, 15))
+    candles = None
 
-    if not ohlcv or not ohlcv.get("dates"):
-        raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
+    # ── DB 우선 조회 (scripts/fetch_bars.py가 수집한 데이터) ──────────────────
+    from datetime import datetime as _dt2
+    _db_start = (_dt2.now() - timedelta(days=365 * min(years, 15))).strftime("%Y%m%d")
+    _db_end   = _dt2.now().strftime("%Y%m%d")
+    _db_bars  = bar_db.get_daily_bars("KR_STOCK", ticker, _db_start, _db_end)
+    if _db_bars:
+        candles = bar_db.bars_to_candles(_db_bars, tf)
 
-    dates = ohlcv["dates"]
-    time_fmt = (lambda d: d + "-01") if tf == "monthly" else (lambda d: d)
+    # ── DB 데이터 없으면 기존 KIS API / pykrx fallback ────────────────────────
+    if not candles:
+        ohlcv = data_service.get_ohlcv_by_timeframe(ticker, tf, years=min(years, 15))
+        if not ohlcv or not ohlcv.get("dates"):
+            raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
 
-    volumes = ohlcv.get("volume", [])
-    candles = [
-        {
-            "time":   time_fmt(d),
-            "open":   round(float(ohlcv["open"][i]),  1),
-            "high":   round(float(ohlcv["high"][i]),  1),
-            "low":    round(float(ohlcv["low"][i]),   1),
-            "close":  round(float(ohlcv["close"][i]), 1),
-            "volume": int(volumes[i]) if i < len(volumes) else 0,
-        }
-        for i, d in enumerate(dates)
-        if ohlcv["close"][i] > 0
-    ]
+        dates    = ohlcv["dates"]
+        time_fmt = (lambda d: d + "-01") if tf == "monthly" else (lambda d: d)
+        volumes  = ohlcv.get("volume", [])
+        candles  = [
+            {
+                "time":   time_fmt(d),
+                "open":   round(float(ohlcv["open"][i]),  1),
+                "high":   round(float(ohlcv["high"][i]),  1),
+                "low":    round(float(ohlcv["low"][i]),   1),
+                "close":  round(float(ohlcv["close"][i]), 1),
+                "volume": int(volumes[i]) if i < len(volumes) else 0,
+            }
+            for i, d in enumerate(dates)
+            if ohlcv["close"][i] > 0
+        ]
 
     # NXT 시간대: 오늘 날짜 캔들이 없으면 NXT 현재가로 생성
     now = _now_kst()

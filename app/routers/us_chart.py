@@ -11,6 +11,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import us_data_service
+from app.services import bar_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/us")
@@ -79,23 +80,34 @@ async def us_chart_data(symbol: str, timeframe: str = "daily", poll: int = 0):
         }
 
     # ── 일봉 / 주봉 / 월봉 ───────────────────────────────────────────────────
-    ohlcv = us_data_service.get_us_ohlcv_by_timeframe(symbol, tf)
-    if ohlcv is None or not ohlcv.get("dates"):
-        raise HTTPException(status_code=404, detail=f"데이터 없음: {symbol}")
+    candles = None
 
-    dates   = ohlcv["dates"]
-    volumes = ohlcv.get("volume", [])
-    candles = [
-        {
-            "time":   d,
-            "open":   ohlcv["open"][i],
-            "high":   ohlcv["high"][i],
-            "low":    ohlcv["low"][i],
-            "close":  ohlcv["close"][i],
-            "volume": int(volumes[i]) if i < len(volumes) else 0,
-        }
-        for i, d in enumerate(dates)
-    ]
+    # ── DB 우선 조회 (scripts/fetch_bars.py가 수집한 데이터) ──────────────────
+    from datetime import datetime as _dt2, timedelta as _td2
+    _db_start = (_dt2.now() - _td2(days=365 * 5 + 5)).strftime("%Y%m%d")
+    _db_end   = _dt2.now().strftime("%Y%m%d")
+    _db_bars  = bar_db.get_daily_bars("US_STOCK", symbol, _db_start, _db_end)
+    if _db_bars:
+        candles = bar_db.bars_to_candles(_db_bars, tf)
+
+    # ── DB 데이터 없으면 기존 API fallback ────────────────────────────────────
+    if not candles:
+        ohlcv = us_data_service.get_us_ohlcv_by_timeframe(symbol, tf)
+        if ohlcv is None or not ohlcv.get("dates"):
+            raise HTTPException(status_code=404, detail=f"데이터 없음: {symbol}")
+        dates   = ohlcv["dates"]
+        volumes = ohlcv.get("volume", [])
+        candles = [
+            {
+                "time":   d,
+                "open":   ohlcv["open"][i],
+                "high":   ohlcv["high"][i],
+                "low":    ohlcv["low"][i],
+                "close":  ohlcv["close"][i],
+                "volume": int(volumes[i]) if i < len(volumes) else 0,
+            }
+            for i, d in enumerate(dates)
+        ]
 
     name = us_data_service.get_us_company_name(symbol)
     return {

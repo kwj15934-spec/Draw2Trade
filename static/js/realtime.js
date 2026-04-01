@@ -250,6 +250,9 @@
     // _prevClose 기준 등락률 계산 → _flushPricePanel 대신 직접 DOM 업데이트
     _pendingCandlePrice = msg.close;
 
+    // NXT 등 세션 정보가 있으면 배지 업데이트
+    if (msg.session_type) _updateSourceBadge(msg.session_type);
+
     _scheduleRaf();
     _autoScrollToLatest();
     _setLive(true);
