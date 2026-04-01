@@ -167,6 +167,42 @@ async def _krx_scheduler():
 app = FastAPI(title="Draw2Trade", version="1.0.0", lifespan=lifespan)
 
 
+# ── 점검 모드 미들웨어 ────────────────────────────────────────────────────────
+# .env 또는 환경변수로 제어:
+#   MAINTENANCE_MODE=true   → 점검 모드 활성화 (기본값: false)
+#   MAINTENANCE_ALLOWED_IPS → 허용할 IP 목록, 쉼표 구분 (예: "1.2.3.4,5.6.7.8")
+import os as _os
+
+_MAINTENANCE_HTML_PATH = BASE_DIR / "templates" / "maintenance.html"
+
+class MaintenanceMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if _os.getenv("MAINTENANCE_MODE", "false").lower() != "true":
+            return await call_next(request)
+
+        # 허용 IP 확인
+        allowed_ips = {
+            ip.strip()
+            for ip in _os.getenv("MAINTENANCE_ALLOWED_IPS", "").split(",")
+            if ip.strip()
+        }
+        client_ip = (
+            request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            or (request.client.host if request.client else "")
+        )
+        if client_ip in allowed_ips:
+            return await call_next(request)
+
+        # 정적 파일은 점검 페이지 표시에 필요하므로 통과
+        if request.url.path.startswith("/static"):
+            return await call_next(request)
+
+        html = _MAINTENANCE_HTML_PATH.read_text(encoding="utf-8")
+        return HTMLResponse(content=html, status_code=503)
+
+app.add_middleware(MaintenanceMiddleware)
+
+
 # ── 접속자 추적 미들웨어 ──────────────────────────────────────────────────────
 class ActivityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
