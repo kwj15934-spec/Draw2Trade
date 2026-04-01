@@ -303,7 +303,7 @@ def fetch_bars(mode: str, markets: list[str]) -> None:
     """날짜별로 전 종목 일봉 수집."""
     now    = datetime.now()
     end    = now.strftime("%Y%m%d")
-    start  = "19900101"  # 전체 기간 (상장 이후 전체)
+    start  = "19950101"  # KOSPI/KOSDAQ 데이터 제공 시작 시점
 
     if mode == "update":
         last = _last_date_in_db()
