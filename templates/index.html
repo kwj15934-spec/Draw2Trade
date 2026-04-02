@@ -303,7 +303,10 @@
 
       <!-- 패널 헤더: 메인 차트 종목명 -->
       <div class="info-panel-ticker-header">
-        <span class="info-panel-header-label">메인 종목 정보</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="info-panel-header-label">메인 종목 정보</span>
+          <span id="info-panel-updated" style="font-size:10px;color:#555;"></span>
+        </div>
         <div class="info-panel-ticker-row">
           <span class="info-panel-ticker-name" id="info-panel-name">—</span>
           <span class="info-panel-ticker-code" id="info-panel-code"></span>
@@ -312,7 +315,7 @@
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
-        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')"><span class="tab-breadcrumb-parent">재무</span> <span class="tab-breadcrumb-sep">›</span> <span class="tab-breadcrumb-child">개요</span></button>
+        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">개요</button>
         <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
         <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
         <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
@@ -1566,6 +1569,14 @@ function _escHtml(s) {
     var codeEl = document.getElementById('info-panel-code');
     if (nameEl) nameEl.textContent = n || t || '—';
     if (codeEl) codeEl.textContent = (n && t && n !== t) ? '(' + t + ')' : '';
+    var updatedEl = document.getElementById('info-panel-updated');
+    if (updatedEl) {
+      var now = new Date();
+      var y = now.getFullYear();
+      var mo = String(now.getMonth()+1).padStart(2,'0');
+      var d = String(now.getDate()).padStart(2,'0');
+      updatedEl.textContent = y + '.' + mo + '.' + d + ' 기준';
+    }
   }
 
   // 차트 로드 시 API에서 name 확보 후 헤더 갱신 (탭 무관)
