@@ -23,15 +23,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, chart, dart, fundamental, kis_data, market, pattern, realtime, user_data
-# us_chart: 미국 주식 DB 수집 완료 전까지 비활성화
+from app.routers import auth, chart, dart, fundamental, market, pattern, user_data
+# KIS API 관련 라우터 비활성화
+# from app.routers import kis_data, realtime
+# US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
-from app.services.kis_client import start_token_refresh_loop
-from app.services import kis_stream
-from app.services.us_data_service import build_us_name_cache, prefetch_us_ohlcv_background
+from app.services.us_data_service import build_us_name_cache
 from app.services.vite_manifest import load_manifest, is_production, vite_asset, vite_imports
 
 # ── 경로 설정 ────────────────────────────────────────────────────────────────
@@ -42,10 +42,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-# KIS 클라이언트/서비스 로그는 INFO로 강제 상향 (DEBUG 메시지도 보임)
-for _log_name in ("app.services.kis_client", "app.routers.kis_data",
-                  "app.services.data_service", "app.routers.chart"):
-    logging.getLogger(_log_name).setLevel(logging.DEBUG)
+logging.getLogger("app.services.data_service").setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
@@ -65,43 +62,20 @@ async def lifespan(app: FastAPI):
         init_firebase()
     except Exception as e:
         logger.error("Firebase 초기화 실패: %s", e)
-    try:
-        start_token_refresh_loop()   # KIS 토큰 자동 갱신 루프 (API 키 미설정 시 무시)
-    except Exception as e:
-        logger.error("KIS 토큰 루프 시작 실패: %s", e)
     # Redis 캐시 연결
     from app.services.redis_cache import rcache
     if await rcache.ensure_connected():
         logger.info("Redis 캐시 활성화")
     else:
         logger.warning("Redis 미연결 — 인메모리/디스크 캐시만 사용")
-    # KIS 실시간 WebSocket 스트림 (KIS 미설정 시 connect_loop가 즉시 반환)
-    asyncio.create_task(kis_stream.connect_loop())
     try:
         build_cache()
         logger.info("KR 캐시 완료.")
     except Exception as e:
         logger.error("KR 캐시 빌드 실패: %s", e)
-    # 초기 종목(삼성전자, AAPL) 주봉/일봉 미리 워밍업 — 첫 사용자 대기 시간 제거
-    try:
-        import threading
-        from app.services.data_service import get_ohlcv_by_timeframe
-        from app.services.us_data_service import get_us_ohlcv_by_timeframe
-        def _warmup():
-            for tf in ("weekly", "daily"):
-                try: get_ohlcv_by_timeframe("005930", tf)
-                except Exception: pass
-            for tf in ("daily", "weekly", "monthly"):
-                try: get_us_ohlcv_by_timeframe("AAPL", tf)
-                except Exception: pass
-            logger.info("초기 종목 주봉/일봉 워밍업 완료.")
-        threading.Thread(target=_warmup, daemon=True).start()
-    except Exception as e:
-        logger.error("워밍업 실패: %s", e)
     try:
         build_us_name_cache()
-        prefetch_us_ohlcv_background()
-        logger.info("US 이름 캐시 완료 + OHLCV 백그라운드 프리페치 시작 - 서버 준비됨.")
+        logger.info("US 이름 캐시 완료.")
     except Exception as e:
         logger.error("US 캐시 빌드 실패: %s", e)
     # 패턴 검색용 ProcessPoolExecutor (GIL 우회 — CPU 병렬 처리)
@@ -115,7 +89,6 @@ async def lifespan(app: FastAPI):
     yield
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()
-    await kis_stream.stop()
     await rcache.close()
     logger.info("Draw2Trade 종료.")
 
@@ -259,14 +232,16 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # API 라우터
 app.include_router(auth.router)
 app.include_router(chart.router)
-app.include_router(kis_data.router)
 app.include_router(pattern.router)
-# app.include_router(us_chart.router)  # 미국 주식 DB 수집 완료 전까지 비활성화
 app.include_router(user_data.router)
-app.include_router(realtime.router)
 app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
+# KIS API 관련 라우터 비활성화
+# app.include_router(kis_data.router)
+# app.include_router(realtime.router)
+# 미국 주식 DB 수집 완료 전까지 비활성화
+# app.include_router(us_chart.router)
 
 
 # ── 헬스체크 ─────────────────────────────────────────────────────────────────
