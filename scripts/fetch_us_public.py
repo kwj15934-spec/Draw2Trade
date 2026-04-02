@@ -36,7 +36,7 @@ sys.path.insert(0, str(_ROOT))
 from dotenv import load_dotenv
 _env_scripts = Path(__file__).resolve().parent / ".env"
 _env_root    = _ROOT / ".env"
-load_dotenv(_env_scripts if _env_scripts.exists() else _env_root)
+load_dotenv(_env_scripts if _env_scripts.exists() else _env_root, override=True)
 
 import os
 import urllib.request
