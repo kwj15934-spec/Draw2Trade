@@ -1157,6 +1157,16 @@
           periodHtml = '<div class="result-period">과거 사례 ' + escHtml(r.period) + '</div>';
         }
 
+        // 실시간 시세 딥링크
+        var quoteUrl, quoteLbl;
+        if (market === 'US') {
+          quoteUrl = 'https://finance.yahoo.com/quote/' + encodeURIComponent(r.ticker);
+          quoteLbl = 'Yahoo Finance';
+        } else {
+          quoteUrl = 'https://finance.naver.com/item/main.naver?code=' + encodeURIComponent(r.ticker);
+          quoteLbl = '네이버 증권';
+        }
+
         return (
           '<div class="result-card" ' +
             'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\',\'' + nm + '\')" ' +
@@ -1171,11 +1181,18 @@
               '<div class="result-score-pct" style="color:' + color + '">' + pct + '%</div>' +
               '<div class="result-score-bar"><div class="result-score-fill" style="width:' + barW + '%;background:' + color + '"></div></div>' +
             '</div>' +
-            '<button class="result-hist-news-btn" ' +
-              'onclick="event.stopPropagation();showHistoricalNews(this,\'' + tk + '\',\'' + escHtml(r.period_from||'') + '\',\'' + escHtml(r.period_to||'') + '\')" ' +
-              'title="패턴 당시 주요 뉴스 보기">' +
-              '패턴 당시 뉴스' +
-            '</button>' +
+            '<div class="result-card-actions">' +
+              '<button class="result-hist-news-btn" ' +
+                'onclick="event.stopPropagation();showHistoricalNews(this,\'' + tk + '\',\'' + escHtml(r.period_from||'') + '\',\'' + escHtml(r.period_to||'') + '\')" ' +
+                'title="패턴 당시 주요 뉴스 보기">' +
+                '패턴 당시 뉴스' +
+              '</button>' +
+              '<a class="result-quote-btn" href="' + quoteUrl + '" target="_blank" rel="noopener noreferrer" ' +
+                'onclick="event.stopPropagation()" ' +
+                'title="' + quoteLbl + '에서 실시간 시세 확인">' +
+                '실시간 시세 ↗' +
+              '</a>' +
+            '</div>' +
             '<div class="result-hist-news-panel" style="display:none;"></div>' +
           '</div>'
         );
