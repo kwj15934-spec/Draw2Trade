@@ -119,12 +119,12 @@ async def chart_data(
 
     candles = bar_db.bars_to_candles(bars, tf)
 
-    # 일봉: 장중 실시간 현재가를 마지막 봉으로 추가/갱신
+    # 일봉: 장중 실시간 현재가를 마지막 봉으로 추가/갱신 (캐시 저장 안 함 — 항상 최신 유지)
     if tf == "daily":
         candles = fdr_service.append_realtime_candle(candles, ticker)
-
-    ttl = _REDIS_CANDLE_TTL.get(tf, 300)
-    await rcache.set_candles(ticker, tf, candles, ttl=ttl)
+    else:
+        ttl = _REDIS_CANDLE_TTL.get(tf, 600)
+        await rcache.set_candles(ticker, tf, candles, ttl=ttl)
 
     return {
         "ticker":    ticker,
