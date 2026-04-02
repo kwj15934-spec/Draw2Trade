@@ -246,16 +246,10 @@
     _currentTicker = '';
     _renderedKeys  = {};
     _stopWorker();
-    var list = document.getElementById('trade-list');
-    if (list) {
-      list.innerHTML = '<div class="tl-empty">체결 데이터 대기 중...</div>';
+    var dailyList = document.getElementById('trade-list-daily');
+    if (dailyList) {
+      dailyList.innerHTML = '<div class="tl-empty">일별 데이터 대기 중...</div>';
     }
-    var rows = document.getElementById('asking-rows');
-    if (rows) rows.innerHTML = '<div class="asking-empty">실시간 데이터 대기 중...</div>';
-    var askTotalEl = document.getElementById('ask-total-label');
-    var bidTotalEl = document.getElementById('bid-total-label');
-    if (askTotalEl) askTotalEl.textContent = '매도 잔량';
-    if (bidTotalEl) bidTotalEl.textContent = '매수 잔량';
   };
 
   // ── 헬퍼 ──────────────────────────────────────────────────────────────────
@@ -618,7 +612,7 @@
     window._onChartLoaded = function (ticker, market) {
       var thbName = document.getElementById('thb-name');
       if (thbName) thbName.textContent = ticker;
-      if (_activeTab === 'daily') _loadDailyTrades();
+      _loadDailyTrades();
       if (_orig) _orig(ticker, market);
     };
   })();
