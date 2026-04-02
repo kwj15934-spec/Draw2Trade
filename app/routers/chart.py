@@ -135,6 +135,30 @@ async def chart_data(
     }
 
 
+@router.get("/v1/stock/news/{symbol}")
+async def stock_news(symbol: str):
+    """
+    종목 뉴스 반환 (네이버 검색 API 기반).
+
+    Response:
+        {"symbol": "...", "items": [{"title": "...", "url": "...", "date": "...", "source": "..."}, ...]}
+    """
+    import asyncio
+
+    def _sync() -> list[dict]:
+        try:
+            from app.services.naver_service import fetch_news
+            company = data_service.get_company_name(symbol) or symbol
+            return fetch_news(company, display=20)
+        except Exception as e:
+            logger.warning("뉴스 조회 실패 (%s): %s", symbol, e)
+            return []
+
+    loop = asyncio.get_running_loop()
+    items = await loop.run_in_executor(None, _sync)
+    return {"symbol": symbol, "items": items}
+
+
 @router.post("/admin/refresh-ticker-cache")
 async def refresh_ticker_cache():
     """티커 캐시 강제 초기화 후 KRX API 재수집 (배포 서버 갱신용)."""
