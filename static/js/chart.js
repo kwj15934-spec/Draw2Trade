@@ -273,6 +273,7 @@
       handleScroll: true,
       handleScale: true,
       autoSize: true,
+      attributionLogo: true,
     });
 
     // 캔들 시리즈: 상단 75% 영역 사용 (하단 25%는 거래량)
