@@ -99,6 +99,12 @@ def _init_db() -> None:
                 PRIMARY KEY (market_group, symbol)
             )
         """)
+        # 구버전 스키마 마이그레이션
+        for col, coltype in [("name_en", "TEXT"), ("exchange", "TEXT"), ("market", "TEXT")]:
+            try:
+                conn.execute(f"ALTER TABLE symbols ADD COLUMN {col} {coltype}")
+            except sqlite3.OperationalError:
+                pass
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sym ON symbols(market_group, symbol)")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS daily_bars (
