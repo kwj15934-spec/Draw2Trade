@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.services import data_service
 from app.services.redis_cache import rcache
 from app.services import bar_db
+from app.services import fdr_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -97,16 +98,17 @@ async def chart_data(
     if tf not in ("monthly", "weekly", "daily"):
         tf = "daily"
 
-    # Redis 캐시 히트
-    cached = await rcache.get_candles(ticker, tf)
-    if cached is not None:
-        return {
-            "ticker":    ticker,
-            "name":      data_service.get_company_name(ticker),
-            "candles":   cached,
-            "timeframe": tf,
-            "prevClose": 0,
-        }
+    # Redis 캐시 히트 (daily timeframe만 캐시 — 실시간 봉은 캐시 우회)
+    if tf != "daily":
+        cached = await rcache.get_candles(ticker, tf)
+        if cached is not None:
+            return {
+                "ticker":    ticker,
+                "name":      data_service.get_company_name(ticker),
+                "candles":   cached,
+                "timeframe": tf,
+                "prevClose": 0,
+            }
 
     # DB 조회 (전체 기간)
     _db_end = datetime.now().strftime("%Y%m%d")
@@ -116,6 +118,10 @@ async def chart_data(
         raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
 
     candles = bar_db.bars_to_candles(bars, tf)
+
+    # 일봉: 장중 실시간 현재가를 마지막 봉으로 추가/갱신
+    if tf == "daily":
+        candles = fdr_service.append_realtime_candle(candles, ticker)
 
     ttl = _REDIS_CANDLE_TTL.get(tf, 300)
     await rcache.set_candles(ticker, tf, candles, ttl=ttl)

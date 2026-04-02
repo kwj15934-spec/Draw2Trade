@@ -12,9 +12,29 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.services import us_data_service
 from app.services import bar_db
+from app.services import fdr_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/us")
+
+
+def _append_us_realtime(candles: list[dict], symbol: str) -> list[dict]:
+    """미국 주식 일봉 candles에 당일 실시간 봉 추가/갱신."""
+    from datetime import date
+    today_candle = fdr_service.get_today_candle_us(symbol)
+    if today_candle is None:
+        return candles
+
+    today_str = date.today().strftime("%Y-%m-%d")
+    if candles and candles[-1].get("time") == today_str:
+        last = dict(candles[-1])
+        last["close"]  = today_candle["close"]
+        last["high"]   = max(last.get("high", 0),  today_candle["high"])
+        last["low"]    = min(last.get("low", 9e9), today_candle["low"]) if last.get("low", 0) > 0 else today_candle["low"]
+        last["volume"] = today_candle["volume"]
+        return candles[:-1] + [last]
+    else:
+        return candles + [today_candle]
 
 
 @router.get("/list")
@@ -108,6 +128,10 @@ async def us_chart_data(symbol: str, timeframe: str = "daily", poll: int = 0):
             }
             for i, d in enumerate(dates)
         ]
+
+    # 일봉: 장중 실시간 현재가를 마지막 봉으로 추가/갱신
+    if tf == "daily":
+        candles = _append_us_realtime(candles, symbol)
 
     name = us_data_service.get_us_company_name(symbol)
     return {
