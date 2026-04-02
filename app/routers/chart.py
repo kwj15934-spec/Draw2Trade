@@ -148,7 +148,7 @@ async def kospi_categories(market: str | None = Query(None)):
 @router.get("/chart/{ticker}")
 async def chart_data(
     ticker: str,
-    timeframe: str = "monthly",
+    timeframe: str = "daily",
     months: int = 120,
     poll: int = 0,
 ):

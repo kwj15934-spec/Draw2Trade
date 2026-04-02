@@ -23,7 +23,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, chart, dart, fundamental, kis_data, market, pattern, realtime, us_chart, user_data
+from app.routers import auth, chart, dart, fundamental, kis_data, market, pattern, realtime, user_data
+# us_chart: 미국 주식 DB 수집 완료 전까지 비활성화
+# from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
@@ -259,7 +261,7 @@ app.include_router(auth.router)
 app.include_router(chart.router)
 app.include_router(kis_data.router)
 app.include_router(pattern.router)
-app.include_router(us_chart.router)
+# app.include_router(us_chart.router)  # 미국 주식 DB 수집 완료 전까지 비활성화
 app.include_router(user_data.router)
 app.include_router(realtime.router)
 app.include_router(dart.router)
