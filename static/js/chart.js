@@ -539,12 +539,12 @@
         if (label) {
           label.textContent = data.name + ' (' + ticker + ')  |  ' + tfLabel + '  |  ' + data.candles.length + unit;
         }
-        // 헤더바 종목명 업데이트
+        // 헤더바 종목명 + 종가/등락률 업데이트
         var thbName = document.getElementById('thb-name');
         if (thbName) thbName.textContent = ticker;
         var thbFullname = document.getElementById('thb-fullname');
         if (thbFullname) thbFullname.textContent = data.name || '';
-        // 헤더바 마지막 캔들 종가/등락률은 실시간 데이터 수신 후 표시 (초기 로드 시 prevClose 미확정이므로 안 뜸)
+        _initHeaderBar(paintedCandles);
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
         if (searchInp && window.getComputedStyle(searchInp).display !== 'none') {
@@ -874,6 +874,7 @@
     D2T.matchPeriodData = null;
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = o.labelText;
+    _initHeaderBar(o.candles);
     D2T.originState = null;
     var backBtn = document.getElementById('btn-back-to-origin');
     if (backBtn) backBtn.style.display = 'none';
