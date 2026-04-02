@@ -146,27 +146,40 @@ def get_today_candle_us(symbol: str) -> Optional[dict]:
         return None
 
 
-def append_realtime_candle(candles: list[dict], ticker: str) -> list[dict]:
+def append_realtime_candle(candles: list[dict], ticker: str, timeframe: str = "daily") -> list[dict]:
     """
     candles 리스트 마지막에 당일 실시간 봉을 추가.
 
-    - candles 마지막 봉이 이미 오늘 날짜면 close만 업데이트
-    - 아니면 새 봉 추가
+    - daily:   오늘 날짜 봉 추가/갱신
+    - weekly:  이번 주 월요일 키 봉에 갱신
+    - monthly: 이번 달 1일 키 봉에 갱신
     - FDR 실패 시 candles 그대로 반환
     """
     today_candle = get_today_candle(ticker)
     if today_candle is None:
         return candles
 
-    today_str = date.today().strftime("%Y-%m-%d")
+    today = date.today()
 
-    if candles and candles[-1].get("time") == today_str:
-        # 이미 오늘 봉 존재 → close/high/low/volume만 갱신
+    # timeframe별 버킷 키 계산
+    if timeframe == "weekly":
+        monday = today - timedelta(days=today.weekday())
+        bucket_key = monday.strftime("%Y-%m-%d")
+    elif timeframe == "monthly":
+        bucket_key = today.strftime("%Y-%m-01")
+    else:
+        bucket_key = today.strftime("%Y-%m-%d")
+
+    if candles and candles[-1].get("time") == bucket_key:
+        # 이미 해당 봉 존재 → close/high/low/volume 갱신
         last = dict(candles[-1])
         last["close"]  = today_candle["close"]
-        last["high"]   = max(last.get("high", 0),   today_candle["high"])
-        last["low"]    = min(last.get("low", 9e9),  today_candle["low"]) if last.get("low", 0) > 0 else today_candle["low"]
-        last["volume"] = today_candle["volume"]
+        last["high"]   = max(last.get("high", 0),  today_candle["high"])
+        last["low"]    = min(last.get("low", 9e9), today_candle["low"]) if last.get("low", 0) > 0 else today_candle["low"]
+        last["volume"] = (last.get("volume") or 0) + today_candle["volume"] if timeframe != "daily" else today_candle["volume"]
         return candles[:-1] + [last]
     else:
-        return candles + [today_candle]
+        # 새 봉 추가 (time을 버킷 키로 교체)
+        new_candle = dict(today_candle)
+        new_candle["time"] = bucket_key
+        return candles + [new_candle]
