@@ -1305,7 +1305,10 @@
     var thbVol = document.getElementById('thb-vol');
     if (thbVol) thbVol.textContent = '거래량 ' + volStr;
     var thbTime = document.getElementById('thb-time');
-    if (thbTime) thbTime.textContent = typeof last.time === 'string' ? last.time : '';
+    if (thbTime) {
+      var dateStr = typeof last.time === 'string' ? last.time : '';
+      thbTime.textContent = dateStr ? dateStr + ' 종가 기준' : '';
+    }
   }
 
 
