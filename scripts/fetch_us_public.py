@@ -2,6 +2,7 @@
 Tiingo API 미국 주식 데이터 수집 스크립트
 ==========================================
 1. 종목 리스트 수집     → data/market_data.db symbols 테이블 (US_STOCK)
+   (NASDAQ + NYSE + AMEX 전체 — Tiingo supported_tickers.zip 기반)
 2. 전체 기간 일봉 수집  → data/market_data.db daily_bars 테이블 (US_STOCK)
    (시가/고가/저가/종가/수정종가/거래량/등락률)
 
@@ -16,16 +17,19 @@ API: https://api.tiingo.com
 
 cron 예시 (리눅스):
   # 미국장 마감 후 (ET 16:00 = UTC 21:00)
-  0 21 * * 1-5 cd /path/to/Draw2Trade && python scripts/fetch_us_public.py --mode=update
+  0 21 * * 1-5 cd /path/to/Draw2Trade && TIINGO_API_KEY=xxx python scripts/fetch_us_public.py --mode=update
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import sqlite3
 import sys
 import time
+import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -48,8 +52,11 @@ CHECKPOINT_PATH = DATA_DIR / "us_checkpoint.json"
 
 TIINGO_KEY  = os.getenv("TIINGO_API_KEY", "")
 BASE_URL    = "https://api.tiingo.com"
-RATE_SLEEP  = 0.3   # Tiingo 무료: 50,000 req/월, 넉넉하게 간격 유지
+RATE_SLEEP  = 0.3   # Tiingo 무료: 50,000 req/월
 BATCH_SIZE  = 100   # DB upsert 배치
+
+# 수집 대상 거래소 (OTC/Pink 제외)
+TARGET_EXCHANGES = {"NASDAQ", "NYSE", "AMEX"}
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +72,7 @@ def _tiingo_get(path: str, params: dict = {}) -> Optional[list | dict]:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None  # 종목 없음
+            return None
         print(f"  [HTTP오류] {path}: {e.code}")
         return None
     except Exception as e:
@@ -119,61 +126,81 @@ def _init_db() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 종목 리스트 수집 (S&P 500 + NASDAQ 100 우선, 이후 전체)
+# 종목 리스트 수집 (Tiingo supported_tickers.zip — NASDAQ/NYSE/AMEX 전체)
 # ---------------------------------------------------------------------------
 
-# S&P 500 + NASDAQ 100 주요 종목 (초기 수집 대상)
-_MAJOR_SYMBOLS = [
-    # S&P 500 Top 30
-    "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","BRK.B","JPM","V",
-    "UNH","XOM","LLY","JNJ","PG","MA","AVGO","HD","CVX","MRK",
-    "COST","ABBV","PEP","KO","WMT","BAC","MCD","TMO","CSCO","CRM",
-    # NASDAQ 100 추가
-    "AMD","INTC","QCOM","TXN","ADBE","NFLX","PYPL","SBUX","GILD","MDLZ",
-    "REGN","VRTX","PANW","SNPS","CDNS","MRVL","FTNT","KLAC","LRCX","AMAT",
-    "MU","ASML","ADI","MCHP","IDXX","EXC","PCAR","AZN","BIIB","ILMN",
-    # 주요 ETF
-    "SPY","QQQ","IWM","DIA","VTI","VOO","GLD","SLV","USO","TLT",
-]
+def _fetch_supported_tickers() -> list[dict]:
+    """Tiingo supported_tickers.zip 다운로드 → NASDAQ/NYSE/AMEX 종목 파싱."""
+    url = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip"
+    print("Tiingo 전체 종목 리스트 다운로드 중...")
+    try:
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            data = resp.read()
+    except Exception as e:
+        print(f"  [오류] supported_tickers.zip 다운로드 실패: {e}")
+        return []
 
-def fetch_symbols(symbols: list[str] = None) -> list[str]:
-    """종목 리스트를 symbols 테이블에 저장. 반환값: 유효 종목 코드 리스트."""
-    target = symbols or _MAJOR_SYMBOLS
-    print(f"미국 종목 리스트 수집 중... ({len(target)}종목)")
-
-    valid = []
     records = []
-    for i, sym in enumerate(target):
-        data = _tiingo_get(f"/tiingo/daily/{sym}")
-        if not data or not isinstance(data, dict):
-            continue
-        name = data.get("name", "").strip()
-        exch = data.get("exchangeCode", "").strip()
-        records.append({
-            "market_group":     "US_STOCK",
-            "symbol":           sym.upper(),
-            "name_kr":          None,
-            "name_en":          name,
-            "market":           "US",
-            "exchange":         exch,
-            "collected_at_utc": _now_utc(),
-        })
-        valid.append(sym.upper())
-        now_str = datetime.now().strftime("%H:%M:%S")
-        print(f"  [{now_str}] {i+1}/{len(target)} {sym} ({name}) {exch}", flush=True)
-        time.sleep(RATE_SLEEP)
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        csv_name = next((n for n in zf.namelist() if n.endswith(".csv")), None)
+        if not csv_name:
+            print("  [오류] zip 안에 CSV 없음")
+            return []
+        with zf.open(csv_name) as f:
+            reader = csv.DictReader(io.TextIOWrapper(f, encoding="utf-8"))
+            for row in reader:
+                exch = (row.get("exchange") or "").strip().upper()
+                ticker = (row.get("ticker") or "").strip().upper()
+                asset_type = (row.get("assetType") or "").strip().lower()
+                # 주식/ETF만, 대상 거래소만
+                if exch not in TARGET_EXCHANGES:
+                    continue
+                if asset_type not in ("stock", "etf", ""):
+                    continue
+                if not ticker:
+                    continue
+                records.append({
+                    "symbol":   ticker,
+                    "name_en":  (row.get("name") or "").strip(),
+                    "exchange": exch,
+                })
+    return records
 
-    if records:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.executemany("""
-                INSERT OR REPLACE INTO symbols
-                  (market_group, symbol, name_kr, name_en, market, exchange, collected_at_utc)
-                VALUES
-                  (:market_group, :symbol, :name_kr, :name_en, :market, :exchange, :collected_at_utc)
-            """, records)
-            conn.commit()
-    print(f"종목 저장 완료: {len(records)}종목")
-    return valid
+
+def fetch_symbols() -> list[str]:
+    """전체 종목 리스트를 symbols 테이블에 저장. 반환값: 유효 종목 코드 리스트."""
+    tickers = _fetch_supported_tickers()
+    if not tickers:
+        print("종목 리스트 수집 실패.")
+        return []
+
+    print(f"총 {len(tickers):,}종목 (NASDAQ/NYSE/AMEX) DB 저장 중...")
+
+    now = _now_utc()
+    records = [
+        {
+            "market_group":     "US_STOCK",
+            "symbol":           t["symbol"],
+            "name_kr":          None,
+            "name_en":          t["name_en"],
+            "market":           "US",
+            "exchange":         t["exchange"],
+            "collected_at_utc": now,
+        }
+        for t in tickers
+    ]
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.executemany("""
+            INSERT OR REPLACE INTO symbols
+              (market_group, symbol, name_kr, name_en, market, exchange, collected_at_utc)
+            VALUES
+              (:market_group, :symbol, :name_kr, :name_en, :market, :exchange, :collected_at_utc)
+        """, records)
+        conn.commit()
+
+    print(f"종목 저장 완료: {len(records):,}종목")
+    return [t["symbol"] for t in tickers]
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +276,7 @@ def _get_symbols_from_db() -> list[tuple[str, str]]:
     try:
         with sqlite3.connect(DB_PATH) as conn:
             rows = conn.execute(
-                "SELECT symbol, name_en FROM symbols WHERE market_group='US_STOCK'"
+                "SELECT symbol, name_en FROM symbols WHERE market_group='US_STOCK' ORDER BY symbol"
             ).fetchall()
         return [(r[0], r[1] or "") for r in rows]
     except Exception:
@@ -288,7 +315,7 @@ def fetch_bars(mode: str, limit: int = 0) -> None:
     if start_idx > 0:
         print(f"이어받기: {start_idx}/{total} 부터 재개")
 
-    print(f"모드: {mode} | 대상: {total}종목")
+    print(f"모드: {mode} | 대상: {total:,}종목")
 
     batch: list[dict] = []
     processed = start_idx
@@ -325,7 +352,6 @@ def fetch_bars(mode: str, limit: int = 0) -> None:
                 time.sleep(RATE_SLEEP)
                 continue
 
-            # 등락률 계산용 전일 종가
             prev_close = 0.0
             records = []
             for item in sorted(items, key=lambda x: x.get("date", "")):
