@@ -2002,9 +2002,15 @@ function _escHtml(s) {
   // ── 차트 로드 시 자동으로 패널 데이터 갱신 ──────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     var _origOnChartLoaded = window._onChartLoaded;
-    window._onChartLoaded = function (ticker, market) {
-      // 헤더 name을 API에서 가져와 설정 (탭과 무관하게 항상 실행)
-      _fetchAndSetName(ticker, market);
+    window._onChartLoaded = function (ticker, market, chartName) {
+      // 차트 API에서 받은 name이 있으면 즉시 적용, 없으면 finance API에서 가져옴
+      if (chartName) {
+        _updateInfoPanelHeader(ticker, chartName);
+        _infoPanelTicker = ticker;
+        _infoPanelName = chartName;
+      } else {
+        _fetchAndSetName(ticker, market);
+      }
       var activeTab = document.querySelector('.info-tab-btn.active');
       var tab = activeTab ? activeTab.dataset.itab : 'finance';
       if (tab === 'finance')   window.loadFinanceData(ticker, market);

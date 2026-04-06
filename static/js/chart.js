@@ -564,7 +564,7 @@
         var backBtn = document.getElementById('btn-back-to-origin');
         if (backBtn) backBtn.style.display = 'none';
         // 메인 차트 로드: 중앙 패널(info-side-panel)만 갱신
-        if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR');
+        if (typeof window._onChartLoaded === 'function') window._onChartLoaded(ticker, D2T.market || 'KR', data.name || '');
         // 메인 로드 시에는 우측 패널(floating-info-widget) 건드리지 않음
       })
       .catch(function (e) {
@@ -1290,8 +1290,8 @@
       var html = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
         + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
 
-      // 타임프레임 전체 기간 등락 (첫 봉 → 마지막 봉)
-      if (candles.length > 1) {
+      // 타임프레임 전체 기간 등락 — 월봉/주봉에서만 표시 (일봉은 생략)
+      if (candles.length > 1 && D2T.timeframe !== 'daily') {
         var first = candles[0];
         if (first.close) {
           var tfPct = ((close - first.close) / first.close * 100).toFixed(2);
