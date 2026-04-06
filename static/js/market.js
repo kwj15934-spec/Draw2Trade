@@ -244,8 +244,8 @@
     if (!badge || !textEl) return;
 
     if (period && period !== '1d') {
-      badge.className    = 'mkt-freshness';
-      textEl.textContent = '전일 종가 기준';
+      badge.className    = 'mkt-freshness recent';
+      textEl.textContent = '● DB 종가 기준';
       return;
     }
 
@@ -269,7 +269,7 @@
 
     if (isRealtime && ageSec < 300) {
       badge.className    = 'mkt-freshness fresh';
-      textEl.textContent = '● 실시간(KIS)';
+      textEl.textContent = '● 최신 DB';
     } else if (!isFallback && ageSec < 3600) {
       badge.className = 'mkt-freshness recent';
       if (isKR && kstHM >= 1530 && kstHM < 1800) {
@@ -352,15 +352,11 @@
 
     var srcHintEl = document.getElementById('mkt-source-hint');
     if (srcHintEl) {
-      if (market === 'US' && !isFallback) {
-        var parts = [];
-        if (rankings.source) parts.push(rankings.source);
-        if (rankings.us_nday != null && rankings.us_nday !== '') parts.push('NDAY=' + rankings.us_nday);
-        if (rankings.us_nday_note) parts.push(rankings.us_nday_note);
-        srcHintEl.textContent = parts.join(' · ');
-      } else if (market === 'KR' && !isFallback && rankings.fid_strt_date
-          && rankings.source && String(rankings.source).indexOf('kis_period') === 0) {
-        srcHintEl.textContent = '기간: ' + rankings.fid_strt_date + ' ~ ' + (rankings.fid_end_date || '');
+      var src = rankings.source || '';
+      if (src === 'db' && !isFallback) {
+        var period = rankings.period || '1d';
+        var periodLabel = {'1d':'1일','1w':'1주','1m':'1개월','3m':'3개월','6m':'6개월'}[period] || period;
+        srcHintEl.textContent = 'DB 기준 · ' + periodLabel + ' 합산';
       } else {
         srcHintEl.textContent = '';
       }
@@ -384,9 +380,7 @@
 
     if (!items.length) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--d2t-text-3);">'
-        + (D2T.dashboardState.market === 'US'
-          ? 'KIS API를 통해 미국 주식 데이터를 불러오는 중이거나, API 설정을 확인하세요.'
-          : '현재 조회 가능한 데이터가 없습니다.<br><small style="opacity:.6;">장 마감 후에는 데이터가 제한될 수 있습니다.</small>')
+        + '현재 조회 가능한 데이터가 없습니다.<br><small style="opacity:.6;">DB에 해당 기간 데이터가 없을 수 있습니다.</small>'
         + '</td></tr>';
       return;
     }
