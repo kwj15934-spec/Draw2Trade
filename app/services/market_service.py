@@ -394,119 +394,179 @@ async def fetch_rankings(
     def _db_rankings():
         import sqlite3
         from pathlib import Path
+        from app.services.data_service import all_names
         db_path = Path(__file__).resolve().parent.parent.parent / "data" / "market_data.db"
         if not db_path.exists():
             return []
 
         conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
         try:
+            # latest_date 한 번만 조회
+            latest_date = conn.execute(
+                "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK'"
+            ).fetchone()[0] or end_date
+
+            # ── 랭킹 쿼리 (서브쿼리 없이 WITH로 최신일 미리 확정) ──────────
             if category == "trade_value":
                 rows = conn.execute(
                     """
-                    SELECT symbol, SUM(trade_value) as total_tv, MAX(close) as price,
-                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN close ELSE NULL END) as last_close,
-                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN change_rate ELSE NULL END) as last_rate
-                    FROM daily_bars
-                    WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
-                      AND trade_value > 0
-                    GROUP BY symbol
-                    ORDER BY total_tv DESC
-                    LIMIT ?
+                    WITH ranked AS (
+                        SELECT symbol, SUM(trade_value) as total_tv
+                        FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
+                          AND trade_value > 0
+                        GROUP BY symbol
+                        ORDER BY total_tv DESC
+                        LIMIT ?
+                    ),
+                    latest AS (
+                        SELECT symbol, close, change_rate
+                        FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date = ?
+                    )
+                    SELECT r.symbol, r.total_tv, l.close, l.change_rate
+                    FROM ranked r LEFT JOIN latest l ON r.symbol = l.symbol
+                    ORDER BY r.total_tv DESC
                     """,
-                    (start_date, end_date, top_n),
+                    (start_date, end_date, top_n, latest_date),
                 ).fetchall()
-                return [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[3] or r[2] or 0), "change_rate": round(float(r[4] or 0), 2)} for r in rows if r[0]]
+                items_raw = [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
 
             elif category == "volume":
                 rows = conn.execute(
                     """
-                    SELECT symbol, SUM(volume) as total_vol,
-                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN close ELSE NULL END) as last_close,
-                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN change_rate ELSE NULL END) as last_rate
-                    FROM daily_bars
-                    WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
-                      AND volume > 0
-                    GROUP BY symbol
-                    ORDER BY total_vol DESC
-                    LIMIT ?
+                    WITH ranked AS (
+                        SELECT symbol, SUM(volume) as total_vol
+                        FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
+                          AND volume > 0
+                        GROUP BY symbol
+                        ORDER BY total_vol DESC
+                        LIMIT ?
+                    ),
+                    latest AS (
+                        SELECT symbol, close, change_rate
+                        FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date = ?
+                    )
+                    SELECT r.symbol, r.total_vol, l.close, l.change_rate
+                    FROM ranked r LEFT JOIN latest l ON r.symbol = l.symbol
+                    ORDER BY r.total_vol DESC
                     """,
-                    (start_date, end_date, top_n),
+                    (start_date, end_date, top_n, latest_date),
                 ).fetchall()
-                return [{"ticker": r[0], "volume": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+                items_raw = [{"ticker": r[0], "volume": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
 
             elif category in ("rise", "fall"):
-                latest_date_row = conn.execute(
-                    "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK'"
-                ).fetchone()
-                latest_date = latest_date_row[0] if latest_date_row else end_date
-
+                order = "DESC" if category == "rise" else "ASC"
                 if period == "1d":
-                    # 당일 change_rate(전일 대비 등락률) 직접 사용
                     rows = conn.execute(
-                        """
+                        f"""
                         SELECT symbol, close, change_rate, trade_value, volume
                         FROM daily_bars
                         WHERE market_group='KR_STOCK' AND trade_date = ?
                           AND close > 0 AND change_rate IS NOT NULL
-                        ORDER BY change_rate {}
+                        ORDER BY change_rate {order}
                         LIMIT ?
-                        """.format("DESC" if category == "rise" else "ASC"),
+                        """,
                         (latest_date, top_n),
                     ).fetchall()
-                    return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
+                    items_raw = [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
                 else:
-                    # 기간 시작일 종가 대비 현재 종가 등락률
-                    base_date_row = conn.execute(
-                        """
-                        SELECT MAX(trade_date) FROM daily_bars
-                        WHERE market_group='KR_STOCK' AND trade_date < ?
-                        """,
+                    base_date = conn.execute(
+                        "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK' AND trade_date < ?",
                         (start_date,),
-                    ).fetchone()
-                    base_date = base_date_row[0] if base_date_row and base_date_row[0] else start_date
-
+                    ).fetchone()[0] or start_date
                     rows = conn.execute(
-                        """
-                        SELECT t.symbol,
-                               t.close as today_close,
-                               b.close as base_close,
-                               (t.close - b.close) * 100.0 / b.close as change_pct,
-                               t.trade_value,
-                               t.volume
+                        f"""
+                        SELECT t.symbol, t.close, b.close,
+                               (t.close - b.close) * 100.0 / b.close,
+                               t.trade_value, t.volume
                         FROM daily_bars t
-                        JOIN daily_bars b
-                          ON t.symbol = b.symbol AND b.market_group='KR_STOCK' AND b.trade_date = ?
+                        JOIN daily_bars b ON t.symbol = b.symbol
+                          AND b.market_group='KR_STOCK' AND b.trade_date = ?
                         WHERE t.market_group='KR_STOCK' AND t.trade_date = ?
                           AND t.close > 0 AND b.close > 0
-                        ORDER BY change_pct {}
+                        ORDER BY 4 {order}
                         LIMIT ?
-                        """.format("DESC" if category == "rise" else "ASC"),
+                        """,
                         (base_date, latest_date, top_n),
                     ).fetchall()
-                    return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": int(r[4] or 0), "volume": int(r[5] or 0)} for r in rows if r[0]]
+                    items_raw = [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": int(r[4] or 0), "volume": int(r[5] or 0)} for r in rows if r[0]]
 
             else:
-                # strength: 당일 거래대금 상위 (fallback)
                 rows = conn.execute(
                     """
                     SELECT symbol, trade_value, close, change_rate
                     FROM daily_bars
-                    WHERE market_group='KR_STOCK'
-                      AND trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK')
+                    WHERE market_group='KR_STOCK' AND trade_date = ?
                       AND trade_value > 0
                     ORDER BY trade_value DESC
                     LIMIT ?
                     """,
-                    (top_n,),
+                    (latest_date, top_n),
                 ).fetchall()
-                return [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+                items_raw = [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+
+            if not items_raw:
+                return []
+
+            # ── 스파크라인 한 번에 일괄 조회 ──────────────────────────────
+            tickers = [it["ticker"] for it in items_raw]
+            placeholders = ",".join("?" * len(tickers))
+            spark_rows = conn.execute(
+                f"""
+                SELECT symbol, trade_date, close
+                FROM daily_bars
+                WHERE market_group='KR_STOCK'
+                  AND trade_date >= ? AND trade_date <= ?
+                  AND symbol IN ({placeholders})
+                  AND close > 0
+                ORDER BY symbol, trade_date
+                """,
+                (start_date, end_date, *tickers),
+            ).fetchall()
+
+            # symbol → closes 딕셔너리
+            spark_map: dict[str, list[float]] = {}
+            for row in spark_rows:
+                sym = row[0]
+                if sym not in spark_map:
+                    spark_map[sym] = []
+                spark_map[sym].append(float(row[2]))
+
+            # 종목명 맵
+            names = all_names()
+            spark_days = _PERIOD_DAYS.get(period, 20)
+
+            result = []
+            for item in items_raw:
+                ticker = item["ticker"]
+                closes = spark_map.get(ticker, [])
+                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+                rate = item.get("change_rate", 0)
+                result.append({
+                    "ticker":         ticker,
+                    "name":           names.get(ticker, ticker),
+                    "price":          item.get("price", 0),
+                    "change_rate":    f"{rate:+.2f}" if isinstance(rate, float) else str(rate),
+                    "volume":         item.get("volume", 0),
+                    "trade_value":    item.get("trade_value", 0),
+                    "sparkline":      spark,
+                    "open_price":     float(spark[0]) if spark else item.get("price", 0),
+                    "baseline_price": float(spark[0]) if spark else item.get("price", 0),
+                    "trend":          _classify_trend(spark),
+                    "_color_up":      rate >= 0,
+                })
+            return result
 
         finally:
             conn.close()
 
-    items_raw = await loop.run_in_executor(None, _db_rankings)
+    enriched = await loop.run_in_executor(None, _db_rankings)
 
-    if not items_raw:
+    if not enriched:
         snap = _load_snapshot(snap_name)
         if snap and snap.get("data"):
             snap_data = snap["data"]
@@ -515,41 +575,6 @@ async def fetch_rankings(
             logger.info("랭킹 스냅샷 fallback [%s] (%s)", category, snap.get("saved_at"))
             return snap_data
         return {"items": [], "as_of": "", "fallback": True, "category": category}
-
-    # 종목명 + 스파크라인 보강
-    def _enrich_db_items():
-        from app.services.data_service import all_names
-        from app.services import bar_db
-        names = all_names()
-        spark_days = _PERIOD_DAYS.get(period, 20)
-        result = []
-        for item in items_raw:
-            ticker = item["ticker"]
-            name = names.get(ticker, ticker)
-            rate = item.get("change_rate", 0)
-            rate_str = f"{rate:+.2f}" if isinstance(rate, float) else str(rate)
-
-            # 스파크라인: DB에서 최근 spark_days일 종가
-            bars = bar_db.get_daily_bars("KR_STOCK", ticker, start_date, end_date)
-            closes = [float(b["close"]) for b in bars if b.get("close", 0) > 0]
-            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-
-            result.append({
-                "ticker":         ticker,
-                "name":           name,
-                "price":          item.get("price", 0),
-                "change_rate":    rate_str,
-                "volume":         item.get("volume", 0),
-                "trade_value":    item.get("trade_value", 0),
-                "sparkline":      spark,
-                "open_price":     float(spark[0]) if spark else item.get("price", 0),
-                "baseline_price": float(spark[0]) if spark else item.get("price", 0),
-                "trend":          _classify_trend(spark),
-                "_color_up":      rate >= 0,
-            })
-        return result
-
-    enriched = await loop.run_in_executor(None, _enrich_db_items)
 
     now = datetime.now(_KST)
     result = {

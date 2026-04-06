@@ -145,6 +145,14 @@ def _init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_bars_sym
             ON daily_bars(market_group, symbol)
         """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_bars_date
+            ON daily_bars(market_group, trade_date)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_bars_sym_date
+            ON daily_bars(market_group, symbol, trade_date)
+        """)
         conn.commit()
 
 
