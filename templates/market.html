@@ -396,6 +396,7 @@
 }
 .mkt-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -414,13 +415,13 @@
   background: var(--d2t-bg-2, #18181c);
   z-index: 1;
 }
-.mkt-th-rank  { width: 36px;  text-align: center; }
-.mkt-th-name  { min-width: 120px; }
-.mkt-th-price { width: 90px;  text-align: right; }
-.mkt-th-rate  { width: 80px;  text-align: right; }
+.mkt-th-rank  { width: 40px;  text-align: center; }
+.mkt-th-name  { width: 160px; text-align: left; }
+.mkt-th-price { width: 100px; text-align: right; }
+.mkt-th-rate  { width: 85px;  text-align: right; }
 .mkt-th-vol   { width: 100px; text-align: right; }
 .mkt-th-spark { width: 90px;  text-align: center; }
-.mkt-th-trend { width: 180px; text-align: left; padding-left: 12px; }
+.mkt-th-trend { text-align: left; padding-left: 12px; }
 
 .mkt-table tbody tr {
   border-bottom: 1px solid var(--d2t-border-0, rgba(255,255,255,0.04));
@@ -432,6 +433,9 @@
 .mkt-table td {
   padding: 12px 14px;
   vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 td.mkt-price, td.mkt-rate, td.mkt-vol { text-align: right; }
 
@@ -446,6 +450,7 @@ td.mkt-price, td.mkt-rate, td.mkt-vol { text-align: right; }
 .mkt-rank-top3 { color: var(--d2t-cyan, #00d4aa); }
 
 /* 종목명 */
+td.mkt-name-cell { overflow: visible; }
 .mkt-name {
   font-size: 13px;
   font-weight: 600;
@@ -453,7 +458,6 @@ td.mkt-price, td.mkt-rate, td.mkt-vol { text-align: right; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
 }
 .mkt-ticker {
   font-family: 'JetBrains Mono', monospace;

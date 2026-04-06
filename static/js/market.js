@@ -423,7 +423,7 @@
         + ' data-href="'    + href + '"'
         + ' class="mkt-row-clickable">'
         + '<td class="mkt-rank' + rankCls + '">' + rank + '</td>'
-        + '<td>'
+        + '<td class="mkt-name-cell">'
           + '<div class="mkt-name" title="' + _esc(item.name) + '">' + _esc(item.name) + '</div>'
           + '<div class="mkt-ticker">' + _esc(item.ticker) + '</div>'
         + '</td>'
