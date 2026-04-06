@@ -59,9 +59,10 @@ RATE_SLEEP = 0.5   # 공공데이터포털 권장 간격
 # ---------------------------------------------------------------------------
 
 def _api_get(params: dict) -> dict:
-    params["serviceKey"] = API_KEY
+    # serviceKey는 이중 인코딩 방지를 위해 raw로 직접 붙임
     params["resultType"] = "json"
-    url = BASE_URL + "?" + urllib.parse.urlencode(params)
+    query = urllib.parse.urlencode(params)
+    url = BASE_URL + "?serviceKey=" + API_KEY + "&" + query
     try:
         with urllib.request.urlopen(url, timeout=30) as resp:
             return json.loads(resp.read().decode("utf-8"))
