@@ -196,13 +196,30 @@ async def fetch_index_quotes() -> dict:
 
 # ── 추세 라벨 판정 ─────────────────────────────────────────────────────────────
 
-def _classify_trend(closes: list[float]) -> dict:
+def _rate_to_trend(rate: float) -> dict:
+    """등락률 하나로 5단계 추세 반환 (데이터 부족 폴백용)."""
+    if rate >= 5.0:
+        return {"label": "급등", "direction": "up",   "strength": 90, "reason": f"당일 등락률 {rate:+.2f}%"}
+    elif rate >= 0.5:
+        return {"label": "상승", "direction": "up",   "strength": 60, "reason": f"당일 등락률 {rate:+.2f}%"}
+    elif rate > -0.5:
+        return {"label": "보합", "direction": "neutral", "strength": 30, "reason": f"당일 등락률 {rate:+.2f}%"}
+    elif rate > -5.0:
+        return {"label": "하락", "direction": "down", "strength": 60, "reason": f"당일 등락률 {rate:+.2f}%"}
+    else:
+        return {"label": "급락", "direction": "down", "strength": 90, "reason": f"당일 등락률 {rate:+.2f}%"}
+
+
+def _classify_trend(closes: list[float], change_rate: float | None = None) -> dict:
     """
     최근 종가 배열(최소 5개)로 추세 라벨을 판정한다.
     투자 추천이 아닌 통계적 분류.
+    데이터 부족 시 change_rate가 있으면 등락률 기반 5단계로 폴백.
     """
     if not closes or len(closes) < 5:
-        return {"label": "데이터 부족", "direction": "neutral", "strength": 0}
+        if change_rate is not None:
+            return _rate_to_trend(change_rate)
+        return {"label": "—", "direction": "neutral", "strength": 0}
 
     try:
         import numpy as np
@@ -373,7 +390,7 @@ async def _build_fallback_rankings(category: str, top_n: int) -> dict:
                     "sparkline": spark,
                     "open_price": spark[0] if spark else int(last_close),
                     "baseline_price": spark[0] if spark else int(last_close),
-                    "trend": _classify_trend(closes[-20:]),
+                    "trend": _classify_trend(closes[-20:], change_rate),
                     "_sort_vol": last_vol,
                     "_sort_tv": last_tv,
                     "_sort_rate": change_rate,
@@ -605,7 +622,7 @@ async def fetch_rankings(
                     "sparkline":      spark,
                     "open_price":     float(spark[0]) if spark else item.get("price", 0),
                     "baseline_price": float(spark[0]) if spark else item.get("price", 0),
-                    "trend":          _classify_trend(spark),
+                    "trend":          _classify_trend(spark, rate if isinstance(rate, float) else None),
                     "_color_up":      rate >= 0,
                 })
             return result
@@ -848,7 +865,7 @@ async def fetch_us_rankings(
                 "sparkline":      spark,
                 "open_price":     float(spark[0]) if spark else item.get("price", 0),
                 "baseline_price": float(spark[0]) if spark else item.get("price", 0),
-                "trend":          _classify_trend(spark),
+                "trend":          _classify_trend(spark, rate if isinstance(rate, float) else None),
                 "_color_up":      rate >= 0,
                 "market":         "US",
             })
@@ -901,7 +918,7 @@ def _enrich_us(item: dict, period: str) -> dict:
                         spark = closes[-spark_days:] if len(closes) >= spark_days else closes
                         item["sparkline"]      = spark
                         item["baseline_price"] = float(spark[0])
-                        item["trend"]          = _classify_trend(spark)
+                        item["trend"]          = _classify_trend(spark, rate_num)
                         return item
             except Exception as e:
                 logger.debug("_enrich_us OHLCV 실패 [%s]: %s", ticker, e)
@@ -913,7 +930,7 @@ def _enrich_us(item: dict, period: str) -> dict:
             spark = closes[-spark_days:] if len(closes) >= spark_days else closes
             item["sparkline"]      = list(spark)
             item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
-            item["trend"]          = _classify_trend(list(spark))
+            item["trend"]          = _classify_trend(list(spark), rate_num)
             return item
 
     except Exception as e:
@@ -1008,7 +1025,7 @@ def _enrich_krx(item: dict, period: str) -> dict:
                         if float(r.get("stck_clpr") or 0) > 0
                     ]
                     if len(closes) >= 2:
-                        item["trend"]          = _classify_trend(closes)
+                        item["trend"]          = _classify_trend(closes, rate_num)
                         item["sparkline"]      = closes
                         item["baseline_price"] = closes[0]
                         return item
@@ -1022,7 +1039,7 @@ def _enrich_krx(item: dict, period: str) -> dict:
         if data and data.get("close"):
             closes = data["close"]
             spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-            item["trend"]          = _classify_trend(list(spark))
+            item["trend"]          = _classify_trend(list(spark), rate_num)
             item["sparkline"]      = list(spark)
             item["baseline_price"] = float(spark[0]) if spark else item.get("price", 0)
             return item
