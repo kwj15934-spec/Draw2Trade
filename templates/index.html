@@ -915,27 +915,32 @@
     var topPnl  = document.getElementById('sidebar-top-panel');
     var sidebar = document.querySelector('.d2t-sidebar');
     if (!vres || !topPnl || !sidebar) return;
-    var resizing = false, startY, startH;
+    var _dragging = false, startY, startH, _raf = null;
     var MIN_H = 80, MAX_RATIO = 0.75;
     vres.addEventListener('mousedown', function (e) {
       e.preventDefault();
-      resizing = true;
+      _dragging = true;
       startY = e.clientY;
       startH = topPnl.offsetHeight;
       document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'row-resize';
       vres.classList.add('dragging');
     });
     document.addEventListener('mousemove', function (e) {
-      if (!resizing) return;
-      var delta  = e.clientY - startY;
-      var maxH   = Math.floor(sidebar.offsetHeight * MAX_RATIO);
-      var newH   = Math.min(maxH, Math.max(MIN_H, startH + delta));
-      topPnl.style.height = newH + 'px';
+      if (!_dragging) return;
+      if (_raf) return;
+      _raf = requestAnimationFrame(function () {
+        _raf = null;
+        var maxH = Math.floor(sidebar.offsetHeight * MAX_RATIO);
+        var newH = Math.min(maxH, Math.max(MIN_H, startH + (e.clientY - startY)));
+        topPnl.style.height = newH + 'px';
+      });
     });
     document.addEventListener('mouseup', function () {
-      if (!resizing) return;
-      resizing = false;
+      if (!_dragging) return;
+      _dragging = false;
       document.body.style.userSelect = '';
+      document.body.style.cursor = '';
       vres.classList.remove('dragging');
     });
   })();
@@ -944,32 +949,34 @@
   (function initSidebarResize() {
     var handle = document.getElementById('sidebar-resize-handle');
     if (!handle) return;
-    var resizing = false, startX, startW;
+    var _dragging = false, startX, startW, _raf = null;
     var MIN_W = 200, MAX_W = 520;
     handle.addEventListener('mousedown', function (e) {
       e.preventDefault();
-      resizing = true;
+      _dragging = true;
       startX = e.clientX;
       startW = parseInt(getComputedStyle(document.documentElement)
                          .getPropertyValue('--sidebar-w')) || 260;
       document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
       handle.classList.add('dragging');
     });
     document.addEventListener('mousemove', function (e) {
-      if (!resizing) return;
-      var delta = startX - e.clientX;
-      var nw = Math.min(MAX_W, Math.max(MIN_W, startW + delta));
-      document.documentElement.style.setProperty('--sidebar-w', nw + 'px');
-      if (window.D2T && D2T.chart) {
-        var chartEl = document.getElementById('chart-container');
-        if (chartEl) D2T.chart.applyOptions({ width: chartEl.offsetWidth });
-      }
+      if (!_dragging) return;
+      if (_raf) return;
+      _raf = requestAnimationFrame(function () {
+        _raf = null;
+        var nw = Math.min(MAX_W, Math.max(MIN_W, startW + (startX - e.clientX)));
+        document.documentElement.style.setProperty('--sidebar-w', nw + 'px');
+      });
     });
     document.addEventListener('mouseup', function () {
-      if (!resizing) return;
-      resizing = false;
+      if (!_dragging) return;
+      _dragging = false;
       document.body.style.userSelect = '';
+      document.body.style.cursor = '';
       handle.classList.remove('dragging');
+      _syncChartSize(); // mouseup 때만 차트 리사이즈
     });
   })();
 
@@ -1400,15 +1407,8 @@ function _escHtml(s) {
     if (main) main.style.setProperty('--quote-w', w + 'px');
   }
 
-  /** 차트 캔버스를 부모 wrapper 크기에 동기화 */
+  /** 차트 캔버스 동기화 — autoSize:true이므로 syncCanvas만 호출 */
   function _syncChartSize() {
-    var container = document.getElementById('chart-container');
-    var wrapper   = document.getElementById('chart-wrapper');
-    if (container && wrapper && window.D2T && D2T.chart) {
-      var w = container.clientWidth;
-      var h = wrapper.clientHeight;
-      if (w > 0 && h > 0) D2T.chart.resize(w, h);
-    }
     if (typeof window.syncCanvas === 'function') window.syncCanvas();
   }
 
@@ -1416,11 +1416,10 @@ function _escHtml(s) {
     var handle = document.getElementById('quote-resize-handle');
     if (!handle) return;
 
-    // 저장된 너비 복원
     var saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
     if (saved && saved >= MIN_W && saved <= MAX_W) applyWidth(saved);
 
-    var startX, startW;
+    var startX, startW, _raf = null, _dragging = false;
 
     handle.addEventListener('mousedown', function (e) {
       e.preventDefault();
@@ -1428,39 +1427,33 @@ function _escHtml(s) {
       if (!panel) return;
       startX = e.clientX;
       startW = panel.offsetWidth;
+      _dragging = true;
       handle.classList.add('dragging');
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     });
 
-    var _dragResizeRaf = null;
     document.addEventListener('mousemove', function (e) {
-      if (!handle.classList.contains('dragging')) return;
-      var delta = startX - e.clientX;
-      var newW = clamp(startW + delta, MIN_W, MAX_W);
-      applyWidth(newW);
-      // rAF 쓰로틀: 드래그 중 차트도 부드럽게 리사이즈
-      if (!_dragResizeRaf) {
-        _dragResizeRaf = requestAnimationFrame(function () {
-          _dragResizeRaf = null;
-          _syncChartSize();
-        });
-      }
+      if (!_dragging) return;
+      if (_raf) return; // 이전 프레임 처리 중이면 스킵
+      _raf = requestAnimationFrame(function () {
+        _raf = null;
+        var newW = clamp(startW + (startX - e.clientX), MIN_W, MAX_W);
+        applyWidth(newW);
+      });
     });
 
     document.addEventListener('mouseup', function () {
-      if (!handle.classList.contains('dragging')) return;
+      if (!_dragging) return;
+      _dragging = false;
       handle.classList.remove('dragging');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       var panel = document.getElementById('quote-panel');
       if (panel) localStorage.setItem(STORAGE_KEY, panel.offsetWidth);
-      // ResizeObserver가 chart-wrapper 크기 변화를 감지하여 자동 리사이즈
-      // 즉시 반영이 필요한 경우 수동 트리거
-      _syncChartSize();
+      _syncChartSize(); // mouseup 때만 차트 리사이즈
     });
 
-    // 더블클릭 → 기본 너비로 리셋
     handle.addEventListener('dblclick', function () {
       applyWidth(220);
       localStorage.setItem(STORAGE_KEY, 220);
@@ -1524,39 +1517,44 @@ function _escHtml(s) {
 
       var handle = document.getElementById('info-panel-resize-handle');
       if (!handle) return;
-      var startX, startW;
+      var startX, startW, _dragging = false, _raf = null;
 
       handle.addEventListener('mousedown', function (e) {
-        if (_infoPanelCollapsed) return;
         e.preventDefault();
         var panel = document.getElementById('info-side-panel');
         startX = e.clientX;
         startW = panel ? panel.offsetWidth : INFO_PANEL_W;
+        _dragging = true;
         handle.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
       });
 
       document.addEventListener('mousemove', function (e) {
-        if (!handle.classList.contains('dragging')) return;
-        var delta = startX - e.clientX; // 왼쪽으로 드래그 = 패널 확장
-        var newW = Math.min(INFO_MAX_W, Math.max(INFO_MIN_W, startW + delta));
-        _applyInfoW(newW);
+        if (!_dragging) return;
+        if (_raf) return;
+        _raf = requestAnimationFrame(function () {
+          _raf = null;
+          var newW = Math.min(INFO_MAX_W, Math.max(INFO_MIN_W, startW + (startX - e.clientX)));
+          _applyInfoW(newW);
+        });
       });
 
       document.addEventListener('mouseup', function () {
-        if (!handle.classList.contains('dragging')) return;
+        if (!_dragging) return;
+        _dragging = false;
         handle.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         var panel = document.getElementById('info-side-panel');
         if (panel) localStorage.setItem(INFO_RESIZE_KEY, panel.offsetWidth);
+        _syncChartSize();
       });
 
-      // 더블클릭 → 기본 너비 리셋
       handle.addEventListener('dblclick', function () {
         _applyInfoW(320);
         localStorage.setItem(INFO_RESIZE_KEY, 320);
+        _syncChartSize();
       });
     });
   })();
