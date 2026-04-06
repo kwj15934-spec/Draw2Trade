@@ -126,7 +126,7 @@
     .news-card:hover { background: rgba(255,255,255,.025); padding-left: 8px; padding-right: 8px; }
 
     .news-thumb {
-      flex-shrink: 0; width: 80px; height: 62px;
+      flex-shrink: 0; width: 100px; height: 68px;
       border-radius: 7px; overflow: hidden;
       background: var(--bg3); display: flex; align-items: center; justify-content: center;
     }
@@ -139,6 +139,13 @@
       background: linear-gradient(135deg, #14141a 0%, #1c1c24 100%);
     }
     .news-thumb-svg svg { width: 56px; height: 36px; }
+
+    /* OG 이미지 썸네일 */
+    .news-thumb-og {
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 7px;
+      display: block;
+    }
 
     /* 파비콘 기반 썸네일 (큰 로고 + 그라데이션 배경) */
     .news-thumb-fav {
@@ -793,12 +800,22 @@
     var mkt    = it._market || 'KR';
     var rankBadge = rank ? '<span class="news-rank-badge">' + rank + '</span>' : '';
 
-    /* ── 썸네일: 파비콘 크게 + 레터마크 조합 ─────── */
-    var origUrl = it.orig_url || it.url || '';
-    var favUrl  = _faviconUrl(origUrl);
+    /* ── 썸네일: OG이미지 > 파비콘 > 레터마크 순 ─── */
+    var origUrl  = it.orig_url || it.url || '';
+    var imageUrl = it.image_url || '';
+    var favUrl   = _faviconUrl(origUrl);
     var fallback = _makeFallback(mkt, sym);
     var thumbHtml;
-    if (favUrl) {
+    if (imageUrl) {
+      /* OG 이미지: onerror 시 파비콘 폴백으로 대체 */
+      var favFb = favUrl
+        ? '<div class=\\"news-thumb-fav\\" style=\\"background:linear-gradient(145deg,#14141a 0%,#1c1c24 100%);\\">' +
+          '<img src=\\"' + esc(favUrl) + '\\" alt=\\"\\" width=\\"28\\" height=\\"28\\" loading=\\"lazy\\" style=\\"border-radius:4px;\\">' +
+          '</div>'
+        : fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      thumbHtml = '<img class="news-thumb-og" src="' + esc(imageUrl) + '" alt="" loading="lazy" ' +
+        'onerror="this.parentNode.innerHTML=\'' + favFb.replace(/'/g, "\\'") + '\'">';
+    } else if (favUrl) {
       var fbEsc = fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       thumbHtml = '<div class="news-thumb-fav" style="background:linear-gradient(145deg,#14141a 0%,#1c1c24 100%);">' +
         '<img src="' + esc(favUrl) + '" alt="" width="28" height="28" loading="lazy" ' +

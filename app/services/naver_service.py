@@ -349,11 +349,56 @@ def fetch_news(company_name: str, display: int = 20) -> list[dict]:
                     it["title"][:50], it["score"], it["source"],
                 )
 
+        # ── OG 이미지 수집 (상위 10건 병렬) ───────────────────────
+        _attach_og_images(items[:10])
+
         return items
 
     except Exception as e:
         logger.warning("네이버 뉴스 API 실패 (%s): %s", company_name, e)
         return []
+
+
+def _attach_og_images(items: list[dict]) -> None:
+    """상위 N건의 뉴스에 image_url(og:image) 병렬 수집 후 in-place 추가."""
+    import concurrent.futures
+
+    def _fetch_one(it: dict) -> None:
+        # 네이버 뉴스 링크 우선 (og:image 잘 있음), 없으면 원문 링크
+        nav = it.get("orig_url", "") or it.get("url", "")
+        url = it.get("url", "") or nav
+        img = _fetch_og_image(url)
+        it["image_url"] = img
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        list(pool.map(_fetch_one, items))
+
+
+def _fetch_og_image(url: str, timeout: int = 3) -> str:
+    """기사 URL에서 og:image 메타태그 URL 추출. 실패 시 빈 문자열."""
+    if not url:
+        return ""
+    try:
+        req = _req.Request(url)
+        req.add_header("User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36")
+        req.add_header("Accept", "text/html,application/xhtml+xml")
+        with _req.urlopen(req, timeout=timeout) as resp:
+            # 처음 8KB만 읽어서 og:image 추출 (속도 최적화)
+            raw = resp.read(8192).decode("utf-8", errors="ignore")
+        # og:image content 추출
+        m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', raw, re.I)
+        if not m:
+            m = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', raw, re.I)
+        if m:
+            img = m.group(1).strip()
+            if img.startswith("http"):
+                return img
+    except Exception:
+        pass
+    return ""
 
 
 def _strip_tags(text: str) -> str:
