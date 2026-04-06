@@ -658,8 +658,10 @@
       display: grid;
       /* 차트(유동) | 스플리터(5px) | 호가(고정) | 컨텍스트패널(접기가능) | 사이드바스플리터(4px) | 사이드바(고정) */
       grid-template-columns: 1fr 5px var(--quote-w, 200px) var(--info-panel-w, 320px) 4px var(--sidebar-w, 260px);
+      grid-template-rows: 1fr;
       flex: 1;
       min-height: 0;
+      height: 0;
       overflow: hidden;
     }
 
