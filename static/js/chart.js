@@ -23,7 +23,7 @@
     candles:         null,
     ticker:          null,
     loading:         false,
-    timeframe:       'monthly',   // 'monthly' | 'weekly' | 'daily'
+    timeframe:       'daily',      // 'monthly' | 'weekly' | 'daily'
     market:          'KR',        // 'KR' | 'US'
     exchange:        '',          // '' | 'NAS' | 'NYS' | 'AMS'  (US only)
     krMarket:        '',          // '' | 'KOSPI' | 'KOSDAQ'  (KR only)
@@ -42,7 +42,7 @@
   var INTRADAY_TF = { '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 };
 
   // 시장별 기본 타임프레임
-  var MARKET_DEFAULT_TF = { KR: 'monthly', US: 'daily' };
+  var MARKET_DEFAULT_TF = { KR: 'daily', US: 'daily' };
 
   var DRAW_COLOR = '#ff6b35';
 
@@ -541,9 +541,9 @@
         }
         // 헤더바 종목명 + 종가/등락률 업데이트
         var thbName = document.getElementById('thb-name');
-        if (thbName) thbName.textContent = ticker;
+        if (thbName) thbName.textContent = data.name || ticker;
         var thbFullname = document.getElementById('thb-fullname');
-        if (thbFullname) thbFullname.textContent = data.name || '';
+        if (thbFullname) thbFullname.textContent = ticker;
         _initHeaderBar(paintedCandles);
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
@@ -817,9 +817,9 @@
         // ── 앱 전체 종목 동기화 ────────────────────────────────────
         // 1) 헤더바 종목명 업데이트
         var thbName = document.getElementById('thb-name');
-        if (thbName) thbName.textContent = ticker;
+        if (thbName) thbName.textContent = data.name || ticker;
         var thbFullname2 = document.getElementById('thb-fullname');
-        if (thbFullname2) thbFullname2.textContent = data.name || '';
+        if (thbFullname2) thbFullname2.textContent = ticker;
 
         // 2) 검색 인풋 placeholder를 새 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');

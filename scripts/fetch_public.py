@@ -357,7 +357,7 @@ def fetch_bars(mode: str, markets: list[str]) -> None:
         time.sleep(RATE_SLEEP)
 
         # 배치 저장
-        if len(batch) >= BATCH_SIZE * 1000 or processed == total:
+        if len(batch) >= 1000 or processed == total:
             _upsert(batch)
             batch = []
             if mode == "full":

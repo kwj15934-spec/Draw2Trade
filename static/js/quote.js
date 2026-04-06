@@ -610,8 +610,7 @@
   (function patchOnChartLoaded() {
     var _orig = window._onChartLoaded;
     window._onChartLoaded = function (ticker, market) {
-      var thbName = document.getElementById('thb-name');
-      if (thbName) thbName.textContent = ticker;
+      // thb-name은 chart.js에서 이미 종목명으로 설정됨 — 여기서 덮어쓰지 않음
       _loadDailyTrades();
       if (_orig) _orig(ticker, market);
     };
