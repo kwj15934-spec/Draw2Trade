@@ -435,40 +435,55 @@ async def fetch_rankings(
                 return [{"ticker": r[0], "volume": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
 
             elif category in ("rise", "fall"):
-                # 기간 시작일에 가장 가까운 날의 종가, 오늘 종가
                 latest_date_row = conn.execute(
                     "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK'"
                 ).fetchone()
                 latest_date = latest_date_row[0] if latest_date_row else end_date
 
-                base_date_row = conn.execute(
-                    """
-                    SELECT MAX(trade_date) FROM daily_bars
-                    WHERE market_group='KR_STOCK' AND trade_date <= ?
-                    """,
-                    (start_date,),
-                ).fetchone()
-                base_date = base_date_row[0] if base_date_row and base_date_row[0] else start_date
+                if period == "1d":
+                    # 당일 change_rate(전일 대비 등락률) 직접 사용
+                    rows = conn.execute(
+                        """
+                        SELECT symbol, close, change_rate, trade_value, volume
+                        FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date = ?
+                          AND close > 0 AND change_rate IS NOT NULL
+                        ORDER BY change_rate {}
+                        LIMIT ?
+                        """.format("DESC" if category == "rise" else "ASC"),
+                        (latest_date, top_n),
+                    ).fetchall()
+                    return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
+                else:
+                    # 기간 시작일 종가 대비 현재 종가 등락률
+                    base_date_row = conn.execute(
+                        """
+                        SELECT MAX(trade_date) FROM daily_bars
+                        WHERE market_group='KR_STOCK' AND trade_date < ?
+                        """,
+                        (start_date,),
+                    ).fetchone()
+                    base_date = base_date_row[0] if base_date_row and base_date_row[0] else start_date
 
-                rows = conn.execute(
-                    """
-                    SELECT t.symbol,
-                           t.close as today_close,
-                           b.close as base_close,
-                           (t.close - b.close) * 100.0 / b.close as change_pct,
-                           t.trade_value,
-                           t.volume
-                    FROM daily_bars t
-                    JOIN daily_bars b
-                      ON t.symbol = b.symbol AND b.market_group='KR_STOCK' AND b.trade_date = ?
-                    WHERE t.market_group='KR_STOCK' AND t.trade_date = ?
-                      AND t.close > 0 AND b.close > 0
-                    ORDER BY change_pct {}
-                    LIMIT ?
-                    """.format("DESC" if category == "rise" else "ASC"),
-                    (base_date, latest_date, top_n),
-                ).fetchall()
-                return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": int(r[4] or 0), "volume": int(r[5] or 0)} for r in rows if r[0]]
+                    rows = conn.execute(
+                        """
+                        SELECT t.symbol,
+                               t.close as today_close,
+                               b.close as base_close,
+                               (t.close - b.close) * 100.0 / b.close as change_pct,
+                               t.trade_value,
+                               t.volume
+                        FROM daily_bars t
+                        JOIN daily_bars b
+                          ON t.symbol = b.symbol AND b.market_group='KR_STOCK' AND b.trade_date = ?
+                        WHERE t.market_group='KR_STOCK' AND t.trade_date = ?
+                          AND t.close > 0 AND b.close > 0
+                        ORDER BY change_pct {}
+                        LIMIT ?
+                        """.format("DESC" if category == "rise" else "ASC"),
+                        (base_date, latest_date, top_n),
+                    ).fetchall()
+                    return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": int(r[4] or 0), "volume": int(r[5] or 0)} for r in rows if r[0]]
 
             else:
                 # strength: 당일 거래대금 상위 (fallback)
@@ -685,27 +700,42 @@ async def fetch_us_rankings(
                     "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK'"
                 ).fetchone()
                 latest_date = latest_row[0] if latest_row else end_date
-                base_row = conn.execute(
-                    "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK' AND trade_date<=?",
-                    (start_date,),
-                ).fetchone()
-                base_date = base_row[0] if base_row and base_row[0] else start_date
 
-                rows = conn.execute(
-                    f"""
-                    SELECT t.symbol, t.close,
-                           (t.close - b.close) * 100.0 / b.close as pct,
-                           t.trade_value, t.volume
-                    FROM daily_bars t
-                    JOIN daily_bars b ON t.symbol=b.symbol AND b.market_group='US_STOCK' AND b.trade_date=?
-                    WHERE t.market_group='US_STOCK' AND t.trade_date=?
-                      AND t.symbol IN ({placeholders}) AND t.close>0 AND b.close>0
-                    ORDER BY pct {'DESC' if category=='rise' else 'ASC'}
-                    LIMIT ?
-                    """,
-                    (base_date, latest_date, *watchlist_symbols, top_n),
-                ).fetchall()
-                return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
+                if period == "1d":
+                    rows = conn.execute(
+                        f"""
+                        SELECT symbol, close, change_rate, trade_value, volume
+                        FROM daily_bars
+                        WHERE market_group='US_STOCK' AND trade_date=?
+                          AND symbol IN ({placeholders}) AND close>0 AND change_rate IS NOT NULL
+                        ORDER BY change_rate {'DESC' if category=='rise' else 'ASC'}
+                        LIMIT ?
+                        """,
+                        (latest_date, *watchlist_symbols, top_n),
+                    ).fetchall()
+                    return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
+                else:
+                    base_row = conn.execute(
+                        "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK' AND trade_date<?",
+                        (start_date,),
+                    ).fetchone()
+                    base_date = base_row[0] if base_row and base_row[0] else start_date
+
+                    rows = conn.execute(
+                        f"""
+                        SELECT t.symbol, t.close,
+                               (t.close - b.close) * 100.0 / b.close as pct,
+                               t.trade_value, t.volume
+                        FROM daily_bars t
+                        JOIN daily_bars b ON t.symbol=b.symbol AND b.market_group='US_STOCK' AND b.trade_date=?
+                        WHERE t.market_group='US_STOCK' AND t.trade_date=?
+                          AND t.symbol IN ({placeholders}) AND t.close>0 AND b.close>0
+                        ORDER BY pct {'DESC' if category=='rise' else 'ASC'}
+                        LIMIT ?
+                        """,
+                        (base_date, latest_date, *watchlist_symbols, top_n),
+                    ).fetchall()
+                    return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
 
         finally:
             conn.close()
