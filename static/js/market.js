@@ -21,7 +21,7 @@
   D2T.dashboardState = {
     market:      'KR',          // KR | US
     category:    'trade_value', // 랭킹 기준
-    period:      '1w',          // 랭킹 기준 기간 (차트 기간 아님)
+    period:      '1d',          // 랭킹 기준 기간 (차트 기간 아님)
     hideWarning: false,
   };
 
