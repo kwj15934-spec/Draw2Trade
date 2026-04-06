@@ -434,15 +434,15 @@
     <div class="sidebar-card">
       <div class="sidebar-card-head">
         <div class="sidebar-head-row">
-          <div class="sidebar-card-title">TOP 10</div>
+          <div class="sidebar-card-title">금일 TOP 10</div>
           <select class="sidebar-cat-select" id="sidebar-cat" onchange="switchSidebarCat(this.value)">
-            <option value="volume" selected>거래대금</option>
+            <option value="trade_value" selected>거래대금</option>
             <option value="rise">상승률</option>
             <option value="fall">하락률</option>
-            <option value="vol">거래량</option>
+            <option value="volume">거래량</option>
           </select>
         </div>
-        <div class="sidebar-card-sub" id="sidebar-asof-label">전일 종가 기준</div>
+        <div class="sidebar-card-sub" id="sidebar-asof-label">금일 기준</div>
       </div>
       <div class="sidebar-tabs">
         <button class="sidebar-tab active" data-mkt="kr" onclick="switchSidebarTab('kr')">국내 KR</button>
@@ -642,9 +642,9 @@
     });
   }
 
-  /* ── 등락률 캐시 갱신 (_krVolData 로드 후 호출) ── */
+  /* ── 등락률 캐시 갱신 (거래대금 데이터 로드 후 호출) ── */
   function _syncRateFromVol() {
-    var volData = _krScannerData['volume'];
+    var volData = _krScannerData['trade_value'] || _krScannerData['volume'];
     if (!volData) return;
     volData.forEach(function (item) {
       if (item.ticker && item.change_rate != null) {
@@ -922,7 +922,7 @@
      사이드바 — 전일 거래대금 TOP 10
      ════════════════════════════════════════════ */
   var _sidebarMkt = 'kr';
-  var _sidebarCat = 'volume';  // volume | rise | fall | vol
+  var _sidebarCat = 'trade_value';  // trade_value | volume | rise | fall
 
   /* US 고정 대형주 목록 */
   var _US_TOP = [
@@ -941,16 +941,16 @@
   var _usRates   = {};       // ticker → change_rate
 
   var _CAT_LABELS = {
-    volume: '거래대금 TOP 10',
-    rise:   '상승률 TOP 10',
-    fall:   '하락률 TOP 10',
-    vol:    '거래량 TOP 10',
+    trade_value: '거래대금 TOP 10',
+    rise:        '상승률 TOP 10',
+    fall:        '하락률 TOP 10',
+    volume:      '거래량 TOP 10',
   };
   var _CAT_ASOF = {
-    volume: '전일 종가 기준 거래대금 순위',
-    rise:   '전일 종가 기준 상승률 순위',
-    fall:   '전일 종가 기준 하락률 순위',
-    vol:    '전일 종가 기준 거래량 순위',
+    trade_value: '금일 거래대금 순위',
+    rise:        '금일 상승률 순위',
+    fall:        '금일 하락률 순위',
+    volume:      '금일 거래량 순위',
   };
 
   function switchSidebarTab(mkt) {
@@ -972,22 +972,19 @@
   }
   window.switchSidebarCat = switchSidebarCat;
 
-  /* KR 스캐너 fetch — 카테고리별 */
+  /* KR 스캐너 fetch — /api/v1/market/dashboard 기반 (금일 데이터) */
   function _fetchKrScanner(cat) {
-    var apiPath;
-    if (cat === 'volume') apiPath = '/api/v1/stock/market/scanner/volume?top_n=20';
-    else if (cat === 'rise') apiPath = '/api/v1/stock/market/scanner/rise?top_n=20';
-    else if (cat === 'fall') apiPath = '/api/v1/stock/market/scanner/fall?top_n=20';
-    else if (cat === 'vol') apiPath = '/api/v1/stock/market/scanner/volume?top_n=20';
-    else return;
+    var apiCat = cat === 'vol' ? 'volume' : cat;  // 구버전 호환
+    var url = '/api/v1/market/dashboard?market=KR&category=' + apiCat + '&period=1d&top_n=10';
 
-    fetch(apiPath)
+    fetch(url)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (d && d.items && d.items.length) {
-          _krScannerData[cat] = d.items.slice(0, 10);
-          // volume 데이터로 뉴스 배지 등락률 갱신
-          if (cat === 'volume') {
+        var items = (d && d.rankings) || [];
+        if (items.length) {
+          _krScannerData[cat] = items.slice(0, 10);
+          // 거래대금 데이터로 뉴스 배지 등락률 갱신
+          if (cat === 'trade_value') {
             _syncRateFromVol();
             render();
           }
@@ -1161,7 +1158,7 @@
 
   /* ── 초기 로드 ────────────────────────────── */
   _fetchAll(false);
-  _fetchKrScanner('volume');
+  _fetchKrScanner('trade_value');
   _fetchUsRates();
 
   /* ── 30초 폴링 ─────────────────────────────── */
