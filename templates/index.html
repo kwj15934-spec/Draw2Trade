@@ -295,10 +295,7 @@
     <!-- 드래그 리사이즈 핸들 (패널 왼쪽 가장자리) -->
     <div id="info-panel-resize-handle" class="info-panel-resize-handle" title="드래그하여 크기 조절"></div>
 
-    <!-- 접기/펼치기 핸들 -->
-    <button id="info-panel-toggle" class="info-panel-toggle" title="컨텍스트 패널 접기/펼치기" onclick="toggleInfoPanel()">&#8250;</button>
-
-    <!-- 패널 내부 (접었을 때 숨김) -->
+    <!-- 패널 내부 -->
     <div class="info-panel-body">
 
       <!-- 패널 헤더: 메인 차트 종목명 -->
@@ -1493,7 +1490,7 @@ function _escHtml(s) {
   'use strict';
 
   var _infoPanelCollapsed = false;
-  var INFO_PANEL_W = 320; // px (열린 상태)
+  var INFO_PANEL_W = 320;
 
   // ── 탭 전환 ─────────────────────────────────────────────────────
   window.switchInfoTab = function (tabName) {
@@ -1507,34 +1504,8 @@ function _escHtml(s) {
     if (btn)  btn.classList.add('active');
   };
 
-  // ── 패널 접기/펼치기 ────────────────────────────────────────────
-  window.toggleInfoPanel = function () {
-    _infoPanelCollapsed = !_infoPanelCollapsed;
-    var panel  = document.getElementById('info-side-panel');
-    var toggle = document.getElementById('info-panel-toggle');
-    var main   = document.querySelector('.d2t-main');
-    if (!panel) return;
-
-    if (_infoPanelCollapsed) {
-      panel.classList.add('collapsed');
-      if (toggle) toggle.innerHTML = '&#8249;'; // ‹
-      if (main) main.style.setProperty('--info-panel-w', '22px');
-    } else {
-      panel.classList.remove('collapsed');
-      if (toggle) toggle.innerHTML = '&#8250;'; // ›
-      if (main) main.style.setProperty('--info-panel-w', INFO_PANEL_W + 'px');
-    }
-
-    // LW Charts 차트 너비 동기화 (autoSize:true이므로 ResizeObserver가 처리하지만
-    // 트랜지션이 끝난 뒤에도 명시적으로 fit 호출해 반응성 보장)
-    var TRANSITION_MS = 240;
-    setTimeout(function () {
-      if (window.D2T && D2T.chart) {
-        try { D2T.chart.timeScale().fitContent(); } catch (e) { /* ignore */ }
-      }
-      if (typeof window.syncCanvas === 'function') window.syncCanvas();
-    }, TRANSITION_MS);
-  };
+  // toggleInfoPanel — 접기 버튼 제거로 미사용이지만 외부 호출 대비 유지
+  window.toggleInfoPanel = function () {};
 
   // ── info-side-panel 드래그 리사이즈 ─────────────────────────────
   (function () {

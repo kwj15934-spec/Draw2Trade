@@ -763,42 +763,16 @@
     }
     .info-side-panel {
       grid-column: 4;
-      width: 320px;
+      width: 100%;
       min-width: 0;
       display: flex;
       flex-direction: row;
-      /* 중앙 패널: 메인 차트와 같은 계열 배경 */
       background: #15151a;
       border-left: 1px solid #27272a;
       min-height: 0;
       overflow: hidden;
       position: relative;
-      transition: width 0.22s cubic-bezier(.4,0,.2,1);
     }
-    .info-side-panel.collapsed {
-      width: 22px;
-    }
-
-    /* 접기/펼치기 버튼 — 패널 왼쪽 끝에 수직으로 고정 */
-    .info-panel-toggle {
-      flex-shrink: 0;
-      width: 22px;
-      border: none;
-      background: #1e1e22;
-      border-right: 1px solid #27272a;
-      color: #7a8499;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: color .15s, background .15s;
-      writing-mode: horizontal-tb;
-      z-index: 2;
-    }
-    .info-panel-toggle:hover { color: #26a69a; background: #1e2a28; }
-    .info-side-panel.collapsed .info-panel-toggle { border-right: none; }
 
     /* 패널 내부 본체 */
     .info-panel-body {
@@ -808,9 +782,7 @@
       flex-direction: column;
       overflow: hidden;
     }
-    .info-side-panel.collapsed .info-panel-body {
-      display: none;
-    }
+
 
     /* 탭 헤더 — 중앙 패널 전용 */
     .info-panel-tabs {
