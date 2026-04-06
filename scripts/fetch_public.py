@@ -50,7 +50,7 @@ DB_PATH         = DATA_DIR / "market_data.db"
 CHECKPOINT_PATH = DATA_DIR / "public_checkpoint.json"
 
 BASE_URL   = "https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService/getStockPriceInfo"
-API_KEY    = os.getenv("PUBLIC_DATA_API_KEY", "")
+API_KEY    = os.getenv("PUBLIC_DATA_API_KEY", "").strip()
 RATE_SLEEP = 0.5   # 공공데이터포털 권장 간격
 
 
