@@ -97,6 +97,7 @@ async def fetch_index_quotes() -> dict:
     def _sync():
         indices = {}
         index_map = [("KS11", "KOSPI"), ("KQ11", "KOSDAQ")]
+        market_map = {"KOSPI": "KOSPI", "KOSDAQ": "KOSDAQ"}  # mrktCtg 값
 
         # FDR로 오늘 지수 조회
         try:
@@ -127,6 +128,54 @@ async def fetch_index_quotes() -> dict:
                         logger.debug("FDR 지수 조회 실패 [%s]: %s", symbol, e)
         except Exception as e:
             logger.debug("FDR import 실패: %s", e)
+
+        # DB에서 시장별 거래량/거래대금 합산 보강
+        try:
+            import sqlite3
+            from pathlib import Path
+            db_path = Path(__file__).resolve().parent.parent.parent / "data" / "market_data.db"
+            if db_path.exists() and indices:
+                conn = sqlite3.connect(db_path)
+                try:
+                    latest = conn.execute(
+                        "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK'"
+                    ).fetchone()[0]
+                    if latest:
+                        rows = conn.execute(
+                            """
+                            SELECT name, SUM(volume), SUM(trade_value)
+                            FROM daily_bars
+                            WHERE market_group='KR_STOCK' AND trade_date = ?
+                              AND close > 0
+                            GROUP BY name
+                            """,
+                            (latest,),
+                        ).fetchall()
+                        # name 컬럼이 없는 경우 mrktCtg 기반으로 symbols 테이블 조인
+                        vol_map: dict[str, tuple[int, int]] = {}
+                        for r in rows:
+                            pass  # name 컬럼은 종목명이라 시장 구분 불가
+
+                        # symbols 테이블로 시장 구분
+                        mkt_rows = conn.execute(
+                            """
+                            SELECT s.market, SUM(d.volume), SUM(d.trade_value)
+                            FROM daily_bars d
+                            JOIN symbols s ON d.symbol = s.symbol AND s.market_group = d.market_group
+                            WHERE d.market_group='KR_STOCK' AND d.trade_date = ?
+                              AND d.close > 0
+                            GROUP BY s.market
+                            """,
+                            (latest,),
+                        ).fetchall()
+                        for mkt, vol, tv in mkt_rows:
+                            if mkt in indices:
+                                indices[mkt]["volume"] = int(vol or 0)
+                                indices[mkt]["trade_value"] = int(tv or 0)
+                finally:
+                    conn.close()
+        except Exception as e:
+            logger.debug("DB 거래량/거래대금 보강 실패: %s", e)
 
         return indices
 
