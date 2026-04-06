@@ -155,6 +155,39 @@ async def stock_news(symbol: str):
     return {"symbol": symbol, "items": items}
 
 
+@router.get("/v1/stock/community/{symbol}")
+async def stock_community(symbol: str):
+    """
+    네이버 종토방 최신 글 목록 반환.
+
+    Response:
+        {"symbol": "...", "board_url": "...", "items": [...]}
+    """
+    import asyncio
+    import re
+
+    # 6자리 숫자 KR 코드만 지원
+    sym = symbol.strip().zfill(6)
+    if not re.match(r"^\d{6}$", sym):
+        return {"symbol": symbol, "board_url": "", "items": []}
+
+    def _sync() -> list[dict]:
+        try:
+            from app.services.community_service import fetch_community_posts
+            return fetch_community_posts(sym, 10)
+        except Exception as e:
+            logger.warning("종토방 조회 실패 (%s): %s", sym, e)
+            return []
+
+    loop = asyncio.get_running_loop()
+    items = await loop.run_in_executor(None, _sync)
+    return {
+        "symbol":    sym,
+        "board_url": f"https://finance.naver.com/item/board.naver?code={sym}",
+        "items":     items,
+    }
+
+
 @router.post("/admin/refresh-ticker-cache")
 async def refresh_ticker_cache():
     """티커 캐시 강제 초기화 후 KRX API 재수집 (배포 서버 갱신용)."""
