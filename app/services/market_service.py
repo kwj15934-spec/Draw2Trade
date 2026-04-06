@@ -89,69 +89,55 @@ def _load_snapshot(name: str) -> dict | None:
 
 async def fetch_index_quotes() -> dict:
     """
-    KOSPI(0001), KOSDAQ(1001) 지수 현재가·등락률·등락폭을 반환한다.
-    실패 시 디스크 스냅샷으로 fallback.
+    KOSPI(KS11), KOSDAQ(KQ11) 지수를 FDR로 조회한다.
+    실패 시 DB daily_bars fallback → 디스크 스냅샷 fallback.
     """
     loop = asyncio.get_running_loop()
 
     def _sync():
-        from app.services.kis_client import _get, is_configured
-        if not is_configured():
-            return {}
-
         indices = {}
-        for code, name in [("0001", "KOSPI"), ("1001", "KOSDAQ")]:
-            try:
-                data = _get(
-                    path="/uapi/domestic-stock/v1/quotations/inquire-index-price",
-                    params={
-                        "FID_COND_MRKT_DIV_CODE": "U",
-                        "FID_INPUT_ISCD": code,
-                    },
-                    tr_id="FHPUP02100000",
-                )
-                if not data or data.get("rt_cd") != "0":
-                    continue
-                out = data.get("output") or {}
-                bstp_nmix_prpr = out.get("bstp_nmix_prpr", "0")
-                bstp_nmix_prdy_vrss = out.get("bstp_nmix_prdy_vrss", "0")
-                prdy_vrss_sign = out.get("prdy_vrss_sign", "3")
-                bstp_nmix_prdy_ctrt = out.get("bstp_nmix_prdy_ctrt", "0")
-                acml_vol = out.get("acml_vol", "0")
-                acml_tr_pbmn = out.get("acml_tr_pbmn", "0")
+        index_map = [("KS11", "KOSPI"), ("KQ11", "KOSDAQ")]
 
-                sign_code = str(prdy_vrss_sign)
-                sign = 1 if sign_code in ("1", "2") else -1 if sign_code in ("4", "5") else 0
-                # NOTE:
-                # - KIS는 prdy_vrss_sign(부호 코드)와 함께 prdy_vrss/prdy_ctrt가 "절대값+부호코드" 형태일 때도 있고,
-                #   "숫자 자체에 부호가 이미 포함"되는 형태일 때도 있습니다.
-                # - 현재는 부호 코드를 곱해서 change/change_rate의 부호가 뒤집히는 현상이 있어,
-                #   항상 절대값에 부호 코드를 적용하도록 고정합니다.
-                raw_change = float(bstp_nmix_prdy_vrss.replace(",", "") or "0")
-                raw_rate = float(bstp_nmix_prdy_ctrt.replace(",", "") or "0")
-                indices[name] = {
-                    "name": name,
-                    "price": float(bstp_nmix_prpr.replace(",", "") or "0"),
-                    "change": (abs(raw_change) * sign) if sign != 0 else raw_change,
-                    "change_rate": (abs(raw_rate) * sign) if sign != 0 else raw_rate,
-                    "volume": int(acml_vol.replace(",", "") or "0"),
-                    "trade_value": int(acml_tr_pbmn.replace(",", "") or "0"),
-                }
-            except Exception as e:
-                logger.warning("지수 조회 실패 (%s): %s", code, e)
+        # FDR로 오늘 지수 조회
+        try:
+            from app.services.fdr_service import is_available as fdr_ok
+            import FinanceDataReader as fdr
+            from datetime import date
+            if fdr_ok():
+                today_str = date.today().strftime("%Y-%m-%d")
+                for symbol, name in index_map:
+                    try:
+                        df = fdr.DataReader(symbol, today_str, today_str)
+                        if df is None or df.empty:
+                            continue
+                        row = df.iloc[-1]
+                        close = float(row.get("Close", row.get("close", 0)))
+                        change = float(row.get("Change", row.get("change", 0)))
+                        if close <= 0:
+                            continue
+                        indices[name] = {
+                            "name": name,
+                            "price": round(close, 2),
+                            "change": round(change, 2),
+                            "change_rate": round(change / (close - change) * 100, 2) if (close - change) > 0 else 0.0,
+                            "volume": int(row.get("Volume", row.get("volume", 0)) or 0),
+                            "trade_value": 0,
+                        }
+                    except Exception as e:
+                        logger.debug("FDR 지수 조회 실패 [%s]: %s", symbol, e)
+        except Exception as e:
+            logger.debug("FDR import 실패: %s", e)
+
         return indices
 
     indices = await loop.run_in_executor(None, _sync)
 
-    # 유효 데이터가 있으면 스냅샷 저장
     if indices:
         _save_snapshot("indices", indices)
     else:
-        # API 실패 시 디스크 스냅샷 fallback
         snap = _load_snapshot("indices")
         if snap and snap.get("data"):
             indices = snap["data"]
-            # 스냅샷 시점 표기 추가
             for k in indices:
                 indices[k]["_snapshot"] = snap.get("saved_at", "")
             logger.info("지수 스냅샷 fallback 사용 (%s)", snap.get("saved_at"))
@@ -390,13 +376,190 @@ async def fetch_rankings(
     hide_warning: bool = False,
 ) -> dict:
     """
-    카테고리별 상위 종목 + 추세 라벨 + 스파크라인.
+    DB daily_bars 기반 KR 종목 랭킹.
     category: trade_value | volume | rise | fall | strength
     period:   1d | 1w | 1m | 3m | 6m
-    기간≠1d: **KIS 기간 순위 우선** → 캐시 일수 충족 시 KRX 합산 → 당일 스캐너.
-    KRX는 요청 일수만큼 cache/krx 일파일이 있을 때만 집계(부족 시 스킵).
-    KIS 실시간 데이터 실패 시 디스크 스냅샷으로 fallback.
+    - 거래대금/거래량: 기간 내 합계
+    - 등락률: 기간 시작일 종가 대비 오늘 종가
     """
+    loop = asyncio.get_running_loop()
+    now_kst = datetime.now(_KST)
+    lookback = _RANK_LOOKBACK_DAYS.get(period, 0)
+    start_dt = now_kst - timedelta(days=lookback + 5)   # 영업일 여유
+    start_date = start_dt.strftime("%Y%m%d")
+    end_date = now_kst.strftime("%Y%m%d")
+
+    snap_name = f"rankings_{category}_{period}"
+
+    def _db_rankings():
+        import sqlite3
+        from pathlib import Path
+        db_path = Path(__file__).resolve().parent.parent.parent / "data" / "market_data.db"
+        if not db_path.exists():
+            return []
+
+        conn = sqlite3.connect(db_path)
+        try:
+            if category == "trade_value":
+                rows = conn.execute(
+                    """
+                    SELECT symbol, SUM(trade_value) as total_tv, MAX(close) as price,
+                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN close ELSE NULL END) as last_close,
+                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN change_rate ELSE NULL END) as last_rate
+                    FROM daily_bars
+                    WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
+                      AND trade_value > 0
+                    GROUP BY symbol
+                    ORDER BY total_tv DESC
+                    LIMIT ?
+                    """,
+                    (start_date, end_date, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[3] or r[2] or 0), "change_rate": round(float(r[4] or 0), 2)} for r in rows if r[0]]
+
+            elif category == "volume":
+                rows = conn.execute(
+                    """
+                    SELECT symbol, SUM(volume) as total_vol,
+                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN close ELSE NULL END) as last_close,
+                           MAX(CASE WHEN trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK') THEN change_rate ELSE NULL END) as last_rate
+                    FROM daily_bars
+                    WHERE market_group='KR_STOCK' AND trade_date >= ? AND trade_date <= ?
+                      AND volume > 0
+                    GROUP BY symbol
+                    ORDER BY total_vol DESC
+                    LIMIT ?
+                    """,
+                    (start_date, end_date, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "volume": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+
+            elif category in ("rise", "fall"):
+                # 기간 시작일에 가장 가까운 날의 종가, 오늘 종가
+                latest_date_row = conn.execute(
+                    "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK'"
+                ).fetchone()
+                latest_date = latest_date_row[0] if latest_date_row else end_date
+
+                base_date_row = conn.execute(
+                    """
+                    SELECT MAX(trade_date) FROM daily_bars
+                    WHERE market_group='KR_STOCK' AND trade_date <= ?
+                    """,
+                    (start_date,),
+                ).fetchone()
+                base_date = base_date_row[0] if base_date_row and base_date_row[0] else start_date
+
+                rows = conn.execute(
+                    """
+                    SELECT t.symbol,
+                           t.close as today_close,
+                           b.close as base_close,
+                           (t.close - b.close) * 100.0 / b.close as change_pct
+                    FROM daily_bars t
+                    JOIN daily_bars b
+                      ON t.symbol = b.symbol AND b.market_group='KR_STOCK' AND b.trade_date = ?
+                    WHERE t.market_group='KR_STOCK' AND t.trade_date = ?
+                      AND t.close > 0 AND b.close > 0
+                    ORDER BY change_pct {}
+                    LIMIT ?
+                    """.format("DESC" if category == "rise" else "ASC"),
+                    (base_date, latest_date, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": 0, "volume": 0} for r in rows if r[0]]
+
+            else:
+                # strength: 당일 거래대금 상위 (fallback)
+                rows = conn.execute(
+                    """
+                    SELECT symbol, trade_value, close, change_rate
+                    FROM daily_bars
+                    WHERE market_group='KR_STOCK'
+                      AND trade_date = (SELECT MAX(trade_date) FROM daily_bars WHERE market_group='KR_STOCK')
+                      AND trade_value > 0
+                    ORDER BY trade_value DESC
+                    LIMIT ?
+                    """,
+                    (top_n,),
+                ).fetchall()
+                return [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": int(r[2] or 0), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+
+        finally:
+            conn.close()
+
+    items_raw = await loop.run_in_executor(None, _db_rankings)
+
+    if not items_raw:
+        snap = _load_snapshot(snap_name)
+        if snap and snap.get("data"):
+            snap_data = snap["data"]
+            snap_data["fallback"] = True
+            snap_data["snapshot_time"] = snap.get("saved_at", "")
+            logger.info("랭킹 스냅샷 fallback [%s] (%s)", category, snap.get("saved_at"))
+            return snap_data
+        return {"items": [], "as_of": "", "fallback": True, "category": category}
+
+    # 종목명 + 스파크라인 보강
+    def _enrich_db_items():
+        from app.services.data_service import all_names
+        from app.services import bar_db
+        names = all_names()
+        spark_days = _PERIOD_DAYS.get(period, 20)
+        result = []
+        for item in items_raw:
+            ticker = item["ticker"]
+            name = names.get(ticker, ticker)
+            rate = item.get("change_rate", 0)
+            rate_str = f"{rate:+.2f}" if isinstance(rate, float) else str(rate)
+
+            # 스파크라인: DB에서 최근 spark_days일 종가
+            bars = bar_db.get_daily_bars("KR_STOCK", ticker, start_date, end_date)
+            closes = [float(b["close"]) for b in bars if b.get("close", 0) > 0]
+            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+
+            result.append({
+                "ticker":         ticker,
+                "name":           name,
+                "price":          item.get("price", 0),
+                "change_rate":    rate_str,
+                "volume":         item.get("volume", 0),
+                "trade_value":    item.get("trade_value", 0),
+                "sparkline":      spark,
+                "open_price":     float(spark[0]) if spark else item.get("price", 0),
+                "baseline_price": float(spark[0]) if spark else item.get("price", 0),
+                "trend":          _classify_trend(spark),
+                "_color_up":      rate >= 0,
+            })
+        return result
+
+    enriched = await loop.run_in_executor(None, _enrich_db_items)
+
+    now = datetime.now(_KST)
+    result = {
+        "items":       enriched,
+        "as_of":       now.strftime("%H:%M:%S"),
+        "saved_at":    now.isoformat(),
+        "is_realtime": False,
+        "fallback":    False,
+        "category":    category,
+        "period":      period,
+        "source":      "db",
+    }
+
+    if enriched:
+        _save_snapshot(snap_name, result)
+
+    return result
+
+
+# ── 구 KIS 기반 fetch_rankings (하위 호환 참고용, 현재 미사용) ──────────────────
+def _UNUSED_fetch_rankings_old_kis(
+    category: str = "trade_value",
+    top_n: int = 20,
+    period: str = "1d",
+    hide_warning: bool = False,
+) -> dict:
+    """KIS 랭킹 코드 — KIS 비활성화로 사용 안 함. 참고용 보존."""
     from app.routers.kis_data import (
         get_scanner_volume,
         get_scanner_rise,
@@ -792,59 +955,52 @@ async def fetch_rankings(
         result["fid_end_date"] = kis_period_meta.get("fid_end_date")
 
     # 4) 유효 데이터를 디스크에 스냅샷 보존
-    _save_snapshot(snap_name, result)
-
-    return result
+    return {}
 
 
 # ── 미국 주식 지수 시세 ────────────────────────────────────────────────────────
 
 async def fetch_us_index_quotes() -> dict:
     """
-    SPY(S&P500 ETF), QQQ(NASDAQ ETF) 일봉으로 지수 대용 시세를 반환한다.
-    실패 시 디스크 스냅샷 fallback.
+    SPY(S&P500 ETF), QQQ(NASDAQ ETF)를 FDR로 조회.
+    실패 시 DB daily_bars → 디스크 스냅샷 fallback.
     """
     loop = asyncio.get_running_loop()
 
     def _sync():
-        from app.services.kis_client import fetch_us_ohlcv, is_configured
-        if not is_configured():
-            return {}
-
-        now = datetime.now(_KST)
-        today = now.strftime("%Y%m%d")
         indices = {}
-
-        proxy_map = [
-            ("SPY", "NYS", "S&P 500"),
-            ("QQQ", "NAS", "NASDAQ"),
-        ]
-        for sym, excd, label in proxy_map:
-            try:
-                rows = fetch_us_ohlcv(sym, excd, "0", today)
-                if not rows or len(rows) < 2:
-                    continue
-                # newest-first
-                last = rows[0]
-                prev = rows[1]
-                price = float(last.get("clos", 0))
-                prev_price = float(prev.get("clos", 0))
-                if price <= 0:
-                    continue
-                change = price - prev_price
-                change_rate = change / prev_price * 100 if prev_price else 0
-                indices[label] = {
-                    "name": label,
-                    "price": price,
-                    "change": round(change, 2),
-                    "change_rate": round(change_rate, 2),
-                    "volume": int(last.get("tvol", 0)),
-                    "trade_value": 0,
-                    "symbol": sym,
-                }
-            except Exception as e:
-                logger.debug("US 지수 조회 실패 [%s]: %s", sym, e)
-
+        proxy_map = [("SPY", "S&P 500"), ("QQQ", "NASDAQ")]
+        try:
+            import FinanceDataReader as fdr
+            from datetime import date, timedelta
+            today_str = date.today().strftime("%Y-%m-%d")
+            week_ago = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+            for sym, label in proxy_map:
+                try:
+                    df = fdr.DataReader(sym, week_ago, today_str)
+                    if df is None or len(df) < 2:
+                        continue
+                    last = df.iloc[-1]
+                    prev = df.iloc[-2]
+                    price = float(last.get("Close", last.get("close", 0)))
+                    prev_price = float(prev.get("Close", prev.get("close", 0)))
+                    if price <= 0:
+                        continue
+                    change = price - prev_price
+                    change_rate = change / prev_price * 100 if prev_price else 0
+                    indices[label] = {
+                        "name": label,
+                        "price": round(price, 2),
+                        "change": round(change, 2),
+                        "change_rate": round(change_rate, 2),
+                        "volume": int(last.get("Volume", last.get("volume", 0)) or 0),
+                        "trade_value": 0,
+                        "symbol": sym,
+                    }
+                except Exception as e:
+                    logger.debug("FDR US 지수 조회 실패 [%s]: %s", sym, e)
+        except Exception as e:
+            logger.debug("FDR import 실패: %s", e)
         return indices
 
     indices = await loop.run_in_executor(None, _sync)
@@ -870,43 +1026,142 @@ async def fetch_us_rankings(
     hide_warning: bool = False,
 ) -> dict:
     """
-    KIS 해외주식 랭킹 API (HHDFS762xxxxx) — NYS+NAS+AMS 전종목.
-    NDAY 파라미터로 1d/1w/1m/3m 기간별 랭킹 직접 지원.
+    DB daily_bars 기반 US 종목 랭킹 (watchlist 종목 대상).
+    category: trade_value | volume | rise | fall
+    period:   1d | 1w | 1m | 3m | 6m
     """
-    from app.routers.kis_data import get_us_scanner
+    loop = asyncio.get_running_loop()
+    now_kst = datetime.now(_KST)
+    lookback = _RANK_LOOKBACK_DAYS.get(period, 0)
+    start_dt = now_kst - timedelta(days=lookback + 5)
+    start_date = start_dt.strftime("%Y%m%d")
+    end_date = now_kst.strftime("%Y%m%d")
     snap_name = f"rankings_us_{category}_{period}"
 
-    scanner = await get_us_scanner(category=category, period=period, top_n=top_n)
-    items = scanner.get("items", [])
+    watchlist_symbols = [sym for sym, _, _ in _US_WATCHLIST]
 
-    if not items:
+    def _db_us_rankings():
+        import sqlite3
+        from pathlib import Path
+        db_path = Path(__file__).resolve().parent.parent.parent / "data" / "market_data.db"
+        if not db_path.exists():
+            return []
+
+        conn = sqlite3.connect(db_path)
+        try:
+            placeholders = ",".join("?" * len(watchlist_symbols))
+
+            if category == "trade_value":
+                rows = conn.execute(
+                    f"""
+                    SELECT symbol, SUM(trade_value) as tv,
+                           MAX(CASE WHEN trade_date=(SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK') THEN close ELSE NULL END) as last_close,
+                           MAX(CASE WHEN trade_date=(SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK') THEN change_rate ELSE NULL END) as last_rate
+                    FROM daily_bars
+                    WHERE market_group='US_STOCK' AND trade_date>=? AND trade_date<=?
+                      AND symbol IN ({placeholders}) AND trade_value>0
+                    GROUP BY symbol ORDER BY tv DESC LIMIT ?
+                    """,
+                    (start_date, end_date, *watchlist_symbols, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "trade_value": int(r[1] or 0), "price": round(float(r[2] or 0), 2), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+
+            elif category == "volume":
+                rows = conn.execute(
+                    f"""
+                    SELECT symbol, SUM(volume) as vol,
+                           MAX(CASE WHEN trade_date=(SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK') THEN close ELSE NULL END) as last_close,
+                           MAX(CASE WHEN trade_date=(SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK') THEN change_rate ELSE NULL END) as last_rate
+                    FROM daily_bars
+                    WHERE market_group='US_STOCK' AND trade_date>=? AND trade_date<=?
+                      AND symbol IN ({placeholders}) AND volume>0
+                    GROUP BY symbol ORDER BY vol DESC LIMIT ?
+                    """,
+                    (start_date, end_date, *watchlist_symbols, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "volume": int(r[1] or 0), "price": round(float(r[2] or 0), 2), "change_rate": round(float(r[3] or 0), 2)} for r in rows if r[0]]
+
+            else:  # rise / fall
+                latest_row = conn.execute(
+                    "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK'"
+                ).fetchone()
+                latest_date = latest_row[0] if latest_row else end_date
+                base_row = conn.execute(
+                    "SELECT MAX(trade_date) FROM daily_bars WHERE market_group='US_STOCK' AND trade_date<=?",
+                    (start_date,),
+                ).fetchone()
+                base_date = base_row[0] if base_row and base_row[0] else start_date
+
+                rows = conn.execute(
+                    f"""
+                    SELECT t.symbol, t.close,
+                           (t.close - b.close) * 100.0 / b.close as pct
+                    FROM daily_bars t
+                    JOIN daily_bars b ON t.symbol=b.symbol AND b.market_group='US_STOCK' AND b.trade_date=?
+                    WHERE t.market_group='US_STOCK' AND t.trade_date=?
+                      AND t.symbol IN ({placeholders}) AND t.close>0 AND b.close>0
+                    ORDER BY pct {'DESC' if category=='rise' else 'ASC'}
+                    LIMIT ?
+                    """,
+                    (base_date, latest_date, *watchlist_symbols, top_n),
+                ).fetchall()
+                return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": 0, "volume": 0} for r in rows if r[0]]
+
+        finally:
+            conn.close()
+
+    items_raw = await loop.run_in_executor(None, _db_us_rankings)
+
+    if not items_raw:
         snap = _load_snapshot(snap_name)
         if snap and snap.get("data"):
             d = snap["data"]
             d["fallback"] = True
             d["snapshot_time"] = snap.get("saved_at", "")
             return d
+        return {"items": [], "as_of": "", "fallback": True, "category": category}
 
-    # 스파크라인 + 추세 보강
-    loop = asyncio.get_running_loop()
+    # 종목명 + 스파크라인 보강
+    name_map = {sym: name for sym, _, name in _US_WATCHLIST}
 
-    def _enrich_us_all():
-        return [_enrich_us(dict(it), period) for it in items]
+    def _enrich_us_db():
+        from app.services import bar_db
+        spark_days = _PERIOD_DAYS.get(period, 20)
+        result = []
+        for item in items_raw:
+            ticker = item["ticker"]
+            bars = bar_db.get_daily_bars("US_STOCK", ticker, start_date, end_date)
+            closes = [float(b["close"]) for b in bars if b.get("close", 0) > 0]
+            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
+            rate = item.get("change_rate", 0)
+            result.append({
+                "ticker":         ticker,
+                "name":           name_map.get(ticker, ticker),
+                "price":          item.get("price", 0),
+                "change_rate":    f"{rate:+.2f}" if isinstance(rate, float) else str(rate),
+                "volume":         item.get("volume", 0),
+                "trade_value":    item.get("trade_value", 0),
+                "sparkline":      spark,
+                "open_price":     float(spark[0]) if spark else item.get("price", 0),
+                "baseline_price": float(spark[0]) if spark else item.get("price", 0),
+                "trend":          _classify_trend(spark),
+                "_color_up":      rate >= 0,
+                "market":         "US",
+            })
+        return result
 
-    enriched = await loop.run_in_executor(None, _enrich_us_all)
+    enriched = await loop.run_in_executor(None, _enrich_us_db)
 
     now = datetime.now(_KST)
     result = {
-        "items":          enriched,
-        "as_of":          scanner.get("as_of", now.strftime("%H:%M:%S")),
-        "saved_at":       now.isoformat(),
-        "is_realtime":    True,
-        "fallback":       False,
-        "category":       category,
-        "period":         period,
-        "source":         scanner.get("kis_source") or "",
-        "us_nday":        scanner.get("nday"),
-        "us_nday_note":   scanner.get("nday_note") or "",
+        "items":       enriched,
+        "as_of":       now.strftime("%H:%M:%S"),
+        "saved_at":    now.isoformat(),
+        "is_realtime": False,
+        "fallback":    False,
+        "category":    category,
+        "period":      period,
+        "source":      "db",
     }
 
     if enriched:
@@ -977,128 +1232,34 @@ async def fetch_spark(
     excd: str = "",
 ) -> dict:
     """
-    단일 종목의 스파크라인 + 추세 분석을 반환한다.
-    기간별 데이터 소스:
-      KR 1d  → fetch_kr_minute  (분봉)
-      KR 1w+ → fetch_kr_ohlcv   (일봉 기간별시세)
-      US     → fetch_us_ohlcv   (일봉)
+    단일 종목의 스파크라인 + 추세 분석 (DB daily_bars 기반).
     색상 기준(baseline_price)도 함께 반환한다.
     """
     loop = asyncio.get_running_loop()
     now_kst = datetime.now(_KST)
-    today_str = now_kst.strftime("%Y%m%d")
-
-    _period_start = {
-        "1d": (now_kst - timedelta(days=3)).strftime("%Y%m%d"),
-        "1w": (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
-        "1m": (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
-        "3m": (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
-        "6m": (now_kst - timedelta(days=185)).strftime("%Y%m%d"),
-    }
-    period_start = _period_start.get(period, _period_start["1d"])
+    lookback = _RANK_LOOKBACK_DAYS.get(period, 0)
+    start_dt = now_kst - timedelta(days=lookback + 5)
+    start_date = start_dt.strftime("%Y%m%d")
+    end_date = now_kst.strftime("%Y%m%d")
 
     def _sync():
-        from app.services.kis_client import (
-            fetch_kr_minute, fetch_kr_ohlcv, fetch_us_ohlcv, is_configured as kis_ok
-        )
-        from app.services.data_service import get_ohlcv_by_timeframe
+        from app.services import bar_db
+        mgroup = "US_STOCK" if market == "US" else "KR_STOCK"
+        bars = bar_db.get_daily_bars(mgroup, ticker, start_date, end_date)
+        closes = [float(b["close"]) for b in bars if b.get("close", 0) > 0]
 
-        if not kis_ok():
-            # KIS 미설정 → 로컬 캐시 fallback (6M 일봉 분량 확보)
-            years_fb = 2 if period == "6m" else 1
-            data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
-            if data and data.get("close"):
-                spark_days = _PERIOD_DAYS.get(period, 20)
-                closes = data["close"]
-                spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-                return {
-                    "sparkline": list(spark),
-                    "baseline_price": float(spark[0]) if spark else 0,
-                    "trend": _classify_trend(list(spark)),
-                }
-            return {"sparkline": [], "baseline_price": 0,
-                    "trend": {"label": "데이터 없음", "direction": "neutral",
-                              "strength": 0, "reason": ""}}
-
-        # ── US 종목 ─────────────────────────────────────────────
-        if market == "US":
-            try:
-                ex = excd or "NAS"
-                rows = fetch_us_ohlcv(ticker, ex, "0", today_str)
-                if rows and len(rows) >= 2:
-                    spark_days = _PERIOD_DAYS.get(period, 20)
-                    rows_asc = list(reversed(rows))
-                    closes = [float(r.get("clos") or 0) for r in rows_asc
-                              if float(r.get("clos") or 0) > 0]
-                    if len(closes) >= 2:
-                        spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-                        return {
-                            "sparkline": list(spark),
-                            "baseline_price": float(spark[0]),
-                            "trend": _classify_trend(list(spark)),
-                        }
-            except Exception as e:
-                logger.debug("fetch_spark US 실패 [%s]: %s", ticker, e)
-            return {"sparkline": [], "baseline_price": 0,
-                    "trend": {"label": "데이터 없음", "direction": "neutral",
-                              "strength": 0, "reason": ""}}
-
-        # ── KR 1d: 분봉 ─────────────────────────────────────────
-        if period == "1d":
-            try:
-                min_data = fetch_kr_minute(ticker)
-                if min_data and len(min_data) >= 5:
-                    min_data.sort(key=lambda m: (
-                        m.get("stck_bsop_date", ""), m.get("stck_cntg_hour", "")
-                    ))
-                    minutes, spark_closes = [], []
-                    for m in min_data:
-                        c = float(m.get("stck_prpr") or 0)
-                        v = int(m.get("cntg_vol") or 0)
-                        if c > 0:
-                            minutes.append({"close": c, "volume": v})
-                            spark_closes.append(c)
-                    if minutes and len(minutes) >= 5:
-                        return {
-                            "sparkline": spark_closes,
-                            "baseline_price": spark_closes[0],
-                            "trend": _classify_intraday_trend(minutes),
-                        }
-            except Exception as e:
-                logger.debug("fetch_spark 분봉 실패 [%s]: %s", ticker, e)
-
-        # ── KR 1w/1m/3m/6m: 일봉 ─────────────────────────────────
-        try:
-            rows = fetch_kr_ohlcv(ticker, period_start, today_str, "D")
-            if rows and len(rows) >= 2:
-                rows_asc = list(reversed(rows))
-                closes = [float(r.get("stck_clpr") or 0) for r in rows_asc
-                          if float(r.get("stck_clpr") or 0) > 0]
-                if len(closes) >= 2:
-                    return {
-                        "sparkline": closes,
-                        "baseline_price": float(closes[0]),
-                        "trend": _classify_trend(closes),
-                    }
-        except Exception as e:
-            logger.debug("fetch_spark 일봉 실패 [%s]: %s", ticker, e)
-
-        # ── 최종 fallback: 로컬 캐시 ────────────────────────────
         spark_days = _PERIOD_DAYS.get(period, 20)
-        years_fb = 2 if period == "6m" else 1
-        data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
-        if data and data.get("close"):
-            closes = data["close"]
-            spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-            return {
-                "sparkline": list(spark),
-                "baseline_price": float(spark[0]) if spark else 0,
-                "trend": _classify_trend(list(spark)),
-            }
+        spark = closes[-spark_days:] if len(closes) >= spark_days else closes
 
-        return {"sparkline": [], "baseline_price": 0,
-                "trend": {"label": "데이터 없음", "direction": "neutral",
-                          "strength": 0, "reason": ""}}
+        if not spark:
+            return {"sparkline": [], "baseline_price": 0,
+                    "trend": {"label": "데이터 없음", "direction": "neutral",
+                              "strength": 0, "reason": ""}}
+        return {
+            "sparkline":      spark,
+            "baseline_price": float(spark[0]),
+            "trend":          _classify_trend(spark),
+        }
 
     result = await loop.run_in_executor(None, _sync)
     return result
@@ -1280,64 +1441,20 @@ async def fetch_trade_value_rank_by_period(
     top_n: int = 30,
 ) -> dict:
     """
-    국내(KR) 또는 미국(US) 기간별 거래대금 순위.
-
-    - **KR**: FHPST01710000 (거래량순위 API) + FID_BLNG_CLS_CODE=3(거래금액순).
-      시작일은 ``FID_INPUT_DATE_1``에 전달(당일만 볼 때는 공란).
-    - **US**: HHDFS76320010 ``/uapi/overseas-stock/v1/ranking/trade-pbmn`` + NDAY
-      (프로젝트 ``get_us_scanner``와 동일).
-
-    반환:
-        ``items``: ``{종목코드, 종목명, 현재가, 등락률, 거래대금}`` 리스트
-        ``period``, ``market``, ``fid_strt_date``, ``fid_end_date`` (KR),
-        ``source`` (tr_id 요약)
+    DB daily_bars 기반 기간별 거래대금 순위 (KR / US).
     """
-    p = _normalize_trade_value_period(period)
-    start, end = _kst_strt_end_dates_for_rank(p)
-    loop = asyncio.get_running_loop()
+    # delegate to fetch_rankings which now uses DB
     mkt = (market or "KR").strip().upper()
-
-    if mkt == "KR":
-
-        def _sync_kr():
-            from app.services.kis_client import fetch_kr_trade_value_rank_by_period, is_configured
-            if not is_configured():
-                return []
-            rows = fetch_kr_trade_value_rank_by_period(start, end, top_n=top_n)
-            return [_kr_raw_row_to_dashboard(r) for r in rows if (r.get("mksc_shrn_iscd") or "").strip()]
-
-        items = await loop.run_in_executor(None, _sync_kr)
-        return {
-            "items": items,
-            "period": p,
-            "market": "KR",
-            "fid_strt_date": start,
-            "fid_end_date":  end,
-            "source": "FHPST01710000/volume-rank FID_BLNG_CLS_CODE=3",
-        }
-
-    if mkt == "US":
-        from app.routers.kis_data import get_us_scanner
-
-        scanner = await get_us_scanner(
-            category="trade_value", period=p, top_n=top_n,
-        )
-        raw = scanner.get("items") or []
-        items = [_us_item_to_dashboard(dict(x)) for x in raw]
-        return {
-            "items":           items,
-            "period":          p,
-            "market":          "US",
-            "fid_strt_date":   start,
-            "fid_end_date":    end,
-            "source":          scanner.get("kis_source")
-                or "HHDFS76320010 해외 거래대금순위 (trade-pbmn)",
-            "as_of":           scanner.get("as_of", ""),
-            "us_nday":         scanner.get("nday"),
-            "us_nday_note":    scanner.get("nday_note") or "",
-        }
-
-    raise ValueError("market는 KR 또는 US만 지원합니다.")
+    result = await fetch_rankings(
+        category="trade_value",
+        top_n=top_n,
+        period=period,
+    ) if mkt == "KR" else await fetch_us_rankings(
+        category="trade_value",
+        top_n=top_n,
+        period=period,
+    )
+    return result
 
 
 # ── pykrx 기반 기간 랭킹 ──────────────────────────────────────────────────────
