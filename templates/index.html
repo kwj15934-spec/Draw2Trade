@@ -1737,6 +1737,7 @@ function _escHtml(s) {
 
           html += '<div class="finance-card" style="padding:10px 12px;">'
             + '<div class="finance-card-title">연간 실적 <span style="font-weight:400;color:#3f3f52;font-size:9px;">(억원)</span></div>'
+            + '<div class="fund-table-wrap">'
             + '<table class="fund-table">'
             + '<thead><tr><th></th>' + thHtml + '</tr></thead>'
             + '<tbody>'
@@ -1745,6 +1746,7 @@ function _escHtml(s) {
             + trRow('순이익',   '당기순이익_억원', null)
             + '</tbody>'
             + '</table>'
+            + '</div>'
             + '</div>';
 
           // ── ③ 안정성 지표 카드 ─────────────────────────────────

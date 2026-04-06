@@ -857,6 +857,8 @@
       border: 1px solid #27272a;
       border-radius: 8px;
       padding: 12px 14px;
+      overflow: hidden;
+      min-width: 0;
     }
     .finance-card-title {
       font-size: 11px;
@@ -884,9 +886,19 @@
 
     /* ── Fundamental Panel (연간 실적 + AI 요약) ──────────────────────── */
 
+    /* 연간 실적 테이블 래퍼 — 패널 너비 초과 시 가로 스크롤 */
+    .fund-table-wrap {
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 0 -2px;
+    }
+    .fund-table-wrap::-webkit-scrollbar { height: 3px; }
+    .fund-table-wrap::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
+
     /* 연간 실적 테이블 */
     .fund-table {
       width: 100%; border-collapse: collapse; font-size: 11px;
+      min-width: 200px;
     }
     .fund-table th {
       color: #52525b; font-weight: 600; text-align: right;
