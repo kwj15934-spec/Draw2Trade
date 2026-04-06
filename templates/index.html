@@ -292,6 +292,9 @@
        ══════════════════════════════════════════════════════════════ -->
   <div id="info-side-panel" class="info-side-panel">
 
+    <!-- 드래그 리사이즈 핸들 (패널 왼쪽 가장자리) -->
+    <div id="info-panel-resize-handle" class="info-panel-resize-handle" title="드래그하여 크기 조절"></div>
+
     <!-- 접기/펼치기 핸들 -->
     <button id="info-panel-toggle" class="info-panel-toggle" title="컨텍스트 패널 접기/펼치기" onclick="toggleInfoPanel()">&#8250;</button>
 
@@ -1532,6 +1535,60 @@ function _escHtml(s) {
       if (typeof window.syncCanvas === 'function') window.syncCanvas();
     }, TRANSITION_MS);
   };
+
+  // ── info-side-panel 드래그 리사이즈 ─────────────────────────────
+  (function () {
+    var INFO_MIN_W = 220, INFO_MAX_W = 600;
+    var INFO_RESIZE_KEY = 'd2t_info_panel_w';
+
+    function _applyInfoW(w) {
+      var main = document.querySelector('.d2t-main');
+      if (main) main.style.setProperty('--info-panel-w', w + 'px');
+      INFO_PANEL_W = w;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var saved = parseInt(localStorage.getItem(INFO_RESIZE_KEY), 10);
+      if (saved && saved >= INFO_MIN_W && saved <= INFO_MAX_W) _applyInfoW(saved);
+
+      var handle = document.getElementById('info-panel-resize-handle');
+      if (!handle) return;
+      var startX, startW;
+
+      handle.addEventListener('mousedown', function (e) {
+        if (_infoPanelCollapsed) return;
+        e.preventDefault();
+        var panel = document.getElementById('info-side-panel');
+        startX = e.clientX;
+        startW = panel ? panel.offsetWidth : INFO_PANEL_W;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!handle.classList.contains('dragging')) return;
+        var delta = startX - e.clientX; // 왼쪽으로 드래그 = 패널 확장
+        var newW = Math.min(INFO_MAX_W, Math.max(INFO_MIN_W, startW + delta));
+        _applyInfoW(newW);
+      });
+
+      document.addEventListener('mouseup', function () {
+        if (!handle.classList.contains('dragging')) return;
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        var panel = document.getElementById('info-side-panel');
+        if (panel) localStorage.setItem(INFO_RESIZE_KEY, panel.offsetWidth);
+      });
+
+      // 더블클릭 → 기본 너비 리셋
+      handle.addEventListener('dblclick', function () {
+        _applyInfoW(320);
+        localStorage.setItem(INFO_RESIZE_KEY, 320);
+      });
+    });
+  })();
 
   // ── 주요 종목 한글명 로컬 맵 (API 실패 시 즉시 표시용) ───────────
   var _STOCK_NAME_MAP = {

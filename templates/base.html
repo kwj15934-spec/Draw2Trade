@@ -749,6 +749,18 @@
     }
 
     /* ── 종목 상세 컨텍스트 패널 (CSS Grid 4번 컬럼) ────────── */
+    .info-panel-resize-handle {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 5px;
+      cursor: col-resize;
+      z-index: 10;
+      background: transparent;
+    }
+    .info-panel-resize-handle:hover,
+    .info-panel-resize-handle.dragging {
+      background: rgba(38,166,154,0.18);
+    }
     .info-side-panel {
       grid-column: 4;
       width: 320px;
@@ -911,6 +923,7 @@
       text-align: right; padding: 5px 6px;
       color: #d4d8e2; font-family: 'JetBrains Mono', monospace;
       border-bottom: 1px solid rgba(255,255,255,0.03);
+      white-space: nowrap;
     }
     .fund-table td:first-child {
       text-align: left; color: #7a8499; font-family: inherit;
