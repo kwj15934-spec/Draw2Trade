@@ -331,6 +331,10 @@
     var asOf  = document.getElementById('mkt-as-of');
     if (!tbody) return;
 
+    // 헤더 동기화 (칩 클릭 외 경로로도 업데이트)
+    var th = document.getElementById('mkt-th-vol');
+    if (th) th.textContent = _volHeader[D2T.dashboardState.category] || '거래량';
+
     var items      = rankings.items    || [];
     var isFallback = rankings.fallback || false;
     var snapTime   = rankings.snapshot_time || '';

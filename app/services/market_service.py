@@ -455,7 +455,9 @@ async def fetch_rankings(
                     SELECT t.symbol,
                            t.close as today_close,
                            b.close as base_close,
-                           (t.close - b.close) * 100.0 / b.close as change_pct
+                           (t.close - b.close) * 100.0 / b.close as change_pct,
+                           t.trade_value,
+                           t.volume
                     FROM daily_bars t
                     JOIN daily_bars b
                       ON t.symbol = b.symbol AND b.market_group='KR_STOCK' AND b.trade_date = ?
@@ -466,7 +468,7 @@ async def fetch_rankings(
                     """.format("DESC" if category == "rise" else "ASC"),
                     (base_date, latest_date, top_n),
                 ).fetchall()
-                return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": 0, "volume": 0} for r in rows if r[0]]
+                return [{"ticker": r[0], "price": int(r[1] or 0), "change_rate": round(float(r[3] or 0), 2), "trade_value": int(r[4] or 0), "volume": int(r[5] or 0)} for r in rows if r[0]]
 
             else:
                 # strength: 당일 거래대금 상위 (fallback)
@@ -692,7 +694,8 @@ async def fetch_us_rankings(
                 rows = conn.execute(
                     f"""
                     SELECT t.symbol, t.close,
-                           (t.close - b.close) * 100.0 / b.close as pct
+                           (t.close - b.close) * 100.0 / b.close as pct,
+                           t.trade_value, t.volume
                     FROM daily_bars t
                     JOIN daily_bars b ON t.symbol=b.symbol AND b.market_group='US_STOCK' AND b.trade_date=?
                     WHERE t.market_group='US_STOCK' AND t.trade_date=?
@@ -702,7 +705,7 @@ async def fetch_us_rankings(
                     """,
                     (base_date, latest_date, *watchlist_symbols, top_n),
                 ).fetchall()
-                return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": 0, "volume": 0} for r in rows if r[0]]
+                return [{"ticker": r[0], "price": round(float(r[1] or 0), 2), "change_rate": round(float(r[2] or 0), 2), "trade_value": int(r[3] or 0), "volume": int(r[4] or 0)} for r in rows if r[0]]
 
         finally:
             conn.close()
