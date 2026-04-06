@@ -303,7 +303,7 @@
       chartHtml = '<div style="width:80px;height:28px;"></div>';
     }
 
-    return '<td class="mkt-spark-cell">'
+    return '<td class="mkt-col-spark mkt-spark-cell">'
       + '<div class="mkt-spark-chart" id="spark-chart-' + _esc(ticker) + '">' + chartHtml + '</div>'
       + '</td>';
   }
@@ -422,19 +422,19 @@
         + ' data-excd="'    + _esc(item.excd || '') + '"'
         + ' data-href="'    + href + '"'
         + ' class="mkt-row-clickable">'
-        + '<td class="mkt-rank' + rankCls + '">' + rank + '</td>'
-        + '<td class="mkt-name-cell">'
+        + '<td class="mkt-col-rank mkt-rank' + rankCls + '">' + rank + '</td>'
+        + '<td class="mkt-col-name">'
           + '<div class="mkt-name" title="' + _esc(item.name) + '">' + _esc(item.name) + '</div>'
           + '<div class="mkt-ticker">' + _esc(item.ticker) + '</div>'
         + '</td>'
-        + '<td class="mkt-price">'
+        + '<td class="mkt-col-price mkt-price">'
           + (market === 'US' ? '$' : '')
           + _formatNum(item.price, market === 'US' ? 2 : 0)
         + '</td>'
-        + '<td class="mkt-rate ' + rateCls + '">' + rateDisplay + '</td>'
-        + '<td class="mkt-vol">' + volDisplay + '</td>'
+        + '<td class="mkt-col-rate mkt-rate ' + rateCls + '">' + rateDisplay + '</td>'
+        + '<td class="mkt-col-vol mkt-vol">' + volDisplay + '</td>'
         + _buildSparkCell(item.ticker, initPeriod, spColor, item.sparkline || [], baseline)
-        + '<td class="mkt-trend-cell" id="trend-cell-' + _esc(item.ticker) + '">'
+        + '<td class="mkt-col-trend mkt-trend-cell" id="trend-cell-' + _esc(item.ticker) + '">'
           + '<span class="mkt-trend-badge ' + trendDir + '" title="' + _esc(trendReason) + '">'
             + _esc(trendLbl)
           + '</span>'
