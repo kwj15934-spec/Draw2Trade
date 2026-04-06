@@ -303,25 +303,8 @@
       chartHtml = '<div style="width:80px;height:28px;"></div>';
     }
 
-    // 마이크로 버튼
-    var btns = ['1W', '1M', '3M', '6M'];
-    var bMap = { '1W': '1w', '1M': '1m', '3M': '3m', '6M': '6m' };
-    var microHtml = '<div class="mkt-micro-btns">';
-    btns.forEach(function (lbl) {
-      var p    = bMap[lbl];
-      var act  = (p === activePeriod) ? ' active' : '';
-      microHtml += '<button class="mkt-micro-btn' + act + '"'
-        + ' data-ticker="' + _esc(ticker) + '"'
-        + ' data-period="' + p + '"'
-        + '>' + lbl + '</button>';
-    });
-    microHtml += '</div>';
-
     return '<td class="mkt-spark-cell">'
-      + '<div class="mkt-spark-inner">'
-        + '<div class="mkt-spark-chart" id="spark-chart-' + _esc(ticker) + '">' + chartHtml + '</div>'
-        + microHtml
-      + '</div>'
+      + '<div class="mkt-spark-chart" id="spark-chart-' + _esc(ticker) + '">' + chartHtml + '</div>'
       + '</td>';
   }
 
