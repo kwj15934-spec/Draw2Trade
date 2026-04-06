@@ -144,7 +144,7 @@
     .news-thumb-og {
       width: 100%; height: 100%;
       object-fit: cover; border-radius: 7px;
-      display: block;
+      display: block; background: var(--bg3);
     }
 
     /* 파비콘 기반 썸네일 (큰 로고 + 그라데이션 배경) */
@@ -723,6 +723,28 @@
     'NFLX':  { label: 'NFLX', color: '#ef5350', bg: '#1a0404' },
   };
 
+  /* ── 썸네일 onerror 핸들러 ─────────────────────────
+     OG이미지/파비콘 로드 실패 시 레터마크 폴백으로 교체.
+     인라인 이스케이프 없이 전역 함수로 안전하게 처리.
+  ──────────────────────────────────────────────────── */
+  window._thumbErr = function(img) {
+    var parent = img.parentNode;
+    if (!parent) return;
+    var fav = img.dataset.fav || '';
+    var mkt = img.dataset.mkt || 'KR';
+    var sym = img.dataset.sym || '';
+    if (fav && img.src !== fav) {
+      /* 1차 폴백: 파비콘 */
+      img.onerror = function() { window._thumbErr(img); };
+      img.src = fav;
+      img.style.cssText = 'width:28px;height:28px;object-fit:contain;border-radius:4px;margin:auto;';
+      img.dataset.fav = '';  /* 재귀 방지 */
+    } else {
+      /* 2차 폴백: 레터마크 */
+      parent.innerHTML = _makeFallback(mkt, sym);
+    }
+  };
+
   /* ── 썸네일 폴백 — 종목 심볼 레터마크 ────────────────
      고품질 섹터 아이콘: 종목 약어 + 색상 배경 + 캔들 미니차트
   ─────────────────────────────────────────────────── */
@@ -804,26 +826,19 @@
     var origUrl  = it.orig_url || it.url || '';
     var imageUrl = it.image_url || '';
     var favUrl   = _faviconUrl(origUrl);
-    var fallback = _makeFallback(mkt, sym);
     var thumbHtml;
     if (imageUrl) {
-      /* OG 이미지: onerror 시 파비콘 폴백으로 대체 */
-      var favFb = favUrl
-        ? '<div class=\\"news-thumb-fav\\" style=\\"background:linear-gradient(145deg,#14141a 0%,#1c1c24 100%);\\">' +
-          '<img src=\\"' + esc(favUrl) + '\\" alt=\\"\\" width=\\"28\\" height=\\"28\\" loading=\\"lazy\\" style=\\"border-radius:4px;\\">' +
-          '</div>'
-        : fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      /* OG 이미지: onerror 시 _thumbErr() 전역 핸들러로 파비콘/레터마크 폴백 */
       thumbHtml = '<img class="news-thumb-og" src="' + esc(imageUrl) + '" alt="" loading="lazy" ' +
-        'onerror="this.parentNode.innerHTML=\'' + favFb.replace(/'/g, "\\'") + '\'">';
+        'data-fav="' + esc(favUrl) + '" data-mkt="' + esc(mkt) + '" data-sym="' + esc(sym) + '" ' +
+        'onerror="_thumbErr(this)">';
     } else if (favUrl) {
-      var fbEsc = fallback.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      thumbHtml = '<div class="news-thumb-fav" style="background:linear-gradient(145deg,#14141a 0%,#1c1c24 100%);">' +
-        '<img src="' + esc(favUrl) + '" alt="" width="28" height="28" loading="lazy" ' +
-          'style="border-radius:4px;image-rendering:auto;" ' +
-          'onerror="this.parentNode.parentNode.innerHTML=\'' + fbEsc + '\'">' +
-        '</div>';
+      thumbHtml = '<img class="news-thumb-og" src="' + esc(favUrl) + '" alt="" loading="lazy" ' +
+        'style="width:28px;height:28px;object-fit:contain;border-radius:4px;margin:auto;" ' +
+        'data-mkt="' + esc(mkt) + '" data-sym="' + esc(sym) + '" ' +
+        'onerror="_thumbErr(this)">';
     } else {
-      thumbHtml = fallback;
+      thumbHtml = _makeFallback(mkt, sym);
     }
 
     /* ── 출처: [파비콘16] DOMAIN 대문자 ──────────── */
