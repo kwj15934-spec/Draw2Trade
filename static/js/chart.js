@@ -666,6 +666,8 @@
           var ttIsMonth = (periodTo.length === 7);
           var tt = ttIsMonth ? periodTo : periodTo;
 
+          console.log('[D2T pattern] periodFrom=', periodFrom, 'periodTo=', periodTo, 'tf=', tf, 'tt=', tt);
+
           var fromIdx = -1, toIdx = -1;
           for (var bi = 0; bi < validCandles.length; bi++) {
             var ct = String(validCandles[bi].time);
@@ -674,6 +676,9 @@
             var inTo = ttIsMonth ? ct.slice(0, 7) <= tt : ct <= tt;
             if (inTo) toIdx = bi;
           }
+          console.log('[D2T pattern] fromIdx=', fromIdx, 'toIdx=', toIdx,
+            'firstCandle=', validCandles[Math.max(0,fromIdx)] && validCandles[Math.max(0,fromIdx)].time,
+            'lastCandle=', validCandles[toIdx] && validCandles[toIdx].time);
           if (fromIdx < 0) fromIdx = 0;
           // anchor_today: to는 오늘 날짜이지만 DB엔 없을 수 있음 → 마지막 캔들까지 포함
           if (D2T._anchorToday) {
