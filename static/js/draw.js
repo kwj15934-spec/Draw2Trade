@@ -927,6 +927,8 @@
     var topNEl = document.getElementById('top-n-select');
     var topN = topNEl ? parseInt(topNEl.value, 10) : 20;
     var body = { draw_points: pts, top_n: topN, market: market, timeframe: timeframe };
+    // 현재 종목은 결과에서 제외
+    if (window.D2T && D2T.ticker) body.exclude_ticker = D2T.ticker;
 
     // 자동 분석 메타 적용
     if (_autoMeta && _searchMode !== 'chart-period') {

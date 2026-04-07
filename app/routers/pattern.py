@@ -84,6 +84,7 @@ class PatternSearchRequest(BaseModel):
     date_to: str | None = Field(default=None, description="비교 종료일 (KR: YYYY-MM, US: YYYY-MM-DD)")
     market: str = Field(default="KR", description="시장 구분: 'KR' | 'US'")
     timeframe: str = Field(default="monthly", description="차트 타임프레임: monthly | weekly | daily")
+    exclude_ticker: str | None = Field(default=None, description="결과에서 제외할 티커 (현재 보고 있는 종목)")
 
 
 @router.post("/pattern/search")
@@ -212,6 +213,10 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
             ),
         )
         _set_cache(cache_key, results)
+
+    # 현재 종목 제외 (자기 자신이 1위로 나오는 문제 방지)
+    if body.exclude_ticker:
+        results = [r for r in results if r.get("ticker") != body.exclude_ticker]
 
     if not is_pro:
         results = results[10:]  # Top 1~10 제외

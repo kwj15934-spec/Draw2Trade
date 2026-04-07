@@ -215,10 +215,21 @@ def search_similar(
                 len(cache), lookback_months, anchor_today, use_date_range)
 
     skipped_short = 0
+    skipped_illiquid = 0
     for ticker, ohlcv in cache.items():
         dates  = ohlcv.get("dates",  [])
         close  = ohlcv.get("close",  [])
         volume = ohlcv.get("volume", [])
+
+        # 저유동성 종목 필터: 전체 거래량 합이 0이거나 가격 변동이 전혀 없으면 제외
+        if volume and sum(volume) == 0:
+            skipped_illiquid += 1
+            continue
+        if close and len(close) >= 2:
+            mn, mx = min(c for c in close if c), max(close)
+            if mx - mn < _EPS:  # 완전 평탄 (상장폐지 대기 등)
+                skipped_illiquid += 1
+                continue
 
         # ── 날짜 범위 지정 모드 ────────────────────────────────────────────
         if use_date_range:
@@ -417,9 +428,9 @@ def search_similar(
         })
 
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
-    if skipped_short > 0:
-        logger.warning("search_similar: %d개 종목 데이터 부족 (win=%d 필요, 데이터 짧음)",
-                       skipped_short, lookback_months)
+    if skipped_short > 0 or skipped_illiquid > 0:
+        logger.info("search_similar: 제외 — 데이터부족 %d개, 저유동성 %d개",
+                    skipped_short, skipped_illiquid)
     logger.info("search_similar: 결과 %d개 반환 (top_n=%d)", min(len(results), top_n), top_n)
     return results[:top_n]
 
