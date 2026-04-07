@@ -307,7 +307,9 @@ def search_similar(
             # sw>1이면 arr가 유효구간으로 잘리며(date_shift=sw-1), arr 인덱스는 원본 dates 인덱스에 date_shift 만큼 오프셋됩니다.
             # period_from/period_to가 실제 매칭 구간과 어긋나면 이후 구간 기반 거래대금/지표 추출에서 정합성이 깨질 수 있습니다.
             d_from = dates[best_i + date_shift] if (best_i + date_shift) < len(dates) else ""
-            d_to   = dates[min(orig_end, len(dates) - 1)] if dates else ""
+            # anchor_today: 끝을 오늘 날짜로 고정 (DB 마지막 날짜가 과거여도 오늘까지 표시)
+            from datetime import date as _date
+            d_to = _date.today().isoformat()
 
         else:
             # ── 슬라이딩 윈도우 2-pass (벡터 연산) ────────────────────────
@@ -410,6 +412,7 @@ def search_similar(
             "period": f"{d_from} ~ {d_to}",
             "period_from": d_from,
             "period_to": d_to,
+            "anchor_today": anchor_today,
             "match_normalized": [round(v, 4) for v in best_normed.tolist()],
         })
 

@@ -796,6 +796,7 @@
   function loadResultMatch(idx, ticker, periodFrom, periodTo, name) {
     var data = _resultMatches[idx];
     matchPoints = (data && data.matchNormalized) ? data.matchNormalized : null;
+    D2T._anchorToday = (data && data.anchorToday) ? true : false;
     // name을 _onFiwChartLoaded로 전달해 상단 패널 헤더 즉시 반영
     D2T._pendingResultName = name || '';
     D2T.loadResultChart(ticker, periodFrom || '', periodTo || '');
@@ -942,42 +943,85 @@
         body.lookback_bars = _autoMeta.lookback_bars;
         _autoMeta = null;
       } else {
-        // getVisibleRange()는 "YYYY-MM-DD" 문자열 또는 unix timestamp(숫자) 반환 가능
+        // _autoMeta 없음: _drawChartCoords(그린 선의 첫/마지막 time)에서 기간 추출
+        var _mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
+        var _gotRange = false;
+
+        // _drawChartCoords: [{time, price}, ...] — 그린 선의 차트 좌표
+        function _timeToDateStr(t, useShort) {
+          if (!t && t !== 0) return '';
+          var s;
+          if (typeof t === 'number') {
+            var d = new Date(t * 1000);
+            s = d.getUTCFullYear() + '-'
+              + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
+              + String(d.getUTCDate()).padStart(2, '0');
+          } else if (typeof t === 'object' && t.year) {
+            s = t.year + '-' + String(t.month).padStart(2, '0');
+          } else {
+            s = String(t).slice(0, 10);
+          }
+          return useShort ? s.slice(0, 7) : s;
+        }
+
         try {
-          if (window.D2T && D2T.chart) {
-            var vr = D2T.chart.timeScale().getVisibleRange();
-            if (vr && vr.from && vr.to) {
-              var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
-              // 숫자(unix timestamp)이면 Date로 변환, 문자열이면 그대로
-              function _vrToDateStr(v) {
-                if (typeof v === 'number') {
-                  var d = new Date(v * 1000);
-                  return d.getUTCFullYear() + '-'
-                    + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
-                    + String(d.getUTCDate()).padStart(2, '0');
+          if (_drawChartCoords && _drawChartCoords.length >= 2) {
+            var _validCoords = _drawChartCoords.filter(function(c) { return c && c.time != null; });
+            if (_validCoords.length >= 2) {
+              var _tFirst = _validCoords[0].time;
+              var _tLast  = _validCoords[_validCoords.length - 1].time;
+              // D2T.candles에서 해당 time에 가장 가까운 실제 캔들 날짜를 찾아 사용
+              var _candles2 = window.D2T && D2T.candles;
+              var _useShort = (_mkt !== 'US');
+              if (_candles2 && _candles2.length) {
+                function _nearestCandleTime(targetTime) {
+                  var best = _candles2[0];
+                  var bestDiff = Infinity;
+                  for (var _ci = 0; _ci < _candles2.length; _ci++) {
+                    var _ct = _candles2[_ci].time;
+                    var _numT = typeof _ct === 'number' ? _ct
+                      : (typeof _ct === 'string' ? new Date(_ct).getTime() / 1000 : 0);
+                    var _numTgt = typeof targetTime === 'number' ? targetTime
+                      : (typeof targetTime === 'string' ? new Date(targetTime).getTime() / 1000 : 0);
+                    var diff = Math.abs(_numT - _numTgt);
+                    if (diff < bestDiff) { bestDiff = diff; best = _candles2[_ci]; }
+                  }
+                  return best.time;
                 }
-                return String(v).slice(0, 10);
-              }
-              var fromStr = _vrToDateStr(vr.from);  // "YYYY-MM-DD"
-              var toStr   = _vrToDateStr(vr.to);
-              if (mkt === 'US') {
-                body.date_from = fromStr;
-                body.date_to   = toStr;
+                body.date_from = _timeToDateStr(_nearestCandleTime(_tFirst), _useShort);
+                body.date_to   = _timeToDateStr(_nearestCandleTime(_tLast),  _useShort);
               } else {
-                // KR 월봉: "YYYY-MM-DD" → "YYYY-MM" 으로 변환
-                body.date_from = fromStr.slice(0, 7);
-                body.date_to   = toStr.slice(0, 7);
+                body.date_from = _timeToDateStr(_tFirst, _useShort);
+                body.date_to   = _timeToDateStr(_tLast,  _useShort);
               }
+              body.lookback_bars = _validCoords.length;
+              _gotRange = true;
             }
           }
         } catch (e) {}
-        // lookback_bars로 보이는 봉 수도 함께 전달
-        try {
-          if (window.D2T && D2T.chart) {
-            var lr2 = D2T.chart.timeScale().getVisibleLogicalRange();
-            if (lr2 && lr2.to > lr2.from) body.lookback_bars = Math.max(2, Math.round(lr2.to - lr2.from));
-          }
-        } catch (e) {}
+
+        // fallback: 가시 캔들 범위
+        if (!_gotRange) {
+          try {
+            var _candles = window.D2T && D2T.candles;
+            if (window.D2T && D2T.chart && _candles && _candles.length) {
+              var lr2 = D2T.chart.timeScale().getVisibleLogicalRange();
+              if (lr2 && lr2.to > lr2.from) {
+                var _fi = Math.max(0, Math.floor(lr2.from));
+                var _ti = Math.min(_candles.length - 1, Math.ceil(lr2.to));
+                var _useShort2 = (_mkt !== 'US');
+                body.date_from = _timeToDateStr(_candles[_fi].time, _useShort2);
+                body.date_to   = _timeToDateStr(_candles[_ti].time, _useShort2);
+                body.lookback_bars = _ti - _fi + 1;
+                _gotRange = true;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (!_gotRange) {
+          body.lookback_months = 36;
+        }
       }
       body.anchor_today = false;
     } else if (isBlankMode) {
@@ -1110,6 +1154,7 @@
         matchNormalized: r.match_normalized || null,
         periodFrom:      r.period_from      || '',
         periodTo:        r.period_to        || '',
+        anchorToday:     !!r.anchor_today,
       };
     });
 

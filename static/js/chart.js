@@ -659,13 +659,20 @@
         var filtered = [];
 
         if (periodFrom && periodTo) {
+          // "YYYY-MM" 형식이면 from은 해당 월 1일, to는 해당 월 말일(다음달 전)로 비교
+          // 일봉 캔들 "YYYY-MM-DD"와 비교할 때 월 형식이 잘리는 버그 방지
           var tf = periodFrom.length === 7 ? periodFrom + '-01' : periodFrom;
-          var tt = periodTo.length   === 7 ? periodTo   + '-01' : periodTo;
+          // to가 "YYYY-MM"이면 prefix 비교로 처리 (해당 월 전체 포함)
+          var ttIsMonth = (periodTo.length === 7);
+          var tt = ttIsMonth ? periodTo : periodTo;
 
           var fromIdx = -1, toIdx = -1;
           for (var bi = 0; bi < validCandles.length; bi++) {
-            if (fromIdx < 0 && validCandles[bi].time >= tf) fromIdx = bi;
-            if (validCandles[bi].time <= tt) toIdx = bi;
+            var ct = String(validCandles[bi].time);
+            if (fromIdx < 0 && ct >= tf) fromIdx = bi;
+            // to가 월 형식이면 해당 월의 캔들을 모두 포함 (prefix 비교)
+            var inTo = ttIsMonth ? ct.slice(0, 7) <= tt : ct <= tt;
+            if (inTo) toIdx = bi;
           }
           if (fromIdx < 0) fromIdx = 0;
           if (toIdx < 0) toIdx = validCandles.length - 1;
@@ -676,16 +683,20 @@
             // 전체 데이터 유지 (스크롤 가능), scrollToPosition으로 이동
             displayCandles = validCandles;
 
-            // 매칭 구간 중앙을 화면 중앙에 위치시키는 scrollToPosition 값 계산
-            // scrollToPosition(pos): 오른쪽 끝 기준, 음수=왼쪽이동
-            // pos = -(전체 - 1 - 매치중앙) + 화면절반
-            var matchCenter = Math.round((fromIdx + toIdx) / 2);
             var wrapper = document.getElementById('chart-wrapper');
-            var approxBarSpacing = 10; // px, 기본 barSpacing 근사치
+            var approxBarSpacing = 10;
             var halfVisible = wrapper
               ? Math.round(wrapper.offsetWidth / approxBarSpacing / 2)
               : 30;
-            var scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
+            var scrollOffset;
+            if (D2T._anchorToday) {
+              // anchor_today: 끝(오늘)을 화면 오른쪽에 맞춤 → scrollToPosition(5)
+              scrollOffset = 5;
+            } else {
+              // 매칭 구간 중앙을 화면 중앙에 위치
+              var matchCenter = Math.round((fromIdx + toIdx) / 2);
+              scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
+            }
 
             // 매칭 구간 고가/저가 기반으로 pMin/pMax 결정 (캔들과 1:1 수직 정렬)
             var highs = filtered.map(function (c) { return c.high; });
@@ -731,31 +742,29 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            // matchPeriodData와 동일한 finalMin/finalMax 사용 → 캔들과 1:1 수직 정렬
-            var _mpd = D2T.matchPeriodData;
-            var _pMin = _mpd ? _mpd.priceMin : Math.max(0, pMin);
-            var _pMax = _mpd ? _mpd.priceMax : pMax;
-            var _pRange = _pMax - _pMin || 1;
-
+            // 패턴 선을 독립 축(pattern-overlay)에 0~1 값으로 그림.
+            // scaleMargins를 캔들 축과 동일하게 설정 → 수직 위치 일치.
             for (var i = 0; i < filtered.length; i++) {
               var normIdx = Math.round((i / Math.max(1, filtered.length - 1)) * (drawNorm.length - 1));
-              safeDrawData.push({
-                time: filtered[i].time,
-                value: _pMin + (drawNorm[normIdx] * _pRange),
-              });
-              safeMatchData.push({
-                time: filtered[i].time,
-                value: _pMin + (matchNorm[normIdx] * _pRange),
-              });
+              safeDrawData.push({ time: filtered[i].time, value: drawNorm[normIdx] });
+              safeMatchData.push({ time: filtered[i].time, value: matchNorm[normIdx] });
             }
 
             _patternDrawSeries = D2T.chart.addLineSeries({
-              color: '#ff6b35', lineWidth: 3, priceScaleId: 'right',
+              color: '#ff6b35', lineWidth: 3, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
+              autoscaleInfoProvider: function () { return { priceRange: { minValue: 0, maxValue: 1 } }; },
             });
             _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'right',
+              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
+              autoscaleInfoProvider: function () { return { priceRange: { minValue: 0, maxValue: 1 } }; },
+            });
+            // 캔들 축(right)과 동일한 scaleMargins 적용 → 수직 위치 일치
+            D2T.chart.priceScale('pattern-overlay').applyOptions({
+              scaleMargins: { top: 0.1, bottom: 0.2 },
+              visible: false,
+              autoScale: false,
             });
 
             _patternDrawSeries.setData(safeDrawData);
@@ -777,10 +786,7 @@
         var _offset = (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null)
           ? D2T.matchPeriodData.scrollOffset : null;
         if (_offset != null) {
-          // setVisibleLogicalRange로 패턴 구간 중앙을 화면 중앙에 위치
-          // logical index = 전체 캔들 배열 인덱스 (0부터)
           var _wrapper2 = document.getElementById('chart-wrapper');
-          // LW Charts에서 실제 가시 범위를 읽어 halfVisible 계산
           var _halfVis = 30;
           try {
             var _visRange = D2T.chart.timeScale().getVisibleLogicalRange();
@@ -788,25 +794,49 @@
           } catch (e) {
             if (_wrapper2) _halfVis = Math.round(_wrapper2.offsetWidth / 10 / 2);
           }
-          var _matchCenterIdx = Math.round((fromIdx + toIdx) / 2);
-          var _from = _matchCenterIdx - _halfVis;
-          var _to   = _matchCenterIdx + _halfVis;
           D2T.chart.timeScale().applyOptions({ rightOffset: 5, shiftVisibleRangeOnNewBar: false });
-          requestAnimationFrame(function () {
-            try {
-              D2T.chart.timeScale().setVisibleLogicalRange({ from: _from, to: _to });
-            } catch (e) {
-              D2T.chart.timeScale().scrollToPosition(_offset, false);
-            }
-            setTimeout(function () {
+
+          if (D2T._anchorToday) {
+            // anchor_today: 오늘(캔들 끝)을 화면 오른쪽에 맞춤
+            var _totalCandles = validCandles.length;
+            var _anchorFrom = _totalCandles - _halfVis * 2;
+            var _anchorTo   = _totalCandles - 1 + 5; // 우측 여백
+            requestAnimationFrame(function () {
+              try {
+                D2T.chart.timeScale().setVisibleLogicalRange({ from: _anchorFrom, to: _anchorTo });
+              } catch (e) {
+                D2T.chart.timeScale().scrollToPosition(5, false);
+              }
+              setTimeout(function () {
+                try {
+                  D2T.chart.timeScale().setVisibleLogicalRange({ from: _anchorFrom, to: _anchorTo });
+                } catch (e) {
+                  D2T.chart.timeScale().scrollToPosition(5, false);
+                }
+                if (typeof redraw === 'function') redraw();
+              }, 150);
+            });
+          } else {
+            // 슬라이딩 모드: 매칭 구간 중앙을 화면 중앙에 위치
+            var _matchCenterIdx = Math.round((fromIdx + toIdx) / 2);
+            var _from = _matchCenterIdx - _halfVis;
+            var _to   = _matchCenterIdx + _halfVis;
+            requestAnimationFrame(function () {
               try {
                 D2T.chart.timeScale().setVisibleLogicalRange({ from: _from, to: _to });
               } catch (e) {
                 D2T.chart.timeScale().scrollToPosition(_offset, false);
               }
-              if (typeof redraw === 'function') redraw();
-            }, 150);
-          });
+              setTimeout(function () {
+                try {
+                  D2T.chart.timeScale().setVisibleLogicalRange({ from: _from, to: _to });
+                } catch (e) {
+                  D2T.chart.timeScale().scrollToPosition(_offset, false);
+                }
+                if (typeof redraw === 'function') redraw();
+              }, 150);
+            });
+          }
         } else {
           D2T.chart.timeScale().fitContent();
         }

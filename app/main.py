@@ -24,8 +24,6 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
 from app.routers import auth, chart, dart, fundamental, market, pattern, user_data
-# KIS API 관련 라우터 비활성화
-# from app.routers import kis_data, realtime
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -237,9 +235,6 @@ app.include_router(user_data.router)
 app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
-# KIS API 관련 라우터 비활성화
-# app.include_router(kis_data.router)
-# app.include_router(realtime.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
 # app.include_router(us_chart.router)
 

@@ -1,7 +1,7 @@
 """
 Market Dashboard Service
 
-기존 KIS 스캐너 API를 통합 호출하여 시장 대시보드용 종합 랭킹 데이터를 반환한다.
+DB daily_bars 기반으로 시장 대시보드용 종합 랭킹 데이터를 반환한다.
 KOSPI/KOSDAQ 지수 시세 + 거래량/등락률 상·하위 + 각 종목 추세 라벨을 포함한다.
 
 장 마감/주말에도 마지막 유효 데이터를 디스크 스냅샷으로 보존하여 항상 표시한다.
@@ -892,11 +892,9 @@ async def fetch_us_rankings(
 
 
 def _enrich_us(item: dict, period: str) -> dict:
-    """KIS 랭킹 US 아이템에 스파크라인 + 추세 + _color_up 보강."""
+    """US 아이템에 스파크라인 + 추세 + _color_up 보강 (yfinance 캐시 기반)."""
     ticker = item["ticker"]
-    excd   = item.get("excd", "NAS")
     try:
-        from app.services.kis_client import fetch_us_ohlcv, is_configured
         from app.services.us_data_service import get_us_ohlcv_by_timeframe
 
         rate_num = float(str(item.get("change_rate") or "0").replace("+", ""))
@@ -905,25 +903,6 @@ def _enrich_us(item: dict, period: str) -> dict:
 
         spark_days = _PERIOD_DAYS.get(period, 20)
 
-        if is_configured():
-            try:
-                now_kst = datetime.now(_KST)
-                today   = now_kst.strftime("%Y%m%d")
-                rows = fetch_us_ohlcv(ticker, excd, "0", today)
-                if rows and len(rows) >= 2:
-                    rows_asc = list(reversed(rows))
-                    closes = [float(r.get("clos") or 0) for r in rows_asc
-                              if float(r.get("clos") or 0) > 0]
-                    if len(closes) >= 2:
-                        spark = closes[-spark_days:] if len(closes) >= spark_days else closes
-                        item["sparkline"]      = spark
-                        item["baseline_price"] = float(spark[0])
-                        item["trend"]          = _classify_trend(spark, rate_num)
-                        return item
-            except Exception as e:
-                logger.debug("_enrich_us OHLCV 실패 [%s]: %s", ticker, e)
-
-        # fallback: 로컬 캐시
         data = get_us_ohlcv_by_timeframe(ticker, "daily")
         if data and data.get("close"):
             closes = data["close"]
@@ -991,48 +970,15 @@ async def fetch_spark(
 def _enrich_krx(item: dict, period: str) -> dict:
     """
     krx_service.get_period_rankings()가 반환한 아이템에
-    스파크라인 + 추세 라벨 + _color_up을 보강한다.
-    fetch_spark와 동일 로직 (동기 버전).
+    스파크라인 + 추세 라벨 + _color_up을 보강한다 (DB 캐시 기반).
     """
     ticker = item["ticker"]
     try:
-        from app.services.kis_client import (
-            fetch_kr_ohlcv, is_configured as kis_ok,
-        )
         from app.services.data_service import get_ohlcv_by_timeframe
 
         rate_num = float(str(item.get("change_rate") or "0").replace("+", ""))
         item["_color_up"] = rate_num >= 0
 
-        now_kst = datetime.now(_KST)
-        today   = now_kst.strftime("%Y%m%d")
-        _period_start = {
-            "1w":  (now_kst - timedelta(days=9)).strftime("%Y%m%d"),
-            "1m":  (now_kst - timedelta(days=32)).strftime("%Y%m%d"),
-            "3m":  (now_kst - timedelta(days=95)).strftime("%Y%m%d"),
-            "6m":  (now_kst - timedelta(days=185)).strftime("%Y%m%d"),
-        }
-        start = _period_start.get(period, (now_kst - timedelta(days=9)).strftime("%Y%m%d"))
-
-        if kis_ok():
-            try:
-                rows = fetch_kr_ohlcv(ticker, start, today, "D")
-                if rows and len(rows) >= 2:
-                    rows_asc = list(reversed(rows))
-                    closes = [
-                        float(r.get("stck_clpr") or 0)
-                        for r in rows_asc
-                        if float(r.get("stck_clpr") or 0) > 0
-                    ]
-                    if len(closes) >= 2:
-                        item["trend"]          = _classify_trend(closes, rate_num)
-                        item["sparkline"]      = closes
-                        item["baseline_price"] = closes[0]
-                        return item
-            except Exception as e:
-                logger.debug("_enrich_krx 일봉 실패 [%s]: %s", ticker, e)
-
-        # fallback: 로컬 캐시
         spark_days = _PERIOD_DAYS.get(period, 20)
         years_fb = 2 if period == "6m" else 1
         data = get_ohlcv_by_timeframe(ticker, "daily", years=years_fb)
@@ -1104,26 +1050,6 @@ def _kr_dashboard_row_to_scanner_item(row: dict) -> dict:
         "trade_value": int(row.get("거래대금") or 0),
     }
 
-
-def _kis_volume_rank_api_row_to_scanner(row: dict) -> dict:
-    """FHPST01710000 output 행 → 스캐너 아이템.
-    체결강도 = 매수체결량(shnu_cnqn_smtn) / 매도체결량(seln_cnqn_smtn) * 100.
-    두 필드 모두 없을 때는 vol_inrt(거래증가율)로 대체.
-    """
-    dash = _kr_raw_row_to_dashboard(row)
-    out = _kr_dashboard_row_to_scanner_item(dash)
-    out["volume"] = int(str(row.get("acml_vol", "0")).replace(",", "") or "0")
-    try:
-        buy  = float(str(row.get("shnu_cnqn_smtn", "0")).replace(",", "") or "0")
-        sell = float(str(row.get("seln_cnqn_smtn", "0")).replace(",", "") or "0")
-        if buy > 0 or sell > 0:
-            out["strength"] = round(buy / sell * 100, 1) if sell > 0 else 100.0
-        else:
-            # 체결량 필드 없을 때 vol_inrt(거래증가율) fallback
-            out["strength"] = float(str(row.get("vol_inrt", "0")).replace(",", "") or "0")
-    except (TypeError, ValueError):
-        out["strength"] = 0.0
-    return out
 
 
 def _kr_raw_row_to_dashboard(row: dict) -> dict:

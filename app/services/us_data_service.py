@@ -1,12 +1,11 @@
 """
 US 주식 데이터 서비스
 
-데이터 소스 우선순위:
-  1. KIS (한국투자증권 Open API) — KIS_APP_KEY / KIS_APP_SECRET 설정 시
-  2. yfinance — KIS 미설정 또는 실패 시 fallback
+데이터 소스:
+  yfinance — 일봉/주봉/월봉/분봉 OHLCV
 
 캐시 구조:
-  cache/us/tickers.json        — 전체 US 종목 목록 (일 1회 갱신, excd 포함)
+  cache/us/tickers.json        — 전체 US 종목 목록 (일 1회 갱신)
   cache/us/ohlcv/{symbol}.json — 일봉 OHLCV (당일 last_date 기준 캐시)
 
 티커 수집:
@@ -22,8 +21,6 @@ from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
-
-from app.services import kis_client
 
 import pandas as pd
 
@@ -639,82 +636,10 @@ def _fetch_from_yfinance(symbol: str, period: str = "10y", interval: str = "1d")
         return None
 
 
-def _get_excd(symbol: str) -> str:
-    """티커 캐시에서 KIS 거래소 코드 조회. 없으면 'NAS' 반환."""
-    for item in _ticker_list_cache:
-        if item.get("ticker") == symbol:
-            return item.get("excd") or "NAS"
-    return "NAS"
-
-
-def get_excd(symbol: str) -> str:
-    """Public: 티커의 KIS 거래소 코드 반환 (NAS / NYS / AMS)."""
-    return _get_excd(symbol)
-
-
-def _fetch_from_kis(symbol: str, years: int = 10, gubn: str = "0") -> Optional[dict]:
-    """
-    KIS API로 US OHLCV 조회.
-    gubn: '0'=일봉, '1'=주봉, '2'=월봉
-    """
-    excd = _get_excd(symbol)
-    records = kis_client.fetch_us_ohlcv_paginated(symbol, excd, years, gubn)
-    if not records:
-        return None
-
-    # 오름차순 정렬 (오래된→최신)
-    records.sort(key=lambda r: r.get("bass_dt", ""))
-
-    freq_map = {"0": "d", "1": "w", "2": "m"}
-    freq = freq_map.get(gubn, "d")
-
-    dates, opens, highs, lows, closes, volumes = [], [], [], [], [], []
-    for r in records:
-        raw_date = r.get("bass_dt", "")
-        if not raw_date or len(raw_date) != 8:
-            continue
-        try:
-            if gubn == "2":
-                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m")
-            else:
-                d = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-        try:
-            o  = round(float(r.get("open") or 0), 4)
-            h  = round(float(r.get("high") or 0), 4)
-            lo = round(float(r.get("low") or 0), 4)
-            c  = round(float(r.get("clos") or 0), 4)
-            v  = int(r.get("tvol") or 0)
-        except (ValueError, TypeError):
-            continue
-        if c == 0:
-            continue
-        dates.append(d)
-        opens.append(o)
-        highs.append(h)
-        lows.append(lo)
-        closes.append(c)
-        volumes.append(v)
-
-    if not dates:
-        return None
-
-    return {
-        "dates":     dates,
-        "open":      opens,
-        "high":      highs,
-        "low":       lows,
-        "close":     closes,
-        "volume":    volumes,
-        "freq":      freq,
-        "last_date": dates[-1],
-    }
-
 
 def get_us_ohlcv(symbol: str, years: int = 10) -> Optional[dict]:
     """
-    3-tier cache: 메모리 → 디스크 → KIS/yfinance (일봉).
+    3-tier cache: 메모리 → 디스크 → yfinance (일봉).
     당일 last_date면 캐시 유효.
     """
     symbol = symbol.upper()
@@ -740,17 +665,10 @@ def get_us_ohlcv(symbol: str, years: int = 10) -> Optional[dict]:
         except Exception:
             pass
 
-    # 3) KIS API (설정된 경우)
+    # 3) yfinance
     data = None
-    if kis_client.is_configured():
-        data = _fetch_from_kis(symbol, years=years, gubn="0")
-        if data is None:
-            logger.debug("KIS US OHLCV 실패, yfinance fallback (%s)", symbol)
-
-    # 4) yfinance fallback
-    if data is None:
-        period = f"{years}y"
-        data = _fetch_from_yfinance(symbol, period=period, interval="1d")
+    period = f"{years}y"
+    data = _fetch_from_yfinance(symbol, period=period, interval="1d")
     if data is None:
         return None
 
@@ -771,7 +689,7 @@ def get_us_ohlcv_by_timeframe(symbol: str, timeframe: str = "daily") -> Optional
     """
     timeframe: 'daily' | 'weekly' | 'monthly'
     daily → get_us_ohlcv() (캐시 활용)
-    weekly/monthly → 메모리+디스크 캐시 → KIS/yfinance
+    weekly/monthly → 메모리+디스크 캐시 → yfinance
     """
     global _mem_us_ohlcv_tf_date
     symbol = symbol.upper()
@@ -806,12 +724,6 @@ def get_us_ohlcv_by_timeframe(symbol: str, timeframe: str = "daily") -> Optional
 
     # 네트워크 조회
     data = None
-    if kis_client.is_configured():
-        gubn_map = {"weekly": "1", "monthly": "2"}
-        data = _fetch_from_kis(symbol, years=10, gubn=gubn_map.get(timeframe, "1"))
-        if not data:
-            logger.debug("KIS US OHLCV timeframe 실패, yfinance fallback (%s, %s)", symbol, timeframe)
-
     if not data:
         interval_map = {"weekly": "1wk", "monthly": "1mo"}
         data = _fetch_from_yfinance(symbol, period="10y", interval=interval_map.get(timeframe, "1wk"))
@@ -832,6 +744,7 @@ def get_us_company_name(symbol: str) -> str:
     return _mem_us_names.get(symbol.upper(), symbol.upper())
 
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # US 분봉 / 시간봉
 # ─────────────────────────────────────────────────────────────────────────────
@@ -839,63 +752,10 @@ def get_us_company_name(symbol: str) -> str:
 # TTL 캐시: (symbol, interval_min) → (candles, expire_ts)
 _us_intraday_cache: dict[tuple, tuple] = {}
 _US_INTRADAY_TTL = {1: 60, 5: 300, 15: 600, 30: 900, 60: 1800, 240: 3600}
-_us_intraday_refreshing: set[tuple] = set()
-
-# 서버 주도 갱신: 최근 조회된 US 종목 추적
-_active_us_intraday: dict[tuple, float] = {}
-_US_ACTIVE_TTL = 600  # 10분 미조회 시 제외
-_us_server_refresh_started = False
-
-
-def _mark_us_active(symbol: str, interval_min: int) -> None:
-    _active_us_intraday[(symbol.upper(), interval_min)] = __import__("time").time()
-
-
-def _us_server_refresh_loop() -> None:
-    """서버 주도 US 분봉 캐시 갱신 루프 (daemon thread)."""
-    import threading, time as _time
-    while True:
-        try:
-            now = _time.time()
-            expired = [k for k, t in list(_active_us_intraday.items()) if now - t > _US_ACTIVE_TTL]
-            for k in expired:
-                _active_us_intraday.pop(k, None)
-
-            for (symbol, interval_min) in list(_active_us_intraday.keys()):
-                cache_key = (symbol, interval_min)
-                if cache_key in _us_intraday_refreshing:
-                    continue
-                cached = _us_intraday_cache.get(cache_key)
-                ttl = _US_INTRADAY_TTL.get(interval_min, 60)
-                if cached:
-                    _, expire_ts = cached
-                    if expire_ts - _time.time() > ttl * 0.2:
-                        continue
-
-                _us_intraday_refreshing.add(cache_key)
-                def _do(s=symbol, m=interval_min, k=cache_key):
-                    try:
-                        get_us_intraday(s, m)
-                    finally:
-                        _us_intraday_refreshing.discard(k)
-                threading.Thread(target=_do, daemon=True).start()
-                _time.sleep(0.5)
-        except Exception:
-            pass
-        _time.sleep(10)
-
-
-def _ensure_us_server_refresh_loop() -> None:
-    global _us_server_refresh_started
-    if _us_server_refresh_started:
-        return
-    _us_server_refresh_started = True
-    import threading
-    threading.Thread(target=_us_server_refresh_loop, daemon=True).start()
 
 
 def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None:
-    """yfinance로 US 분봉/시간봉 캔들 반환. KIS 실패 시 fallback."""
+    """yfinance로 US 분봉/시간봉 캔들 반환."""
     try:
         import yfinance as yf
         from datetime import datetime, timezone
@@ -961,21 +821,11 @@ def _intraday_from_yfinance(symbol: str, interval_min: int) -> list[dict] | None
 
 def get_us_intraday(symbol: str, interval_min: int = 5, poll_only: bool = False) -> list[dict] | None:
     """
-    US 분봉/시간봉 캔들 반환.
+    US 분봉/시간봉 캔들 반환 (yfinance 기반).
     interval_min: 1 | 5 | 15 | 30 | 60 | 240
-
-    poll_only=True: 폴링 요청 — 캐시가 있으면 항상 반환 (외부 API 직접 호출 없음).
-                    서버 갱신 루프가 캐시를 자동으로 최신 상태로 유지.
     """
     import time as _time
-    from datetime import timezone
-    from app.services.kis_client import fetch_us_minute_paginated, is_configured
 
-    # 조회 종목 등록 + 루프 시작
-    _mark_us_active(symbol, interval_min)
-    _ensure_us_server_refresh_loop()
-
-    # TTL 캐시 확인
     cache_key = (symbol.upper(), interval_min)
     cached = _us_intraday_cache.get(cache_key)
     now_ts = _time.time()
@@ -985,64 +835,13 @@ def get_us_intraday(symbol: str, interval_min: int = 5, poll_only: bool = False)
         if now_ts < expire_ts:
             return candles_c
         if poll_only:
-            return candles_c  # 폴링은 stale 캐시라도 즉시 반환
+            return candles_c
 
-    result: list[dict] | None = None
-
-    # 1순위: KIS API
-    if is_configured():
-        excd = get_excd(symbol)
-        if excd:
-            # NMIN 매핑: 60/240은 30분봉 데이터를 집계
-            native_nmin = interval_min if interval_min <= 30 else 30
-            pages_map   = {1: 2, 5: 2, 15: 2, 30: 3, 60: 5, 240: 8}
-            pages       = pages_map.get(interval_min, 3)
-
-            raw = fetch_us_minute_paginated(symbol, excd, nmin=native_nmin, pages=pages)
-            if raw:
-                candles: list[dict] = []
-                seen: set[str] = set()
-                for r in reversed(raw):
-                    d = r.get("kymd", "")
-                    t = r.get("khms", "")
-                    if not d or not t or len(d) != 8 or len(t) != 6:
-                        continue
-                    key = d + t
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    try:
-                        dt = datetime(int(d[:4]), int(d[4:6]), int(d[6:]),
-                                      int(t[:2]), int(t[2:4]), int(t[4:]),
-                                      tzinfo=timezone.utc)
-                        candles.append({
-                            "time":   int(dt.timestamp()),
-                            "open":   float(r.get("open")  or 0),
-                            "high":   float(r.get("high")  or 0),
-                            "low":    float(r.get("low")   or 0),
-                            "close":  float(r.get("close") or r.get("last") or 0),
-                            "volume": int(r.get("tvol")    or 0),
-                        })
-                    except (ValueError, TypeError):
-                        continue
-
-                if candles:
-                    if interval_min in (60, 240):
-                        from app.services.data_service import _aggregate_intraday
-                        result = _aggregate_intraday(candles, interval_min * 60)
-                    else:
-                        result = candles
-            if not result:
-                logger.debug("KIS US minute 실패, yfinance fallback (%s, %dm)", symbol, interval_min)
-
-    # 2순위: yfinance fallback
-    if not result:
-        result = _intraday_from_yfinance(symbol, interval_min)
+    result = _intraday_from_yfinance(symbol, interval_min)
 
     if not result:
         return None
 
-    # TTL 캐시 저장
     ttl = _US_INTRADAY_TTL.get(interval_min, 300)
     _us_intraday_cache[cache_key] = (result, _time.time() + ttl)
     return result
@@ -1069,11 +868,26 @@ _PRIORITY_SYMBOLS: set[str] = (
 )
 
 
+def _is_us_market_hours() -> bool:
+    """미국 동부 시각 기준 정규장 시간 여부 (09:30–16:00, 월~금)."""
+    try:
+        from zoneinfo import ZoneInfo
+        et = ZoneInfo("America/New_York")
+    except ImportError:
+        import pytz
+        et = pytz.timezone("America/New_York")
+    from datetime import datetime as _dt
+    now = _dt.now(et)
+    if now.weekday() >= 5:
+        return False
+    return (now.hour == 9 and now.minute >= 30) or (10 <= now.hour < 16)
+
+
 def prefetch_us_ohlcv_background() -> None:
     """
     서버 시작 시 백그라운드 스레드에서 US OHLCV 프리페치.
     - 디스크 캐시가 유효하면 메모리 로드 (모든 종목, 장 중/외 공통)
-    - 캐시 없거나 만료 → 장 마감 후에만 우선순위 종목 KIS/yfinance 다운로드
+    - 캐시 없거나 만료 → 장 마감 후에만 우선순위 종목 yfinance 다운로드
       (장 중에는 API 과부하 방지를 위해 대기 후 다운로드)
     """
     import threading
@@ -1082,7 +896,7 @@ def prefetch_us_ohlcv_background() -> None:
     def _worker() -> None:
         tickers = get_us_tickers()
         today_str = date.today().isoformat()
-        in_market = kis_client.is_market_hours()
+        in_market = _is_us_market_hours()
 
         logger.info(
             "US OHLCV 백그라운드 프리페치 시작: 전체 %d개 (우선순위 자동다운: %d개)%s",
@@ -1128,7 +942,7 @@ def prefetch_us_ohlcv_background() -> None:
             # 최대 8시간 대기하며 장 마감 확인 (10분 간격)
             for _ in range(48):
                 time.sleep(600)
-                if not kis_client.is_market_hours():
+                if not _is_us_market_hours():
                     break
             else:
                 logger.info("US OHLCV 대기 시간 초과 — 다운로드 건너뜀 (다음 서버 시작 시 재시도)")
