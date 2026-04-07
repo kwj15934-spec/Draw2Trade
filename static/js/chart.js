@@ -55,8 +55,6 @@
     try {
       if (_patternDrawSeries)  { D2T.chart.removeSeries(_patternDrawSeries);  _patternDrawSeries  = null; }
       if (_patternMatchSeries) { D2T.chart.removeSeries(_patternMatchSeries); _patternMatchSeries = null; }
-      // 캔들 축 autoscaleInfoProvider 초기화
-      if (D2T && D2T.series) D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
     } catch (e) { /* 이미 제거됨 */ }
   }
 
@@ -739,7 +737,9 @@
         // 마커 비활성화 (차트는 캔들+이동평균선만 표시)
         if (D2T.series) try { D2T.series.setMarkers([]); } catch (_) {}
 
-        // ── 패턴 비교 LineSeries (캔들 1:1 매핑, 중복 time 제거) ──
+        // ── 패턴 비교 LineSeries (독립 Y축, 0~1 정규화값 직접 사용) ──
+        // 캔들 시리즈(right 축)에 영향 없이 독립 price scale 'pattern-overlay'에 그린다.
+        // scaleMargins를 캔들 축과 동일하게 설정해 시각적으로 겹치도록 함.
         _removePatternSeries();
         var safeDrawData = [];
         var safeMatchData = [];
@@ -749,30 +749,22 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            // match_normalized의 0=min, 1=max를 filtered 캔들의 실제 가격으로 역변환.
-            // pMin/pMax: filtered 구간의 low/high 전체 범위 사용.
-            var allLows  = filtered.map(function(c) { return c.low;  }).filter(isFinite);
-            var allHighs = filtered.map(function(c) { return c.high; }).filter(isFinite);
-            var _pMin = allLows.length  ? Math.min.apply(null, allLows)  : 0;
-            var _pMax = allHighs.length ? Math.max.apply(null, allHighs) : 1;
-            if (_pMin === _pMax) { _pMin = _pMin * 0.95; _pMax = _pMax * 1.05 || 1; }
+            // 0~1 정규화 배열을 filtered 캔들 시간축에 매핑 (가격 변환 없이 그대로)
+            safeMatchData = _normToPriceSeries(matchNorm, filtered, 0, 1);
+            safeDrawData  = _normToPriceSeries(drawNorm,  filtered, 0, 1);
 
-            safeMatchData = _normToPriceSeries(matchNorm, filtered, _pMin, _pMax);
-            safeDrawData  = _normToPriceSeries(drawNorm,  filtered, _pMin, _pMax);
-
-            // 캔들 축(right)이 패턴 가격 범위를 반드시 포함하도록 autoscale 강제
-            D2T.series.applyOptions({
-              autoscaleInfoProvider: function() {
-                return { priceRange: { minValue: _pMin, maxValue: _pMax }, margins: { above: 0.1, below: 0.2 } };
-              },
+            // 독립 price scale: 캔들 축에 영향 없음
+            D2T.chart.priceScale('pattern-overlay').applyOptions({
+              scaleMargins: { top: 0.05, bottom: 0.25 },
+              visible: false,
             });
 
             _patternDrawSeries = D2T.chart.addLineSeries({
-              color: '#ff6b35', lineWidth: 3, priceScaleId: 'right',
+              color: '#ff6b35', lineWidth: 3, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
             _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'right',
+              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
 
@@ -790,7 +782,7 @@
         // ── 패턴 구간으로 스크롤 ─────────────────────────────────
         D2T.chart.priceScale('right').applyOptions({
           autoScale: true,
-          scaleMargins: { top: 0.1, bottom: 0.2 },
+          scaleMargins: { top: 0.05, bottom: 0.25 },
         });
         var _offset = (D2T.matchPeriodData && D2T.matchPeriodData.scrollOffset != null)
           ? D2T.matchPeriodData.scrollOffset : null;

@@ -1148,12 +1148,18 @@
       countBadge.style.display = 'inline';
     }
 
+    // 차트와 같은 기간 모드: 모든 결과에 동일한 검색 기간 적용
+    var _chartPeriodFrom = (_lastBody && _lastBody.date_from) ? _lastBody.date_from : null;
+    var _chartPeriodTo   = (_lastBody && _lastBody.date_to)   ? _lastBody.date_to   : null;
+    var _isDateRange     = !!(_chartPeriodFrom && _chartPeriodTo);
+
     // 결과별 매칭 데이터 저장 (onclick에서 인덱스로 참조)
     _resultMatches = results.map(function (r) {
       return {
         matchNormalized: r.match_normalized || null,
-        periodFrom:      r.period_from      || '',
-        periodTo:        r.period_to        || '',
+        // 날짜 범위 모드: 모든 결과에 동일한 검색 기간 사용 (차트와 같은 기간으로 찾기)
+        periodFrom:      _isDateRange ? _chartPeriodFrom : (r.period_from || ''),
+        periodTo:        _isDateRange ? _chartPeriodTo   : (r.period_to   || ''),
         anchorToday:     !!r.anchor_today,
       };
     });
