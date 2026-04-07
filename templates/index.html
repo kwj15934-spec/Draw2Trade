@@ -343,6 +343,12 @@
        메인 종목 정보 오버레이 패널 (차트 + 버튼으로 토글)
        ══════════════════════════════════════════════════════════════ -->
   <div id="main-info-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; width:340px; z-index:200; background:#141416; border-left:1px solid #2d2d30; box-shadow:-4px 0 24px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+    <!-- 좌측 드래그 리사이즈 핸들 -->
+    <div id="main-overlay-resize-handle"
+      style="position:absolute; top:0; left:0; bottom:0; width:5px; cursor:col-resize; z-index:10; background:transparent; transition:background .15s;"
+      onmouseover="this.style.background='rgba(38,166,154,0.25)'"
+      onmouseout="this.style.background='transparent'"
+      title="드래그하여 너비 조절"></div>
     <!-- 오버레이 헤더 -->
     <div style="flex-shrink:0; padding:10px 12px 8px; border-bottom:1px solid #2d2d30; display:flex; align-items:center; justify-content:space-between;">
       <div>
@@ -1433,7 +1439,7 @@ function _escHtml(s) {
 {% endfor %}<script type="module" src="{{ vite_asset('app') }}"></script>
 {% else %}
 <script src="/static/js/chart.js?v=20260407i"></script>
-<script src="/static/js/draw.js?v=20260407g"></script>
+<script src="/static/js/draw.js?v=20260407h"></script>
 <script src="/static/js/realtime.js?v=20260402"></script>
 <script src="/static/js/quote.js?v=20260402"></script>
 {% endif %}
@@ -1489,6 +1495,68 @@ function _escHtml(s) {
 
   // toggleInfoPanel — 접기 버튼 제거로 미사용이지만 외부 호출 대비 유지
   window.toggleInfoPanel = function () {};
+
+  // ── 메인 종목 정보 오버레이 드래그 리사이즈 ─────────────────────
+  (function () {
+    var OVERLAY_MIN_W = 260, OVERLAY_MAX_W = 700;
+    var OVERLAY_RESIZE_KEY = 'd2t_main_overlay_w';
+    var _dragging = false, _startX, _startW, _raf = null;
+
+    function _applyW(w) {
+      var overlay = document.getElementById('main-info-overlay');
+      if (overlay) overlay.style.width = w + 'px';
+    }
+
+    // 저장된 너비 복원
+    var _saved = parseInt(localStorage.getItem(OVERLAY_RESIZE_KEY));
+    if (_saved && _saved >= OVERLAY_MIN_W && _saved <= OVERLAY_MAX_W) {
+      _applyW(_saved);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var handle = document.getElementById('main-overlay-resize-handle');
+      if (!handle) return;
+
+      handle.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        _dragging = true;
+        _startX = e.clientX;
+        var overlay = document.getElementById('main-info-overlay');
+        _startW = overlay ? overlay.offsetWidth : 340;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        handle.style.background = 'rgba(38,166,154,0.35)';
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!_dragging) return;
+        if (_raf) return;
+        _raf = requestAnimationFrame(function () {
+          _raf = null;
+          // 오른쪽 패널이므로 왼쪽으로 드래그 → 너비 증가
+          var nw = Math.min(OVERLAY_MAX_W, Math.max(OVERLAY_MIN_W, _startW + (_startX - e.clientX)));
+          _applyW(nw);
+        });
+      });
+
+      document.addEventListener('mouseup', function () {
+        if (!_dragging) return;
+        _dragging = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        var handle = document.getElementById('main-overlay-resize-handle');
+        if (handle) handle.style.background = 'transparent';
+        var overlay = document.getElementById('main-info-overlay');
+        if (overlay) localStorage.setItem(OVERLAY_RESIZE_KEY, overlay.offsetWidth);
+      });
+
+      // 더블클릭 → 기본 너비 340px 복원
+      handle.addEventListener('dblclick', function () {
+        _applyW(340);
+        localStorage.setItem(OVERLAY_RESIZE_KEY, 340);
+      });
+    });
+  })();
 
   // ── info-side-panel 드래그 리사이즈 ─────────────────────────────
   (function () {
