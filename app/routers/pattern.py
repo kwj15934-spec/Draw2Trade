@@ -140,17 +140,29 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
             effective_lookback = min(2520, body.lookback_bars * tf_to_days.get(tf, 1))  # 최대 ~10년
         else:
             effective_lookback = body.lookback_months * 22
+    elif tf == "daily":
+        # KR 일봉: bar_db 일봉 데이터 사용 — 월봉 변환 없이 실제 일봉으로 패턴 비교
+        from app.services.bar_db import get_daily_ohlcv_all, get_all_names_from_db as _db_names
+        ohlcv_cache = get_daily_ohlcv_all("KR_STOCK", years=2)
+        from app.services.data_service import all_names as _mem_names
+        _db_name_map = _db_names("KR_STOCK")
+        names_cache = {**_mem_names(), **{k: v for k, v in _db_name_map.items() if v}}
+        smooth_window = 3   # 일봉은 노이즈 많음 → 가벼운 스무딩
+        effective_lookback = body.lookback_bars if body.lookback_bars is not None else body.lookback_months * 22
+        effective_lookback = max(5, min(500, effective_lookback))
+        logger.info("KR 일봉 검색: lookback_bars=%s → effective_days=%d, 종목 %d개",
+                    body.lookback_bars, effective_lookback, len(ohlcv_cache))
     else:
-        ohlcv_cache = None   # search_similar 내부에서 all_ohlcv() 사용
+        # KR 월봉/주봉: 기존 월봉 캐시 사용
+        ohlcv_cache = None
         names_cache = None
         smooth_window = 1
-        # KR 데이터는 월봉 기준. 타임프레임에 따라 월 수로 환산
         if body.lookback_bars is not None:
-            tf_to_months = {"monthly": 1.0, "weekly": 1 / 4.33, "daily": 1 / 22.0}
+            tf_to_months = {"monthly": 1.0, "weekly": 1 / 4.33}
             effective_lookback = max(2, min(120, round(body.lookback_bars * tf_to_months.get(tf, 1.0))))
         else:
             effective_lookback = body.lookback_months
-        logger.info("KR 검색: tf=%s, lookback_bars=%s → effective_months=%d",
+        logger.info("KR %s 검색: lookback_bars=%s → effective_months=%d",
                     tf, body.lookback_bars, effective_lookback)
 
     # 끝=오늘 고정 + 시작 가변 모드: anchor_today=True, 날짜 미지정

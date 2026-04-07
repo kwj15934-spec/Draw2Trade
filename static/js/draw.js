@@ -949,6 +949,9 @@
         var _mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
         var _gotRange = false;
 
+        // KR 일봉은 "YYYY-MM-DD", KR 월봉/주봉은 "YYYY-MM", US는 "YYYY-MM-DD"
+        var _useShort = (_mkt !== 'US') && (timeframe !== 'daily');
+
         // _drawChartCoords: [{time, price}, ...] — 그린 선의 차트 좌표
         function _timeToDateStr(t, useShort) {
           if (!t && t !== 0) return '';
@@ -974,7 +977,6 @@
               var _tLast  = _validCoords[_validCoords.length - 1].time;
               // D2T.candles에서 해당 time에 가장 가까운 실제 캔들 날짜를 찾아 사용
               var _candles2 = window.D2T && D2T.candles;
-              var _useShort = (_mkt !== 'US');
               if (_candles2 && _candles2.length) {
                 function _nearestCandleTime(targetTime) {
                   var best = _candles2[0];
@@ -1886,7 +1888,9 @@
       var startTs = parseInt(startDate, 10);
       filtered = candles.filter(function(c) { return c.time >= startTs; });
     } else {
-      var startYM = startDate.slice(0, 7);
+      // 일봉: "YYYY-MM-DD" 전체 사용, 월봉/주봉: "YYYY-MM" 앞 7자리
+      var _curTf = window.D2T && D2T.timeframe ? D2T.timeframe : 'monthly';
+      var startYM = (_curTf === 'daily') ? startDate.slice(0, 10) : startDate.slice(0, 7);
       filtered = candles.filter(function(c) {
         var t = typeof c.time === 'object'
           ? (c.time.year + '-' + pad2(c.time.month))
@@ -1944,9 +1948,13 @@
     var _autoLastTime   = _autoLastCandle ? _autoLastCandle.time : null;
     var _autoDateTo = null;
     if (_autoLastTime) {
-      _autoDateTo = typeof _autoLastTime === 'object'
-        ? (_autoLastTime.year + '-' + pad2(_autoLastTime.month))
-        : String(_autoLastTime).slice(0, 7);
+      if (typeof _autoLastTime === 'object') {
+        _autoDateTo = _autoLastTime.year + '-' + pad2(_autoLastTime.month);
+      } else if (_curTf === 'daily') {
+        _autoDateTo = String(_autoLastTime).slice(0, 10);  // "YYYY-MM-DD"
+      } else {
+        _autoDateTo = String(_autoLastTime).slice(0, 7);   // "YYYY-MM"
+      }
     }
     _autoMeta = {
       anchor_today:  true,

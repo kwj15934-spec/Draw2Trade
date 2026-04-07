@@ -188,6 +188,69 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
     ]
 
 
+_daily_ohlcv_cache: dict = {}  # cache_key → {symbol: ohlcv_dict}
+
+
+def get_daily_ohlcv_all(market_group: str, years: int = 2) -> dict[str, dict]:
+    """
+    market_group의 전 종목 일봉 OHLCV를 한 번의 DB 조회로 반환 (첫 호출 시 메모리 캐시).
+    dates: "YYYY-MM-DD" 형식 (similarity_service의 date_from/date_to와 호환)
+    """
+    global _daily_ohlcv_cache
+    cache_key = f"{market_group}_{years}"
+    if cache_key in _daily_ohlcv_cache:
+        return _daily_ohlcv_cache[cache_key]
+
+    conn = _connect()
+    if conn is None:
+        return {}
+
+    end_date   = datetime.now().strftime("%Y%m%d")
+    start_date = (datetime.now() - timedelta(days=years * 365)).strftime("%Y%m%d")
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT symbol, trade_date, open, high, low, close, volume
+            FROM daily_bars
+            WHERE market_group = ? AND trade_date >= ? AND trade_date <= ?
+              AND close > 0
+            ORDER BY symbol, trade_date ASC
+            """,
+            (market_group, start_date, end_date),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return {}
+
+    raw: dict[str, list] = {}
+    for symbol, trade_date, o, h, lo, c, v in rows:
+        if symbol not in raw:
+            raw[symbol] = []
+        d = str(trade_date)
+        date_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 else d  # "YYYYMMDD" → "YYYY-MM-DD"
+        raw[symbol].append((date_str, o or 0.0, h or 0.0, lo or 0.0, c or 0.0, int(v or 0)))
+
+    result: dict[str, dict] = {}
+    for symbol, bars in raw.items():
+        if not bars:
+            continue
+        result[symbol] = {
+            "dates":  [b[0] for b in bars],
+            "open":   [round(float(b[1]), 1) for b in bars],
+            "high":   [round(float(b[2]), 1) for b in bars],
+            "low":    [round(float(b[3]), 1) for b in bars],
+            "close":  [round(float(b[4]), 1) for b in bars],
+            "volume": [b[5] for b in bars],
+            "freq":   "d",
+        }
+
+    _daily_ohlcv_cache[cache_key] = result
+    return result
+
+
 def get_all_names_from_db(market_group: str) -> dict[str, str]:
     """DB daily_bars에서 종목명 dict {symbol: name} 반환. name 컬럼 없으면 빈 dict."""
     conn = _connect()
