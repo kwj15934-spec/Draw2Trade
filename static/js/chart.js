@@ -677,7 +677,12 @@
             if (inTo) toIdx = bi;
           }
           if (fromIdx < 0) fromIdx = 0;
-          if (toIdx < 0) toIdx = validCandles.length - 1;
+          // anchor_today: to는 오늘 날짜이지만 DB엔 없을 수 있음 → 마지막 캔들까지 포함
+          if (D2T._anchorToday) {
+            toIdx = validCandles.length - 1;
+          } else {
+            if (toIdx < 0) toIdx = validCandles.length - 1;
+          }
 
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
