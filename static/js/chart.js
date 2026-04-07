@@ -55,6 +55,8 @@
     try {
       if (_patternDrawSeries)  { D2T.chart.removeSeries(_patternDrawSeries);  _patternDrawSeries  = null; }
       if (_patternMatchSeries) { D2T.chart.removeSeries(_patternMatchSeries); _patternMatchSeries = null; }
+      // 캔들 축 autoscaleInfoProvider 초기화
+      if (D2T && D2T.series) D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
     } catch (e) { /* 이미 제거됨 */ }
   }
 
@@ -742,29 +744,31 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            // 패턴 선을 독립 축(pattern-overlay)에 0~1 값으로 그림.
-            // scaleMargins를 캔들 축과 동일하게 설정 → 수직 위치 일치.
-            for (var i = 0; i < filtered.length; i++) {
-              var normIdx = Math.round((i / Math.max(1, filtered.length - 1)) * (drawNorm.length - 1));
-              safeDrawData.push({ time: filtered[i].time, value: drawNorm[normIdx] });
-              safeMatchData.push({ time: filtered[i].time, value: matchNorm[normIdx] });
-            }
+            // match_normalized의 0=min, 1=max를 filtered 캔들의 실제 가격으로 역변환.
+            // pMin/pMax: filtered 구간의 low/high 전체 범위 사용.
+            var allLows  = filtered.map(function(c) { return c.low;  }).filter(isFinite);
+            var allHighs = filtered.map(function(c) { return c.high; }).filter(isFinite);
+            var _pMin = allLows.length  ? Math.min.apply(null, allLows)  : 0;
+            var _pMax = allHighs.length ? Math.max.apply(null, allHighs) : 1;
+            if (_pMin === _pMax) { _pMin = _pMin * 0.95; _pMax = _pMax * 1.05 || 1; }
+
+            safeMatchData = _normToPriceSeries(matchNorm, filtered, _pMin, _pMax);
+            safeDrawData  = _normToPriceSeries(drawNorm,  filtered, _pMin, _pMax);
+
+            // 캔들 축(right)이 패턴 가격 범위를 반드시 포함하도록 autoscale 강제
+            D2T.series.applyOptions({
+              autoscaleInfoProvider: function() {
+                return { priceRange: { minValue: _pMin, maxValue: _pMax }, margins: { above: 0.1, below: 0.2 } };
+              },
+            });
 
             _patternDrawSeries = D2T.chart.addLineSeries({
-              color: '#ff6b35', lineWidth: 3, priceScaleId: 'pattern-overlay',
+              color: '#ff6b35', lineWidth: 3, priceScaleId: 'right',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
-              autoscaleInfoProvider: function () { return { priceRange: { minValue: 0, maxValue: 1 } }; },
             });
             _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'pattern-overlay',
+              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'right',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
-              autoscaleInfoProvider: function () { return { priceRange: { minValue: 0, maxValue: 1 } }; },
-            });
-            // 캔들 축(right)과 동일한 scaleMargins 적용 → 수직 위치 일치
-            D2T.chart.priceScale('pattern-overlay').applyOptions({
-              scaleMargins: { top: 0.1, bottom: 0.2 },
-              visible: false,
-              autoScale: false,
             });
 
             _patternDrawSeries.setData(safeDrawData);
