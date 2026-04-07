@@ -19,6 +19,35 @@ from app.services import fdr_service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
+
+def _pykrx_to_candles(data: dict, timeframe: str) -> list[dict]:
+    """
+    data_service.get_ohlcv_by_timeframe() 결과를 Lightweight Charts candle 포맷으로 변환.
+    monthly: dates "YYYY-MM" → time "YYYY-MM-01"
+    weekly/daily: dates "YYYY-MM-DD" → 그대로
+    """
+    dates  = data.get("dates",  [])
+    opens  = data.get("open",   [])
+    highs  = data.get("high",   [])
+    lows   = data.get("low",    [])
+    closes = data.get("close",  [])
+    vols   = data.get("volume", [])
+    candles = []
+    for i, d in enumerate(dates):
+        c = closes[i] if i < len(closes) else 0
+        if not c or c <= 0:
+            continue
+        time_str = (d + "-01") if len(str(d)) == 7 else str(d)  # "YYYY-MM" → "YYYY-MM-01"
+        candles.append({
+            "time":   time_str,
+            "open":   round(float(opens[i]  if i < len(opens)  else c), 1),
+            "high":   round(float(highs[i]  if i < len(highs)  else c), 1),
+            "low":    round(float(lows[i]   if i < len(lows)   else c), 1),
+            "close":  round(float(c), 1),
+            "volume": int(vols[i] if i < len(vols) else 0),
+        })
+    return candles
+
 # Redis 캐시 TTL (초)
 _REDIS_CANDLE_TTL = {
     "daily": 300, "weekly": 600, "monthly": 1800,
@@ -110,14 +139,22 @@ async def chart_data(
                 "prevClose": 0,
             }
 
-    # DB 조회 (전체 기간)
+    # ── 1순위: bar_db (SQLite) 조회 ──────────────────────────────────────────
     _db_end = datetime.now().strftime("%Y%m%d")
     bars = bar_db.get_daily_bars("KR_STOCK", ticker, "19900101", _db_end)
 
-    if not bars:
-        raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
+    if bars:
+        candles = bar_db.bars_to_candles(bars, tf)
+    else:
+        # ── 2순위: pykrx 폴백 (DB에 종목 없거나 데이터 부족 시) ──────────────
+        logger.info("bar_db 데이터 없음 (%s) → pykrx 폴백", ticker)
+        pykrx_data = data_service.get_ohlcv_by_timeframe(ticker, tf, years=10)
+        if not pykrx_data or not pykrx_data.get("dates"):
+            raise HTTPException(status_code=404, detail=f"종목 {ticker} 데이터 없음")
+        candles = _pykrx_to_candles(pykrx_data, tf)
 
-    candles = bar_db.bars_to_candles(bars, tf)
+    if not candles:
+        raise HTTPException(status_code=404, detail=f"종목 {ticker} 캔들 데이터 없음")
 
     # 실시간 현재가를 마지막 봉에 반영 (일봉/주봉/월봉 모두, 캐시 저장 안 함)
     candles = fdr_service.append_realtime_candle(candles, ticker, timeframe=tf)
