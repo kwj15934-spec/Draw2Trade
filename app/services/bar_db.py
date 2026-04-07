@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Optional
 
 _ROOT    = Path(__file__).resolve().parent.parent.parent
+# DB 경로: data/market_data.db 우선, 없으면 "daily data/data/market_data.db" 시도
 _DB_PATH = _ROOT / "data" / "market_data.db"
+if not _DB_PATH.exists():
+    _ALT_DB = _ROOT / "daily data" / "data" / "market_data.db"
+    if _ALT_DB.exists():
+        _DB_PATH = _ALT_DB
 
 # DB 없음 경고를 반복 출력하지 않기 위한 플래그
 _db_missing_warned = False
@@ -54,8 +59,7 @@ def get_daily_bars(
     try:
         rows = conn.execute(
             """
-            SELECT trade_date, open, high, low, close, volume,
-                   trade_value, change_rate
+            SELECT trade_date, open, high, low, close, volume
             FROM daily_bars
             WHERE market_group = ? AND symbol = ?
               AND trade_date >= ? AND trade_date <= ?
@@ -65,14 +69,12 @@ def get_daily_bars(
         ).fetchall()
         return [
             {
-                "trade_date":   r[0],
-                "open":         r[1],
-                "high":         r[2],
-                "low":          r[3],
-                "close":        r[4],
-                "volume":       r[5],
-                "trade_value":  r[6],
-                "change_rate":  r[7],
+                "trade_date": r[0],
+                "open":       r[1],
+                "high":       r[2],
+                "low":        r[3],
+                "close":      r[4],
+                "volume":     r[5],
             }
             for r in rows
             if r[4] and r[4] > 0  # close > 0 인 유효 데이터만
@@ -187,11 +189,15 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
 
 
 def get_all_names_from_db(market_group: str) -> dict[str, str]:
-    """DB daily_bars에서 종목명 dict {symbol: name} 반환."""
+    """DB daily_bars에서 종목명 dict {symbol: name} 반환. name 컬럼 없으면 빈 dict."""
     conn = _connect()
     if conn is None:
         return {}
     try:
+        # name 컬럼 존재 여부 확인
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(daily_bars)").fetchall()}
+        if "name" not in cols:
+            return {}
         rows = conn.execute(
             "SELECT DISTINCT symbol, name FROM daily_bars WHERE market_group = ? AND name IS NOT NULL",
             (market_group,),
