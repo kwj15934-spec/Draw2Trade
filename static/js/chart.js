@@ -758,12 +758,8 @@
             safeMatchData = _normToPriceSeries(matchNorm, filtered, 0, 1);
             safeDrawData  = _normToPriceSeries(drawNorm,  filtered, 0, 1);
 
-            // 독립 price scale: 캔들 축에 영향 없음
-            D2T.chart.priceScale('pattern-overlay').applyOptions({
-              scaleMargins: { top: 0.05, bottom: 0.25 },
-              visible: false,
-            });
-
+            // 독립 price scale: 시리즈 먼저 추가 후 priceScale() 설정
+            // (v4.1.0에서 chart.priceScale('custom-id')는 시리즈 추가 전 null 반환)
             _patternDrawSeries = D2T.chart.addLineSeries({
               color: '#ff6b35', lineWidth: 3, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
@@ -772,6 +768,14 @@
               color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'pattern-overlay',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
+
+            // 시리즈 추가 후 scale 옵션 적용 (캔들 축에 영향 없음)
+            try {
+              _patternDrawSeries.priceScale().applyOptions({
+                scaleMargins: { top: 0.05, bottom: 0.25 },
+                visible: false,
+              });
+            } catch (_) {}
 
             _patternDrawSeries.setData(safeDrawData);
             _patternMatchSeries.setData(safeMatchData);

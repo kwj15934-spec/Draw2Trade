@@ -186,6 +186,102 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
     ]
 
 
+def get_all_names_from_db(market_group: str) -> dict[str, str]:
+    """DB daily_bars에서 종목명 dict {symbol: name} 반환."""
+    conn = _connect()
+    if conn is None:
+        return {}
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT symbol, name FROM daily_bars WHERE market_group = ? AND name IS NOT NULL",
+            (market_group,),
+        ).fetchall()
+        return {r[0]: r[1] for r in rows if r[1]}
+    finally:
+        conn.close()
+
+
+def get_monthly_ohlcv_all(market_group: str, years: int = 10) -> dict[str, dict]:
+    """
+    market_group의 전 종목 월봉 OHLCV를 한 번의 DB 조회로 반환.
+    dates: "YYYY-MM" 형식 (similarity_service 날짜 비교와 호환)
+
+    Returns:
+        {symbol: {"dates": ["2024-01", ...], "open": [...], ..., "freq": "m", "last_month": "..."}}
+    """
+    conn = _connect()
+    if conn is None:
+        return {}
+
+    end_date = datetime.now().strftime("%Y%m%d")
+    start_date = (datetime.now() - timedelta(days=years * 365)).strftime("%Y%m%d")
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT symbol, trade_date, open, high, low, close, volume
+            FROM daily_bars
+            WHERE market_group = ? AND trade_date >= ? AND trade_date <= ?
+              AND close > 0
+            ORDER BY symbol, trade_date ASC
+            """,
+            (market_group, start_date, end_date),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return {}
+
+    from collections import OrderedDict
+
+    raw: dict[str, list] = {}
+    for symbol, trade_date, o, h, lo, c, v in rows:
+        if symbol not in raw:
+            raw[symbol] = []
+        raw[symbol].append((trade_date, o or 0.0, h or 0.0, lo or 0.0, c or 0.0, int(v or 0)))
+
+    result: dict[str, dict] = {}
+    for symbol, bars in raw.items():
+        months: "OrderedDict[str, dict]" = OrderedDict()
+        for trade_date, o, h, lo, c, v in bars:
+            try:
+                month_key = f"{trade_date[:4]}-{trade_date[4:6]}"  # "YYYY-MM"
+            except (IndexError, TypeError):
+                continue
+            if month_key not in months:
+                months[month_key] = {
+                    "open": float(o), "high": float(h),
+                    "low": float(lo), "close": float(c), "volume": v,
+                }
+            else:
+                m = months[month_key]
+                if h:
+                    m["high"] = max(m["high"], float(h))
+                if lo and float(lo) > 0:
+                    m["low"] = min(m["low"], float(lo))
+                if c:
+                    m["close"] = float(c)
+                m["volume"] += v
+
+        if not months:
+            continue
+
+        dates = list(months.keys())
+        result[symbol] = {
+            "dates":      dates,
+            "open":       [round(months[d]["open"],  1) for d in dates],
+            "high":       [round(months[d]["high"],  1) for d in dates],
+            "low":        [round(months[d]["low"],   1) for d in dates],
+            "close":      [round(months[d]["close"], 1) for d in dates],
+            "volume":     [months[d]["volume"] for d in dates],
+            "freq":       "m",
+            "last_month": dates[-1],
+        }
+
+    return result
+
+
 def _fmt_date(date_str: str) -> str:
     """'20240102' → '2024-01-02'"""
     d = str(date_str)

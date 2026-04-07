@@ -415,20 +415,52 @@ def get_preload_status() -> dict:
     return dict(_preload_status)
 
 
+def _load_from_bar_db() -> int:
+    """
+    bar_db (market_data.db) 에서 KR_STOCK 월봉 데이터를 _mem_ohlcv / _mem_names에 로드.
+    로드된 종목 수를 반환한다. DB가 없거나 오류 시 0 반환.
+    """
+    try:
+        from app.services.bar_db import get_monthly_ohlcv_all, get_all_names_from_db
+        db_data = get_monthly_ohlcv_all("KR_STOCK", years=10)
+        if not db_data:
+            return 0
+        db_names = get_all_names_from_db("KR_STOCK")
+        for symbol, ohlcv in db_data.items():
+            _mem_ohlcv[symbol] = ohlcv
+            if symbol in db_names and db_names[symbol]:
+                _mem_names[symbol] = db_names[symbol]
+            if symbol not in _mem_markets:
+                _mem_markets[symbol] = "KOSPI"
+        return len(db_data)
+    except Exception as e:
+        logger.warning("bar_db 로드 실패: %s", e)
+        return 0
+
+
 def build_cache() -> None:
     """
     KOSPI 전 종목 월봉 데이터를 메모리에 선로드.
 
+    0단계: bar_db (market_data.db) 에서 즉시 로드 — KIS API / pykrx 불필요
     1단계: 디스크 캐시를 날짜 무관하게 전부 메모리에 올림 (즉시 검색 가능)
     2단계: 미캐시 종목은 백그라운드에서 pykrx로 천천히 채움
     """
     global _mem_ohlcv_date
 
+    # ── 0단계: bar_db 우선 로드 ──────────────────────────────────────────────
+    db_loaded = _load_from_bar_db()
+    if db_loaded > 0:
+        logger.info("bar_db에서 %d개 종목 월봉 로드 완료 (유사종목 검색 즉시 사용 가능)", db_loaded)
+        _preload_status["phase"] = "done"
+        _preload_status["loaded"] = db_loaded
+
     tickers = get_kospi_tickers()
     total = len(tickers)
-    _preload_status["phase"] = "disk"
-    _preload_status["total"] = total
-    _preload_status["loaded"] = 0
+    _preload_status["total"] = max(total, db_loaded)
+    if db_loaded == 0:
+        _preload_status["phase"] = "disk"
+        _preload_status["loaded"] = 0
 
     # 프리로드 날짜를 오늘로 설정 → get_monthly_ohlcv의 .clear() 방지
     _mem_ohlcv_date = datetime.now().strftime("%Y-%m-%d")
