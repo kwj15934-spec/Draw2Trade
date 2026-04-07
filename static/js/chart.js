@@ -823,7 +823,8 @@
                 } catch (e) {
                   D2T.chart.timeScale().scrollToPosition(5, false);
                 }
-                if (typeof redraw === 'function') redraw();
+                // redraw() 호출 안 함 — 결과 차트에서 _patternDrawSeries가 패턴 오버레이를 표시함
+                // redraw() 호출 시 캔버스 드로잉이 다른 종목 가격축에 재투영되어 두 번 그려지는 문제 발생
               }, 150);
             });
           } else {
@@ -843,7 +844,7 @@
                 } catch (e) {
                   D2T.chart.timeScale().scrollToPosition(_offset, false);
                 }
-                if (typeof redraw === 'function') redraw();
+                // redraw() 호출 안 함 — 결과 차트에서 _patternDrawSeries가 패턴 오버레이를 표시함
               }, 150);
             });
           }

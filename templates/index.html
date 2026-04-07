@@ -233,6 +233,14 @@
         </div>
       </div>
 
+      <!-- 차트 우상단: 메인 종목 정보 토글 버튼 -->
+      <button id="btn-main-info-toggle"
+        onclick="toggleMainInfoOverlay()"
+        title="메인 종목 정보"
+        style="position:absolute; top:8px; right:10px; z-index:30; width:28px; height:28px; background:rgba(30,30,33,0.85); border:1px solid #3a3a3e; border-radius:6px; color:#d4d8e2; cursor:pointer; font-size:16px; font-weight:300; line-height:1; display:flex; align-items:center; justify-content:center; transition:background .15s, border-color .15s;"
+        onmouseover="this.style.background='rgba(38,166,154,0.25)'; this.style.borderColor='#26a69a';"
+        onmouseout="this.style.background='rgba(30,30,33,0.85)'; this.style.borderColor='#3a3a3e';">＋</button>
+
     </div>
 
     <!-- ── 패턴 비교 미니 패널 ──────────────── -->
@@ -286,40 +294,78 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
-       종목 상세 컨텍스트 패널 (info-side-panel)
-       · 기본 350px 너비, 접기/펼치기 가능
-       · 탭: 재무 / 뉴스·공시 / 시장 반응
+       유사 종목 상세 패널 (왼쪽 고정 패널 — 기존 info-side-panel 자리)
+       유사 종목 클릭 시 재무/뉴스/시장반응 표시
        ══════════════════════════════════════════════════════════════ -->
   <div id="info-side-panel" class="info-side-panel">
 
     <!-- 드래그 리사이즈 핸들 (패널 왼쪽 가장자리) -->
     <div id="info-panel-resize-handle" class="info-panel-resize-handle" title="드래그하여 크기 조절"></div>
 
-    <!-- 패널 내부 -->
-    <div class="info-panel-body">
+    <!-- 패널 내부: floating-info-widget 내용을 여기에 표시 -->
+    <div class="info-panel-body" style="display:flex;flex-direction:column;min-height:0;height:100%;">
 
-      <!-- 패널 헤더: 메인 차트 종목명 -->
+      <!-- 패널 헤더 -->
       <div class="info-panel-ticker-header">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span class="info-panel-header-label">메인 종목 정보</span>
-          <span id="info-panel-updated" style="font-size:10px;color:#555;"></span>
+          <span class="info-panel-header-label">유사 종목 비교</span>
         </div>
         <div class="info-panel-ticker-row">
-          <span class="info-panel-ticker-name" id="info-panel-name">—</span>
-          <span class="info-panel-ticker-code" id="info-panel-code"></span>
+          <span class="info-panel-ticker-name" id="fiw-title-left">종목을 선택하세요</span>
+          <span class="info-panel-ticker-code" id="fiw-ticker-left"></span>
         </div>
       </div>
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
-        <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">개요</button>
-        <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
-        <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
-        <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
+        <button class="info-tab-btn active" data-itab="finance"   onclick="switchFiwTab('finance')">재무</button>
+        <button class="info-tab-btn"        data-itab="news"      onclick="switchFiwTab('news')">뉴스</button>
+        <button class="info-tab-btn"        data-itab="community" onclick="switchFiwTab('community')">시장반응</button>
       </div>
 
-      <!-- ── 재무 탭 ──────────────────────────────────── -->
-      <div id="info-pane-finance" class="info-pane active">
+      <!-- 탭 콘텐츠: fiw-panel-* 을 여기 렌더 -->
+      <div id="fiw-body-left" style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <div id="fiw-panel-finance-left" class="fiw-panel active" style="flex:1;overflow-y:auto;padding:6px 8px;">
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+        </div>
+        <div id="fiw-panel-news-left" class="fiw-panel" style="flex:1;overflow-y:auto;padding:6px 8px;display:none;">
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+        </div>
+        <div id="fiw-panel-community-left" class="fiw-panel" style="flex:1;overflow-y:auto;padding:6px 8px;display:none;">
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+        </div>
+      </div>
+
+    </div><!-- /.info-panel-body -->
+  </div><!-- /#info-side-panel -->
+
+  <!-- ══════════════════════════════════════════════════════════════
+       메인 종목 정보 오버레이 패널 (차트 + 버튼으로 토글)
+       ══════════════════════════════════════════════════════════════ -->
+  <div id="main-info-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; width:340px; z-index:200; background:#141416; border-left:1px solid #2d2d30; box-shadow:-4px 0 24px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+    <!-- 오버레이 헤더 -->
+    <div style="flex-shrink:0; padding:10px 12px 8px; border-bottom:1px solid #2d2d30; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="font-size:10px;color:#555;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">메인 종목 정보</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:14px;font-weight:700;color:#e8eaef;" id="info-panel-name">—</span>
+          <span style="font-size:11px;color:#7a8499;" id="info-panel-code"></span>
+        </div>
+        <span id="info-panel-updated" style="font-size:10px;color:#555;"></span>
+      </div>
+      <button onclick="toggleMainInfoOverlay()" style="background:none;border:none;color:#7a8499;cursor:pointer;font-size:18px;line-height:1;padding:4px;" title="닫기">&times;</button>
+    </div>
+    <!-- 탭 헤더 -->
+    <div class="info-panel-tabs" style="flex-shrink:0;border-bottom:1px solid #2d2d30;">
+      <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">개요</button>
+      <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
+      <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
+      <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
+    </div>
+    <!-- 탭 콘텐츠 -->
+    <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+      <!-- ── 재무 탭 ── -->
+      <div id="info-pane-finance" class="info-pane active" style="flex:1;overflow-y:auto;">
         <div class="info-pane-loading" id="finance-loading" style="display:none;">
           <div class="info-spinner"></div><span>로딩 중...</span>
         </div>
@@ -327,19 +373,15 @@
           <div class="info-empty">종목을 로드하면 재무 지표가 표시됩니다.</div>
         </div>
       </div>
-
-      <!-- ── 상세 재무제표 탭 ──────────────────────────── -->
-      <div id="info-pane-detailed" class="info-pane" style="display:none;flex-direction:column;padding:8px 10px;">
-        <!-- 보고서 유형 선택 -->
+      <!-- ── 상세 재무제표 탭 ── -->
+      <div id="info-pane-detailed" class="info-pane" style="display:none;flex-direction:column;padding:8px 10px;flex:1;overflow:hidden;">
         <div class="detfin-report-tabs" id="detfin-report-tabs">
           <button class="detfin-report-tab active" data-report="annual">사업</button>
           <button class="detfin-report-tab"        data-report="half">반기</button>
           <button class="detfin-report-tab"        data-report="q1">1분기</button>
           <button class="detfin-report-tab"        data-report="q3">3분기</button>
         </div>
-        <!-- 재무제표 유형 탭 -->
         <div class="detfin-type-tabs" id="detfin-type-tabs"></div>
-        <!-- 테이블 영역 -->
         <div id="detfin-loading" class="info-pane-loading" style="display:none;">
           <div class="info-spinner"></div><span>재무제표 불러오는 중…</span>
         </div>
@@ -347,23 +389,22 @@
           <div class="info-empty">종목을 로드하면 상세 재무제표가 표시됩니다.</div>
         </div>
       </div>
-
-      <!-- ── 속보 탭 ──────────────────────────────────── -->
-      <div id="info-pane-news" class="info-pane" style="display:none;flex-direction:column;">
+      <!-- ── 뉴스 탭 ── -->
+      <div id="info-pane-news" class="info-pane" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
         <div id="info-news-feed" style="flex:1;overflow-y:auto;padding:6px 8px;">
           <div class="info-empty">종목을 로드하면 뉴스가 표시됩니다.</div>
         </div>
       </div>
-
-      <!-- ── 시장반응 탭 ───────────────────────────────── -->
-      <div id="info-pane-community" class="info-pane" style="display:none;flex-direction:column;">
+      <!-- ── 시장반응 탭 ── -->
+      <div id="info-pane-community" class="info-pane" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
         <div id="info-community-feed" style="flex:1;overflow-y:auto;padding:6px 8px;">
           <div class="info-empty">종목을 로드하면 시장반응이 표시됩니다.</div>
         </div>
       </div>
-
-    </div><!-- /.info-panel-body -->
-  </div><!-- /#info-side-panel -->
+    </div>
+  </div>
+  <!-- 오버레이 배경 클릭 시 닫기 -->
+  <div id="main-info-overlay-backdrop" onclick="toggleMainInfoOverlay()" style="display:none; position:fixed; inset:0; z-index:199; background:rgba(0,0,0,0.3);"></div>
 
   <!-- ── 사이드바 스플리터 ────────────────────────── -->
   <div id="sidebar-resize-handle"></div>
@@ -371,52 +412,16 @@
   <!-- ── 우측 사이드바 ──────────────────────────── -->
   <div class="d2t-sidebar">
 
-    <!-- ══ 상단 패널: 유사 종목 상세 정보 ════════ -->
-    <div id="sidebar-top-panel">
-
-      <!-- 위젯 최소화 시 표시되는 복원 버튼 -->
-      <button id="fiw-restore-tab" style="display:none;" title="상세 정보 열기">상세 정보 열기</button>
-
-      <!-- 종목 정보 위젯 본체 -->
-      <div id="floating-info-widget">
-        <div id="fiw-header">
-          <div id="fiw-title-group">
-            <div class="fiw-header-top">
-              <span class="fiw-header-label">유사 종목 비교</span>
-            </div>
-            <div class="fiw-header-bottom">
-              <!-- 종목 미선택: 안내 / 선택 후: 종목명 + 티커 -->
-              <span id="fiw-title" class="fiw-title-label">종목을 선택하세요</span>
-              <span id="fiw-ticker" class="fiw-ticker-sub"></span>
-            </div>
-          </div>
-          <div id="fiw-controls">
-            <button id="fiw-btn-min" title="최소화">─</button>
-          </div>
-        </div>
-        <div id="fiw-tabs">
-          <button class="fiw-tab active" data-tab="finance">재무</button>
-          <button class="fiw-tab" data-tab="news">뉴스</button>
-          <button class="fiw-tab" data-tab="community">시장반응</button>
-        </div>
-        <div id="fiw-body">
-          <div id="fiw-panel-finance" class="fiw-panel active">
-            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
-          </div>
-          <div id="fiw-panel-news" class="fiw-panel">
-            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
-          </div>
-          <div id="fiw-panel-community" class="fiw-panel">
-            <div class="fiw-loading">하단 리스트에서 종목을 클릭하세요</div>
-          </div>
-        </div>
-        <div id="fiw-resize-handle"></div>
-      </div>
-
-    </div><!-- /#sidebar-top-panel -->
-
-    <!-- ══ 수직 리사이저 ══════════════════════════ -->
-    <div id="sidebar-vresizer"></div>
+    <!-- 기존 floating-info-widget 은 #info-side-panel(왼쪽)로 이동됨 -->
+    <!-- 하위 호환을 위해 숨겨진 더미 요소 유지 -->
+    <div id="floating-info-widget" style="display:none;" aria-hidden="true">
+      <span id="fiw-title"></span>
+      <span id="fiw-ticker"></span>
+      <div id="fiw-panel-finance" class="fiw-panel"></div>
+      <div id="fiw-panel-news" class="fiw-panel"></div>
+      <div id="fiw-panel-community" class="fiw-panel"></div>
+    </div>
+    <button id="fiw-restore-tab" style="display:none;" aria-hidden="true"></button>
 
     <!-- ══ 하단 패널: 검색결과/즐겨찾기/저장 ════ -->
     <div id="sidebar-bottom-panel">
@@ -864,86 +869,37 @@
   var _debounceTimer = null;
   var _DEBOUNCE_MS   = 300;
 
-  // ── 탭 전환 ──────────────────────────────────────────────
+  // ── 탭 전환 (왼쪽 패널용) ────────────────────────────────
   function switchTab(tab) {
     _activeTab = tab;
-    document.querySelectorAll('.fiw-tab').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.tab === tab);
+    // 왼쪽 패널 탭 버튼 active 상태 (info-tab-btn with data-itab)
+    document.querySelectorAll('#info-side-panel .info-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.itab === tab);
     });
-    document.querySelectorAll('.fiw-panel').forEach(function (p) {
-      p.classList.toggle('active', p.id === 'fiw-panel-' + tab);
+    // 왼쪽 패널 콘텐츠 표시/숨김
+    ['finance', 'news', 'community'].forEach(function (t) {
+      var el = document.getElementById('fiw-panel-' + t + '-left');
+      if (el) el.style.display = (t === tab) ? 'flex' : 'none';
     });
     if (_ticker && !_loaded[tab]) _fetchTab(tab, _ticker);
   }
 
-  document.querySelectorAll('.fiw-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var tab = this.dataset.tab;
-      var wasActive = _activeTab === tab && _loaded[tab];
-      switchTab(tab);
-      // 커뮤니티 탭은 이미 로드된 상태에서 다시 클릭해도 강제 갱신
-      if (tab === 'community' && wasActive && _ticker) {
-        _loaded.community = false;
-        _fetchTab('community', _ticker);
-      }
-    });
-  });
+  // 왼쪽 패널 탭 버튼 클릭 — switchFiwTab 전역으로 노출
+  window.switchFiwTab = function (tab) {
+    var wasActive = _activeTab === tab && _loaded[tab];
+    switchTab(tab);
+    if (tab === 'community' && wasActive && _ticker) {
+      _loaded.community = false;
+      _fetchTab('community', _ticker);
+    }
+  };
 
-  // ── 최소화 / 복원 ─────────────────────────────────────────
-  var _widget     = document.getElementById('floating-info-widget');
-  var _restoreTab = document.getElementById('fiw-restore-tab');
-  var _topPanel   = document.getElementById('sidebar-top-panel');
+  // ── 최소화 / 복원 (레이아웃 변경으로 왼쪽 패널은 항상 표시) ──────
+  function _collapseWidget() { /* 왼쪽 패널 고정 표시 — no-op */ }
+  function _expandWidget()   { /* 왼쪽 패널 고정 표시 — no-op */ }
 
-  function _collapseWidget() {
-    if (_widget)   _widget.style.display = 'none';
-    if (_restoreTab) _restoreTab.style.display = 'flex';
-    if (_topPanel) _topPanel.style.height = 'auto';
-  }
-  function _expandWidget() {
-    if (_restoreTab) _restoreTab.style.display = 'none';
-    if (_widget)   _widget.style.display = 'flex';
-    if (_topPanel) _topPanel.style.height = '';
-  }
-
-  var _btnMin = document.getElementById('fiw-btn-min');
-  if (_btnMin) _btnMin.addEventListener('click', _collapseWidget);
-  if (_restoreTab) _restoreTab.addEventListener('click', _expandWidget);
-
-  // ── 사이드바 수직 리사이저 (상단/하단 패널 비율) ──────────
-  (function initVResizer() {
-    var vres    = document.getElementById('sidebar-vresizer');
-    var topPnl  = document.getElementById('sidebar-top-panel');
-    var sidebar = document.querySelector('.d2t-sidebar');
-    if (!vres || !topPnl || !sidebar) return;
-    var _dragging = false, startY, startH, _raf = null;
-    var MIN_H = 80, MAX_RATIO = 0.75;
-    vres.addEventListener('mousedown', function (e) {
-      e.preventDefault();
-      _dragging = true;
-      startY = e.clientY;
-      startH = topPnl.offsetHeight;
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'row-resize';
-      vres.classList.add('dragging');
-    });
-    document.addEventListener('mousemove', function (e) {
-      if (!_dragging) return;
-      if (_raf) return;
-      _raf = requestAnimationFrame(function () {
-        _raf = null;
-        var maxH = Math.floor(sidebar.offsetHeight * MAX_RATIO);
-        var newH = Math.min(maxH, Math.max(MIN_H, startH + (e.clientY - startY)));
-        topPnl.style.height = newH + 'px';
-      });
-    });
-    document.addEventListener('mouseup', function () {
-      if (!_dragging) return;
-      _dragging = false;
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-      vres.classList.remove('dragging');
-    });
-  })();
+  // ── 수직 리사이저 (sidebar-top-panel 제거로 불필요) ──────────
+  // initVResizer: no-op
 
   // ── 사이드바 수평 스플리터 리사이즈 ──────────────────────
   (function initSidebarResize() {
@@ -983,7 +939,7 @@
   // ── fiw-body 이벤트 위임 — 뉴스/커뮤니티 카드 클릭 처리 ──────────
   // innerHTML 재생성 후에도 항상 작동. 인라인 onclick 없이 처리.
   (function () {
-    var body = document.getElementById('fiw-body');
+    var body = document.getElementById('fiw-body-left');
     if (!body) return;
 
     function closest(el, selector, root) {
@@ -1020,14 +976,18 @@
 
   // ── 데이터 fetch ───────────────────────────────────────────
   function _setPanel(tab, html) {
-    var el = document.getElementById('fiw-panel-' + tab);
+    // 왼쪽 패널 (새 레이아웃) — 여기에만 실제 렌더링
+    var el = document.getElementById('fiw-panel-' + tab + '-left');
     if (el) el.innerHTML = html;
+    // 더미 호환 요소도 업데이트 (이벤트 위임 등에서 참조할 수 있으므로)
+    var dummy = document.getElementById('fiw-panel-' + tab);
+    if (dummy) dummy.innerHTML = html;
   }
   function _loadingPanel(tab) {
-    _setPanel(tab, '<div class="fiw-loading">로딩 중…</div>');
+    _setPanel(tab, '<div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">로딩 중…</div>');
   }
   function _errorPanel(tab, msg) {
-    _setPanel(tab, '<div class="fiw-loading">' + (msg || '데이터 없음') + '</div>');
+    _setPanel(tab, '<div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">' + (msg || '데이터 없음') + '</div>');
   }
 
   function _fetchTab(tab, ticker) {
@@ -1254,21 +1214,22 @@
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── 우측 패널 헤더 즉시 갱신 ────────────────────────────────
+  // ── 왼쪽 패널 헤더 즉시 갱신 ────────────────────────────────
   function _updateHeader(ticker, name) {
+    // 왼쪽 패널 (새 레이아웃)
+    var titleLeft = document.getElementById('fiw-title-left');
+    var tkLeft    = document.getElementById('fiw-ticker-left');
+    if (titleLeft) {
+      titleLeft.textContent = name || ticker || '종목을 선택하세요';
+    }
+    if (tkLeft) {
+      tkLeft.textContent = (name && ticker) ? '(' + ticker + ')' : '';
+    }
+    // 더미 호환 요소
     var titleEl = document.getElementById('fiw-title');
     var tkSpan  = document.getElementById('fiw-ticker');
-    if (!titleEl || !tkSpan) return;
-    if (name || ticker) {
-      titleEl.textContent = name || ticker;
-      titleEl.classList.remove('fiw-title-placeholder');
-      tkSpan.textContent  = (name && ticker) ? '(' + ticker + ')' : '';
-    } else {
-      titleEl.textContent = '종목을 선택하세요';
-      titleEl.classList.add('fiw-title-placeholder');
-      tkSpan.textContent  = '';
-    }
-    tkSpan.title = tkSpan.textContent;
+    if (titleEl) titleEl.textContent = name || ticker || '종목을 선택하세요';
+    if (tkSpan)  tkSpan.textContent  = (name && ticker) ? '(' + ticker + ')' : '';
   }
 
   // ── 종목 데이터 전체 리셋 + 갱신 ────────────────────────────
@@ -1471,8 +1432,8 @@ function _escHtml(s) {
 {% for src in vite_imports('app') %}<script type="module" src="{{ src }}"></script>
 {% endfor %}<script type="module" src="{{ vite_asset('app') }}"></script>
 {% else %}
-<script src="/static/js/chart.js?v=20260407g"></script>
-<script src="/static/js/draw.js?v=20260407e"></script>
+<script src="/static/js/chart.js?v=20260407i"></script>
+<script src="/static/js/draw.js?v=20260407g"></script>
 <script src="/static/js/realtime.js?v=20260402"></script>
 <script src="/static/js/quote.js?v=20260402"></script>
 {% endif %}
@@ -1485,14 +1446,43 @@ function _escHtml(s) {
   var _infoPanelCollapsed = false;
   var INFO_PANEL_W = 320;
 
-  // ── 탭 전환 ─────────────────────────────────────────────────────
+  // ── 메인 종목 정보 오버레이 토글 ────────────────────────────────
+  window.toggleMainInfoOverlay = function () {
+    var overlay  = document.getElementById('main-info-overlay');
+    var backdrop = document.getElementById('main-info-overlay-backdrop');
+    var btn      = document.getElementById('btn-main-info-toggle');
+    if (!overlay) return;
+    var isOpen = overlay.style.display !== 'none' && overlay.style.display !== '';
+    if (isOpen) {
+      overlay.style.display  = 'none';
+      if (backdrop) backdrop.style.display = 'none';
+      if (btn) { btn.textContent = '＋'; btn.style.borderColor = '#3a3a3e'; btn.style.background = 'rgba(30,30,33,0.85)'; }
+    } else {
+      overlay.style.display  = 'flex';
+      if (backdrop) backdrop.style.display = 'block';
+      if (btn) { btn.textContent = '✕'; btn.style.borderColor = '#26a69a'; btn.style.background = 'rgba(38,166,154,0.18)'; }
+      // 열릴 때 현재 메인 종목 데이터 로드 (아직 로드 안 됐을 경우)
+      var ticker = window.D2T && D2T.ticker;
+      var market = window.D2T && D2T.market;
+      var activeBtn = document.querySelector('#main-info-overlay .info-tab-btn.active');
+      var tab = activeBtn ? activeBtn.dataset.itab : 'finance';
+      if (ticker) {
+        if (tab === 'finance')   window.loadFinanceData && window.loadFinanceData(ticker, market);
+        if (tab === 'detailed')  window.loadDetailedFinancials && window.loadDetailedFinancials(ticker, market);
+        if (tab === 'news')      window.loadNewsData && window.loadNewsData(ticker, market);
+        if (tab === 'community') window.loadCommunityData && window.loadCommunityData(ticker, market);
+      }
+    }
+  };
+
+  // ── 탭 전환 (오버레이 패널용) ────────────────────────────────────
   window.switchInfoTab = function (tabName) {
-    var panes = document.querySelectorAll('.info-pane');
-    var btns  = document.querySelectorAll('.info-tab-btn');
+    var panes = document.querySelectorAll('#main-info-overlay .info-pane');
+    var btns  = document.querySelectorAll('#main-info-overlay .info-tab-btn');
     panes.forEach(function (p) { p.style.display = 'none'; });
     btns.forEach(function (b) { b.classList.remove('active'); });
     var pane = document.getElementById('info-pane-' + tabName);
-    var btn  = document.querySelector('.info-tab-btn[data-itab="' + tabName + '"]');
+    var btn  = document.querySelector('#main-info-overlay .info-tab-btn[data-itab="' + tabName + '"]');
     if (pane) pane.style.display = 'flex';
     if (btn)  btn.classList.add('active');
   };
@@ -2027,11 +2017,11 @@ function _escHtml(s) {
     };
   })();
 
-  // ── 차트 로드 시 자동으로 패널 데이터 갱신 ──────────────────────
+  // ── 차트 로드 시 오버레이 헤더 갱신 (데이터 로드는 오버레이가 열릴 때만) ──
   document.addEventListener('DOMContentLoaded', function () {
     var _origOnChartLoaded = window._onChartLoaded;
     window._onChartLoaded = function (ticker, market, chartName) {
-      // 차트 API에서 받은 name이 있으면 즉시 적용, 없으면 finance API에서 가져옴
+      // 헤더만 갱신 (오버레이 열림 여부 무관)
       if (chartName) {
         _updateInfoPanelHeader(ticker, chartName);
         _infoPanelTicker = ticker;
@@ -2039,17 +2029,22 @@ function _escHtml(s) {
       } else {
         _fetchAndSetName(ticker, market);
       }
-      var activeTab = document.querySelector('.info-tab-btn.active');
-      var tab = activeTab ? activeTab.dataset.itab : 'finance';
-      if (tab === 'finance')   window.loadFinanceData(ticker, market);
-      if (tab === 'detailed')  window.loadDetailedFinancials(ticker, market);
-      if (tab === 'news')      window.loadNewsData(ticker, market);
-      if (tab === 'community') window.loadCommunityData(ticker, market);
+      // 오버레이가 열려 있을 때만 데이터 로드
+      var overlay = document.getElementById('main-info-overlay');
+      var isOpen  = overlay && overlay.style.display !== 'none' && overlay.style.display !== '';
+      if (isOpen) {
+        var activeTab = document.querySelector('#main-info-overlay .info-tab-btn.active');
+        var tab = activeTab ? activeTab.dataset.itab : 'finance';
+        if (tab === 'finance')   window.loadFinanceData(ticker, market);
+        if (tab === 'detailed')  window.loadDetailedFinancials(ticker, market);
+        if (tab === 'news')      window.loadNewsData(ticker, market);
+        if (tab === 'community') window.loadCommunityData(ticker, market);
+      }
       if (typeof _origOnChartLoaded === 'function') _origOnChartLoaded(ticker, market);
     };
 
-    // 탭 클릭 시 lazy load
-    document.querySelectorAll('.info-tab-btn').forEach(function (btn) {
+    // 오버레이 탭 클릭 시 lazy load
+    document.querySelectorAll('#main-info-overlay .info-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var tab = btn.dataset.itab;
         var ticker = window.D2T && D2T.ticker;

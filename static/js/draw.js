@@ -1080,8 +1080,17 @@
       body: JSON.stringify(body),
     })
       .then(function (r) {
-        if (!r.ok) return r.json().then(function (d) { throw new Error(d.detail || 'HTTP ' + r.status); });
-        return r.json();
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            var detail = 'HTTP ' + r.status;
+            try { detail = JSON.parse(t).detail || detail; } catch (_) {}
+            throw new Error(detail);
+          });
+        }
+        return r.text().then(function (t) {
+          try { return JSON.parse(t); }
+          catch (_) { throw new Error('서버 응답 오류 (JSON 파싱 실패)'); }
+        });
       })
       .then(function (data) {
         // 서버 데이터 프리로드 중 → 재시도 안내
