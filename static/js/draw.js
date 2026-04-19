@@ -949,8 +949,8 @@
         var _mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
         var _gotRange = false;
 
-        // KR 일봉은 "YYYY-MM-DD", KR 월봉/주봉은 "YYYY-MM", US는 "YYYY-MM-DD"
-        var _useShort = (_mkt !== 'US') && (timeframe !== 'daily');
+        // 일봉은 "YYYY-MM-DD", 월봉/주봉은 "YYYY-MM"
+        var _useShort = (timeframe !== 'daily');
 
         // _drawChartCoords: [{time, price}, ...] — 그린 선의 차트 좌표
         function _timeToDateStr(t, useShort) {
@@ -1013,7 +1013,7 @@
               if (lr2 && lr2.to > lr2.from) {
                 var _fi = Math.max(0, Math.floor(lr2.from));
                 var _ti = Math.min(_candles.length - 1, Math.ceil(lr2.to));
-                var _useShort2 = (_mkt !== 'US');
+                var _useShort2 = true;
                 body.date_from = _timeToDateStr(_candles[_fi].time, _useShort2);
                 body.date_to   = _timeToDateStr(_candles[_ti].time, _useShort2);
                 body.lookback_bars = _ti - _fi + 1;
@@ -1222,14 +1222,8 @@
         }
 
         // 실시간 시세 딥링크
-        var quoteUrl, quoteLbl;
-        if (market === 'US') {
-          quoteUrl = 'https://finance.yahoo.com/quote/' + encodeURIComponent(r.ticker);
-          quoteLbl = 'Yahoo Finance';
-        } else {
-          quoteUrl = 'https://finance.naver.com/item/main.naver?code=' + encodeURIComponent(r.ticker);
-          quoteLbl = '네이버 증권';
-        }
+        var quoteUrl = 'https://finance.naver.com/item/main.naver?code=' + encodeURIComponent(r.ticker);
+        var quoteLbl = '네이버 증권';
 
         return (
           '<div class="result-card" ' +
@@ -1510,8 +1504,7 @@
           var vr = window.D2T && D2T.chart && D2T.chart.timeScale().getVisibleRange();
           if (vr && vr.from) {
             var fd = new Date(vr.from * 1000);
-            df = market === 'US' ? fd.toISOString().slice(0,10)
-              : fd.getFullYear() + '-' + String(fd.getMonth()+1).padStart(2,'0');
+            df = fd.getFullYear() + '-' + String(fd.getMonth()+1).padStart(2,'0');
           }
         } catch(e) {}
       }
@@ -1524,8 +1517,7 @@
           var vr2 = window.D2T && D2T.chart && D2T.chart.timeScale().getVisibleRange();
           if (vr2 && vr2.to) {
             var td = new Date(vr2.to * 1000);
-            dt = market === 'US' ? td.toISOString().slice(0,10)
-              : td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0');
+            dt = td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0');
           }
         } catch(e) {}
       }

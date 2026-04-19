@@ -276,7 +276,7 @@
     .sidebar-card-sub {
       font-size: 10px; color: #52525b; margin-bottom: 10px;
     }
-    /* 사이드바 KR/US 탭 */
+    /* 사이드바 탭 */
     .sidebar-tabs {
       display: flex; border-bottom: 1px solid var(--border);
       margin: 0;
@@ -409,7 +409,6 @@
     <div class="news-tabs" id="news-tabs">
       <button class="news-tab active" data-tab="all">전체</button>
       <button class="news-tab" data-tab="kr">국내 (KR)</button>
-      <button class="news-tab" data-tab="us">해외 (US)</button>
       <button class="news-tab" data-tab="hot">인기</button>
     </div>
 
@@ -446,7 +445,6 @@
       </div>
       <div class="sidebar-tabs">
         <button class="sidebar-tab active" data-mkt="kr" onclick="switchSidebarTab('kr')">국내 KR</button>
-        <button class="sidebar-tab"        data-mkt="us" onclick="switchSidebarTab('us')">해외 US</button>
       </div>
       <div class="sidebar-body" id="sidebar-vol-list">
         <div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>
@@ -490,7 +488,6 @@
   var _perPage = 15;
   var _allItems = [];
   var _krItems  = [];
-  var _usItems  = [];
 
   // 전일 등락률 캐시 { ticker: rate_string }
   var _rateCache = {};
@@ -506,9 +503,6 @@
   /* KR: 섹터별 대표 종목 (삼성 편중 해소) */
   var _KR_SYMBOLS = Object.keys(_KR_NAME);
 
-  /* US: S&P 500 대형주 */
-  var _US_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'META', 'GOOGL', 'MSFT', 'AMZN', 'JPM'];
-
   /* ── KR 이름 → 코드 역방향 맵 (멀티 종목 추출용) ── */
   var _KR_NAME_TO_CODE = {};
   Object.keys(_KR_NAME).forEach(function (code) {
@@ -517,15 +511,12 @@
 
   /* ── 뉴스 제목에서 종목 추출 ─────────────────────
      - KR: _KR_NAME 키워드 매칭
-     - US: 심볼 대문자 패턴 매칭
   ──────────────────────────────────────────────── */
-  function _extractSymbols(title, primarySym, market) {
+  function _extractSymbols(title, primarySym) {
     var found = {};
-    if (market === 'KR') {
-      Object.keys(_KR_NAME_TO_CODE).forEach(function (name) {
-        if (title.indexOf(name) !== -1) found[_KR_NAME_TO_CODE[name]] = true;
-      });
-    }
+    Object.keys(_KR_NAME_TO_CODE).forEach(function (name) {
+      if (title.indexOf(name) !== -1) found[_KR_NAME_TO_CODE[name]] = true;
+    });
     // 주 종목은 항상 포함
     if (primarySym) found[primarySym] = true;
     return Object.keys(found);
@@ -562,55 +553,47 @@
 
   function _fetchAll(isPolling) {
     if (!isPolling) setLoading();
-    var allSyms = _KR_SYMBOLS.concat(_US_SYMBOLS);
-    var fetches = allSyms.map(function (sym) {
+    var fetches = _KR_SYMBOLS.map(function (sym) {
       return fetch('/api/v1/stock/news/' + encodeURIComponent(sym))
         .then(function (r) { return r.ok ? r.json() : null; })
         .catch(function () { return null; });
     });
     Promise.all(fetches).then(function (results) {
-      var krRaw = [], usRaw = [];
+      var krRaw = [];
       results.forEach(function (d, i) {
         if (!d || !d.items || !d.items.length) return;
-        var isUs = i >= _KR_SYMBOLS.length;
-        var sym  = allSyms[i];
+        var sym  = _KR_SYMBOLS[i];
         /* 종목의 최신 1개만 */
         var best = d.items.slice().sort(function (a, b) {
           return _parseDate(b.date) - _parseDate(a.date);
         })[0];
         var entry = Object.assign({}, best, {
           _symbol:  sym,
-          _market:  isUs ? 'US' : 'KR',
-          _symbols: _extractSymbols(best.title || '', sym, isUs ? 'US' : 'KR'),
+          _market:  'KR',
+          _symbols: _extractSymbols(best.title || '', sym),
           _score:   best.score || 0,
         });
-        if (isUs) usRaw.push(entry); else krRaw.push(entry);
+        krRaw.push(entry);
       });
 
       var newKr  = _dedupe(krRaw).sort(function (a, b) { return _parseDate(b.date) - _parseDate(a.date); });
-      var newUs  = _dedupe(usRaw).sort(function (a, b) { return _parseDate(b.date) - _parseDate(a.date); });
-      var newAll = _dedupe(newKr.concat(newUs)).sort(function (a, b) {
-        return _parseDate(b.date) - _parseDate(a.date);
-      });
 
       if (isPolling) {
         /* 폴링: 새 뉴스만 prepend */
-        var fresh = newAll.filter(function (it) {
+        var fresh = newKr.filter(function (it) {
           var key = it.url || it.title;
           return key && !_seenUrls[key];
         });
         if (fresh.length) {
           fresh.forEach(function (it) { _seenUrls[it.url || it.title] = true; });
-          _krItems  = _dedupe(fresh.filter(function (it) { return it._market === 'KR'; }).concat(_krItems));
-          _usItems  = _dedupe(fresh.filter(function (it) { return it._market === 'US'; }).concat(_usItems));
+          _krItems  = _dedupe(fresh.concat(_krItems));
           _allItems = _dedupe(fresh.concat(_allItems));
           if (_page === 1) _prependCards(fresh);
         }
       } else {
         /* 초기 로드 */
         _krItems  = newKr;
-        _usItems  = newUs;
-        _allItems = newAll;
+        _allItems = newKr;
         _allItems.forEach(function (it) { _seenUrls[it.url || it.title] = true; });
         _page = 1;
         render();
@@ -656,7 +639,6 @@
   /* ── 렌더 ───────────────────────────────────── */
   function getFiltered() {
     var src = _tab === 'kr'  ? _krItems
-            : _tab === 'us'  ? _usItems
             : _tab === 'hot' ? _allItems.slice().sort(function (a, b) {
                 // 스코어(관련도) 내림차순 → 날짜 최신순
                 var sa = a._score || 0, sb = b._score || 0;
@@ -712,17 +694,6 @@
     '028260': { label: 'SCT',  color: '#fb8c00', bg: '#1a0d00' },  /* 삼성물산 */
     '105560': { label: 'KBF',  color: '#26a69a', bg: '#001a18' },  /* KB금융 */
     '055550': { label: 'SHF',  color: '#5c6bc0', bg: '#080a1a' },  /* 신한지주 */
-    /* US */
-    'AAPL':  { label: 'AAPL', color: '#90caf9', bg: '#051525' },
-    'NVDA':  { label: 'NVDA', color: '#76ff03', bg: '#0d1a00' },
-    'TSLA':  { label: 'TSLA', color: '#ef5350', bg: '#1a0404' },
-    'META':  { label: 'META', color: '#5b8def', bg: '#051025' },
-    'GOOGL': { label: 'GOOG', color: '#fbbc04', bg: '#1a1300' },
-    'MSFT':  { label: 'MSFT', color: '#2196f3', bg: '#051525' },
-    'AMZN':  { label: 'AMZN', color: '#ff9800', bg: '#1a0d00' },
-    'JPM':   { label: 'JPM',  color: '#26a69a', bg: '#001a18' },
-    'AMD':   { label: 'AMD',  color: '#e91e63', bg: '#1a0510' },
-    'NFLX':  { label: 'NFLX', color: '#ef5350', bg: '#1a0404' },
   };
 
   /* ── 썸네일 onerror 핸들러 ─────────────────────────
@@ -752,11 +723,11 @@
   ─────────────────────────────────────────────────── */
   function _makeFallback(mkt, sym) {
     var ico    = (sym && _ICON_MAP[sym]) || null;
-    var accent = ico ? ico.color : (mkt === 'US' ? '#5b8def' : '#26a69a');
+    var accent = ico ? ico.color : '#26a69a';
     var bgCol  = ico ? ico.bg    : '#14141a';
-    var label  = ico ? ico.label : (mkt === 'US' ? 'US' : 'KR');
+    var label  = ico ? ico.label : 'KR';
     var accent2 = '#ef5350';
-    var mktTag  = mkt === 'US' ? 'NASDAQ' : 'KRX';
+    var mktTag  = 'KRX';
 
     return '<div class="news-thumb-svg" style="background:linear-gradient(145deg,' + bgCol + ' 0%,#1c1c24 100%);">' +
       /* 시장 태그 (우하단) */
@@ -850,15 +821,13 @@
       : '';
     var sourceHtml = smallFav + (domain ? '<span class="news-source">' + domain + '</span>' : '');
 
-    var mktBadge = mkt === 'US'
-      ? '<span class="news-market-badge badge-us">US</span>'
-      : '<span class="news-market-badge badge-kr">KR</span>';
+    var mktBadge = '<span class="news-market-badge badge-kr">KR</span>';
 
     /* 종목 배지 — _symbols 배열 전체 순회, 배경 없는 텍스트 컬러 포인트 */
     var symbols = (it._symbols && it._symbols.length) ? it._symbols : (sym ? [sym] : []);
     var chipParts = [];
     symbols.forEach(function (s, idx) {
-      var dispName  = mkt === 'KR' ? (_KR_NAME[s] || s) : s;
+      var dispName  = _KR_NAME[s] || s;
       var rate      = _rateCache[s];
       var chipClass = 'chip-flat';
       var rateHtml  = '';
@@ -924,21 +893,7 @@
   var _sidebarMkt = 'kr';
   var _sidebarCat = 'trade_value';  // trade_value | volume | rise | fall
 
-  /* US 고정 대형주 목록 */
-  var _US_TOP = [
-    { ticker: 'NVDA',  name: 'NVIDIA' },
-    { ticker: 'AAPL',  name: 'Apple' },
-    { ticker: 'TSLA',  name: 'Tesla' },
-    { ticker: 'MSFT',  name: 'Microsoft' },
-    { ticker: 'AMZN',  name: 'Amazon' },
-    { ticker: 'META',  name: 'Meta' },
-    { ticker: 'GOOGL', name: 'Alphabet' },
-    { ticker: 'JPM',   name: 'JPMorgan' },
-    { ticker: 'AMD',   name: 'AMD' },
-    { ticker: 'NFLX',  name: 'Netflix' },
-  ];
   var _krScannerData = {};   // { volume: [...], rise: [...], fall: [...], vol: [...] }
-  var _usRates   = {};       // ticker → change_rate
 
   var _CAT_LABELS = {
     trade_value: '거래대금 TOP 10',
@@ -992,21 +947,6 @@
         }
       })
       .catch(function () {});
-  }
-
-  /* US 종목 finance fetch (등락률 수집) */
-  function _fetchUsRates() {
-    _US_TOP.forEach(function (t) {
-      fetch('/api/v1/stock/finance/' + encodeURIComponent(t.ticker))
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) {
-          if (!d) return;
-          var rate = d.change_rate || (d.price_info && d.price_info.change_rate) || null;
-          _usRates[t.ticker] = rate || null;
-          if (_sidebarMkt === 'us') renderSidebar();
-        })
-        .catch(function () { _usRates[t.ticker] = null; });
-    });
   }
 
   /* 거래량 → 읽기 좋은 단위 문자열 */
@@ -1078,43 +1018,6 @@
       });
       html += '<div class="sidebar-as-of">' + (_CAT_ASOF[_sidebarCat] || '') + '</div>';
       el.innerHTML = html;
-
-    } else {
-      var anyLoaded = Object.keys(_usRates).length > 0;
-      if (!anyLoaded) {
-        el.innerHTML = '<div class="news-empty" style="padding:24px 0;font-size:12px;"><div class="news-spinner"></div>로딩 중…</div>';
-        return;
-      }
-      var maxAbs = Math.max.apply(null,
-        _US_TOP.map(function (t) { return Math.abs(parseFloat(_usRates[t.ticker] || '0')); })
-      ) || 1;
-
-      var html = '';
-      _US_TOP.forEach(function (t, i) {
-        var rateRaw  = _usRates[t.ticker];
-        var rate     = rateRaw != null ? parseFloat(rateRaw) : NaN;
-        var isUp     = !isNaN(rate) && rate > 0;
-        var isDown   = !isNaN(rate) && rate < 0;
-        var pctClass = isUp ? 'pct-up' : isDown ? 'pct-down' : 'pct-flat';
-        var pctText  = isNaN(rate) ? '—' : (isUp ? '+' : '') + rate.toFixed(2) + '%';
-        var rankClass = i < 3 ? 'vol-rank top3' : 'vol-rank';
-        var barPct   = isNaN(rate) ? 0 : Math.round((Math.abs(rate) / maxAbs) * 100);
-        var barColor = isDown ? 'rgba(38,166,154,.06)' : 'rgba(239,83,80,.06)';
-
-        html += '<div class="vol-row" onclick="goChart(\'' + esc(t.ticker) + '\',\'US\')">' +
-          '<div class="vol-bar" style="width:' + barPct + '%;background:' + barColor + ';border-right-color:' + (isDown ? 'rgba(38,166,154,.15)' : 'rgba(239,83,80,.15)') + '"></div>' +
-          '<span class="' + rankClass + '">' + (i + 1) + '</span>' +
-          '<div class="vol-info">' +
-            '<div class="vol-name">' + esc(t.name) + '</div>' +
-            '<div class="vol-code">' + esc(t.ticker) + '</div>' +
-          '</div>' +
-          '<div class="vol-right">' +
-            '<span class="vol-pct ' + pctClass + '">' + pctText + '</span>' +
-          '</div>' +
-        '</div>';
-      });
-      html += '<div class="sidebar-as-of">S&amp;P 500 대형주 전일 등락률</div>';
-      el.innerHTML = html;
     }
   }
 
@@ -1127,10 +1030,9 @@
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  /* 차트 앱 이동 — market 파라미터 정확히 전달 */
-  window.goChart = function (sym, mkt) {
-    var market = (mkt || '').toUpperCase() === 'US' ? 'US' : 'KR';
-    window.location.href = '/app?symbol=' + encodeURIComponent(sym) + '&market=' + market;
+  /* 차트 앱 이동 */
+  window.goChart = function (sym) {
+    window.location.href = '/app?symbol=' + encodeURIComponent(sym) + '&market=KR';
   };
 
   window.goPage = function (p) {
@@ -1159,7 +1061,6 @@
   /* ── 초기 로드 ────────────────────────────── */
   _fetchAll(false);
   _fetchKrScanner('trade_value');
-  _fetchUsRates();
 
   /* ── 30초 폴링 ─────────────────────────────── */
   setInterval(function () { _fetchAll(true); }, 30000);

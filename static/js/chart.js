@@ -8,7 +8,7 @@
  * D2T.ticker       — 현재 로드된 티커
  * D2T.loading      — 로딩 중 여부
  * D2T.timeframe    — 'monthly' | 'weekly' | 'daily'
- * D2T.market       — 'KR' | 'US'
+ * D2T.market       — 'KR'
  */
 
 (function () {
@@ -24,9 +24,9 @@
     ticker:          null,
     loading:         false,
     timeframe:       'daily',      // 'monthly' | 'weekly' | 'daily'
-    market:          'KR',        // 'KR' | 'US'
-    exchange:        '',          // '' | 'NAS' | 'NYS' | 'AMS'  (US only)
-    krMarket:        '',          // '' | 'KOSPI' | 'KOSDAQ'  (KR only)
+    market:          'KR',
+    exchange:        '',
+    krMarket:        '',          // '' | 'KOSPI' | 'KOSDAQ'
     matchPeriodData: null,
   };
 
@@ -41,8 +41,7 @@
   };
   var INTRADAY_TF = { '1m':1,'5m':1,'15m':1,'30m':1,'60m':1,'240m':1 };
 
-  // 시장별 기본 타임프레임
-  var MARKET_DEFAULT_TF = { KR: 'daily', US: 'daily' };
+  var MARKET_DEFAULT_TF = { KR: 'daily' };
 
   var DRAW_COLOR = '#ff6b35';
 
@@ -200,11 +199,7 @@
   // 외부 접근용
   D2T._hidePatternMiniChart = _hidePatternMiniChart;
 
-  // ── 헬퍼: 시장별 API 경로 ─────────────────────────────────────────────────
   function chartUrl(ticker, tf) {
-    if (D2T.market === 'US') {
-      return '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=' + encodeURIComponent(tf);
-    }
     return '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=' + encodeURIComponent(tf);
   }
 
@@ -941,19 +936,12 @@
     var sel = document.getElementById('ticker-select');
     if (!sel) return;
 
-    var endpoint = D2T.market === 'US' ? '/api/us/list' : '/api/kospi/list';
-    var defaultTicker = D2T.market === 'US' ? 'AAPL' : '005930';
-    if (D2T.market === 'US') {
-      var params = [];
-      if (D2T.exchange) params.push('exchange=' + encodeURIComponent(D2T.exchange));
-      if (category)    params.push('category=' + encodeURIComponent(category));
-      if (params.length) endpoint += '?' + params.join('&');
-    } else {
-      var params = [];
-      if (category)      params.push('category=' + encodeURIComponent(category));
-      if (D2T.krMarket) params.push('market=' + encodeURIComponent(D2T.krMarket));
-      if (params.length) endpoint += '?' + params.join('&');
-    }
+    var endpoint = '/api/kospi/list';
+    var defaultTicker = '005930';
+    var params = [];
+    if (category)      params.push('category=' + encodeURIComponent(category));
+    if (D2T.krMarket) params.push('market=' + encodeURIComponent(D2T.krMarket));
+    if (params.length) endpoint += '?' + params.join('&');
 
     fetch(endpoint)
       .then(function (r) { return r.json(); })
@@ -985,8 +973,8 @@
     var catSel = document.getElementById('category-select');
     if (!catSel) return;
 
-    var endpoint = D2T.market === 'US' ? '/api/us/categories' : '/api/kospi/categories';
-    if (D2T.market === 'KR' && D2T.krMarket) {
+    var endpoint = '/api/kospi/categories';
+    if (D2T.krMarket) {
       endpoint += '?market=' + encodeURIComponent(D2T.krMarket);
     }
     fetch(endpoint)
@@ -1017,9 +1005,7 @@
       return;
     }
 
-    var searchEndpoint = D2T.market === 'US'
-      ? '/api/us/search?q=' + encodeURIComponent(q) + '&limit=30'
-      : '/api/kospi/search?q=' + encodeURIComponent(q) + '&limit=30';
+    var searchEndpoint = '/api/kospi/search?q=' + encodeURIComponent(q) + '&limit=30';
 
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(function () {
@@ -1091,34 +1077,24 @@
     // 서브타이틀 변경
     var subtitle = document.getElementById('d2t-subtitle');
     if (subtitle) {
-      subtitle.textContent = market === 'US' ? 'US 미장 패턴 유사도 검색' : 'KOSPI 패턴 유사도 검색';
+      subtitle.textContent = 'KOSPI 패턴 유사도 검색';
     }
-
-    // US 목록 제한 안내 힌트
-    var usHint = document.getElementById('us-list-hint');
-    if (usHint) usHint.style.display = market === 'US' ? 'inline' : 'none';
 
     // 시장 버튼 active 토글
     document.querySelectorAll('.market-btn').forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.market === market);
     });
 
-    // 카테고리/검색 UI: KR·US 모두 표시
+    // 카테고리/검색 UI
     var catGroup = document.getElementById('category-group');
     var krMktGroup = document.getElementById('kr-market-group');
-    var exchGroup = document.getElementById('exchange-group');
     var searchInp = document.getElementById('ticker-search');
-    var searchWrap = document.getElementById('ticker-search-wrap');
     if (catGroup) catGroup.style.display = 'flex';
-    if (krMktGroup) krMktGroup.style.display = market === 'KR' ? 'flex' : 'none';
-    if (exchGroup) exchGroup.style.display = market === 'US' ? 'flex' : 'none';
-    if (searchInp) searchInp.placeholder = market === 'US' ? '종목명/티커 검색 (US)' : '종목명/티커 검색 (KR)';
-    // 거래소/시장 필터 초기화
+    if (krMktGroup) krMktGroup.style.display = 'flex';
+    if (searchInp) searchInp.placeholder = '종목명/티커 검색 (KR)';
+    // 시장 필터 초기화
     D2T.exchange = '';
     D2T.krMarket = '';
-    document.querySelectorAll('.exchange-btn').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.excd === '');
-    });
     document.querySelectorAll('.kr-market-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.krmarket === '');
     });
@@ -1128,25 +1104,23 @@
     loadCategoryList();
     loadTickerList('');
 
-    // 날짜 범위 입력 type 전환 (KR: month, US: date)
+    // 날짜 범위 입력 초기화
     var dtFrom = document.getElementById('date-from');
     var dtTo   = document.getElementById('date-to');
-    var inputType = market === 'US' ? 'date' : 'month';
-    if (dtFrom) { dtFrom.type = inputType; dtFrom.value = ''; }
-    if (dtTo)   { dtTo.type   = inputType; dtTo.value   = ''; }
+    if (dtFrom) dtFrom.value = '';
+    if (dtTo)   dtTo.value   = '';
     // lookback 드롭다운 라벨 전환
     var lookbackSel = document.getElementById('lookback-months');
     if (lookbackSel) {
       var opts = lookbackSel.options;
-      var labelAttr = market === 'US' ? 'data-us' : 'data-kr';
       for (var i = 0; i < opts.length; i++) {
-        var lbl = opts[i].getAttribute(labelAttr);
+        var lbl = opts[i].getAttribute('data-kr');
         if (lbl) opts[i].textContent = lbl;
       }
     }
 
     // 장 시간 chip 갱신
-    if (typeof window.updateMarketHoursChip === 'function') window.updateMarketHoursChip(market);
+    if (typeof window.updateMarketHoursChip === 'function') window.updateMarketHoursChip();
 
     // 드로잉 초기화
     if (typeof clearDraw === 'function') clearDraw();
@@ -1170,8 +1144,7 @@
     if (krMktGroup) krMktGroup.style.display = 'flex';
     if (searchInp) searchInp.placeholder = '종목명/티커 검색 (KR)';
     // 초기 차트를 종목 목록 응답 전에 즉시 병렬 로드
-    var _initTicker = new URLSearchParams(window.location.search).get('ticker')
-      || (D2T.market === 'US' ? 'AAPL' : '005930');
+    var _initTicker = new URLSearchParams(window.location.search).get('ticker') || '005930';
     loadChart(_initTicker);
     loadCategoryList();
     loadTickerList('');
@@ -1271,18 +1244,6 @@
     document.querySelectorAll('.market-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         switchMarket(this.dataset.market);
-      });
-    });
-
-    // 거래소 필터 버튼 (US 전용)
-    document.querySelectorAll('.exchange-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        D2T.exchange = this.dataset.excd || '';
-        document.querySelectorAll('.exchange-btn').forEach(function (b) {
-          b.classList.toggle('active', b.dataset.excd === D2T.exchange);
-        });
-        var catSel = document.getElementById('category-select');
-        loadTickerList(catSel ? catSel.value : '');
       });
     });
 

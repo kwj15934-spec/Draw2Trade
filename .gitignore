@@ -28,3 +28,12 @@ static/dist/
 __pycache__/
 *.pyc
 *.pyo
+
+# 데이터 / 캐시 폴더 (서버에서 관리)
+daily data/
+cache/
+docs/
+draw2trade_web/
+
+# 임시 파일
+nul

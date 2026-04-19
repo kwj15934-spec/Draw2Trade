@@ -27,10 +27,8 @@
   <!-- 우측 밀기 -->
   <div class="d2t-nav-spacer"></div>
 
-  <!-- KR / US 선택 (US 준비 중 — 임시 비활성화) -->
   <div class="market-selector">
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
-    <!-- <button class="btn-d2t market-btn" id="market-us" data-market="US">US</button> -->
   </div>
 
   <!-- 시장 시간 칩 -->
@@ -109,15 +107,6 @@
           <button class="btn-d2t kr-market-btn active" data-krmarket="">ALL</button>
           <button class="btn-d2t kr-market-btn" data-krmarket="KOSPI">KOSPI</button>
           <button class="btn-d2t kr-market-btn" data-krmarket="KOSDAQ">KOSDAQ</button>
-        </div>
-      </div>
-      <!-- US 거래소 필터 -->
-      <div id="exchange-group" class="tb-pill-group" style="display:none;">
-        <div class="tb-btn-group">
-          <button class="btn-d2t exchange-btn active" data-excd="">ALL</button>
-          <button class="btn-d2t exchange-btn" data-excd="NAS">NAS</button>
-          <button class="btn-d2t exchange-btn" data-excd="NYS">NYS</button>
-          <button class="btn-d2t exchange-btn" data-excd="AMS">AMS</button>
         </div>
       </div>
       <!-- 종목 드롭다운 (JS가 populate) -->
@@ -546,43 +535,13 @@
 {% block scripts %}
 <script>
 (function () {
-  var KR = { label: '09:00~15:30 KST', tz: 'Asia/Seoul', open: [9, 0], close: [15, 30] };
+  var KR = { label: '09:00~15:30 KST', tz: 'Asia/Seoul' };
 
-  /** 서머타임(DST) 여부 판별 — 미국 EDT: 3월 둘째 일요일 ~ 11월 첫 번째 일요일 */
-  function _isEdtNow() {
-    var now = new Date();
-    var y = now.getUTCFullYear();
-
-    // 3월 둘째 일요일 02:00 ET = UTC 07:00 (EST+5) or 06:00 (EDT+4) → 보수적으로 UTC 07:00 사용
-    var mar = new Date(Date.UTC(y, 2, 1));
-    var dow = mar.getUTCDay(); // 0=Sun
-    var dstStart = new Date(Date.UTC(y, 2, (dow === 0 ? 8 : 15 - dow), 7)); // 3월 둘째 Sun 07:00 UTC
-
-    // 11월 첫 번째 일요일 02:00 ET = UTC 06:00 (EDT+4)
-    var nov = new Date(Date.UTC(y, 10, 1));
-    var dow2 = nov.getUTCDay();
-    var dstEnd = new Date(Date.UTC(y, 10, (dow2 === 0 ? 1 : 8 - dow2), 6)); // 11월 첫째 Sun 06:00 UTC
-
-    return now >= dstStart && now < dstEnd;
-  }
-
-  /** ET→KST 고정 오프셋: EDT +13h, EST +14h */
-  function _usLabel() {
-    if (_isEdtNow()) return '22:30~05:00 KST (EDT)';
-    return '23:30~06:00 KST (EST)';
-  }
-
-  function isOpen(market) {
+  function isOpen() {
     try {
       var now = new Date();
-      var tz = (market === 'US') ? 'America/New_York' : 'Asia/Seoul';
-      var openH  = (market === 'US') ? 9  : 9;
-      var openM  = (market === 'US') ? 30 : 0;
-      var closeH = (market === 'US') ? 16 : 15;
-      var closeM = (market === 'US') ? 0  : 30;
-
       var parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz, hour: 'numeric', minute: 'numeric',
+        timeZone: 'Asia/Seoul', hour: 'numeric', minute: 'numeric',
         weekday: 'short', hour12: false
       }).formatToParts(now);
       var get = function (t) {
@@ -591,31 +550,27 @@
       var weekday = (parts.find(function (p) { return p.type === 'weekday'; }) || {}).value || '';
       if (['Mon','Tue','Wed','Thu','Fri'].indexOf(weekday) < 0) return false;
       var cur = get('hour') * 60 + get('minute');
-      return cur >= openH * 60 + openM && cur < closeH * 60 + closeM;
+      return cur >= 9 * 60 && cur < 15 * 60 + 30;
     } catch (e) { return false; }
   }
 
-  window.updateMarketHoursChip = function (market) {
+  window.updateMarketHoursChip = function () {
     ['market-hours-chip', 'market-hours-chip2'].forEach(function (id) {
       var chip = document.getElementById(id);
       if (!chip) return;
-      var label = (market === 'US') ? _usLabel() : KR.label;
-      var on = isOpen(market);
+      var on = isOpen();
       var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
         + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
       var status = on
         ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
         : '<span style="color:#555;">마감</span>';
-      chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
+      chip.innerHTML = dot + '&nbsp;' + KR.label + '&nbsp;·&nbsp;' + status;
     });
   };
 
   document.addEventListener('DOMContentLoaded', function () {
-    window.updateMarketHoursChip('KR');
-    setInterval(function () {
-      var m = (window.D2T && D2T.market) ? D2T.market : 'KR';
-      window.updateMarketHoursChip(m);
-    }, 60000);
+    window.updateMarketHoursChip();
+    setInterval(function () { window.updateMarketHoursChip(); }, 60000);
   });
 })();
 </script>
@@ -2235,10 +2190,6 @@ function _escHtml(s) {
   // 주도주 클릭 → 차트 즉시 전환
   window._onOvertimeLeaderClick = function (item) {
     if (!item || !item.ticker) return;
-    // KR 시장으로 전환되어 있지 않으면 전환
-    if (window.D2T && D2T.market !== 'KR' && typeof D2T.switchMarket === 'function') {
-      D2T.switchMarket('KR');
-    }
     // 일봉으로 전환 후 차트 로드
     if (window.D2T && typeof D2T.loadChart === 'function') {
       D2T.timeframe = 'daily';

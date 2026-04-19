@@ -19,7 +19,7 @@
 
   // ── 전역 대시보드 상태 ───────────────────────────────────────
   D2T.dashboardState = {
-    market:      'KR',          // KR | US
+    market:      'KR',
     category:    'trade_value', // 랭킹 기준
     period:      '1d',          // 랭킹 기준 기간 (차트 기간 아님)
     hideWarning: false,
@@ -206,7 +206,7 @@
 
   // ── 지수 카드 렌더링 ─────────────────────────────────────────
   function _renderIndices(indices, market) {
-    var keys = market === 'US' ? ['S&P 500', 'NASDAQ'] : ['KOSPI', 'KOSDAQ'];
+    var keys = ['KOSPI', 'KOSDAQ'];
     var ids  = ['idx-A', 'idx-B'];
     keys.forEach(function (name, i) {
       var el = document.getElementById(ids[i]);
@@ -223,7 +223,7 @@
       var arrow   = d.change > 0 ? '▲' : d.change < 0 ? '▼' : '—';
       var chgStr  = arrow + ' ' + Math.abs(d.change).toFixed(2);
       var rateStr = (d.change_rate >= 0 ? '+' : '') + d.change_rate.toFixed(2) + '%';
-      var tvStr   = market === 'US' ? '' : '<span>거래대금 ' + _formatVal(d.trade_value) + '</span>';
+      var tvStr   = '<span>거래대금 ' + _formatVal(d.trade_value) + '</span>';
       var snapLabel = d._snapshot ? '<div class="mkt-idx-snap">' + _esc(d._snapshot) + ' 기준</div>' : '';
       el.classList.remove('d2t-skeleton');
       el.innerHTML =
@@ -264,18 +264,13 @@
     var ageHr  = Math.floor(ageSec / 3600);
     var now    = new Date();
     var kstHM  = ((now.getUTCHours() + 9) % 24) * 100 + now.getUTCMinutes();
-    var isKR   = D2T.dashboardState.market !== 'US';
-    var usNightOpen = kstHM >= 2330 || kstHM < 600;
-
     if (isRealtime && ageSec < 300) {
       badge.className    = 'mkt-freshness fresh';
       textEl.textContent = '● 최신 DB';
     } else if (!isFallback && ageSec < 3600) {
       badge.className = 'mkt-freshness recent';
-      if (isKR && kstHM >= 1530 && kstHM < 1800) {
+      if (kstHM >= 1530 && kstHM < 1800) {
         textEl.textContent = '● 장 마감(15:30)';
-      } else if (!isKR && !usNightOpen) {
-        textEl.textContent = '● 장 마감';
       } else {
         textEl.textContent = '● ' + ageMin + '분 전';
       }
@@ -428,8 +423,7 @@
           + '<div class="mkt-ticker">' + _esc(item.ticker) + '</div>'
         + '</td>'
         + '<td class="mkt-col-price mkt-price">'
-          + (market === 'US' ? '$' : '')
-          + _formatNum(item.price, market === 'US' ? 2 : 0)
+          + _formatNum(item.price, 0)
         + '</td>'
         + '<td class="mkt-col-rate mkt-rate ' + rateCls + '">' + rateDisplay + '</td>'
         + '<td class="mkt-col-vol mkt-vol">' + volDisplay + '</td>'

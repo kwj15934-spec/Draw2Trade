@@ -21,41 +21,6 @@
   var _lastTradePrice = 0;  // 직전 체결가 (매수/매도 fallback용)
   var _lastCvolDir = true;  // 직전 체결량 방향 (동가 시 유지용)
 
-  // ── US 체결 시각 KST 변환 ───────────────────────────────────────────────────
-  // KIS HDFSCNT0 tick.time = 현지 ET 시간 HHMMSS (EDT or EST)
-  // EDT(3월 둘째 일 ~ 11월 첫째 일): ET+13h = KST
-  // EST(그 외): ET+14h = KST
-
-  function _isEDT() {
-    // 현재 UTC 기준, 올해 3월 둘째 일요일과 11월 첫째 일요일 UTC 계산
-    var now = new Date();
-    var yr = now.getUTCFullYear();
-    // 3월 둘째 일요일 (07:00 UTC = 02:00 EST)
-    var mar = new Date(Date.UTC(yr, 2, 1));
-    var marDay = mar.getUTCDay();                   // 0=Sun
-    var marDst = Date.UTC(yr, 2, (7 - marDay) % 7 + 8, 7);   // 2nd Sunday 07:00 UTC
-    // 11월 첫째 일요일 (06:00 UTC = 02:00 EDT)
-    var nov = new Date(Date.UTC(yr, 10, 1));
-    var novDay = nov.getUTCDay();
-    var novDst = Date.UTC(yr, 10, (7 - novDay) % 7 + 1, 6);  // 1st Sunday 06:00 UTC
-    var nowMs = now.getTime();
-    return nowMs >= marDst && nowMs < novDst;
-  }
-
-  /** ET 시각 HHMMSS → KST HHMMSS (문자열 반환) */
-  function _etToKst(hhmmss) {
-    if (!hhmmss || hhmmss.length < 6) return hhmmss;
-    var offset = _isEDT() ? 13 : 14;  // KST - ET 시간차
-    var hh = parseInt(hhmmss.slice(0, 2), 10);
-    var mm = parseInt(hhmmss.slice(2, 4), 10);
-    var ss = parseInt(hhmmss.slice(4, 6), 10);
-    var totalMin = hh * 60 + mm + offset * 60;
-    totalMin = ((totalMin % 1440) + 1440) % 1440;  // 0~1439 범위 정규화
-    var kh = Math.floor(totalMin / 60);
-    var km = totalMin % 60;
-    return String(kh).padStart(2, '0') + String(km).padStart(2, '0') + String(ss).padStart(2, '0');
-  }
-
   // ── rAF 배치: 호가창 ────────────────────────────────────────────────────────
 
   var _pendingAsking = null;
@@ -297,9 +262,7 @@
     if (!list) return;
     list.innerHTML = '<div class="tl-empty">로딩 중...</div>';
 
-    var url = market === 'US'
-      ? '/api/us/chart/' + encodeURIComponent(ticker) + '?timeframe=daily'
-      : '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=daily';
+    var url = '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=daily';
 
     fetch(url)
       .then(function(r) { return r.ok ? r.json() : null; })
@@ -382,8 +345,7 @@
     if (_isLoading) return;
     _isLoading = true;
 
-    var tickUrl = '/api/ticks/' + encodeURIComponent(ticker) +
-                  (market === 'US' ? '?market=US' : '');
+    var tickUrl = '/api/ticks/' + encodeURIComponent(ticker);
     fetch(tickUrl)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
@@ -503,8 +465,7 @@
 
     // HH:mm:ss 강제
     var time     = tick.time || '';
-    var market   = window.D2T && window.D2T.market;
-    var dispTime = (market === 'US') ? _etToKst(time) : time;
+    var dispTime = time;
     var timeDisp = dispTime.length >= 6
       ? dispTime.slice(0,2) + ':' + dispTime.slice(2,4) + ':' + dispTime.slice(4,6)
       : (dispTime.length >= 4
@@ -578,8 +539,7 @@
     if (thbVol) thbVol.textContent = '거래량 ' + _fmtVol(t.accvol);
     var thbTime = document.getElementById('thb-time');
     var timeStr = t.time || '';
-    var market2 = window.D2T && window.D2T.market;
-    var dispT = (market2 === 'US') ? _etToKst(timeStr) : timeStr;
+    var dispT = timeStr;
     if (thbTime && dispT.length >= 6) {
       thbTime.textContent = dispT.slice(0,2) + ':' + dispT.slice(2,4) + ':' + dispT.slice(4,6) + ' KST';
     }
