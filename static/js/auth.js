@@ -107,9 +107,8 @@
       await loginWithToken(idToken);
     }
   } catch (e) {
-    if (e.code === 'auth/network-request-failed') {
-      showError('네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.');
-    } else {
+    // network-request-failed: 리다이렉트 이전 페이지 로드 시 정상적으로 발생 — 무시
+    if (e.code !== 'auth/network-request-failed') {
       showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
     }
   }
