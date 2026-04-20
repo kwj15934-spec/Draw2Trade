@@ -96,23 +96,38 @@
     }
   }
 
+  // ── Google 리다이렉트 결과 처리 (페이지 복귀 시) ────────────────────────
+  try {
+    var redirectResult = await auth.getRedirectResult();
+    if (redirectResult && redirectResult.user) {
+      ['btn-google-login', 'btn-google-signup'].forEach(function(id) {
+        setLoading(id, true);
+      });
+      var idToken = await redirectResult.user.getIdToken();
+      await loginWithToken(idToken);
+    }
+  } catch (e) {
+    if (e.code === 'auth/network-request-failed') {
+      showError('네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.');
+    } else {
+      showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
+    }
+  }
+
   // ── Google 로그인 / 가입 (공통 핸들러) ─────────────────────────────────
   async function handleGoogleAuth(btnId) {
     setLoading(btnId, true);
     showError('');
-    var redirecting = false;
     try {
       var provider = new firebase.auth.GoogleAuthProvider();
-      var result = await auth.signInWithPopup(provider);
-      var idToken = await result.user.getIdToken();
-      var status = await loginWithToken(idToken);
-      if (status === 'approved') redirecting = true;
+      await auth.signInWithRedirect(provider);
     } catch (e) {
-      if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      if (e.code === 'auth/network-request-failed') {
+        showError('네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.');
+      } else {
         showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
       }
-    } finally {
-      if (!redirecting) setLoading(btnId, false);
+      setLoading(btnId, false);
     }
   }
 
@@ -146,6 +161,8 @@
           msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
         } else if (e.code === 'auth/too-many-requests') {
           msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.';
+        } else if (e.code === 'auth/network-request-failed') {
+          msg = '네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.';
         } else if (e.message) {
           msg = e.message;
         }
@@ -193,6 +210,8 @@
           msg = '유효하지 않은 이메일 주소입니다.';
         } else if (e.code === 'auth/weak-password') {
           msg = '비밀번호가 너무 약합니다. 6자 이상으로 설정하세요.';
+        } else if (e.code === 'auth/network-request-failed') {
+          msg = '네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.';
         } else if (e.message) {
           msg = e.message;
         }
