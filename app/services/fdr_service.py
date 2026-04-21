@@ -30,6 +30,68 @@ def is_available() -> bool:
     return _FDR_AVAILABLE
 
 
+def _safe_float(val) -> float:
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _safe_int(val) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
+def get_recent_candles(ticker: str, start_date: str, end_date: str | None = None) -> list[dict]:
+    """
+    start_date ~ end_date 기간의 캔들 목록 반환.
+    start_date, end_date: 'YYYY-MM-DD'
+    DB 데이터 공백을 보완할 때 사용.
+    """
+    if not _FDR_AVAILABLE:
+        return []
+
+    if end_date is None:
+        end_date = date.today().strftime("%Y-%m-%d")
+
+    try:
+        import pandas as pd
+        df = fdr.DataReader(ticker, start_date, end_date)
+        if df is None or df.empty:
+            return []
+
+        df = df.reset_index()
+        date_col = df.columns[0]
+
+        candles = []
+        for _, row in df.iterrows():
+            try:
+                d = pd.to_datetime(row[date_col]).strftime("%Y-%m-%d")
+                open_  = _safe_float(row.get("Open",   row.get("open",  0)))
+                high   = _safe_float(row.get("High",   row.get("high",  0)))
+                low    = _safe_float(row.get("Low",    row.get("low",   0)))
+                close  = _safe_float(row.get("Close",  row.get("close", 0)))
+                volume = _safe_int(  row.get("Volume", row.get("volume", 0)))
+                if close <= 0:
+                    continue
+                candles.append({
+                    "time":   d,
+                    "open":   round(open_, 1),
+                    "high":   round(high,  1),
+                    "low":    round(low,   1),
+                    "close":  round(close, 1),
+                    "volume": volume,
+                })
+            except Exception:
+                continue
+        return candles
+    except Exception as e:
+        logger.debug("FDR get_recent_candles(%s) 오류: %s", ticker, e)
+        return []
+
+
 def get_today_candle(ticker: str) -> Optional[dict]:
     """
     당일 실시간 봉 반환.
@@ -55,18 +117,6 @@ def get_today_candle(ticker: str) -> Optional[dict]:
             return None
 
         row = df.iloc[-1]
-
-        def _safe_float(val) -> float:
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                return 0.0
-
-        def _safe_int(val) -> int:
-            try:
-                return int(val)
-            except (TypeError, ValueError):
-                return 0
 
         open_  = _safe_float(row.get("Open",   row.get("open",  0)))
         high   = _safe_float(row.get("High",   row.get("high",  0)))
@@ -110,18 +160,6 @@ def get_today_candle_us(symbol: str) -> Optional[dict]:
             return None
 
         row = df.iloc[-1]
-
-        def _safe_float(val) -> float:
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                return 0.0
-
-        def _safe_int(val) -> int:
-            try:
-                return int(val)
-            except (TypeError, ValueError):
-                return 0
 
         open_  = _safe_float(row.get("Open",   row.get("open",  0)))
         high   = _safe_float(row.get("High",   row.get("high",  0)))

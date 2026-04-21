@@ -34,6 +34,16 @@
   var drawNormalized = null; // 검색에 사용된 내 패턴의 150pt 정규화 배열 (비교 모드용)
   var _resultMatches = [];   // renderResults 결과별 {matchNormalized, periodFrom, periodTo} 저장
 
+  // ── 검색 로딩 상태 ────────────────────────────────────────────────────────
+  var _searchMsgTimer = null;
+  var _searchMsgIdx   = 0;
+  var _SEARCH_MSGS = [
+    'KOSPI 전 종목 패턴 스캔 중...',
+    '유사 구간을 분석하고 있습니다...',
+    '최적 매칭 종목을 정렬 중...',
+    '결과를 준비하고 있습니다...',
+  ];
+
   // ── 즐겨찾기 / 저장 상태 ───────────────────────────────────────────────────
   var _favorites    = new Set();  // "TICKER|MARKET"
   var _lastResults  = [];         // 마지막 검색 결과 전체
@@ -159,11 +169,15 @@
 
     document.querySelectorAll('.draw-tool-btn').forEach(function (btn) {
       btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
     });
 
     if (tool) {
       var btn = document.getElementById('tool-' + tool);
-      if (btn) btn.classList.add('active');
+      if (btn) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
+      }
       syncCanvas();
       canvas.style.pointerEvents = 'auto';
       canvas.style.cursor = 'crosshair';
@@ -808,6 +822,84 @@
     isBlankMode = !!isBlank;
   };
 
+  // ── 검색 로딩 헬퍼 ───────────────────────────────────────────────────────
+  function _buildSearchLoadingHTML(desc) {
+    var skels = '';
+    for (var i = 0; i < 7; i++) {
+      var w1 = 35 + Math.round(Math.random() * 35);
+      var w2 = 50 + Math.round(Math.random() * 35);
+      skels += '<div class="d2t-skel-card">'
+        + '<div class="d2t-skeleton" style="height:11px;width:' + w1 + '%;border-radius:3px;"></div>'
+        + '<div class="d2t-skeleton" style="height:10px;width:' + w2 + '%;border-radius:3px;margin-top:7px;"></div>'
+        + '</div>';
+    }
+    return '<div class="d2t-search-state">'
+      + '<div class="d2t-search-spinner-row">'
+      + '<div class="d2t-spinner d2t-spinner-sm"></div>'
+      + '<span class="d2t-search-msg-text">' + escHtml(_SEARCH_MSGS[0]) + '</span>'
+      + '</div>'
+      + (desc ? '<div class="d2t-search-desc">' + escHtml(desc) + '</div>' : '')
+      + '</div>'
+      + skels;
+  }
+
+  function _startSearchLoading(desc) {
+    var btn = document.getElementById('btn-search');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.origHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="d2t-btn-spinner"></span>검색 중...';
+    }
+    showStatus('', '');
+
+    if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
+
+    var placeholder = document.getElementById('results-placeholder');
+    var list = document.getElementById('results-list');
+    if (placeholder) placeholder.style.display = 'none';
+    if (list) {
+      list.innerHTML = _buildSearchLoadingHTML(desc);
+      list.style.display = 'block';
+    }
+
+    _searchMsgIdx = 0;
+    if (_searchMsgTimer) clearInterval(_searchMsgTimer);
+    _searchMsgTimer = setInterval(function () {
+      _searchMsgIdx = (_searchMsgIdx + 1) % _SEARCH_MSGS.length;
+      var el = document.querySelector('.d2t-search-msg-text');
+      if (el) el.textContent = _SEARCH_MSGS[_searchMsgIdx];
+    }, 2500);
+  }
+
+  function _stopSearchLoading() {
+    if (_searchMsgTimer) { clearInterval(_searchMsgTimer); _searchMsgTimer = null; }
+    var btn = document.getElementById('btn-search');
+    if (btn) {
+      btn.disabled = false;
+      if (btn.dataset.origHtml) { btn.innerHTML = btn.dataset.origHtml; delete btn.dataset.origHtml; }
+    }
+  }
+
+  function _showSearchError(msg) {
+    _stopSearchLoading();
+    showStatus('', '');
+    var list = document.getElementById('results-list');
+    var placeholder = document.getElementById('results-placeholder');
+    if (list) list.style.display = 'none';
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.innerHTML = '<div class="d2t-search-error">'
+        + '<div class="d2t-search-error-icon">!</div>'
+        + '<div class="d2t-search-error-msg">' + escHtml(msg) + '</div>'
+        + '<button class="d2t-search-retry-btn" onclick="typeof doSearchRetry===\'function\'&&doSearchRetry()">다시 시도</button>'
+        + '</div>';
+    }
+  }
+
+  window.doSearchRetry = function () {
+    if (typeof _doSearchActual === 'function') _doSearchActual();
+  };
+
   // ── 유사 종목 검색 ────────────────────────────────────────────────────────
   function getPatternPoints() {
     if (drawPoints.length >= 2) {
@@ -1056,21 +1148,7 @@
     var searchDesc = body.lookback_bars
       ? ('기준 ' + body.lookback_bars + '봉' + anchorDesc)
       : (body.lookback_months ? (body.lookback_months + '개월' + anchorDesc) : '날짜 범위 고정');
-    showStatus('검색 중...', 'info');
-    document.getElementById('btn-search').disabled = true;
-
-    // 결과 패널에 로딩 스피너 표시 (유사 종목 탭으로 전환 후)
-    if (typeof window.switchSidebarTab === 'function') window.switchSidebarTab('results');
-    var placeholder = document.getElementById('results-placeholder');
-    var list = document.getElementById('results-list');
-    if (placeholder) {
-      placeholder.style.display = 'block';
-      placeholder.innerHTML = '<div class="d2t-search-loading">'
-        + '<div class="d2t-spinner"></div>'
-        + '<p><strong>검색 중...</strong><br>' + escHtml(searchDesc) + '</p>'
-        + '</div>';
-    }
-    if (list) list.style.display = 'none';
+    _startSearchLoading(searchDesc);
 
     _lastBody = body;
 
@@ -1093,19 +1171,10 @@
         });
       })
       .then(function (data) {
+        _stopSearchLoading();
         // 서버 데이터 프리로드 중 → 재시도 안내
         if (data.status === 'loading') {
-          showStatus(data.message || '데이터 준비 중...', 'info');
-          var placeholder = document.getElementById('results-placeholder');
-          if (placeholder) {
-            placeholder.style.display = 'block';
-            placeholder.innerHTML = '<div style="padding:40px 16px;text-align:center;">'
-              + '<div class="d2t-spinner" style="margin:0 auto 16px"></div>'
-              + '<div style="font-size:14px;font-weight:700;color:#d1d4dc;margin-bottom:8px;">'
-              + (data.message || '데이터를 준비 중입니다') + '</div>'
-              + '<div style="font-size:12px;color:#888;">잠시 후 다시 검색해주세요.</div>'
-              + '</div>';
-          }
+          _showSearchError(data.message || '데이터를 준비 중입니다. 잠시 후 다시 시도해주세요.');
           return;
         }
         _lastResults = data.results || [];
@@ -1116,10 +1185,7 @@
         if (btn) btn.style.display = _lastResults.length ? 'inline-flex' : 'none';
       })
       .catch(function (e) {
-        showStatus('오류: ' + (e.message || '검색 실패'), 'error');
-      })
-      .finally(function () {
-        document.getElementById('btn-search').disabled = false;
+        _showSearchError(e.message || '검색 중 오류가 발생했습니다. 다시 시도해주세요.');
       });
   }
 
@@ -1197,59 +1263,82 @@
         '</div>';
     }
 
-    list.innerHTML = lockBlock + results
-      .map(function (r, idx) {
-        var score = r.similarity_score;
-        var pct   = (score * 100).toFixed(1);
-        var color = score >= 0.85 ? '#26a69a'
-                  : score >= 0.75 ? '#ff9800'
-                  : '#90a4ae';
-        var barW  = Math.round(score * 100);
-        var pf = escHtml(r.period_from || '');
-        var pt = escHtml(r.period_to   || '');
-        var tk = escHtml(r.ticker);
-        var mk = escHtml(market);
-        var nm = escHtml(r.company_name || r.ticker);
+    // 최고 점수 기준으로 상대 너비 정규화
+    var maxScore = results.reduce(function (m, r) { return Math.max(m, r.similarity_score || 0); }, 0) || 1;
 
-        // 유사 구간 날짜 (period_from ~ period_to 축약)
-        var periodHtml = '';
-        if (r.period_from && r.period_to) {
-          var pfShort = r.period_from.substring(0, 7); // YYYY-MM
-          var ptShort = r.period_to.substring(0, 7);
-          periodHtml = '<div class="result-period">과거 사례 ' + pfShort + ' ~ ' + ptShort + '</div>';
-        } else if (r.period) {
-          periodHtml = '<div class="result-period">과거 사례 ' + escHtml(r.period) + '</div>';
-        }
+    if (results.length === 0) {
+      list.innerHTML = lockBlock +
+        '<div class="result-empty-state">' +
+          '<svg width="56" height="48" viewBox="0 0 56 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+            '<rect x="2" y="30" width="8" height="16" rx="2" fill="#4a5060"/>' +
+            '<rect x="14" y="20" width="8" height="26" rx="2" fill="#4a5060"/>' +
+            '<rect x="26" y="10" width="8" height="36" rx="2" fill="#4a5060"/>' +
+            '<rect x="38" y="18" width="8" height="28" rx="2" fill="#4a5060"/>' +
+            '<line x1="4" y1="44" x2="52" y2="44" stroke="#3a3f50" stroke-width="2" stroke-linecap="round"/>' +
+            '<circle cx="44" cy="8" r="7" fill="#1e1e21" stroke="#e05050" stroke-width="2"/>' +
+            '<line x1="41" y1="5" x2="47" y2="11" stroke="#e05050" stroke-width="1.8" stroke-linecap="round"/>' +
+            '<line x1="47" y1="5" x2="41" y2="11" stroke="#e05050" stroke-width="1.8" stroke-linecap="round"/>' +
+          '</svg>' +
+          '<div class="result-empty-title">유사 패턴을 찾지 못했습니다</div>' +
+          '<div class="result-empty-tips">' +
+            '패턴을 더 길게 그려보세요<br>' +
+            '추세선이나 직선보다 곡선 패턴이 효과적입니다<br>' +
+            '검색 기간 범위를 넓혀보세요' +
+          '</div>' +
+        '</div>';
+    } else {
+      list.innerHTML = lockBlock + results
+        .map(function (r, idx) {
+          var score    = r.similarity_score;
+          var pct      = (score * 100).toFixed(1);
+          var relW     = Math.round((score / maxScore) * 100);
+          var coverW   = 100 - relW;
+          var rank     = idx + 1 + rankOffset;
+          var rankCls  = rank === 1 ? ' rr-gold' : rank === 2 ? ' rr-silver' : rank === 3 ? ' rr-bronze' : '';
+          var pf = escHtml(r.period_from || '');
+          var pt = escHtml(r.period_to   || '');
+          var tk = escHtml(r.ticker);
+          var nm = escHtml(r.company_name || r.ticker);
 
-        // 실시간 시세 딥링크
-        var quoteUrl = 'https://finance.naver.com/item/main.naver?code=' + encodeURIComponent(r.ticker);
-        var quoteLbl = '네이버 증권';
+          var periodHtml = '';
+          if (r.period_from && r.period_to) {
+            var pfShort = r.period_from.substring(0, 7);
+            var ptShort = r.period_to.substring(0, 7);
+            periodHtml = '<div class="result-period">과거 사례 ' + pfShort + ' ~ ' + ptShort + '</div>';
+          } else if (r.period) {
+            periodHtml = '<div class="result-period">과거 사례 ' + escHtml(r.period) + '</div>';
+          }
 
-        return (
-          '<div class="result-card" ' +
-            'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\',\'' + nm + '\')" ' +
-            'title="클릭: 패턴 유사도 기반 수학적 검색 결과입니다. 투자 권유가 아닙니다.">' +
-            '<div class="result-rank">' + (idx + 1 + rankOffset) + '</div>' +
-            '<div class="result-info">' +
-              '<div class="result-name" title="' + nm + '">' + nm + '</div>' +
-              '<div class="result-ticker">' + tk + '</div>' +
-              periodHtml +
-            '</div>' +
-            '<div class="result-score-wrap">' +
-              '<div class="result-score-pct" style="color:' + color + '">' + pct + '%</div>' +
-              '<div class="result-score-bar"><div class="result-score-fill" style="width:' + barW + '%;background:' + color + '"></div></div>' +
-            '</div>' +
-            '<div class="result-card-actions">' +
-              '<a class="result-quote-btn" href="' + quoteUrl + '" target="_blank" rel="noopener noreferrer" ' +
-                'onclick="event.stopPropagation()" ' +
-                'title="' + quoteLbl + '에서 실시간 시세 확인">' +
-                '실시간 시세 ↗' +
-              '</a>' +
-            '</div>' +
-          '</div>'
-        );
-      })
-      .join('');
+          var quoteUrl = 'https://finance.naver.com/item/main.naver?code=' + encodeURIComponent(r.ticker);
+
+          return (
+            '<div class="result-card" ' +
+              'onclick="loadResultMatch(' + idx + ',\'' + tk + '\',\'' + pf + '\',\'' + pt + '\',\'' + nm + '\')" ' +
+              'title="클릭: 패턴 유사도 기반 수학적 검색 결과입니다. 투자 권유가 아닙니다.">' +
+              '<div class="result-rank' + rankCls + '">' + rank + '</div>' +
+              '<div class="result-info">' +
+                '<div class="result-name" title="' + nm + '">' + nm + '</div>' +
+                '<div class="result-ticker">' + tk + '</div>' +
+                periodHtml +
+              '</div>' +
+              '<div class="result-score-wrap">' +
+                '<div class="result-score-pct">' + pct + '%</div>' +
+                '<div class="result-score-bar">' +
+                  '<div class="result-score-cover" style="width:' + coverW + '%"></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="result-card-actions">' +
+                '<a class="result-quote-btn" href="' + quoteUrl + '" target="_blank" rel="noopener noreferrer" ' +
+                  'onclick="event.stopPropagation()" ' +
+                  'title="네이버 증권에서 실시간 시세 확인">' +
+                  '실시간 시세 ↗' +
+                '</a>' +
+              '</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+    }
 
     // 검색 완료 훅 — 모바일 사이드바 자동 열기 등에 사용
     if (typeof window._onSearchComplete === 'function') {
@@ -1573,9 +1662,26 @@
     });
   };
 
+  // ── 투자 면책 배너 ────────────────────────────────────────────────────────
+  window.d2tDismissDisclaimer = function () {
+    var banner = document.getElementById('d2t-disclaimer-banner');
+    if (banner) banner.style.display = 'none';
+    try { localStorage.setItem('d2t_disclaimer_dismissed', '1'); } catch (_) {}
+  };
+
   // ── DOM 준비 후 실행 ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     initCanvas();
+
+    // 면책 배너 — 이미 닫은 경우 숨김
+    (function () {
+      try {
+        if (localStorage.getItem('d2t_disclaimer_dismissed') === '1') {
+          var banner = document.getElementById('d2t-disclaimer-banner');
+          if (banner) banner.style.display = 'none';
+        }
+      } catch (_) {}
+    }());
 
     // 고급 옵션 토글
     var btnAdv = document.getElementById('btn-advanced');

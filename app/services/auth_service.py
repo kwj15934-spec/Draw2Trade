@@ -116,24 +116,40 @@ def get_user_status(uid: str) -> str | None:
     return user["status"] if user else None
 
 
-def register_user(user_info: dict) -> str:
-    """신규 유저를 approved 상태로 자동 등록. 이미 존재하면 기존 상태 반환."""
+def upsert_user(user_info: dict) -> None:
+    """신규 유저 등록 또는 기존 유저 정보 업데이트 (플랜 유지).
+    이메일이 같은 기존 유저가 있으면 UID를 새 값으로 마이그레이션."""
     users = _load_users()
     uid = user_info["uid"]
+    email = user_info.get("email", "")
+
+    # 새 UID로 등록된 유저가 없으면 이메일로 기존 레코드 검색 (UID 마이그레이션)
+    if uid not in users and email:
+        old_uid = next((k for k, v in users.items() if v.get("email") == email), None)
+        if old_uid:
+            users[uid] = users.pop(old_uid)
+            users[uid]["uid"] = uid
+            for key in ("name", "picture"):
+                if key in user_info:
+                    users[uid][key] = user_info[key]
+            _save_users(users)
+            _firestore_upsert_user(uid, {"uid": uid})
+            logger.info("유저 UID 마이그레이션: %s → %s (%s)", old_uid, uid, email)
+            return
+
     if uid not in users:
         now = datetime.now(timezone.utc).isoformat()
-        entry = {
-            **user_info,
-            "status": "approved",
-            "plan": "free",
-            "created_at": now,
-        }
+        entry = {**user_info, "plan": "free", "created_at": now}
         users[uid] = entry
         _save_users(users)
         _firestore_upsert_user(uid, entry)
-        logger.info("신규 유저 자동 승인 등록: %s", user_info.get("email"))
-        return "approved"
-    return users[uid]["status"]
+        logger.info("신규 유저 등록: %s", email)
+    else:
+        # 기존 유저: 이름/이메일 등 정보만 업데이트, 플랜은 유지
+        for key in ("email", "name", "picture"):
+            if key in user_info:
+                users[uid][key] = user_info[key]
+        _save_users(users)
 
 
 def approve_user(uid: str) -> bool:

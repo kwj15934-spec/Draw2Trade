@@ -144,6 +144,28 @@ async def chart_data(
     bars = bar_db.get_daily_bars("KR_STOCK", ticker, "19900101", _db_end)
 
     if bars:
+        # DB 데이터가 4일(영업일 기준 2~3일) 이상 오래됐으면 FDR로 최근 누락 날짜 보완
+        last_bar_dt = datetime.strptime(bars[-1]["trade_date"], "%Y%m%d")
+        gap_days = (datetime.now() - last_bar_dt).days
+        if tf == "daily" and gap_days > 3:
+            fill_start = (last_bar_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+            recent = fdr_service.get_recent_candles(ticker, fill_start)
+            if recent:
+                existing = {b["trade_date"] for b in bars}
+                for rc in recent:
+                    rc_compact = rc["time"].replace("-", "")
+                    if rc_compact not in existing:
+                        bars.append({
+                            "trade_date": rc_compact,
+                            "open":   rc["open"],
+                            "high":   rc["high"],
+                            "low":    rc["low"],
+                            "close":  rc["close"],
+                            "volume": rc["volume"],
+                        })
+                bars.sort(key=lambda b: b["trade_date"])
+                logger.info("FDR 갭 보완 (%s): %d봉 추가 (last_db=%s)",
+                            ticker, len(recent), bars[-1]["trade_date"])
         candles = bar_db.bars_to_candles(bars, tf)
     else:
         # ── 2순위: pykrx 폴백 (DB에 종목 없거나 데이터 부족 시) ──────────────

@@ -59,14 +59,30 @@
     return;
   }
 
-  firebase.initializeApp(cfg);
-  var auth = firebase.auth();
+  // 이미 초기화된 앱이 있으면 재사용
+  var app = firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
+  var auth = firebase.auth(app);
+
+  // 로그아웃 후 리다이렉트된 경우 Firebase 세션도 정리
+  if (new URLSearchParams(window.location.search).get('logout') === '1') {
+    await auth.signOut();
+    history.replaceState(null, '', '/login');
+    return;
+  }
+
+  // 서버사이드 OAuth 에러 처리
+  var urlError = new URLSearchParams(window.location.search).get('error');
+  if (urlError) {
+    showError('Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+    history.replaceState(null, '', '/login');
+  }
 
   // Firebase 준비 완료 → Google 버튼 활성화
   ['btn-google-login', 'btn-google-signup'].forEach(function(id) {
     var btn = document.getElementById(id);
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   });
+
 
   // ── 3. 백엔드 로그인 ─────────────────────────────────────────────────────
   async function loginWithToken(idToken) {
@@ -84,50 +100,14 @@
     if (data.status === 'approved') {
       window.location.href = '/';
       return 'approved';
-    } else if (data.status === 'pending') {
-      if (typeof window.showPendingModal === 'function') {
-        window.showPendingModal();
-      } else {
-        window.location.href = '/pending';
-      }
-      return 'pending';
-    } else if (data.status === 'rejected') {
-      throw new Error('가입이 거절되었습니다. 관리자에게 문의하세요.');
     }
   }
 
-  // ── Google 리다이렉트 결과 처리 (페이지 복귀 시) ────────────────────────
-  try {
-    var redirectResult = await auth.getRedirectResult();
-    if (redirectResult && redirectResult.user) {
-      ['btn-google-login', 'btn-google-signup'].forEach(function(id) {
-        setLoading(id, true);
-      });
-      var idToken = await redirectResult.user.getIdToken();
-      await loginWithToken(idToken);
-    }
-  } catch (e) {
-    // network-request-failed: 리다이렉트 이전 페이지 로드 시 정상적으로 발생 — 무시
-    if (e.code !== 'auth/network-request-failed') {
-      showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
-    }
-  }
-
-  // ── Google 로그인 / 가입 (공통 핸들러) ─────────────────────────────────
-  async function handleGoogleAuth(btnId) {
+  // ── Google 로그인 / 가입 (서버사이드 OAuth) ────────────────────────────
+  function handleGoogleAuth(btnId) {
     setLoading(btnId, true);
     showError('');
-    try {
-      var provider = new firebase.auth.GoogleAuthProvider();
-      await auth.signInWithRedirect(provider);
-    } catch (e) {
-      if (e.code === 'auth/network-request-failed') {
-        showError('네트워크 연결을 확인하세요. 잠시 후 다시 시도해주세요.');
-      } else {
-        showError(e.message || 'Google 인증 중 오류가 발생했습니다.');
-      }
-      setLoading(btnId, false);
-    }
+    window.location.href = '/api/auth/google/init';
   }
 
   ['btn-google-login', 'btn-google-signup'].forEach(function(id) {

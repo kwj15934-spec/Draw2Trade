@@ -579,6 +579,8 @@
     if (!ticker) return;
     if (D2T.loading) return;
     D2T.loading = true;
+    _removePatternSeries();
+    _hidePatternMiniChart();
 
     // 원본 상태 저장 (처음 결과 로드 시에만)
     if (!D2T.originState && D2T.ticker && D2T.candles) {
@@ -685,9 +687,6 @@
           filtered = validCandles.slice(fromIdx, toIdx + 1);
 
           if (filtered.length > 0) {
-            // 전체 데이터 유지 (스크롤 가능), scrollToPosition으로 이동
-            displayCandles = validCandles;
-
             var wrapper = document.getElementById('chart-wrapper');
             var approxBarSpacing = 10;
             var halfVisible = wrapper
@@ -695,23 +694,65 @@
               : 30;
             var scrollOffset;
             if (D2T._anchorToday) {
-              // anchor_today: 끝(오늘)을 화면 오른쪽에 맞춤 → scrollToPosition(5)
               scrollOffset = 5;
             } else {
-              // 매칭 구간 중앙을 화면 중앙에 위치
               var matchCenter = Math.round((fromIdx + toIdx) / 2);
               scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
             }
 
-            // 매칭 구간 고가/저가 기반으로 pMin/pMax 결정 (캔들과 1:1 수직 정렬)
-            var highs = filtered.map(function (c) { return c.high; });
-            var lows  = filtered.map(function (c) { return c.low; });
-            var pMin = Math.min.apply(null, lows);
-            var pMax = Math.max.apply(null, highs);
-            if (!isFinite(pMin) || !isFinite(pMax)) { pMin = 0; pMax = 100; }
-            var finalMin = pMin;
-            var finalMax = pMax;
-            if (finalMin < 0) finalMin = 0;  // 주가는 0 미만 불가
+            // ── 매칭 구간 Y축 로버스트 범위 계산(분위수 기반) ─────────
+            // 권리락/장중 스파이크로 전체 Y축이 왜곡되지 않도록, 매칭 구간
+            // 캔들의 low/high 각각을 정렬해 중앙 95% 분위수를 사용.
+            var highs = filtered.map(function (c) { return c.high; })
+                                .filter(function (v) { return isFinite(v) && v > 0; })
+                                .sort(function (a, b) { return a - b; });
+            var lows  = filtered.map(function (c) { return c.low; })
+                                .filter(function (v) { return isFinite(v) && v > 0; })
+                                .sort(function (a, b) { return a - b; });
+
+            function _pct(arr, p) {
+              if (!arr.length) return NaN;
+              var idx = Math.min(arr.length - 1, Math.max(0, Math.round((arr.length - 1) * p)));
+              return arr[idx];
+            }
+            var q_lo, q_hi;
+            if (lows.length && highs.length) {
+              q_lo = _pct(lows,  0.025);
+              q_hi = _pct(highs, 0.975);
+              if (!isFinite(q_lo) || !isFinite(q_hi) || q_hi <= q_lo) {
+                q_lo = lows[0];
+                q_hi = highs[highs.length - 1];
+              }
+            } else {
+              q_lo = 0; q_hi = 100;
+            }
+            var finalMin = Math.max(0, q_lo);
+            var finalMax = q_hi;
+
+            // ── 매칭 구간 캔들 winsorize ────────────────────────────────
+            // 범위 밖(이상치) 캔들만 low/high/open/close를 finalMin~finalMax로 클립.
+            // 범위 내 캔들은 원본 그대로. 매칭 구간 밖은 전부 원본.
+            displayCandles = validCandles.map(function (c, idx) {
+              if (idx < fromIdx || idx > toIdx) return c;
+              if (c.low >= finalMin && c.high <= finalMax &&
+                  c.open >= finalMin && c.open <= finalMax &&
+                  c.close >= finalMin && c.close <= finalMax) {
+                return c;
+              }
+              function _clip(v) {
+                if (!isFinite(v)) return v;
+                return Math.min(finalMax, Math.max(finalMin, v));
+              }
+              return {
+                time:   c.time,
+                open:   _clip(c.open),
+                high:   _clip(c.high),
+                low:    _clip(c.low),
+                close:  _clip(c.close),
+                volume: c.volume,
+              };
+            });
+
             D2T.matchPeriodData = {
               candles:  filtered,
               priceMin: finalMin,
@@ -722,6 +763,8 @@
         }
 
         // ── 데이터 주입 ─────────────────────────────────────────────
+        // autoscaleInfoProvider는 주입하지 않음 (매칭 구간 캔들은 위에서 winsorize 처리).
+        // 사용자가 스크롤해서 다른 구간을 보면 기본 autoScale 로 정상 동작.
         D2T.series.applyOptions({ autoscaleInfoProvider: undefined });
         D2T.series.setData(displayCandles);
         D2T.candles = displayCandles;

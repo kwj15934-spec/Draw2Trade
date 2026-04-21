@@ -16,11 +16,21 @@ VolumeSpike 계산:
 
 처리 파이프라인:
   사용자 드로잉 → 150포인트 리샘플 → 0~1 정규화
-  종목 슬라이딩 윈도우 → 적응형 스무딩 → 리샘플 → 정규화
-  → 빠른 필터 → 복합 점수 계산 → 2-pass 정밀화 → Top N 반환
+  종목 슬라이딩 윈도우 → forward-adjust(권리락 보정) → 적응형 스무딩 → 리샘플 → 정규화
+  → 빠른 필터(방향/유동성/평탄도) → 복합 점수 계산 → 2-pass 정밀화 → Top N 반환
+
+유니버스 필터:
+  - 종목명에 "스팩"/"SPAC" 포함 종목 제외
+  - 최근 3개월 평균 거래대금(close×volume) 하위 10% 제외
+  - 변동폭이 지나치게 작은 "평탄 패턴" 제외 (정규화 시 노이즈 증폭 방지)
+
+이상치(권리락/배당락) 보정:
+  - 직전 봉 대비 abs(log-return) > 0.25 인 지점 감지 → forward-adjust로 이전 구간 ratio 조정
+  - 차트 표시가 아닌 유사도 계산 전용 보정
 """
 import heapq
 import logging
+import math
 from typing import Sequence
 
 import numpy as np
@@ -31,11 +41,91 @@ logger = logging.getLogger(__name__)
 
 PATTERN_LEN = 150  # 고정 리샘플 포인트 수
 _EPS = 1e-9
+_OUTLIER_LOG_THRESHOLD = 0.25   # |log(P_t / P_{t-1})| > 0.25 → 이상 갭으로 간주 (≈ ±28%)
+_FLAT_REL_RANGE = 0.05          # 윈도우 (max-min)/median < 5% 면 평탄 패턴으로 제외
+_LIQUIDITY_PERCENTILE = 10      # 거래대금 하위 N% 제외
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 수치 유틸
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _is_excluded_name(name: str | None) -> bool:
+    """종목명 기반 유니버스 제외: 스팩(SPAC)."""
+    if not name:
+        return False
+    low = name.lower()
+    if "스팩" in name:
+        return True
+    if "spac" in low:
+        return True
+    return False
+
+
+def forward_adjust(arr: np.ndarray, threshold: float = _OUTLIER_LOG_THRESHOLD) -> np.ndarray:
+    """
+    권리락/배당락/이상치로 추정되는 ±threshold 초과 로그수익률 갭을 forward-adjust.
+
+    - 최신 가격은 유지하고, 갭 이전 구간 전체를 ratio로 스케일 보정
+    - 수정주가(adjusted close)와 동일한 효과를 주어 유사도 계산에 사용
+    - 차트 표시용이 아닌 계산 전용 (원본 arr는 변경하지 않음)
+    """
+    if arr is None or len(arr) < 2:
+        return arr
+    out = np.asarray(arr, dtype=float).copy()
+    # 뒤에서 앞으로 스캔 — 이상 갭 발견 시 갭 이전 구간을 현재 가격 기준으로 조정
+    for i in range(len(out) - 2, -1, -1):
+        prev_v = out[i]
+        next_v = out[i + 1]
+        if prev_v <= 0 or next_v <= 0:
+            continue
+        ratio = next_v / prev_v
+        if ratio <= 0:
+            continue
+        logret = math.log(ratio)
+        if abs(logret) > threshold:
+            # 갭 이전 구간 전체를 ratio 배 — 즉, 이상 갭 앞쪽을 현재 기준으로 재조정
+            out[: i + 1] *= ratio
+    return out
+
+
+def _recent_trading_value(ohlcv: dict) -> float:
+    """
+    최근 3개월 평균 거래대금(close × volume).
+    freq: 'm'=3개월=3봉, 'w'=3개월≈13봉, 'd'=3개월≈65봉.
+    데이터 부족 시 0 반환.
+    """
+    close = ohlcv.get("close", [])
+    volume = ohlcv.get("volume", [])
+    if not close or not volume:
+        return 0.0
+    freq = ohlcv.get("freq", "d")
+    n_recent = {"m": 3, "w": 13}.get(freq, 65)
+    cs = close[-n_recent:]
+    vs = volume[-n_recent:]
+    vals = [float(c) * float(v) for c, v in zip(cs, vs) if c and v and c > 0 and v > 0]
+    if not vals:
+        return 0.0
+    return float(np.mean(vals))
+
+
+def _liquidity_cutoff(cache: dict, names: dict, percentile: int = _LIQUIDITY_PERCENTILE) -> float:
+    """
+    유니버스 전체 종목의 최근 거래대금 percentile 임계값.
+    임계값 미만 종목은 검색 대상에서 제외.
+    유니버스 크기가 너무 작으면(<20) 0.0 반환(필터 비활성).
+    """
+    tvs: list[float] = []
+    for ticker, ohlcv in cache.items():
+        if _is_excluded_name(names.get(ticker, ticker)):
+            continue
+        tv = _recent_trading_value(ohlcv)
+        if tv > 0:
+            tvs.append(tv)
+    if len(tvs) < 20:
+        return 0.0
+    return float(np.percentile(tvs, percentile))
+
 
 def resample(seq: Sequence[float], n: int) -> np.ndarray:
     """시계열을 n개 포인트로 선형 보간 리샘플링."""
@@ -211,23 +301,40 @@ def search_similar(
     names = names_cache if names_cache is not None else all_names()
     results: list[dict] = []
 
-    logger.info("search_similar: 종목 %d개, lookback=%d, anchor_today=%s, date_range=%s",
-                len(cache), lookback_months, anchor_today, use_date_range)
+    # ── 유니버스 사전 필터: 유동성 임계값(거래대금 하위 10%) 계산 ─────────────
+    liquidity_cutoff = _liquidity_cutoff(cache, names, percentile=_LIQUIDITY_PERCENTILE)
+
+    logger.info("search_similar: 종목 %d개, lookback=%d, anchor_today=%s, date_range=%s, liquidity_cutoff=%.0f",
+                len(cache), lookback_months, anchor_today, use_date_range, liquidity_cutoff)
 
     skipped_short = 0
     skipped_illiquid = 0
+    skipped_spac = 0
+    skipped_flat = 0
     for ticker, ohlcv in cache.items():
         dates  = ohlcv.get("dates",  [])
         close  = ohlcv.get("close",  [])
         volume = ohlcv.get("volume", [])
 
-        # 저유동성 종목 필터: 전체 거래량 합이 0이거나 가격 변동이 전혀 없으면 제외
+        # ── 스팩(SPAC) 제외: 종목명 기반 ───────────────────────────────────
+        if _is_excluded_name(names.get(ticker, ticker)):
+            skipped_spac += 1
+            continue
+
+        # ── 저유동성 필터 ──────────────────────────────────────────────────
         if volume and sum(volume) == 0:
             skipped_illiquid += 1
             continue
         if close and len(close) >= 2:
             mn, mx = min(c for c in close if c), max(close)
             if mx - mn < _EPS:  # 완전 평탄 (상장폐지 대기 등)
+                skipped_illiquid += 1
+                continue
+
+        # 최근 3개월 거래대금이 하위 10% 미만이면 제외
+        if liquidity_cutoff > 0:
+            tv = _recent_trading_value(ohlcv)
+            if tv < liquidity_cutoff:
                 skipped_illiquid += 1
                 continue
 
@@ -240,6 +347,13 @@ def search_similar(
             if len(indices) < 2:
                 continue
             arr = np.array([close[i] for i in indices], dtype=float)
+            # 권리락/이상치 갭 보정 (유사도 계산용 — 원본 DB 변경 없음)
+            arr = forward_adjust(arr)
+            # 평탄 패턴 필터: (max-min)/median < 5% 면 의미 있는 패턴 없음
+            _med = float(np.median(arr)) if len(arr) else 0.0
+            if _med > 0 and (float(arr.max() - arr.min()) / _med) < _FLAT_REL_RANGE:
+                skipped_flat += 1
+                continue
             sw = _resolve_smooth(smooth_window, len(arr))
             if sw > 1 and len(arr) > sw:
                 arr = np.convolve(arr, np.ones(sw) / sw, mode="valid")
@@ -266,6 +380,8 @@ def search_similar(
 
         # ── 공통 전처리 ────────────────────────────────────────────────────
         arr = np.array(close, dtype=float)
+        # 권리락/이상치 보정 (유사도 계산 전용)
+        arr = forward_adjust(arr)
         win = lookback_months
 
         sw = _resolve_smooth(smooth_window, win)
@@ -285,6 +401,15 @@ def search_similar(
             # max_search_bars가 있으면: 다양한 시작점 시도 (끝=오늘 고정)
             # 없으면: 고정 win 크기 (기존 동작)
             orig_end = n - 1 + date_shift
+            # 평탄 윈도우 검사용 헬퍼
+            def _flat_window(sl: np.ndarray) -> bool:
+                if len(sl) < 2:
+                    return True
+                med = float(np.median(sl))
+                if med <= 0:
+                    return True
+                return (float(sl.max() - sl.min()) / med) < _FLAT_REL_RANGE
+
             if max_search_bars is not None:
                 min_win = max(2, win // 2)
                 max_win = min(n - 1, max_search_bars)
@@ -304,6 +429,8 @@ def search_similar(
                         if start < 0:
                             continue
                         sl   = arr[start:n]
+                        if _flat_window(sl):
+                            continue
                         x_old = np.linspace(0.0, 1.0, len(sl))
                         nm   = normalize(np.interp(x_new, x_old, sl))
                         s    = similarity_score(tmpl, nm)
@@ -311,9 +438,16 @@ def search_similar(
                             best_score  = s
                             best_i      = start
                             best_normed = nm
+                if best_score < 0:
+                    skipped_flat += 1
+                    continue
             else:
                 best_i      = max(0, n - win)
-                best_normed = normalize(resample(arr[best_i: best_i + win], PATTERN_LEN))
+                best_slice  = arr[best_i: best_i + win]
+                if _flat_window(best_slice):
+                    skipped_flat += 1
+                    continue
+                best_normed = normalize(resample(best_slice, PATTERN_LEN))
 
             # sw>1이면 arr가 유효구간으로 잘리며(date_shift=sw-1), arr 인덱스는 원본 dates 인덱스에 date_shift 만큼 오프셋됩니다.
             # period_from/period_to가 실제 매칭 구간과 어긋나면 이후 구간 기반 거래대금/지표 추출에서 정합성이 깨질 수 있습니다.
@@ -333,9 +467,14 @@ def search_similar(
             coarse_wins = all_wins[::coarse]                               # (n_coarse, win)
             coarse_indices = np.arange(0, total_windows, coarse)
 
-            # 벡터 fast-reject: 방향 필터
+            # 벡터 fast-reject: 방향 필터 + 평탄 패턴 필터
             win_ranges = coarse_wins.max(axis=1) - coarse_wins.min(axis=1)
+            win_medians = np.median(coarse_wins, axis=1)
             vmask = win_ranges > _EPS
+            # 상대 변동폭이 _FLAT_REL_RANGE 미만이면 평탄 패턴으로 간주하고 제외
+            with np.errstate(divide="ignore", invalid="ignore"):
+                rel_range = np.where(win_medians > _EPS, win_ranges / win_medians, 0.0)
+            vmask &= rel_range >= _FLAT_REL_RANGE
             if abs(tmpl_net) > 0.3:
                 net_ch = np.where(
                     vmask,
@@ -347,6 +486,7 @@ def search_similar(
             valid_idx  = coarse_indices[vmask]
             valid_wins = coarse_wins[vmask]
             if len(valid_wins) == 0:
+                skipped_flat += 1
                 continue
 
             # 배치 리샘플 → 배치 정규화 → 배치 Pearson (shape score)
@@ -428,9 +568,9 @@ def search_similar(
         })
 
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
-    if skipped_short > 0 or skipped_illiquid > 0:
-        logger.info("search_similar: 제외 — 데이터부족 %d개, 저유동성 %d개",
-                    skipped_short, skipped_illiquid)
+    if skipped_short or skipped_illiquid or skipped_spac or skipped_flat:
+        logger.info("search_similar: 제외 — 데이터부족 %d, 저유동성 %d, 스팩 %d, 평탄패턴 %d",
+                    skipped_short, skipped_illiquid, skipped_spac, skipped_flat)
     logger.info("search_similar: 결과 %d개 반환 (top_n=%d)", min(len(results), top_n), top_n)
     return results[:top_n]
 

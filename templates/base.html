@@ -19,10 +19,11 @@
   <!-- End Google tag -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
+  {% block robots %}<meta name="robots" content="index, follow">{% endblock %}
   <title>{% block title %}Draw2Trade{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
   <link rel="icon" type="image/png" href="/static/img/favicon.png" sizes="32x32">
+  {% block seo %}{% endblock %}
 
   <!-- Bootstrap 5 -->
   <link
@@ -626,6 +627,9 @@
 
     /* ── 버튼 스타일 ──────────────────────────────────────── */
     .btn-d2t {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       height: 30px;
       padding: 0 12px;
       border-radius: 6px;
@@ -638,6 +642,7 @@
       white-space: nowrap;
       transition: all 0.15s;
     }
+    .btn-d2t svg { flex-shrink: 0; }
 
     .btn-d2t:hover { border-color: #26a69a; color: #26a69a; background: rgba(38,166,154,0.06); }
     .btn-d2t.active { background: #26a69a; border-color: #26a69a; color: #fff; }
@@ -1904,15 +1909,102 @@
     }
     .d2t-spinner {
       width: 32px; height: 32px;
-      border: 3px solid #2d2d30;
-      border-top-color: #2dd4bf;
+      border: 3px solid var(--d2t-bg-4, #26262c);
+      border-top-color: var(--d2t-cyan, #00d4aa);
       border-radius: 50%;
       animation: d2t-spin .75s linear infinite;
+      flex-shrink: 0;
+    }
+    .d2t-spinner-sm {
+      width: 14px; height: 14px;
+      border-width: 2px;
     }
     .d2t-search-loading p {
       color: #7a8499; font-size: 12px; margin: 0; line-height: 1.6;
     }
     .d2t-search-loading strong { color: #d4d8e2; }
+
+    /* ── 검색 진행 상태 (스켈레톤 + 순환 메시지) ────────── */
+    .d2t-search-state {
+      padding: 14px 12px 10px;
+      border-bottom: 1px solid var(--d2t-bg-4, #26262c);
+      margin-bottom: 4px;
+    }
+    .d2t-search-spinner-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+    .d2t-search-msg-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--d2t-cyan, #00d4aa);
+      transition: opacity .3s;
+    }
+    .d2t-search-desc {
+      font-size: 11px;
+      color: #5a6070;
+      padding-left: 22px;
+    }
+    .d2t-skel-card {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--d2t-bg-3, #1f1f24);
+    }
+
+    /* ── 버튼 내 인라인 스피너 ──────────────────────────── */
+    .d2t-btn-spinner {
+      display: inline-block;
+      width: 11px; height: 11px;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: d2t-spin .65s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    /* ── 검색 에러 상태 ──────────────────────────────────── */
+    .d2t-search-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 40px 16px 32px;
+      text-align: center;
+    }
+    .d2t-search-error-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(239,83,80,.15);
+      border: 1.5px solid rgba(239,83,80,.4);
+      color: #ef5350;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 34px;
+      text-align: center;
+    }
+    .d2t-search-error-msg {
+      font-size: 12px;
+      color: #8a9099;
+      line-height: 1.6;
+      max-width: 200px;
+    }
+    .d2t-search-retry-btn {
+      margin-top: 4px;
+      padding: 6px 18px;
+      background: transparent;
+      border: 1px solid var(--d2t-cyan, #00d4aa);
+      border-radius: 4px;
+      color: var(--d2t-cyan, #00d4aa);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .d2t-search-retry-btn:hover {
+      background: var(--d2t-cyan-dim, rgba(0,212,170,.15));
+    }
 
     /* ── 사이드바 하단 패널 내부 콘텐츠 패널 ────────────── */
     .sidebar-content-panel {
@@ -2112,18 +2204,32 @@
       gap: 6px;
       padding: 7px 10px;
       border-bottom: 1px solid #1e1e21;
+      border-left: 2px solid transparent;
       cursor: pointer;
-      transition: background 0.12s;
+      transition: background 0.12s, border-left-color 0.12s;
     }
-    .result-card:hover { background: #1e1e21; }
+    .result-card:hover {
+      background: #1a1a1e;
+      border-left-color: var(--d2t-cyan);
+    }
+    .result-card:hover .result-card-actions { opacity: 1; }
 
+    /* 순위 뱃지 */
     .result-rank {
-      width: 24px;
-      font-size: 12px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
       font-weight: 700;
       color: #555;
       flex-shrink: 0;
+      border-radius: 4px;
     }
+    .rr-gold   { background: #3a2e08; color: #f0c040; border: 1px solid #5a4a10; }
+    .rr-silver { background: #252830; color: #9eaabb; border: 1px solid #3a3f50; }
+    .rr-bronze { background: #2e1e14; color: #c07850; border: 1px solid #4a3020; }
 
     .result-info {
       flex: 1;
@@ -2145,25 +2251,28 @@
 
     /* 유사도 바 */
     .result-score-wrap {
-      width: 68px;
+      width: 72px;
       flex-shrink: 0;
     }
     .result-score-pct {
       font-size: 12px;
       font-weight: 700;
       line-height: 1;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
+      color: var(--d2t-cyan);
     }
     .result-score-bar {
-      height: 3px;
-      background: #2d2d30;
+      position: relative;
+      height: 4px;
       border-radius: 2px;
+      background: linear-gradient(to right, var(--d2t-orange), #e0a020 45%, var(--d2t-cyan));
       overflow: hidden;
     }
-    .result-score-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.4s;
+    .result-score-cover {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      background: var(--d2t-bg-3);
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
     }
 
     /* ── 결과 카드: 버튼 그룹 ──────────────────────────── */
@@ -2172,6 +2281,32 @@
       flex-direction: column;
       gap: 4px;
       flex-shrink: 0;
+      opacity: 0.45;
+      transition: opacity 0.15s;
+    }
+
+    /* ── 빈 상태 ─────────────────────────────────────────── */
+    .result-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px 24px;
+      gap: 10px;
+      color: #555;
+      text-align: center;
+    }
+    .result-empty-state svg { opacity: 0.35; }
+    .result-empty-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6a7080;
+      margin-top: 4px;
+    }
+    .result-empty-tips {
+      font-size: 11px;
+      color: #484e5e;
+      line-height: 1.6;
     }
     .result-hist-news-btn {
       background: none;
@@ -2216,6 +2351,33 @@
       border-top: 1px solid #1e1e21;
       margin-top: 4px;
     }
+
+    /* ── 투자 면책 배너 ──────────────────────────────── */
+    .d2t-disclaimer-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--d2t-bg-3, #1e2332);
+      border-left: 2px solid #f59e0b;
+      font-size: 11px;
+      color: var(--d2t-text-2, #7a8499);
+      line-height: 1.55;
+    }
+    .d2t-disclaimer-banner-text { flex: 1; }
+    .d2t-disclaimer-close {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: #555d7a;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 0 0 4px;
+      margin-top: 1px;
+      transition: color 0.12s;
+    }
+    .d2t-disclaimer-close:hover { color: #9aa0b0; }
     .tl-panel-title {
       padding: 6px 12px 4px;
       font-size: 10px;
@@ -3396,8 +3558,8 @@
     </div>
     <!-- 우: 면책조항 + copyright -->
     <div style="text-align:right;flex-shrink:0;font-size:10px;color:#555d7a;line-height:1.6;">
-      <div>본 서비스는 사용자가 직접 그린 패턴을 과거 차트에서 수학적으로 탐색하는 기술적 도구이며, 투자 권유·자문·추천을 목적으로 하지 않습니다.</div>
-      <div>자본시장과 금융투자업에 관한 법률에 따라 무인가 투자자문업 행위를 하지 않습니다. 모든 투자 결정의 책임은 이용자 본인에게 있습니다.</div>
+      <div>본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.</div>
+      <div>제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.</div>
       <div style="margin-top:2px;">&copy; 2026 Draw2Trade</div>
     </div>
   </footer>

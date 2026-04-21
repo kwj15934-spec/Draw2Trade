@@ -1053,7 +1053,7 @@
     loadKisUsage();
     setInterval(loadKisUsage, 30000);
 
-    document.getElementById('btn-clear-cache').addEventListener('click', async function() {
+    document.getElementById('btn-clear-cache')?.addEventListener('click', async function() {
       if (!confirm('Redis 차트 캐시를 전부 초기화합니다. 계속하시겠습니까?')) return;
       var btn = this;
       var statusEl = document.getElementById('rebuild-status');
@@ -1260,10 +1260,10 @@
     var TYPE_KO     = { update: '업데이트', event: '이벤트', notice: '공지' };
 
     // Ctrl+Enter 단축키
-    document.getElementById('notice-content').addEventListener('keydown', function(e) {
+    document.getElementById('notice-content')?.addEventListener('keydown', function(e) {
       if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); submitNotice(); }
     });
-    document.getElementById('notice-title').addEventListener('keydown', function(e) {
+    document.getElementById('notice-title')?.addEventListener('keydown', function(e) {
       if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); submitNotice(); }
     });
 
