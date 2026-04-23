@@ -1679,16 +1679,6 @@
       } catch (_) {}
     }());
 
-    // 고급 옵션 토글
-    var btnAdv = document.getElementById('btn-advanced');
-    var advOpts = document.getElementById('advanced-options');
-    if (btnAdv && advOpts) {
-      btnAdv.addEventListener('click', function () {
-        var open = advOpts.classList.toggle('open');
-        btnAdv.classList.toggle('active', open);
-      });
-    }
-
     // 드로잉 도구 버튼
     document.querySelectorAll('.draw-tool-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
