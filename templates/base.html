@@ -2211,6 +2211,178 @@
       letter-spacing: 0.2px;
     }
 
+    /* ── AI 프롬프트 박스 (사이드바 상단) ─────────────────── */
+    .ai-prompt-box {
+      margin: 8px 10px 4px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(38,166,154,0.10) 0%, rgba(38,166,154,0.02) 100%);
+      border: 1px solid rgba(38,166,154,0.35);
+      border-radius: 6px;
+    }
+    .ai-prompt-header {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .ai-prompt-title { font-size: 11.5px; font-weight: 600; color: #e0e3ea; }
+    .ai-prompt-badge {
+      margin-left: auto;
+      background: #26a69a; color: #0b1413;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+      padding: 2px 6px; border-radius: 3px;
+    }
+    .ai-prompt-input-row {
+      display: flex; gap: 6px; margin-bottom: 6px;
+    }
+    #ai-prompt-input {
+      flex: 1;
+      background: #0f1012;
+      border: 1px solid #2d2d30;
+      color: #d1d4dc;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    #ai-prompt-input:focus { border-color: #26a69a; }
+    .ai-prompt-btn {
+      background: #26a69a; color: #0b1413;
+      border: none; border-radius: 4px;
+      font-size: 11.5px; font-weight: 700;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    .ai-prompt-btn:hover { background: #1f8f84; }
+    .ai-prompt-btn:disabled, .ai-prompt-btn.loading {
+      opacity: 0.55; cursor: wait;
+    }
+    .ai-prompt-examples {
+      display: flex; flex-wrap: wrap; gap: 4px;
+    }
+    .ai-example-chip {
+      background: #1e1e21;
+      border: 1px solid #2d2d30;
+      color: #a8aeba;
+      font-size: 10.5px;
+      padding: 3px 7px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+    }
+    .ai-example-chip:hover {
+      border-color: #26a69a;
+      color: #d1d4dc;
+    }
+    .ai-prompt-error {
+      margin-top: 6px;
+      padding: 5px 8px;
+      background: rgba(255,107,53,0.12);
+      border: 1px solid rgba(255,107,53,0.4);
+      border-radius: 4px;
+      color: #ffb84d;
+      font-size: 11px;
+    }
+
+    /* ── AI 생성 결과 배너 + 후속질문 ─────────────────────── */
+    .ai-gen-banner {
+      margin: 4px 10px 8px;
+      padding: 10px 12px;
+      background: #16171a;
+      border: 1px solid rgba(38,166,154,0.5);
+      border-radius: 6px;
+      color: #d1d4dc;
+    }
+    .ai-gen-header {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 4px;
+    }
+    .ai-gen-icon { font-size: 13px; }
+    .ai-gen-name {
+      font-size: 13px; font-weight: 700; color: #26a69a;
+      letter-spacing: -0.01em;
+    }
+    .ai-gen-conf {
+      margin-left: auto;
+      font-size: 10px; color: #8a8f9b;
+    }
+    .ai-gen-desc {
+      font-size: 11.5px; color: #a8aeba;
+      line-height: 1.5; margin-bottom: 6px;
+    }
+    .ai-gen-cleaned {
+      font-size: 10.5px; color: #ffb84d;
+      background: rgba(255,184,77,0.08);
+      padding: 4px 6px; border-radius: 3px;
+      margin-bottom: 6px;
+    }
+    .ai-gen-questions {
+      margin: 8px 0;
+      padding: 8px 0;
+      border-top: 1px dashed rgba(255,255,255,0.06);
+      border-bottom: 1px dashed rgba(255,255,255,0.06);
+    }
+    .ai-gen-q { margin-bottom: 8px; }
+    .ai-gen-q:last-child { margin-bottom: 0; }
+    .ai-gen-q-label {
+      font-size: 11.5px; color: #c0c5d0;
+      margin-bottom: 5px; font-weight: 500;
+    }
+    .ai-gen-q-opts {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    @media (min-width: 560px) {
+      .ai-gen-q-opts {
+        flex-direction: row; flex-wrap: wrap;
+      }
+    }
+    .ai-gen-opt {
+      background: #0f1012;
+      border: 1px solid #2d2d30;
+      color: #a8aeba;
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      text-align: left;
+      transition: all .15s;
+    }
+    .ai-gen-opt:hover {
+      border-color: #26a69a; color: #d1d4dc;
+    }
+    .ai-gen-opt.selected {
+      background: #26a69a; color: #0b1413;
+      border-color: #26a69a; font-weight: 600;
+    }
+    .ai-gen-actions {
+      display: flex; gap: 6px; margin-top: 8px;
+    }
+    .ai-gen-btn-skip, .ai-gen-btn-search {
+      flex: 1;
+      border-radius: 4px;
+      padding: 7px 10px;
+      font-size: 11.5px; font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .ai-gen-btn-skip {
+      background: transparent;
+      border: 1px solid #3a3a3e;
+      color: #a8aeba;
+    }
+    .ai-gen-btn-skip:hover {
+      border-color: #5a5a5e; color: #d1d4dc;
+    }
+    .ai-gen-btn-search {
+      background: #26a69a; color: #0b1413; border: none;
+    }
+    .ai-gen-btn-search:hover { background: #1f8f84; }
+    .ai-gen-quota {
+      margin-top: 6px;
+      font-size: 9.5px; color: #6a6f7b; text-align: right;
+    }
+
     /* ── AI 인사이트 카드 (Pro 전용) ─────────────────────── */
     .ai-insight-card {
       margin: 8px 10px 4px;

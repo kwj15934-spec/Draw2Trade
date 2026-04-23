@@ -155,11 +155,17 @@ def _pearson_raw(a: np.ndarray, b: np.ndarray) -> float:
     return 0.0 if np.isnan(corr) else corr
 
 
-def _score_components(a: np.ndarray, b: np.ndarray, vol_score: float = 0.5) -> dict:
+def _score_components(
+    a: np.ndarray,
+    b: np.ndarray,
+    vol_score: float = 0.5,
+    vol_weight: float = 0.20,
+) -> dict:
     """6개 컴포넌트 + total 점수를 dict로 반환.
 
-    vol_score: 거래량 급증 점수 [0, 1].
-               호출자가 계산해 전달. 데이터 없으면 0.5(중립).
+    vol_score:  거래량 급증 점수 [0, 1]. 호출자가 계산해 전달. 데이터 없으면 0.5.
+    vol_weight: 거래량 가중치 (기본 0.20). AI 힌트로 0.10~0.35 범위 동적 조정 가능.
+                기타 5개 컴포넌트의 가중치는 (1-vol_weight) 에 비례 재분배.
     """
     shape_corr      = max(0.0, _pearson_raw(a, b))
     level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
@@ -172,14 +178,24 @@ def _score_components(a: np.ndarray, b: np.ndarray, vol_score: float = 0.5) -> d
     va              = float(np.std(da))
     vb              = float(np.std(db))
     volatility_score = 1.0 - min(1.0, abs(va - vb) / max(va, vb, _EPS))
-    # 거래량 급증 20% 가중치 — 기존 5개 가중치를 80%로 축소하여 합계 1.0 유지
+
+    # 기본 가중치 (vol=0.20 기준): 0.36 / 0.16 / 0.16 / 0.08 / 0.04 = 합 0.80
+    # vol_weight 변경 시 나머지 5개를 (1-vol_weight)/0.80 스케일로 비례 조정
+    vw = max(0.05, min(0.40, vol_weight))
+    scale = (1.0 - vw) / 0.80
+    w_shape  = 0.36 * scale
+    w_level  = 0.16 * scale
+    w_diff   = 0.16 * scale
+    w_extr   = 0.08 * scale
+    w_vlt    = 0.04 * scale
+
     total = (
-        0.36 * shape_corr        # 45% → 36%
-        + 0.16 * level_closeness  # 20% → 16%
-        + 0.16 * diff_corr        # 20% → 16%
-        + 0.08 * extremum_score   # 10% →  8%
-        + 0.04 * volatility_score # 5%  →  4%
-        + 0.20 * vol_score        # 신규: 거래량 급증
+        w_shape * shape_corr
+        + w_level * level_closeness
+        + w_diff  * diff_corr
+        + w_extr  * extremum_score
+        + w_vlt   * volatility_score
+        + vw      * vol_score
     )
     return {
         "total":        total,
@@ -264,6 +280,22 @@ def _fast_reject(tmpl_net: float, win_slice: np.ndarray) -> bool:
 # 메인: 유사 종목 검색 (슬라이딩 윈도우)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_VOL_HINT_WEIGHTS: dict[str, float] = {
+    "spike_at_2nd":    0.35,   # 급증 패턴 강조
+    "gradual_rise":    0.28,   # 점진적 매집
+    "decrease_at_2nd": 0.25,   # 둘째 저점에서 감소 (강세 쌍바닥)
+    "flat":            0.10,   # 거래량 약한 패턴
+    "unknown":         0.20,   # 기본값
+}
+
+
+def _resolve_vol_weight(volume_hint: str | None) -> float:
+    """AI 힌트 문자열 → 거래량 가중치."""
+    if not volume_hint:
+        return 0.20
+    return _VOL_HINT_WEIGHTS.get(volume_hint, 0.20)
+
+
 def search_similar(
     draw_points: list[float],
     lookback_months: int = 36,
@@ -275,6 +307,7 @@ def search_similar(
     smooth_window: int = 1,
     anchor_today: bool = False,
     max_search_bars: int | None = None,
+    volume_hint: str | None = None,
 ) -> list[dict]:
     """
     사용자가 그린 패턴과 유사한 종목을 검색한다.
@@ -292,6 +325,9 @@ def search_similar(
         return []
 
     use_date_range = bool(date_from or date_to)
+
+    # AI 거래량 힌트 → 동적 가중치
+    vol_weight = _resolve_vol_weight(volume_hint)
 
     # 템플릿 준비 (150포인트 + 정규화)
     tmpl = normalize(resample(draw_points, PATTERN_LEN))
@@ -361,7 +397,7 @@ def search_similar(
             # 거래량 급증 점수 계산
             _vol_window = np.array([volume[i] for i in indices], dtype=float) if volume else np.array([])
             _vs = _volume_spike_score(_vol_window)
-            comp = _score_components(tmpl, normed, vol_score=_vs)
+            comp = _score_components(tmpl, normed, vol_score=_vs, vol_weight=vol_weight)
             # 고정 기간 모드: 요청된 date_from/date_to를 기간으로 표시
             # (실제 데이터 첫/마지막이 아닌, 검색 기준 기간을 표시)
             disp_from = date_from or dates[indices[0]]
@@ -554,7 +590,7 @@ def search_similar(
             else np.array([])
         )
         _vs_final = _volume_spike_score(_vol_arr_final)
-        comp = _score_components(tmpl, best_normed, vol_score=_vs_final)
+        comp = _score_components(tmpl, best_normed, vol_score=_vs_final, vol_weight=vol_weight)
         results.append({
             "ticker": ticker,
             "company_name": names.get(ticker, ticker),

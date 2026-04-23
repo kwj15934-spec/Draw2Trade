@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.dependencies.auth import require_pro
-from app.services import ai_service, gemini_service
+from app.services import ai_input_guard, ai_service, gemini_service
 from app.services.inquiry_service import count_pro_usage, log_pro_usage
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,14 @@ _QUOTA_WINDOW_SECONDS = 30 * 24 * 3600  # 30일 롤링 윈도우
 # Gemini Vision (이미지 추출) 쿼터 — 별도 집계
 # 이미지 1장 약 $0.002 → 월 200장 = $0.40
 _VISION_MONTHLY_QUOTA = 200
+
+# AI 패턴 텍스트 생성 쿼터 — 대화형 검색 핵심 기능
+# 1회 ≈ $0.0008 → 월 300회 ≈ $0.24
+_GEN_MONTHLY_QUOTA = 300
+
+# 악용 탐지 — 24시간 내 거부 횟수
+_ABUSE_WINDOW_SECONDS = 24 * 3600
+_ABUSE_THRESHOLD = 10
 
 
 class AISmoothRequest(BaseModel):
@@ -189,4 +197,138 @@ def extract_image_quota(user: dict = Depends(require_pro)):
         "remaining": max(0, _VISION_MONTHLY_QUOTA - used),
         "window_days": 30,
         "configured": gemini_service.is_configured(),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AI 패턴 텍스트 생성 (자연어 → 패턴 + 어노테이션 + 질문, Pro 전용)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PatternFromTextRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=ai_input_guard.MAX_PROMPT_LEN)
+
+
+class AnnotationOut(BaseModel):
+    type:  str
+    label: str
+    x:     float | None = None
+    y:     float | None = None
+    x1:    float | None = None
+    y1:    float | None = None
+    x2:    float | None = None
+    y2:    float | None = None
+    color: str | None = None
+    style: str | None = None
+
+
+class QuestionOptionOut(BaseModel):
+    value: str
+    label: str
+
+
+class FollowUpQuestionOut(BaseModel):
+    key:      str
+    question: str
+    options:  list[QuestionOptionOut]
+
+
+class PatternFromTextResponse(BaseModel):
+    pattern_name:         str | None = None
+    description:          str | None = None
+    draw_points:          list[float] = []
+    annotations:          list[AnnotationOut] = []
+    follow_up_questions:  list[FollowUpQuestionOut] = []
+    confidence:           float | None = None
+    cleaned_prompt:       str | None = None
+    quota_remaining:      int | None = None
+    error:                str | None = None
+
+
+def _gen_quota_used_30d(uid: str) -> int:
+    try:
+        return count_pro_usage(uid, "ai_pattern_gen", time.time() - _QUOTA_WINDOW_SECONDS)
+    except Exception:
+        return 0
+
+
+def _recent_rejections_24h(uid: str) -> int:
+    try:
+        return count_pro_usage(uid, "ai_pattern_gen_rejected", time.time() - _ABUSE_WINDOW_SECONDS)
+    except Exception:
+        return 0
+
+
+@router.post("/pattern_from_text", response_model=PatternFromTextResponse)
+async def pattern_from_text(
+    body: PatternFromTextRequest,
+    user: dict = Depends(require_pro),
+):
+    """
+    자연어 묘사 → 정규화 패턴 (150pt) + 어노테이션 + 후속질문.
+
+    프론트에서 draw_points 를 캔버스에 렌더하고,
+    annotations (point/line/zone) 를 오버레이로 그린 뒤,
+    follow_up_questions 로 검색 세부사항을 확인받는다.
+    """
+    uid = user["uid"]
+
+    # 악용 탐지: 24시간 내 10회 이상 거부된 유저는 일시 차단
+    if _recent_rejections_24h(uid) >= _ABUSE_THRESHOLD:
+        raise HTTPException(
+            status_code=429,
+            detail="반복적인 부적합 입력이 감지되어 24시간 동안 이 기능이 제한됩니다.",
+        )
+
+    # 쿼터 체크
+    used = _gen_quota_used_30d(uid)
+    remaining = max(0, _GEN_MONTHLY_QUOTA - used)
+    if remaining <= 0:
+        raise HTTPException(
+            status_code=429,
+            detail=f"월간 AI 패턴 생성 한도({_GEN_MONTHLY_QUOTA}회)를 초과했습니다.",
+        )
+
+    # 입력 검증
+    guard = ai_input_guard.validate_user_prompt(body.prompt)
+    if not guard.allowed:
+        # 거부 로그 (악용 탐지용)
+        log_pro_usage(uid, "ai_pattern_gen_rejected", f"cat={guard.category}")
+        raise HTTPException(status_code=400, detail=guard.reason)
+
+    # AI 호출
+    result = await gemini_service.generate_pattern_from_text(guard.cleaned)
+
+    if result.get("error") and not result.get("draw_points"):
+        raise HTTPException(status_code=502, detail=result["error"])
+
+    # 성공 시 쿼터 차감
+    if result.get("draw_points"):
+        log_pro_usage(uid, "ai_pattern_gen", f"name={result.get('pattern_name', '')}")
+        remaining -= 1
+
+    return PatternFromTextResponse(
+        pattern_name=result.get("pattern_name"),
+        description=result.get("description"),
+        draw_points=result.get("draw_points", []),
+        annotations=result.get("annotations", []),
+        follow_up_questions=result.get("follow_up_questions", []),
+        confidence=result.get("confidence"),
+        cleaned_prompt=guard.cleaned if guard.cleaned != body.prompt else None,
+        quota_remaining=remaining,
+        error=result.get("error"),
+    )
+
+
+@router.get("/pattern_from_text/quota")
+def pattern_gen_quota(user: dict = Depends(require_pro)):
+    """현재 Pro 유저의 패턴 생성 잔여 한도 + 서비스 상태."""
+    used = _gen_quota_used_30d(user["uid"])
+    return {
+        "monthly_quota": _GEN_MONTHLY_QUOTA,
+        "used": used,
+        "remaining": max(0, _GEN_MONTHLY_QUOTA - used),
+        "window_days": 30,
+        "configured": gemini_service.is_configured(),
+        "examples": ai_input_guard.SAFE_EXAMPLES,
+        "max_prompt_length": ai_input_guard.MAX_PROMPT_LEN,
     }

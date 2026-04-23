@@ -85,6 +85,15 @@ class PatternSearchRequest(BaseModel):
     market: str = Field(default="KR", description="시장 구분: 'KR' | 'US'")
     timeframe: str = Field(default="monthly", description="차트 타임프레임: monthly | weekly | daily")
     exclude_ticker: str | None = Field(default=None, description="결과에서 제외할 티커 (현재 보고 있는 종목)")
+    # AI 대화형 검색 힌트 (옵션) — 사용자가 AI 모달에서 답변한 거래량/기간 패턴
+    volume_hint: str | None = Field(
+        default=None,
+        description="거래량 패턴 힌트: gradual_rise | spike_at_2nd | decrease_at_2nd | flat | unknown",
+    )
+    timeframe_hint: str | None = Field(
+        default=None,
+        description="선호 기간 힌트 (검색 로직엔 정보성, 검색 자체는 body.timeframe 사용)",
+    )
 
 
 @router.post("/pattern/search")
@@ -222,6 +231,7 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
                 smooth_window=smooth_window,
                 anchor_today=body.anchor_today,
                 max_search_bars=max_search_bars,
+                volume_hint=body.volume_hint,
             ),
         )
         _set_cache(cache_key, results)
