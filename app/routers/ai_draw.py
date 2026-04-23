@@ -332,3 +332,91 @@ def pattern_gen_quota(user: dict = Depends(require_pro)):
         "examples": ai_input_guard.SAFE_EXAMPLES,
         "max_prompt_length": ai_input_guard.MAX_PROMPT_LEN,
     }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 메인: 유저 그림 분석 (보정 + 어노테이션 + 질문, Pro 전용)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 유저 그림 분석 쿼터 — 검색 전에 호출되므로 넉넉히
+_ANALYZE_MONTHLY_QUOTA = 500
+
+
+class AnalyzeDrawingRequest(BaseModel):
+    draw_points: list[float] = Field(
+        ...,
+        min_length=2,
+        max_length=2000,
+        description="유저가 그린 0~1 정규화된 패턴 좌표",
+    )
+
+
+class AnalyzeDrawingResponse(BaseModel):
+    pattern_name:         str | None = None
+    description:          str | None = None
+    refined_points:       list[float] = []
+    annotations:          list[AnnotationOut] = []
+    follow_up_questions:  list[FollowUpQuestionOut] = []
+    confidence:           float | None = None
+    quota_remaining:      int | None = None
+    error:                str | None = None
+
+
+def _analyze_quota_used_30d(uid: str) -> int:
+    try:
+        return count_pro_usage(uid, "ai_analyze_drawing", time.time() - _QUOTA_WINDOW_SECONDS)
+    except Exception:
+        return 0
+
+
+@router.post("/analyze_drawing", response_model=AnalyzeDrawingResponse)
+async def analyze_drawing(
+    body: AnalyzeDrawingRequest,
+    user: dict = Depends(require_pro),
+):
+    """
+    유저가 그린 패턴을 AI 가 분석하여 보정된 150pt + 어노테이션 + 후속 질문 반환.
+
+    이 API 는 /api/pattern/search 호출 **직전**에 불려 검색 품질을 높인다.
+    응답의 refined_points 를 검색에 사용하고, follow_up_questions 답변을
+    pattern/search 의 volume_hint 로 넘긴다.
+    """
+    uid = user["uid"]
+    used = _analyze_quota_used_30d(uid)
+    remaining = max(0, _ANALYZE_MONTHLY_QUOTA - used)
+    if remaining <= 0:
+        raise HTTPException(
+            status_code=429,
+            detail=f"월간 AI 그림 분석 한도({_ANALYZE_MONTHLY_QUOTA}회)를 초과했습니다.",
+        )
+
+    result = await gemini_service.analyze_drawing(body.draw_points)
+
+    # 성공 시 쿼터 차감 (AI 분류 성공 기준 — pattern_name 이 있으면 성공)
+    if result.get("pattern_name") and not result.get("error"):
+        log_pro_usage(uid, "ai_analyze_drawing",
+                      f"pts={len(body.draw_points)} name={result.get('pattern_name','')}")
+        remaining -= 1
+
+    return AnalyzeDrawingResponse(
+        pattern_name=result.get("pattern_name"),
+        description=result.get("description"),
+        refined_points=result.get("refined_points", []),
+        annotations=result.get("annotations", []),
+        follow_up_questions=result.get("follow_up_questions", []),
+        confidence=result.get("confidence"),
+        quota_remaining=remaining,
+        error=result.get("error"),
+    )
+
+
+@router.get("/analyze_drawing/quota")
+def analyze_drawing_quota(user: dict = Depends(require_pro)):
+    used = _analyze_quota_used_30d(user["uid"])
+    return {
+        "monthly_quota": _ANALYZE_MONTHLY_QUOTA,
+        "used": used,
+        "remaining": max(0, _ANALYZE_MONTHLY_QUOTA - used),
+        "window_days": 30,
+        "configured": gemini_service.is_configured(),
+    }

@@ -634,8 +634,11 @@
 
   // ── AI 패턴 생성 플로우 (Pro 전용) ──────────────────────────────────────
   window._aiAnnotations = null;
-  var _aiLastResult = null;       // 마지막 AI 생성 결과 (검색 시 질문 답변 병합)
-  var _aiUserAnswers = {};        // {key: value}
+  window._aiSearchPending = false;   // true 면 doSearch 가 AI 분석 건너뜀 (1회성)
+  window._aiSearchHints = null;      // 검색 요청 body 에 주입될 volume_hint 등
+  var _aiLastResult = null;          // 마지막 AI 결과 (text gen + drawing analyze)
+  var _aiUserAnswers = {};           // {key: value}
+  var _aiPreviewPoints = null;       // refined_points 미리보기 (검색 시 적용)
 
   function _normalizedToPixelPointsAI(normPts) {
     if (!normPts || normPts.length < 2 || !canvas) return [];
@@ -793,13 +796,30 @@
   }
 
   function _runAISearch(isSkipped) {
-    // 검색 실행 전: 유저 답변을 searchQuery 확장에 주입
+    // 보정된 좌표 적용 (건너뛰기 선택 시 원본 유지)
+    if (!isSkipped && _aiPreviewPoints && _aiPreviewPoints.length >= 10) {
+      var pixelPts = _normalizedToPixelPointsAI(_aiPreviewPoints);
+      if (pixelPts.length >= 2) {
+        pushHistory();
+        drawPoints = pixelPts;
+        _drawChartCoords = null;
+        drawNormalized = null;
+      }
+    }
+    _aiPreviewPoints = null;
+
+    // 유저 답변을 검색 힌트로 주입
     window._aiSearchHints = isSkipped ? {} : _aiUserAnswers;
+
+    // AI 분석 단계 건너뛰도록 플래그 설정
+    window._aiSearchPending = true;
+
     _hideAIGenBanner();
     if (isSkipped) {
-      showStatus('⚡ AI 기본값으로 검색합니다 (거래량·기간 무관)', '');
+      showStatus('⚡ 원본 패턴으로 검색합니다', '');
+    } else {
+      showStatus('✨ 보정된 패턴으로 검색합니다', '');
     }
-    // 기존 검색 함수 호출
     if (typeof doSearch === 'function') doSearch();
   }
   window.clearDraw = function () {
@@ -1244,6 +1264,12 @@
       return;
     }
 
+    // Pro 유저 + 아직 AI 분석 안 된 상태: 분석 먼저 → 배너 → 유저 확인 → 검색
+    if (window._userPlan === 'pro' && !window._aiSearchPending) {
+      _runAIAnalysisBeforeSearch(pts);
+      return;
+    }
+
     // 빈 캔버스 모드: 바로 검색
     if (isBlankMode) {
       _doSearchActual();
@@ -1254,6 +1280,45 @@
     var modal = document.getElementById('period-select-modal');
     if (modal) { modal.style.display = 'flex'; return; }
     _doSearchActual();
+  }
+
+  // ── AI 선(先)분석 (Pro 전용) ─────────────────────────────────────────────
+  function _runAIAnalysisBeforeSearch(normPts) {
+    showStatus('AI 가 패턴을 분석 중...', '');
+    fetch('/api/ai/analyze_drawing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draw_points: normPts }),
+    })
+      .then(function (r) {
+        return r.json().then(function (data) {
+          if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
+          return data;
+        });
+      })
+      .then(function (data) {
+        showStatus('', '');
+        // AI 실패 (키 미설정/파싱 오류 등): 원본으로 바로 검색
+        if (!data || (!data.pattern_name && !data.annotations && (!data.follow_up_questions || !data.follow_up_questions.length))) {
+          window._aiSearchPending = true;
+          doSearch();
+          return;
+        }
+        // 배너에 결과 표시 — 유저가 확인/답변하고 검색 트리거
+        _aiLastResult = data;
+        _aiUserAnswers = {};
+        window._aiAnnotations = data.annotations || [];
+        // 프리뷰로 refined_points 오버레이 (원본은 유지 — 유저가 승인 시 교체)
+        _aiPreviewPoints = data.refined_points && data.refined_points.length ? data.refined_points : null;
+        redraw();
+        _renderAIGenBanner(data);
+      })
+      .catch(function (err) {
+        console.warn('AI 분석 실패:', err);
+        // 실패해도 원본으로 검색 진행
+        window._aiSearchPending = true;
+        doSearch();
+      });
   }
 
   function _doSearchActual() {
@@ -1453,17 +1518,21 @@
         var btn = document.getElementById('btn-save-drawing');
         if (btn) btn.style.display = _lastResults.length ? 'inline-flex' : 'none';
 
-        // Pro 전용: AI 보정 + 백테스팅 (결과 있을 때만, 비동기 병렬)
+        // Pro 전용: 백테스팅만 사후 호출
+        // (AI 보정은 검색 전에 이미 수행됨 — analyze_drawing)
+        _hideAIInsightCard();
         if (data.plan === 'pro' && _lastResults.length) {
-          _fetchAIInsight(pts);
           _fetchBacktest(_lastResults.slice(0, 10));
         } else {
-          _hideAIInsightCard();
           _hideBacktestCard();
         }
       })
       .catch(function (e) {
         _showSearchError(e.message || '검색 중 오류가 발생했습니다. 다시 시도해주세요.');
+      })
+      .then(function () {
+        // 검색 1회 완료 — 다음 검색 시 다시 AI 분석 수행
+        window._aiSearchPending = false;
       });
   }
 
