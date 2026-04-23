@@ -309,30 +309,6 @@
       </svg>
       내 차트로
     </button>
-    <button id="btn-advanced" class="btn-d2t"
-      aria-label="고급 검색 옵션 열기/닫기" aria-expanded="false"
-      title="고급 검색 옵션">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/>
-        <line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/>
-        <line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/>
-        <line x1="14" y1="2" x2="14" y2="6"/>
-        <line x1="8" y1="10" x2="8" y2="14"/>
-        <line x1="16" y1="18" x2="16" y2="22"/>
-      </svg>
-      고급
-    </button>
-    <div id="advanced-options">
-      <label style="font-size:11px;color:#888;white-space:nowrap;">결과 수</label>
-      <select id="top-n-select" title="검색 결과 최대 개수"
-        style="height:28px;font-size:12px;padding:0 4px;background:#1e1e21;color:#d1d4dc;border:1px solid #2d2d30;border-radius:4px;min-width:auto;">
-        <option value="10">Top 10</option>
-        <option value="20" selected>Top 20</option>
-        <option value="30">Top 30</option>
-        <option value="40">Top 40</option>
-        <option value="50">Top 50</option>
-      </select>
-    </div>
     <span id="search-status" class="search-status"></span>
 
   </div>
@@ -579,6 +555,14 @@
         <div class="d2t-sidebar-header">
           <span class="result-header-title">☰ 검색 결과</span>
           <span id="result-count" class="result-header-count" style="display:none;"></span>
+          <select id="top-n-select" title="검색 결과 최대 개수" aria-label="검색 결과 최대 개수"
+            style="height:24px;font-size:11px;padding:0 6px;background:#1e1e21;color:#d1d4dc;border:1px solid #2d2d30;border-radius:4px;margin-left:auto;">
+            <option value="10">Top 10</option>
+            <option value="20" selected>Top 20</option>
+            <option value="30">Top 30</option>
+            <option value="40">Top 40</option>
+            <option value="50">Top 50</option>
+          </select>
           <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()" aria-label="검색 결과 저장">
             <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
