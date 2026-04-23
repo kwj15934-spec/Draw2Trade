@@ -1263,7 +1263,13 @@
         // ④ 실시간 웹소켓 구독 해제
         if (typeof window._onBlankCanvas === 'function') window._onBlankCanvas();
       } else {
-        // 차트 모드 복귀 — autoSize:true 이므로 별도 resize 불필요
+        // ── 차트 모드 복귀: 빈 캔버스 진입 시 지워진 데이터를 재로드 ──
+        // 드로잉도 초기화 (빈 캔버스에서 그린 선이 실제 차트 위에 남는 걸 방지)
+        if (typeof window.clearDraw === 'function') window.clearDraw();
+        var restoreTicker = D2T.ticker || (document.getElementById('ticker-select') || {}).value;
+        if (restoreTicker) {
+          loadChart(restoreTicker, D2T.timeframe || 'monthly');
+        }
       }
 
       if (typeof window.syncCanvas === 'function') window.syncCanvas();
