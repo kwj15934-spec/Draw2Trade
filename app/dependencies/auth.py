@@ -33,6 +33,14 @@ def require_user(request: Request) -> dict:
     return user
 
 
+def require_pro(request: Request) -> dict:
+    """Pro 구독 필수 의존성. 미인증 401, 무료 플랜 403."""
+    user = require_user(request)
+    if user.get("plan") != "pro":
+        raise HTTPException(status_code=403, detail="Pro 구독이 필요한 기능입니다.")
+    return user
+
+
 def require_admin(request: Request) -> dict:
     """관리자 전용 의존성. 비관리자 시 HTTP 403."""
     user = get_optional_user(request)
