@@ -115,6 +115,35 @@
     }
     .plan-price span { font-size: 16px; font-weight: 400; color: var(--muted); }
     .plan-note { font-size: 13px; color: var(--teal); margin-bottom: 6px; }
+
+    /* 월/연 토글 */
+    .billing-toggle {
+      display: inline-flex;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 2px;
+    }
+    .bt-opt {
+      background: transparent; border: none; color: var(--muted);
+      padding: 6px 14px; border-radius: 4px;
+      font-size: 12.5px; font-weight: 600; cursor: pointer;
+      transition: all .15s;
+      font-family: inherit;
+    }
+    .bt-opt:hover { color: #fff; }
+    .bt-opt.active {
+      background: var(--teal); color: #0b1413;
+    }
+    .bt-save {
+      background: var(--orange); color: #fff;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 5px; border-radius: 3px;
+      margin-left: 3px;
+    }
+    .bt-opt.active .bt-save { background: #0b1413; color: var(--orange); }
     .plan-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
 
     .plan-features {
@@ -216,16 +245,31 @@
     </div>
 
     <div class="plan-card featured">
-      <div class="plan-event-badge">🎉 이벤트 특가</div>
+      <div class="plan-event-badge">🎉 연간 결제 시 2개월 무료</div>
       <div class="plan-name">Pro</div>
-      <div class="plan-price">$6 <span>/ 월</span></div>
-      <div class="plan-note">PayPal로 바로 시작하세요</div>
+
+      <!-- 월/연 토글 -->
+      <div class="billing-toggle" role="tablist" aria-label="결제 주기 선택">
+        <button type="button" class="bt-opt active"
+                data-period="monthly" role="tab" aria-selected="true"
+                onclick="selectBillingPeriod('monthly')">월간</button>
+        <button type="button" class="bt-opt"
+                data-period="annual" role="tab" aria-selected="false"
+                onclick="selectBillingPeriod('annual')">
+          연간 <span class="bt-save">−17%</span>
+        </button>
+      </div>
+
+      <div class="plan-price" id="plan-price-display">$6 <span>/ 월</span></div>
+      <div class="plan-note" id="plan-price-sub">월 단위 결제 · 언제든 해지 가능</div>
       <div class="plan-desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
       <ul class="plan-features">
         <li>KR 시장 패턴 검색</li>
         <li>무제한 검색</li>
         <li>Top 1~50 전체 결과</li>
-        <li>자동 패턴 검색 (기간 지정 후 자동 분석)</li>
+        <li>AI 리터치 — 내 그림을 AI가 보정 + 거래량 질문</li>
+        <li>AI 차트 요청 — 글로 패턴 묘사 → 자동 생성</li>
+        <li>과거 흐름 백테스팅 (+1M/3M/6M 수익률)</li>
         <li>즐겨찾기 · 차트 저장 무제한</li>
         <li>속도 우선 지원</li>
       </ul>
@@ -291,7 +335,7 @@
           </tr>
           <tr>
             <td style="color:#7a8499; padding:6px 0;">금액</td>
-            <td style="color:#26a69a; font-weight:800; font-size:18px; padding:6px 0;">$6</td>
+            <td style="color:#26a69a; font-weight:800; font-size:18px; padding:6px 0;" id="pro-modal-amount">$6 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 월</span></td>
           </tr>
           <tr>
             <td style="color:#7a8499; padding:6px 0;">예금주</td>
@@ -339,6 +383,27 @@
     });
   }
 
+  // 월/연 결제 주기 토글 상태
+  var _billingPeriod = 'monthly';
+  function selectBillingPeriod(period) {
+    _billingPeriod = period === 'annual' ? 'annual' : 'monthly';
+    var opts = document.querySelectorAll('.billing-toggle .bt-opt');
+    for (var i = 0; i < opts.length; i++) {
+      var active = opts[i].getAttribute('data-period') === _billingPeriod;
+      opts[i].classList.toggle('active', active);
+      opts[i].setAttribute('aria-selected', active ? 'true' : 'false');
+    }
+    var priceEl = document.getElementById('plan-price-display');
+    var subEl   = document.getElementById('plan-price-sub');
+    if (_billingPeriod === 'annual') {
+      if (priceEl) priceEl.innerHTML = '$60 <span>/ 년</span>';
+      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b style="color:#fff;">$5</b> · 2개월 무료';
+    } else {
+      if (priceEl) priceEl.innerHTML = '$6 <span>/ 월</span>';
+      if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
+    }
+  }
+
   async function openProModal() {
     document.getElementById('pro-modal').style.display = 'flex';
     var loggedIn = false;
@@ -352,6 +417,13 @@
     document.getElementById('pro-step-login').style.display = loggedIn ? 'none' : 'block';
     document.getElementById('pro-error').textContent = '';
     document.getElementById('pro-memo').value = '';
+    // 선택된 결제 주기를 모달 금액에 반영
+    var amtEl = document.getElementById('pro-modal-amount');
+    if (amtEl) {
+      amtEl.innerHTML = (_billingPeriod === 'annual')
+        ? '$60 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 년 (2개월 무료)</span>'
+        : '$6 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 월</span>';
+    }
     var btn = document.getElementById('pro-submit-btn');
     btn.disabled = false;
     btn.textContent = '신청하기';
@@ -376,7 +448,7 @@
       var res = await fetch('/api/pro-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memo: memo }),
+        body: JSON.stringify({ memo: memo, billing_period: _billingPeriod }),
       });
       if (res.status === 401) {
         errEl.textContent = '로그인이 필요합니다.';

@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>밈 차트 게시판 · Draw2Trade</title>
 <meta name="description" content="유저가 그린 재미있는 차트 패턴을 공유하는 커뮤니티. 기영이 앞구르기부터 쿠크다스 붕괴까지.">
+{% if kakao_app_key %}
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+        integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"
+        crossorigin="anonymous"></script>
+<script>
+  try {
+    if (window.Kakao && !window.Kakao.isInitialized()) {
+      window.Kakao.init('{{ kakao_app_key }}');
+    }
+  } catch (e) { console.warn('Kakao init 실패:', e); }
+</script>
+{% endif %}
 <style>
   :root {
     --bg: #141416;
@@ -315,6 +327,8 @@
 
   var _currentSort = 'hot';
   var _authState = { user: null };
+  var _kakaoEnabled = {{ 'true' if kakao_app_key else 'false' }};
+  var _publicBase = {{ public_base_url|tojson if public_base_url else '""' }} || window.location.origin;
 
   fetch('/api/auth/me').then(function (r) { return r.ok ? r.json() : null; })
     .then(function (data) {
@@ -428,6 +442,7 @@
       + (m.description ? '<div class="mb-detail-desc">' + esc(m.description) + '</div>' : '')
       + '<div class="mb-detail-actions">'
       +   '<button class="mb-like-btn' + liked + '" id="mb-like-btn">❤️ <span id="mb-like-count">' + (m.like_count||0) + '</span></button>'
+      +   (_kakaoEnabled ? '<button class="mb-share-btn" id="mb-kakao-btn" style="background:#FEE500;color:#3C1E1E;border-color:#FEE500;">💬 카카오톡</button>' : '')
       +   '<button class="mb-share-btn" id="mb-share-btn">🔗 링크 복사</button>'
       +   '<button class="mb-report-btn" id="mb-report-btn">🚩 신고</button>'
       +   (isMine ? '<button class="mb-delete-btn" id="mb-delete-btn">삭제</button>' : '')
@@ -446,6 +461,8 @@
     if (likeBtn) likeBtn.addEventListener('click', function () { toggleLike(m.id); });
     var shareBtn = document.getElementById('mb-share-btn');
     if (shareBtn) shareBtn.addEventListener('click', function () { shareMeme(m.id); });
+    var kakaoBtn = document.getElementById('mb-kakao-btn');
+    if (kakaoBtn) kakaoBtn.addEventListener('click', function () { shareToKakao(m); });
     var reportBtn = document.getElementById('mb-report-btn');
     if (reportBtn) reportBtn.addEventListener('click', function () { reportMeme(m.id); });
     var deleteBtn = document.getElementById('mb-delete-btn');
@@ -536,11 +553,48 @@
   }
 
   function shareMeme(id) {
-    var url = window.location.origin + '/community/memes#' + id;
+    var url = _publicBase + '/community/memes#' + id;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(function () { alert('링크가 복사되었습니다.'); });
     } else {
       prompt('링크를 복사하세요:', url);
+    }
+  }
+
+  function shareToKakao(m) {
+    if (!window.Kakao || !window.Kakao.isInitialized || !window.Kakao.isInitialized()) {
+      alert('카카오 SDK 가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    var memeUrl = _publicBase + '/community/memes#' + m.id;
+    var imgUrl  = m.thumbnail_path
+      ? (m.thumbnail_path.indexOf('http') === 0 ? m.thumbnail_path : _publicBase + m.thumbnail_path)
+      : (_publicBase + '/static/og-default.png');
+    try {
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: m.title || 'Draw2Trade 밈 차트',
+          description: (m.description || '재미있는 차트 패턴 보러가기').slice(0, 80),
+          imageUrl: imgUrl,
+          imageWidth: 640,
+          imageHeight: 320,
+          link: {
+            mobileWebUrl: memeUrl,
+            webUrl: memeUrl,
+          },
+        },
+        buttons: [{
+          title: '차트 보러가기',
+          link: {
+            mobileWebUrl: memeUrl,
+            webUrl: memeUrl,
+          },
+        }],
+      });
+    } catch (err) {
+      console.warn('Kakao share 실패:', err);
+      alert('카카오 공유에 실패했습니다. 링크 복사를 이용해주세요.');
     }
   }
 
