@@ -17,6 +17,12 @@ from typing import Optional
 
 import httpx
 
+from app.services.ai_compliance import (
+    COMPLIANCE_INSTRUCTION,
+    sanitize_ai_text,
+    sanitize_dict,
+)
+
 logger = logging.getLogger(__name__)
 
 _API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -90,6 +96,7 @@ async def generate_financial_summary(
         "재무 데이터를 간결하고 명확하게 해석합니다. "
         "과장하지 않고, 데이터 기반으로만 판단하며, "
         "투자 권유가 아닌 정보 제공 목적으로 작성합니다."
+        + COMPLIANCE_INSTRUCTION
     )
 
     user_prompt = (
@@ -136,7 +143,8 @@ async def generate_financial_summary(
         elif line.startswith("리스크:"):
             result["risk"] = line[4:].strip()
 
-    return result
+    # 컴플라이언스 필터 — 투자권유 표현 제거/치환
+    return sanitize_dict(result, ["overview", "strength", "risk", "raw"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -158,7 +166,8 @@ _SMOOTH_SYSTEM_PROMPT = (
     '{"pattern_type":"...","interpretation":"...","follow_up_questions":'
     '[{"key":"volume_profile","question":"...","options":["...","...","...","..."]}],'
     '"confidence":0.85}\n\n'
-    "interpretation 은 한국어로 최대 60자. 투자 권유는 금지."
+    "interpretation 은 한국어로 최대 60자. **패턴 형태만 기술**하고 향후 주가 방향·매매 판단은 일절 언급 금지."
+    + COMPLIANCE_INSTRUCTION
 )
 
 
@@ -298,10 +307,26 @@ async def smooth_drawing_pattern(draw_points: list[float]) -> dict:
             "configured": True,
         }
 
+    # 컴플라이언스 필터 — 투자권유 표현 제거/치환
+    interp = sanitize_ai_text(parsed.get("interpretation"))
+    pt     = sanitize_ai_text(parsed.get("pattern_type"))
+
+    # follow_up_questions 의 question/options 문자열도 정화
+    fuq_clean = []
+    for q in (parsed.get("follow_up_questions") or []):
+        if not isinstance(q, dict):
+            continue
+        q2 = dict(q)
+        q2["question"] = sanitize_ai_text(q.get("question"))
+        opts = q.get("options") or []
+        q2["options"] = [o for o in (sanitize_ai_text(x) for x in opts) if o is not None]
+        if q2["question"]:
+            fuq_clean.append(q2)
+
     return {
-        "pattern_type": parsed.get("pattern_type"),
-        "interpretation": parsed.get("interpretation"),
-        "follow_up_questions": parsed.get("follow_up_questions", []) or [],
+        "pattern_type": pt,
+        "interpretation": interp,
+        "follow_up_questions": fuq_clean,
         "confidence": parsed.get("confidence"),
         "warnings": warnings,
         "configured": True,
