@@ -306,17 +306,13 @@
       ctx.rect(0, 0, chartWidth, canvas.height);
       ctx.clip();
 
-      // ① 매칭 구간 배경 하이라이트
+      // ① 매칭 구간 배경 하이라이트만 캔버스에 그림
+      // 패턴 곡선(drawCurveFill / drawNormCurve)은 chart.js의 LineSeries가 전담
+      // → 두 번 그려서 중복되는 버그 방지 (result 차트 모드에서)
       if (x0 != null && x1 != null) {
         ctx.fillStyle = 'rgba(38,166,154,0.15)';
         ctx.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), canvas.height);
       }
-      // ② 두 곡선 사이 채움 (drawCurveFill 내부에도 clip 있음 — 이중 보호)
-      drawCurveFill(drawNormalized, matchPoints, 'rgba(38,166,154,0.25)');
-      // ③ 매칭 패턴 선 (청록 점선)
-      drawNormCurve(matchPoints,  '#26a69a', null, 2.5, true);
-      // ④ 내 패턴 선 (주황 실선)
-      drawNormCurve(drawNormalized, DRAW_COLOR, null, 3, false);
 
       ctx.restore();
 

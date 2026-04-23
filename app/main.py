@@ -300,6 +300,11 @@ async def pricing_page(request: Request):
     return RedirectResponse(url="/", status_code=302)
 
 
+@app.get("/account", response_class=HTMLResponse)
+async def account_page(request: Request):
+    return templates.TemplateResponse("account.html", {"request": request})
+
+
 @app.get("/terms", response_class=HTMLResponse)
 async def terms_page(request: Request):
     return templates.TemplateResponse("terms.html", {"request": request})
