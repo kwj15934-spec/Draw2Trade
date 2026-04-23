@@ -17,6 +17,7 @@ MVP 제약:
   - 단일 시계열(종가선/캔들) 만 지원 (복수 패널 차트는 비권장)
   - 정규화 좌표만 반환 (실제 가격/날짜는 라벨 OCR 필요 — 추후 확장)
 """
+import asyncio
 import base64
 import json
 import logging
@@ -29,6 +30,57 @@ import httpx
 from app.services.ai_compliance import COMPLIANCE_INSTRUCTION, sanitize_ai_text
 
 logger = logging.getLogger(__name__)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 재시도 가능한 POST — 429/503 일 때 지수 백오프
+# ──────────────────────────────────────────────────────────────────────────────
+_RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
+_MAX_RETRIES       = 2    # 총 최대 3회 호출 (초기 + 재시도 2회)
+_BASE_BACKOFF_SEC  = 1.0
+
+
+async def _post_with_retry(url: str, params: dict, payload: dict, timeout: float) -> httpx.Response:
+    """Gemini API POST — 429/5xx 는 지수 백오프로 재시도."""
+    last_exc: Exception | None = None
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                resp = await client.post(
+                    url,
+                    params=params,
+                    json=payload,
+                    headers={"content-type": "application/json"},
+                )
+                if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
+                    backoff = _BASE_BACKOFF_SEC * (2 ** attempt)
+                    logger.info("Gemini %d — %.1fs 후 재시도 (%d/%d)",
+                                resp.status_code, backoff, attempt + 1, _MAX_RETRIES)
+                    await asyncio.sleep(backoff)
+                    continue
+                return resp
+            except httpx.TimeoutException as e:
+                last_exc = e
+                if attempt < _MAX_RETRIES:
+                    await asyncio.sleep(_BASE_BACKOFF_SEC * (2 ** attempt))
+                    continue
+                raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("Gemini retry loop ended without response")
+
+
+def _classify_http_error(status_code: int) -> str:
+    """HTTP 상태코드 → 유저 친화적 메시지."""
+    if status_code == 429:
+        return "AI 가 일시적으로 바쁩니다. 잠시 후 다시 시도해주세요."
+    if status_code == 403:
+        return "API 키가 유효하지 않거나 권한이 부족합니다."
+    if status_code == 400:
+        return "요청 형식이 올바르지 않습니다."
+    if 500 <= status_code < 600:
+        return "AI 서비스 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+    return f"Gemini API 오류 ({status_code})"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -276,19 +328,12 @@ async def extract_pattern_from_image(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                _API_URL,
-                params={"key": _API_KEY},
-                json=payload,
-                headers={"content-type": "application/json"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        logger.warning("Gemini API 오류: %s — %s", e.response.status_code, e.response.text[:200])
-        base["error"] = f"Gemini API 오류 ({e.response.status_code})"
-        return base
+        resp = await _post_with_retry(_API_URL, {"key": _API_KEY}, payload, timeout=30.0)
+        if resp.status_code >= 400:
+            logger.warning("Gemini API 오류: %s — %s", resp.status_code, resp.text[:200])
+            base["error"] = _classify_http_error(resp.status_code)
+            return base
+        data = resp.json()
     except Exception as e:
         logger.warning("Gemini 호출 실패: %s", e)
         base["error"] = "Gemini API 호출 실패"
@@ -561,20 +606,13 @@ async def generate_pattern_from_text(cleaned_prompt: str) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=25.0) as client:
-            resp = await client.post(
-                _API_URL,
-                params={"key": _API_KEY},
-                json=payload,
-                headers={"content-type": "application/json"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        logger.warning("Gemini 패턴 생성 API 오류: %s — %s",
-                       e.response.status_code, e.response.text[:200])
-        base["error"] = f"Gemini API 오류 ({e.response.status_code})"
-        return base
+        resp = await _post_with_retry(_API_URL, {"key": _API_KEY}, payload, timeout=25.0)
+        if resp.status_code >= 400:
+            logger.warning("Gemini 패턴 생성 API 오류: %s — %s",
+                           resp.status_code, resp.text[:200])
+            base["error"] = _classify_http_error(resp.status_code)
+            return base
+        data = resp.json()
     except Exception as e:
         logger.warning("Gemini 패턴 생성 호출 실패: %s", e)
         base["error"] = "Gemini API 호출 실패"
@@ -729,23 +767,15 @@ async def analyze_drawing(draw_points: list[float]) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=25.0) as client:
-            resp = await client.post(
-                _API_URL,
-                params={"key": _API_KEY},
-                json=payload,
-                headers={"content-type": "application/json"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        logger.warning("Gemini analyze_drawing API 오류: %s — %s",
-                       e.response.status_code, e.response.text[:200])
-        base["error"] = f"Gemini API 오류 ({e.response.status_code})"
-        # 키 오류라도 룰베이스 보정은 반환
-        smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
-        base["refined_points"] = [round(v, 4) for v in smoothed]
-        return base
+        resp = await _post_with_retry(_API_URL, {"key": _API_KEY}, payload, timeout=25.0)
+        if resp.status_code >= 400:
+            logger.warning("Gemini analyze_drawing API 오류: %s — %s",
+                           resp.status_code, resp.text[:200])
+            base["error"] = _classify_http_error(resp.status_code)
+            smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
+            base["refined_points"] = [round(v, 4) for v in smoothed]
+            return base
+        data = resp.json()
     except Exception as e:
         logger.warning("Gemini analyze_drawing 호출 실패: %s", e)
         base["error"] = "Gemini API 호출 실패"
