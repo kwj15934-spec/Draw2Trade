@@ -298,6 +298,18 @@
       </svg>
       유사 종목 검색
     </button>
+    <!-- Pro 전용: HTS/MTS 캡처 이미지 업로드 → AI 가 패턴 좌표 추출 -->
+    <button id="btn-upload-chart" class="btn-d2t" aria-label="차트 이미지로 패턴 검색" title="HTS/MTS 캡처 이미지를 업로드하면 AI가 패턴을 읽어 검색합니다 (Pro 전용)">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="9" cy="9" r="2"/>
+        <path d="m21 15-5-5L5 21"/>
+      </svg>
+      이미지로 검색
+      <span class="btn-pro-mini">PRO</span>
+    </button>
+    <input id="chart-image-input" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+
     <button id="btn-back-to-origin" class="btn-d2t"
       style="display:none;color:#26a69a;border-color:#26a69a;font-weight:600;"
       onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()"

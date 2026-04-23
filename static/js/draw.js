@@ -1351,6 +1351,100 @@
     });
   }
 
+  // ── AI 이미지 업로드 → 패턴 좌표 추출 (Pro 전용) ─────────────────────────
+  var _UPLOAD_MAX_BYTES = 4 * 1024 * 1024; // 4MB (Gemini 한도와 일치)
+
+  function _fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = reader.result || '';
+        // data URI prefix 제거: "data:image/png;base64,AAA..." → "AAA..."
+        var idx = result.indexOf(',');
+        resolve(idx >= 0 ? result.slice(idx + 1) : result);
+      };
+      reader.onerror = function () { reject(new Error('파일 읽기 실패')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function _normalizedToPixelPoints(normPts) {
+    // Gemini 반환: [0.42, 0.41, ..., 0.87] — Y 0=저가, 1=고가
+    // 캔버스: Y축 반전 (상단=고가) → py = (1 - v) * height
+    if (!normPts || normPts.length < 2 || !canvas) return [];
+    var out = [];
+    var W = canvas.width, H = canvas.height;
+    // 좌우 여백 5%
+    var padL = W * 0.05, padR = W * 0.95;
+    for (var i = 0; i < normPts.length; i++) {
+      var t = i / (normPts.length - 1);
+      var x = padL + (padR - padL) * t;
+      var y = (1 - normPts[i]) * H;
+      out.push({ x: x, y: y });
+    }
+    return out;
+  }
+
+  function _handleChartImageUpload(file) {
+    if (!file) return;
+    if (file.size > _UPLOAD_MAX_BYTES) {
+      showStatus('이미지가 너무 큽니다 (최대 4MB)', 'error');
+      return;
+    }
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      showStatus('PNG / JPEG / WebP 만 지원합니다', 'error');
+      return;
+    }
+
+    showStatus('AI 가 차트를 읽는 중...', '');
+    var btn = document.getElementById('btn-upload-chart');
+    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+
+    _fileToBase64(file)
+      .then(function (b64) {
+        return fetch('/api/ai/extract_from_image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: b64, mime_type: file.type }),
+        });
+      })
+      .then(function (r) {
+        if (r.status === 401) throw new Error('로그인이 필요합니다');
+        if (r.status === 403) throw new Error('Pro 구독이 필요한 기능입니다');
+        if (r.status === 429) throw new Error('월간 이미지 분석 한도를 초과했습니다');
+        if (!r.ok) throw new Error('AI 분석 실패 (HTTP ' + r.status + ')');
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data.is_chart || !data.draw_points || data.draw_points.length < 10) {
+          throw new Error(data.error || '차트를 인식하지 못했습니다. 더 선명한 이미지로 다시 시도해주세요.');
+        }
+        // 추출된 정규화 좌표 → 캔버스 픽셀 좌표 → drawPoints 주입
+        var pixelPts = _normalizedToPixelPoints(data.draw_points);
+        if (pixelPts.length < 2) throw new Error('좌표 변환 실패');
+
+        pushHistory();
+        drawPoints = pixelPts;
+        _drawChartCoords = null;  // 빈 캔버스 모드
+        parallelChannels = [];
+        trendPoints = []; linePoints = []; parallelPoints = [];
+        matchPoints = null;
+        drawNormalized = null;
+        redraw();
+
+        var ptName = data.pattern_type ? (' · ' + data.pattern_type) : '';
+        var conf   = (typeof data.confidence === 'number')
+                       ? (' (신뢰도 ' + Math.round(data.confidence * 100) + '%)') : '';
+        showStatus('패턴 인식 완료' + ptName + conf + ' — 검색 버튼을 누르세요', '');
+      })
+      .catch(function (err) {
+        showStatus(err.message || 'AI 분석 중 오류가 발생했습니다', 'error');
+      })
+      .then(function () {
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+      });
+  }
+
   // ── 결과 렌더링 ───────────────────────────────────────────────────────────
   function renderResults(results, rankOffset) {
     var list        = document.getElementById('results-list');
@@ -1937,6 +2031,18 @@
 
     // 검색
     document.getElementById('btn-search').addEventListener('click', doSearch);
+
+    // AI 이미지 업로드 (Pro 전용) — HTS/MTS 캡처 → 패턴 좌표 추출
+    var _uploadBtn   = document.getElementById('btn-upload-chart');
+    var _uploadInput = document.getElementById('chart-image-input');
+    if (_uploadBtn && _uploadInput) {
+      _uploadBtn.addEventListener('click', function () { _uploadInput.click(); });
+      _uploadInput.addEventListener('change', function (e) {
+        var file = e.target.files && e.target.files[0];
+        e.target.value = ''; // 같은 파일 재선택 가능하게
+        if (file) _handleChartImageUpload(file);
+      });
+    }
 
     // 캔버스 마우스 이벤트
     canvas.addEventListener('mousedown',  onMouseDown);
