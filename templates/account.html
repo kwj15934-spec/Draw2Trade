@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마이페이지 · Draw2Trade</title>
+<style>
+  :root {
+    --bg: #141416;
+    --bg-2: #1a1a1c;
+    --card: #1e1e21;
+    --border: #2d2d30;
+    --text: #d4d8e2;
+    --text-dim: #7a8499;
+    --teal: #26a69a;
+    --orange: #ff6b35;
+    --red: #ef5350;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .nav {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-brand { color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.3px; }
+  .nav-links { display: flex; gap: 18px; align-items: center; }
+  .nav-links a { color: var(--text-dim); font-size: 14px; }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-logout:hover { background: var(--red); color: #fff; }
+
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1.title { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 28px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+
+  .profile-row { display: flex; align-items: center; gap: 16px; }
+  .profile-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; overflow: hidden;
+  }
+  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-name { font-size: 16px; font-weight: 700; color: #fff; }
+  .profile-email { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+  .plan-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+  .plan-badge.pro {
+    background: linear-gradient(135deg, var(--teal), #4db6ac);
+    color: #fff;
+  }
+  .plan-badge.free { background: var(--border); color: var(--text-dim); }
+
+  .sub-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .sub-row:last-child { border-bottom: none; }
+  .sub-label { color: var(--text-dim); }
+  .sub-value { color: var(--text); font-weight: 600; }
+
+  .upgrade-cta {
+    margin-top: 14px;
+    background: linear-gradient(135deg, var(--teal), #4db6ac);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    display: inline-block;
+  }
+  .upgrade-cta:hover { text-decoration: none; filter: brightness(1.1); }
+
+  .item-list { list-style: none; margin: 0; padding: 0; }
+  .item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  .item:last-child { border-bottom: none; }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { color: var(--text); font-weight: 600; }
+  .item-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .btn-del {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .btn-del:hover { border-color: var(--red); color: var(--red); }
+
+  .empty { color: var(--text-dim); font-size: 13px; padding: 18px 0; text-align: center; }
+
+  .loading { text-align: center; color: var(--text-dim); padding: 40px 0; }
+  .login-prompt { text-align: center; padding: 60px 20px; }
+  .login-prompt h2 { color: #fff; font-size: 20px; margin-bottom: 8px; }
+  .login-prompt p { color: var(--text-dim); margin-bottom: 20px; }
+  .login-prompt a {
+    display: inline-block;
+    background: var(--teal);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+  .login-prompt a:hover { text-decoration: none; filter: brightness(1.1); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-brand">Draw2Trade</a>
+  <div class="nav-links">
+    <a href="/app">앱</a>
+    <a href="/pricing">요금제</a>
+    <a href="/market">시장</a>
+    <button class="btn-logout" id="btn-logout" style="display:none;">로그아웃</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="loading" class="loading">불러오는 중…</div>
+
+  <div id="login-prompt" class="login-prompt" style="display:none;">
+    <h2>로그인이 필요합니다</h2>
+    <p>마이페이지를 보려면 먼저 로그인해주세요.</p>
+    <a href="/login">로그인하기</a>
+  </div>
+
+  <div id="content" style="display:none;">
+    <h1 class="title">마이페이지</h1>
+    <p class="subtitle">내 정보, 구독, 즐겨찾기, 저장한 패턴을 관리하세요.</p>
+
+    <!-- 프로필 -->
+    <div class="card">
+      <h2>프로필</h2>
+      <div class="profile-row">
+        <div class="profile-avatar" id="profile-avatar">?</div>
+        <div>
+          <div class="profile-name" id="profile-name"></div>
+          <div class="profile-email" id="profile-email"></div>
+          <span class="plan-badge" id="plan-badge"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 구독 -->
+    <div class="card">
+      <h2>구독 정보</h2>
+      <div class="sub-row">
+        <span class="sub-label">현재 플랜</span>
+        <span class="sub-value" id="sub-plan">—</span>
+      </div>
+      <div class="sub-row" id="sub-expires-row" style="display:none;">
+        <span class="sub-label">만료일</span>
+        <span class="sub-value" id="sub-expires">—</span>
+      </div>
+      <div id="free-upgrade" style="display:none;">
+        <p style="color:var(--text-dim);font-size:13px;margin:12px 0 0;">
+          Pro 플랜으로 업그레이드하고 무제한 검색, Top 1~50 전체 결과, 자동 분석을 이용하세요.
+        </p>
+        <a href="/pricing" class="upgrade-cta">Pro로 업그레이드 →</a>
+      </div>
+    </div>
+
+    <!-- 즐겨찾기 -->
+    <div class="card">
+      <h2>즐겨찾기 <span id="fav-count" style="color:var(--text-dim);font-weight:500;font-size:13px;"></span></h2>
+      <ul class="item-list" id="fav-list"></ul>
+      <div class="empty" id="fav-empty" style="display:none;">즐겨찾기한 종목이 없습니다.</div>
+    </div>
+
+    <!-- 저장된 패턴 -->
+    <div class="card">
+      <h2>저장된 패턴 <span id="dr-count" style="color:var(--text-dim);font-weight:500;font-size:13px;"></span></h2>
+      <ul class="item-list" id="dr-list"></ul>
+      <div class="empty" id="dr-empty" style="display:none;">저장된 패턴이 없습니다.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var loading = document.getElementById('loading');
+  var loginPrompt = document.getElementById('login-prompt');
+  var content = document.getElementById('content');
+  var btnLogout = document.getElementById('btn-logout');
+
+  function show(el) { el.style.display = 'block'; }
+  function hide(el) { el.style.display = 'none'; }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  btnLogout.addEventListener('click', function () {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+      .then(function () { location.href = '/'; });
+  });
+
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      hide(loading);
+      if (!data || !data.user) {
+        show(loginPrompt);
+        return;
+      }
+      var u = data.user;
+      show(content);
+      btnLogout.style.display = 'inline-block';
+
+      // 프로필
+      var av = document.getElementById('profile-avatar');
+      if (u.picture) av.innerHTML = '<img src="' + u.picture + '" alt="">';
+      else av.textContent = (u.name || u.email || '?')[0].toUpperCase();
+      document.getElementById('profile-name').textContent = u.name || u.email;
+      document.getElementById('profile-email').textContent = u.email || '';
+      var badge = document.getElementById('plan-badge');
+      if (u.plan === 'pro') { badge.textContent = 'PRO'; badge.classList.add('pro'); }
+      else { badge.textContent = 'FREE'; badge.classList.add('free'); }
+
+      // 구독
+      document.getElementById('sub-plan').textContent = u.plan === 'pro' ? 'Pro' : 'Free';
+      if (u.plan === 'pro') {
+        if (u.pro_expires_at) {
+          document.getElementById('sub-expires-row').style.display = 'flex';
+          document.getElementById('sub-expires').textContent = formatDate(u.pro_expires_at);
+        }
+      } else {
+        document.getElementById('free-upgrade').style.display = 'block';
+      }
+
+      loadFavorites();
+      loadDrawings();
+    })
+    .catch(function () {
+      hide(loading);
+      show(loginPrompt);
+    });
+
+  function loadFavorites() {
+    fetch('/api/favorites', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (list) { renderFavorites(list || []); })
+      .catch(function () { renderFavorites([]); });
+  }
+
+  function renderFavorites(list) {
+    var ul = document.getElementById('fav-list');
+    var empty = document.getElementById('fav-empty');
+    document.getElementById('fav-count').textContent = list.length ? '(' + list.length + ')' : '';
+    ul.innerHTML = '';
+    if (!list.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    list.forEach(function (f) {
+      var li = document.createElement('li');
+      li.className = 'item';
+      var title = (f.name || f.ticker) + ' · ' + (f.market || 'KR') + ' ' + f.ticker;
+      li.innerHTML =
+        '<div class="item-main"><div class="item-title">' + escapeHtml(title) + '</div></div>' +
+        '<button class="btn-del">삭제</button>';
+      li.querySelector('.btn-del').addEventListener('click', function () {
+        if (!confirm('삭제하시겠습니까?')) return;
+        fetch('/api/favorites/' + encodeURIComponent(f.market || 'KR') + '/' + encodeURIComponent(f.ticker), {
+          method: 'DELETE', credentials: 'same-origin'
+        }).then(function () { loadFavorites(); });
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function loadDrawings() {
+    fetch('/api/drawings', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (list) { renderDrawings(list || []); })
+      .catch(function () { renderDrawings([]); });
+  }
+
+  function renderDrawings(list) {
+    var ul = document.getElementById('dr-list');
+    var empty = document.getElementById('dr-empty');
+    document.getElementById('dr-count').textContent = list.length ? '(' + list.length + ')' : '';
+    ul.innerHTML = '';
+    if (!list.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    list.forEach(function (d) {
+      var li = document.createElement('li');
+      li.className = 'item';
+      var meta = [];
+      if (d.ticker) meta.push((d.market || 'KR') + ' ' + d.ticker);
+      if (d.date_from && d.date_to) meta.push(d.date_from + ' ~ ' + d.date_to);
+      if (d.created_at) meta.push('저장: ' + formatDate(d.created_at));
+      li.innerHTML =
+        '<div class="item-main">' +
+          '<div class="item-title">' + escapeHtml(d.label || '(이름 없음)') + '</div>' +
+          (meta.length ? '<div class="item-meta">' + escapeHtml(meta.join(' · ')) + '</div>' : '') +
+        '</div>' +
+        '<button class="btn-del">삭제</button>';
+      li.querySelector('.btn-del').addEventListener('click', function () {
+        if (!confirm('삭제하시겠습니까?')) return;
+        fetch('/api/drawings/' + encodeURIComponent(d.id), {
+          method: 'DELETE', credentials: 'same-origin'
+        }).then(function () { loadDrawings(); });
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+})();
+</script>
+</body>
+</html>
