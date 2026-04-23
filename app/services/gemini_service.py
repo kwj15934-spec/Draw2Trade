@@ -21,6 +21,7 @@ import base64
 import json
 import logging
 import os
+import re
 from typing import Any
 
 import httpx
@@ -28,6 +29,114 @@ import httpx
 from app.services.ai_compliance import COMPLIANCE_INSTRUCTION, sanitize_ai_text
 
 logger = logging.getLogger(__name__)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 공통 Gemini 응답 파서 — 경계 조건 강건
+# ──────────────────────────────────────────────────────────────────────────────
+
+_MD_FENCE_RE = re.compile(r"^```(?:json|JSON)?\s*|\s*```$", re.MULTILINE)
+
+
+def _extract_json_from_gemini(data: dict) -> tuple[dict | None, str]:
+    """
+    Gemini API 응답 dict 에서 JSON 파싱된 오브젝트를 추출한다.
+
+    반환: (parsed_dict_or_None, error_msg)
+
+    실패 케이스:
+      - candidates 비어있음 (안전 필터로 전체 블록됨)
+      - finishReason = SAFETY / RECITATION (부분 블록됨)
+      - parts 누락 또는 text 필드 없음
+      - JSON 파싱 실패 (마크다운 코드블록 감싸짐, 유효하지 않은 JSON)
+    """
+    candidates = data.get("candidates") or []
+    if not candidates:
+        pf = data.get("promptFeedback") or {}
+        block_reason = pf.get("blockReason", "UNKNOWN")
+        return None, f"요청이 안전 필터에 의해 차단되었습니다 ({block_reason})"
+
+    cand = candidates[0]
+    finish = cand.get("finishReason", "")
+
+    if finish == "SAFETY":
+        return None, "응답이 안전 필터에 의해 차단되었습니다"
+    if finish == "RECITATION":
+        return None, "응답이 출처 정책에 의해 차단되었습니다"
+    if finish == "MAX_TOKENS":
+        # 부분 응답이 있을 수도 있으므로 계속 시도
+        logger.warning("Gemini 응답이 MAX_TOKENS로 잘렸습니다 — 파싱 시도")
+
+    content = cand.get("content") or {}
+    parts = content.get("parts") or []
+    if not parts:
+        return None, "응답에 콘텐츠 파트가 없습니다"
+
+    # 모든 text 파트 병합 (Gemini가 가끔 여러 파트로 나눠서 반환)
+    texts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
+    if not texts:
+        return None, "응답 텍스트가 비어있습니다"
+    raw_text = "".join(texts).strip()
+    if not raw_text:
+        return None, "응답 텍스트가 비어있습니다"
+
+    # 마크다운 코드블록 제거 (```json ... ``` 감싸진 경우)
+    cleaned = raw_text
+    if cleaned.startswith("```"):
+        cleaned = _MD_FENCE_RE.sub("", cleaned).strip()
+
+    # JSON 파싱 시도
+    try:
+        return json.loads(cleaned), ""
+    except json.JSONDecodeError as je:
+        # 부분 JSON 이라도 괄호 균형 맞춰 재시도 (MAX_TOKENS 잘림 대비)
+        trimmed = _try_fix_truncated_json(cleaned)
+        if trimmed:
+            try:
+                return json.loads(trimmed), ""
+            except json.JSONDecodeError:
+                pass
+        logger.warning(
+            "Gemini JSON 파싱 실패: %s | finishReason=%s | raw=%r",
+            je, finish, raw_text[:500],
+        )
+        return None, "JSON 파싱 실패"
+
+
+def _try_fix_truncated_json(text: str) -> str | None:
+    """
+    잘린 JSON 을 괄호/따옴표 균형을 맞춰 복구 시도.
+    실패 시 None.
+    """
+    if not text or not text.startswith("{"):
+        return None
+    # 마지막 콤마 제거, 열린 괄호 카운트
+    s = text.rstrip().rstrip(",")
+    opens = {"{": 0, "[": 0}
+    closes = {"}": 0, "]": 0}
+    in_str = False
+    escape = False
+    for ch in s:
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in opens:
+            opens[ch] += 1
+        elif ch in closes:
+            closes[ch] += 1
+    if in_str:
+        s += '"'
+    s += "]" * max(0, opens["["] - closes["]"])
+    s += "}" * max(0, opens["{"] - closes["}"])
+    return s
 
 _API_KEY = os.environ.get("GEMINI_API_KEY", "")
 _MODEL   = "gemini-2.5-flash"  # Vision 포함 저가형
@@ -185,13 +294,10 @@ async def extract_pattern_from_image(
         base["error"] = "Gemini API 호출 실패"
         return base
 
-    # 응답 파싱
-    try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-        parsed = json.loads(text)
-    except Exception:
-        logger.warning("Gemini 응답 파싱 실패: %s", json.dumps(data)[:300])
-        base["error"] = "Gemini 응답 파싱 실패"
+    # 응답 파싱 (강건 헬퍼 사용)
+    parsed, perr = _extract_json_from_gemini(data)
+    if parsed is None:
+        base["error"] = perr or "Gemini 응답 파싱 실패"
         return base
 
     is_chart = bool(parsed.get("is_chart"))
@@ -266,52 +372,9 @@ _PATTERN_GEN_SCHEMA: dict[str, Any] = {
         "draw_points": {
             "type": "array",
             "items": {"type": "number"},
-            "minItems": 50,
-            "maxItems": _PATTERN_GEN_POINTS,
         },
-        "annotations": {
-            "type": "array",
-            "maxItems": 6,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "type":  {"type": "string", "enum": ["point", "line", "zone"]},
-                    "x":     {"type": "number"},
-                    "y":     {"type": "number"},
-                    "x1":    {"type": "number"},
-                    "y1":    {"type": "number"},
-                    "x2":    {"type": "number"},
-                    "y2":    {"type": "number"},
-                    "label": {"type": "string"},
-                    "color": {"type": "string"},
-                    "style": {"type": "string"},
-                },
-                "required": ["type", "label"],
-            },
-        },
-        "follow_up_questions": {
-            "type": "array",
-            "maxItems": 2,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "key":      {"type": "string"},
-                    "question": {"type": "string"},
-                    "options": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "value": {"type": "string"},
-                                "label": {"type": "string"},
-                            },
-                            "required": ["value", "label"],
-                        },
-                    },
-                },
-                "required": ["key", "question", "options"],
-            },
-        },
+        "annotations":        {"type": "array", "items": {"type": "object"}},
+        "follow_up_questions":{"type": "array", "items": {"type": "object"}},
         "confidence": {"type": "number"},
     },
     "required": ["pattern_name", "draw_points"],
@@ -517,12 +580,9 @@ async def generate_pattern_from_text(cleaned_prompt: str) -> dict:
         base["error"] = "Gemini API 호출 실패"
         return base
 
-    try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-        parsed = json.loads(text)
-    except Exception:
-        logger.warning("Gemini 패턴 생성 응답 파싱 실패: %s", json.dumps(data)[:300])
-        base["error"] = "응답 파싱 실패"
+    parsed, perr = _extract_json_from_gemini(data)
+    if parsed is None:
+        base["error"] = perr or "응답 파싱 실패"
         return base
 
     # draw_points 정화
@@ -560,6 +620,179 @@ async def generate_pattern_from_text(cleaned_prompt: str) -> dict:
         "pattern_name": pattern_name,
         "description": description,
         "draw_points": [round(v, 4) for v in clipped],
+        "annotations": annotations,
+        "follow_up_questions": questions,
+        "confidence": confidence,
+        "configured": True,
+        "error": None,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 유저 그림 분석 — 보정 + 어노테이션 + 질문 (메인 플로우)
+# ──────────────────────────────────────────────────────────────────────────────
+
+_ANALYZE_SYSTEM_PROMPT = (
+    "당신은 KOSPI 차트 패턴 분석 전문가입니다. 사용자가 마우스로 그린 "
+    "0~1 정규화 좌표 배열을 받아 다음을 수행합니다:\n\n"
+    "1. 패턴 형태 분류 (쌍바닥·쌍봉·헤드앤숄더·역헤드앤숄더·상승추세·하락추세·박스권·V자반등·계단식상승·급락후반등·기타)\n"
+    "2. 보정된 좌표 refined_points 를 150개로 생성 — 원본을 **스무딩**하고 "
+    "일일 변동 ±30% 초과 구간을 **클리핑**. 유저의 의도를 훼손하지 말 것\n"
+    "3. 핵심 지점·지지선·돌파구간을 annotations 배열로 표시\n"
+    "   - type='point': (x, y) 저점/고점/변곡점\n"
+    "   - type='line': (x1,y1)-(x2,y2) 넥라인·지지·저항\n"
+    "   - type='zone': (x1, x2) 구간 (돌파구간·박스권·매집구간)\n"
+    "4. 검색 정확도를 높일 follow_up_questions 최대 2개\n"
+    "   - 거래량 패턴 (volume_profile) 반드시 포함\n"
+    "   - 각 옵션은 {\"value\": snake_case영문, \"label\": 한국어}\n"
+    "5. description 은 한국어 40자 이내 — 객관적 관찰만\n\n"
+    "**절대 금지**: 종목명·매매 판단·가격 예측·투자 권유\n\n"
+    "JSON 한 덩어리로만 반환 (마크다운·설명 금지)."
+    + COMPLIANCE_INSTRUCTION
+)
+
+_ANALYZE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "pattern_name":      {"type": "string"},
+        "description":       {"type": "string"},
+        "refined_points":    {"type": "array", "items": {"type": "number"}},
+        "annotations":       {"type": "array", "items": {"type": "object"}},
+        "follow_up_questions":{"type": "array", "items": {"type": "object"}},
+        "confidence":        {"type": "number"},
+    },
+    "required": ["pattern_name", "refined_points"],
+}
+
+
+async def analyze_drawing(draw_points: list[float]) -> dict:
+    """
+    유저가 그린 패턴을 분석하고 다음을 반환:
+      - pattern_name       : 패턴 형태 분류 (쌍바닥, V자반등 등)
+      - description        : 40자 이내 한국어 설명
+      - refined_points     : 보정된 150개 0~1 좌표 (스무딩+상한가 클리핑)
+      - annotations        : 시각 어노테이션 (점·선·영역)
+      - follow_up_questions: 검색 정확도 개선 질문 (거래량 등)
+      - confidence         : 0~1 신뢰도
+
+    입력 draw_points 길이 무관 (너무 길면 150으로 리샘플링 후 전달).
+    API 키 미설정 시 원본 반환 + error 표시.
+    """
+    base = {
+        "pattern_name": None,
+        "description": None,
+        "refined_points": [],
+        "annotations": [],
+        "follow_up_questions": [],
+        "confidence": None,
+        "configured": bool(_API_KEY),
+        "error": None,
+    }
+
+    if not draw_points or len(draw_points) < 2:
+        base["error"] = "빈 패턴 또는 포인트 부족"
+        return base
+
+    # 입력 정규화: 0~1 클램핑 + 150pt 리샘플
+    sanitized_in: list[float] = []
+    for v in draw_points:
+        cv = _clamp_unit(v)
+        if cv is not None:
+            sanitized_in.append(cv)
+    if len(sanitized_in) < 2:
+        base["error"] = "유효한 포인트 부족"
+        return base
+    input_pts = _resample_linear(sanitized_in, 150)
+
+    if not _API_KEY:
+        # 키 미설정: 룰베이스 보정만 (스무딩+클리핑) + 경고
+        smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
+        base["refined_points"] = [round(v, 4) for v in smoothed]
+        base["error"] = "GEMINI_API_KEY 미설정 (기본 스무딩만 적용)"
+        return base
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": _ANALYZE_SYSTEM_PROMPT},
+                    {"text": f"\n\n사용자가 그린 좌표 (150개):\n{json.dumps([round(v,3) for v in input_pts])}"},
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "responseMimeType": "application/json",
+            "responseSchema": _ANALYZE_SCHEMA,
+            "maxOutputTokens": 4096,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=25.0) as client:
+            resp = await client.post(
+                _API_URL,
+                params={"key": _API_KEY},
+                json=payload,
+                headers={"content-type": "application/json"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPStatusError as e:
+        logger.warning("Gemini analyze_drawing API 오류: %s — %s",
+                       e.response.status_code, e.response.text[:200])
+        base["error"] = f"Gemini API 오류 ({e.response.status_code})"
+        # 키 오류라도 룰베이스 보정은 반환
+        smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
+        base["refined_points"] = [round(v, 4) for v in smoothed]
+        return base
+    except Exception as e:
+        logger.warning("Gemini analyze_drawing 호출 실패: %s", e)
+        base["error"] = "Gemini API 호출 실패"
+        smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
+        base["refined_points"] = [round(v, 4) for v in smoothed]
+        return base
+
+    parsed, perr = _extract_json_from_gemini(data)
+    if parsed is None:
+        base["error"] = perr or "응답 파싱 실패"
+        # 파싱 실패 시에도 룰베이스 보정은 반환
+        smoothed = _clip_daily_jump(input_pts, max_jump=0.30)
+        base["refined_points"] = [round(v, 4) for v in smoothed]
+        return base
+
+    # refined_points 정화
+    raw_refined = parsed.get("refined_points") or parsed.get("draw_points") or []
+    refined_clean: list[float] = []
+    for v in raw_refined:
+        cv = _clamp_unit(v)
+        if cv is not None:
+            refined_clean.append(cv)
+    # 길이 부족 시 원본 유지
+    if len(refined_clean) < 10:
+        refined_clean = input_pts[:]
+    refined_150 = _resample_linear(refined_clean, 150)
+    refined_150 = _clip_daily_jump(refined_150, max_jump=0.30)
+
+    pattern_name = sanitize_ai_text(parsed.get("pattern_name")) or "AI 분석 패턴"
+    pattern_name = pattern_name[:20]
+    description  = sanitize_ai_text(parsed.get("description")) or ""
+    description  = description[:80]
+
+    annotations = _sanitize_annotations(parsed.get("annotations"))
+    questions   = _sanitize_questions(parsed.get("follow_up_questions"))
+
+    confidence = parsed.get("confidence")
+    if confidence is not None:
+        try:
+            confidence = max(0.0, min(1.0, float(confidence)))
+        except (TypeError, ValueError):
+            confidence = None
+
+    return {
+        "pattern_name": pattern_name,
+        "description": description,
+        "refined_points": [round(v, 4) for v in refined_150],
         "annotations": annotations,
         "follow_up_questions": questions,
         "confidence": confidence,
