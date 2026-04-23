@@ -25,6 +25,8 @@ from typing import Any
 
 import httpx
 
+from app.services.ai_compliance import COMPLIANCE_INSTRUCTION, sanitize_ai_text
+
 logger = logging.getLogger(__name__)
 
 _API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -59,8 +61,11 @@ _EXTRACTION_PROMPT = (
     "3. 거래량/보조지표/MACD 패널이 있어도 **메인 가격 차트만** 분석\n"
     "4. 차트가 식별 불가능하면 is_chart=false 로 반환\n"
     "5. 패턴 형태도 동시에 분류 (쌍바닥/쌍봉/헤드앤숄더/역헤드앤숄더/"
-    "상승추세/하락추세/박스권/V자반등/기타)\n\n"
+    "상승추세/하락추세/박스권/V자반등/기타)\n"
+    "6. note 필드는 한국어 최대 40자, **패턴 형태에 대한 객관적 관찰만** 기술.\n"
+    "   종목 식별·향후 주가 방향·매매 판단은 절대 언급 금지.\n\n"
     "응답은 반드시 JSON 형식으로만 반환합니다."
+    + COMPLIANCE_INSTRUCTION
 )
 
 # Gemini responseSchema (구조화된 JSON 강제)
@@ -207,12 +212,16 @@ async def extract_pattern_from_image(
         base["error"] = "추출된 포인트가 너무 적습니다 (차트가 명확하지 않을 수 있음)"
         return base
 
+    # 컴플라이언스 필터 — 텍스트 필드에서 투자권유 표현 제거
+    pt   = sanitize_ai_text(parsed.get("pattern_type"))
+    note = sanitize_ai_text(parsed.get("note"))
+
     return {
         "is_chart": is_chart,
         "draw_points": clean_pts,
-        "pattern_type": parsed.get("pattern_type"),
+        "pattern_type": pt,
         "confidence": parsed.get("confidence"),
-        "note": parsed.get("note"),
+        "note": note,
         "configured": True,
-        "error": None if is_chart else (parsed.get("note") or "차트를 인식하지 못했습니다"),
+        "error": None if is_chart else (note or "차트를 인식하지 못했습니다"),
     }
