@@ -238,6 +238,20 @@
     .feature-list li::before { content: ''; flex-shrink: 0; width: 5px; height: 5px; margin-top: 9px; background: var(--teal); border-radius: 50%; }
     .feature-visual { height: 120px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); position: relative; overflow: hidden; }
 
+    /* ── Pro Perks ── */
+    .pro-perks-section { background: linear-gradient(180deg, rgba(38,166,154,0.035) 0%, transparent 100%); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .pro-perks-section .features { grid-template-columns: repeat(3,1fr); }
+    @media (max-width: 960px) { .pro-perks-section .features { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 640px) { .pro-perks-section .features { grid-template-columns: 1fr; } }
+    .pro-feature { position: relative; border-color: rgba(38,166,154,0.35); background: linear-gradient(180deg, rgba(38,166,154,0.04) 0%, var(--surface) 60%); }
+    .pro-feature:hover { border-color: var(--teal); }
+    .pro-badge { position: absolute; top: 14px; right: 14px; background: var(--teal); color: #0b1413; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; padding: 4px 9px; border-radius: 3px; text-transform: uppercase; }
+    .pro-badge-soon { background: transparent; color: var(--orange); border: 1px solid var(--orange); }
+    .pro-feature-soon { border-style: dashed; border-color: rgba(255,107,53,0.4); background: linear-gradient(180deg, rgba(255,107,53,0.04) 0%, var(--surface) 60%); }
+    .pro-feature-soon:hover { border-color: var(--orange); }
+    .pro-more-note { margin-top: 40px; padding: 20px 24px; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius); text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+    .pro-more-note strong { color: var(--text-hi); font-weight: 600; }
+
     /* ── Pricing ── */
     .pricing { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; max-width: 860px; margin: 0 auto; }
     @media (max-width: 760px) { .pricing { grid-template-columns: 1fr; } }
@@ -677,6 +691,91 @@
           <li>네이버 종토방 연동으로 시장 반응 확인</li>
         </ul>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRO PERKS ==================== -->
+<section class="section pro-perks-section" id="pro-perks">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow" style="color:var(--teal);">PRO EXCLUSIVE</div>
+      <h2 class="section-title">유료 결제 시 활성화되는 도구</h2>
+      <p class="section-sub">Pro 사용자를 위한 고급 기능들 — 앞으로 계속 추가됩니다.</p>
+    </div>
+
+    <div class="features">
+      <div class="feature reveal pro-feature">
+        <span class="pro-badge">PRO</span>
+        <div class="feature-title">자동 패턴 검색</div>
+        <div class="feature-visual">
+          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;justify-content:center;gap:10px;font-family:var(--mono);font-size:10px;">
+            <div style="display:flex;align-items:center;gap:8px;color:var(--muted);">
+              <span style="width:60px;">START</span>
+              <div style="flex:1;height:2px;background:linear-gradient(to right,var(--teal),transparent);"></div>
+              <span style="color:var(--teal);">2024-01</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;color:var(--muted);">
+              <span style="width:60px;">END</span>
+              <div style="flex:1;height:2px;background:linear-gradient(to right,var(--teal),transparent);"></div>
+              <span style="color:var(--teal);">2024-12</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);">
+              <span style="width:6px;height:6px;background:var(--teal);border-radius:50%;box-shadow:0 0 8px var(--teal);"></span>
+              AUTO-ANALYZE <span style="color:var(--muted);">· 2,412 종목</span>
+            </div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>직접 그릴 필요 없이 <strong style="color:var(--teal);">기간만 지정</strong>하면 자동 분석</li>
+          <li>과거 구간 선택 시 당시 유사 패턴 종목을 찾아줌</li>
+          <li>반복적인 리서치 시간 대폭 단축</li>
+        </ul>
+      </div>
+
+      <div class="feature reveal pro-feature">
+        <span class="pro-badge">PRO</span>
+        <div class="feature-title">Top 1~10 상위 결과</div>
+        <div class="feature-visual">
+          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--gold);width:18px;text-align:center;background:rgba(230,182,76,0.15);border-radius:2px;padding:1px 0;">1</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">94.2%</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--silver);width:18px;text-align:center;background:rgba(183,188,199,0.15);border-radius:2px;padding:1px 0;">2</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:88%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">91.7%</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--bronze);width:18px;text-align:center;background:rgba(205,127,50,0.15);border-radius:2px;padding:1px 0;">3</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:74%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">88.4%</span></div>
+            <div style="text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted);padding-top:4px;border-top:1px solid var(--border);">FREE 제한 → PRO 전체 공개</div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>가장 유사한 <strong style="color:var(--teal);">Top 1~10 결과 완전 공개</strong> (Free는 11~50만 표시)</li>
+          <li>금·은·동 랭크 뱃지로 최상위 패턴 즉시 식별</li>
+          <li>즐겨찾기 · 검색 저장 개수 무제한</li>
+        </ul>
+      </div>
+
+      <div class="feature reveal pro-feature pro-feature-soon">
+        <span class="pro-badge pro-badge-soon">COMING SOON</span>
+        <div class="feature-title">AI 자동 생성 도구</div>
+        <div class="feature-visual">
+          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              <circle cx="12" cy="12" r="3.5"/>
+            </svg>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;line-height:1.5;">
+              차트 자동 해석<br>패턴 자동 추천<br>리스크 진단
+            </div>
+          </div>
+        </div>
+        <ul class="feature-list">
+          <li>AI가 차트를 읽고 유사 패턴을 <strong style="color:var(--teal);">자동 제안</strong></li>
+          <li>과거 유사 구간의 이후 흐름을 통계적으로 요약</li>
+          <li>준비 중 — Pro 사용자에게 선공개 예정</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pro-more-note reveal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Pro 전용 도구는 <strong>꾸준히 추가</strong>됩니다. 구독 중이시면 별도 결제 없이 모두 이용 가능합니다.</span>
     </div>
   </div>
 </section>

@@ -157,3 +157,13 @@ def has_pro_usage(uid: str) -> bool:
             "SELECT 1 FROM pro_usage_log WHERE uid=? LIMIT 1", (uid,)
         ).fetchone()
     return row is not None
+
+
+def count_pro_usage(uid: str, feature: str, since_ts: float) -> int:
+    """특정 feature 의 since_ts 이후 사용 횟수. 쿼터 체크용."""
+    with _conn() as con:
+        row = con.execute(
+            "SELECT COUNT(*) FROM pro_usage_log WHERE uid=? AND feature=? AND used_at>=?",
+            (uid, feature, since_ts),
+        ).fetchone()
+    return int(row[0]) if row else 0

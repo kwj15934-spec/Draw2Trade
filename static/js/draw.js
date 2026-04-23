@@ -1179,10 +1179,176 @@
         showStatus('', '');
         var btn = document.getElementById('btn-save-drawing');
         if (btn) btn.style.display = _lastResults.length ? 'inline-flex' : 'none';
+
+        // Pro 전용: AI 보정 + 백테스팅 (결과 있을 때만, 비동기 병렬)
+        if (data.plan === 'pro' && _lastResults.length) {
+          _fetchAIInsight(pts);
+          _fetchBacktest(_lastResults.slice(0, 10));
+        } else {
+          _hideAIInsightCard();
+          _hideBacktestCard();
+        }
       })
       .catch(function (e) {
         _showSearchError(e.message || '검색 중 오류가 발생했습니다. 다시 시도해주세요.');
       });
+  }
+
+  // ── AI 차트 보정 (Pro 전용) ──────────────────────────────────────────────
+  function _hideAIInsightCard() {
+    var el = document.getElementById('ai-insight-card');
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  }
+
+  function _renderAIInsightCard(data) {
+    var el = document.getElementById('ai-insight-card');
+    if (!el) return;
+    if (!data || (!data.pattern_type && !(data.warnings && data.warnings.length))) {
+      _hideAIInsightCard();
+      return;
+    }
+    var parts = ['<div class="ai-card-header">',
+      '<span class="ai-card-badge">AI</span>',
+      '<span class="ai-card-title">패턴 분석</span>'];
+    if (typeof data.confidence === 'number') {
+      parts.push('<span class="ai-card-confidence">신뢰도 ' + Math.round(data.confidence * 100) + '%</span>');
+    }
+    parts.push('</div>');
+    if (data.pattern_type) {
+      parts.push('<div class="ai-card-pattern">' + _escapeHtml(data.pattern_type) + '</div>');
+    }
+    if (data.interpretation) {
+      parts.push('<div class="ai-card-interp">' + _escapeHtml(data.interpretation) + '</div>');
+    }
+    if (data.warnings && data.warnings.length) {
+      parts.push('<ul class="ai-card-warnings">');
+      for (var i = 0; i < data.warnings.length; i++) {
+        parts.push('<li>⚠️ ' + _escapeHtml(data.warnings[i]) + '</li>');
+      }
+      parts.push('</ul>');
+    }
+    if (data.follow_up_questions && data.follow_up_questions.length) {
+      parts.push('<div class="ai-card-followup">');
+      for (var j = 0; j < data.follow_up_questions.length; j++) {
+        var q = data.follow_up_questions[j];
+        if (!q || !q.question) continue;
+        parts.push('<div class="ai-card-question"><div class="ai-card-q-label">' + _escapeHtml(q.question) + '</div>');
+        if (q.options && q.options.length) {
+          parts.push('<div class="ai-card-q-options">');
+          for (var k = 0; k < q.options.length; k++) {
+            parts.push('<button type="button" class="ai-card-q-opt" data-qkey="'
+              + _escapeHtml(q.key || '') + '" data-val="' + _escapeHtml(q.options[k]) + '">'
+              + _escapeHtml(q.options[k]) + '</button>');
+          }
+          parts.push('</div>');
+        }
+        parts.push('</div>');
+      }
+      parts.push('</div>');
+    }
+    if (typeof data.quota_remaining === 'number') {
+      parts.push('<div class="ai-card-quota">이번 달 AI 보정 남은 횟수 · ' + data.quota_remaining + '회</div>');
+    }
+    el.innerHTML = parts.join('');
+    el.style.display = 'block';
+
+    // 옵션 버튼 토글 상호작용 (현재는 UI 피드백만 — 향후 search refine에 연결)
+    var opts = el.querySelectorAll('.ai-card-q-opt');
+    for (var m = 0; m < opts.length; m++) {
+      opts[m].addEventListener('click', function (ev) {
+        var btn = ev.currentTarget;
+        var siblings = btn.parentNode.querySelectorAll('.ai-card-q-opt');
+        for (var n = 0; n < siblings.length; n++) siblings[n].classList.remove('selected');
+        btn.classList.add('selected');
+      });
+    }
+  }
+
+  function _fetchAIInsight(normPoints) {
+    _hideAIInsightCard();
+    fetch('/api/ai/smooth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draw_points: normPoints }),
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) { if (data) _renderAIInsightCard(data); })
+      .catch(function () { /* graceful — AI는 보조 기능 */ });
+  }
+
+  // ── 백테스팅 (Pro 전용) ──────────────────────────────────────────────────
+  function _hideBacktestCard() {
+    var el = document.getElementById('backtest-card');
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  }
+
+  function _fmtPct(v) {
+    if (v === null || v === undefined) return '—';
+    var sign = v >= 0 ? '+' : '';
+    return sign + (v * 100).toFixed(1) + '%';
+  }
+
+  function _renderBacktestCard(data) {
+    var el = document.getElementById('backtest-card');
+    if (!el) return;
+    var s = data && data.summary;
+    if (!s || !s.n) { _hideBacktestCard(); return; }
+
+    var html = [
+      '<div class="bt-card-header">',
+      '<span class="bt-card-title">이 패턴의 과거 성과</span>',
+      '<span class="bt-card-sub">Top 10 중 ' + s.n + '개 종목 기준</span>',
+      '</div>',
+      '<div class="bt-card-grid">',
+      '<div class="bt-cell"><div class="bt-cell-label">+1개월</div>',
+      '<div class="bt-cell-val ' + (s.avg_return_1m >= 0 ? 'pos' : 'neg') + '">' + _fmtPct(s.avg_return_1m) + '</div>',
+      '<div class="bt-cell-sub">평균</div></div>',
+      '<div class="bt-cell"><div class="bt-cell-label">+3개월</div>',
+      '<div class="bt-cell-val ' + (s.avg_return_3m >= 0 ? 'pos' : 'neg') + '">' + _fmtPct(s.avg_return_3m) + '</div>',
+      '<div class="bt-cell-sub">평균</div></div>',
+      '<div class="bt-cell"><div class="bt-cell-label">+6개월</div>',
+      '<div class="bt-cell-val ' + (s.avg_return_6m >= 0 ? 'pos' : 'neg') + '">' + _fmtPct(s.avg_return_6m) + '</div>',
+      '<div class="bt-cell-sub">평균</div></div>',
+      '</div>',
+    ];
+    if (typeof s.win_rate_3m === 'number') {
+      var wr = Math.round(s.win_rate_3m * 100);
+      html.push('<div class="bt-card-winrate">',
+        '<div class="bt-winrate-bar"><div class="bt-winrate-fill" style="width:' + wr + '%;"></div></div>',
+        '<div class="bt-winrate-text">3개월 후 상승 ' + (s.positive_3m_count || 0) + '종목 / 하락 ' + (s.negative_3m_count || 0) + '종목 (승률 ' + wr + '%)</div>',
+        '</div>');
+    }
+    html.push('<div class="bt-card-disclaimer">과거 데이터 통계이며 미래 수익을 보장하지 않습니다.</div>');
+    el.innerHTML = html.join('');
+    el.style.display = 'block';
+  }
+
+  function _fetchBacktest(topMatches) {
+    _hideBacktestCard();
+    var matches = topMatches.map(function (r) {
+      return {
+        ticker: r.ticker,
+        company_name: r.company_name || r.ticker,
+        period_to: r.period_to || '',
+      };
+    }).filter(function (m) { return m.ticker && m.period_to; });
+    if (!matches.length) return;
+
+    fetch('/api/backtest/forward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matches: matches }),
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) { if (data) _renderBacktestCard(data); })
+      .catch(function () { /* graceful */ });
+  }
+
+  function _escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
 
   // ── 결과 렌더링 ───────────────────────────────────────────────────────────
@@ -1208,6 +1374,8 @@
       if (colHeader)  colHeader.style.display = 'none';
       var hn = document.getElementById('result-historical-notice');
       if (hn) hn.style.display = 'none';
+      _hideAIInsightCard();
+      _hideBacktestCard();
       return;
     }
 

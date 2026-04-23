@@ -23,7 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, chart, dart, fundamental, google_auth, market, pattern, user_data
+from app.routers import ai_draw, auth, backtest, chart, dart, fundamental, google_auth, market, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -236,6 +236,8 @@ app.include_router(user_data.router)
 app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
+app.include_router(ai_draw.router)
+app.include_router(backtest.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
 # app.include_router(us_chart.router)
 

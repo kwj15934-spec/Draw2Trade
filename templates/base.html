@@ -2196,6 +2196,84 @@
       letter-spacing: 0.2px;
     }
 
+    /* ── AI 인사이트 카드 (Pro 전용) ─────────────────────── */
+    .ai-insight-card {
+      margin: 8px 10px 4px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(38,166,154,0.08) 0%, rgba(38,166,154,0.02) 100%);
+      border: 1px solid rgba(38,166,154,0.35);
+      border-radius: 6px;
+      font-size: 12px;
+      color: #d1d4dc;
+    }
+    .ai-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ai-card-badge {
+      background: #26a69a; color: #0b1413; font-weight: 700;
+      font-size: 9px; letter-spacing: 0.12em; padding: 2px 6px; border-radius: 3px;
+    }
+    .ai-card-title { font-weight: 600; color: #e0e3ea; font-size: 11px; }
+    .ai-card-confidence { margin-left: auto; font-size: 10px; color: #8a8f9b; }
+    .ai-card-pattern {
+      font-size: 14px; font-weight: 700; color: #26a69a;
+      margin-bottom: 4px; letter-spacing: -0.01em;
+    }
+    .ai-card-interp { color: #a8aeba; line-height: 1.5; margin-bottom: 6px; font-size: 11.5px; }
+    .ai-card-warnings { list-style: none; margin: 4px 0 0; padding: 0; font-size: 11px; color: #ffb84d; }
+    .ai-card-warnings li { padding: 2px 0; line-height: 1.45; }
+    .ai-card-followup { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); }
+    .ai-card-question { margin-bottom: 6px; }
+    .ai-card-q-label { font-size: 11px; color: #c0c5d0; margin-bottom: 4px; font-weight: 500; }
+    .ai-card-q-options { display: flex; flex-wrap: wrap; gap: 4px; }
+    .ai-card-q-opt {
+      background: #1e1e21; color: #a8aeba; border: 1px solid #2d2d30;
+      border-radius: 3px; padding: 3px 8px; font-size: 10.5px; cursor: pointer;
+      transition: all .15s;
+    }
+    .ai-card-q-opt:hover { border-color: #26a69a; color: #d1d4dc; }
+    .ai-card-q-opt.selected { background: #26a69a; color: #0b1413; border-color: #26a69a; font-weight: 600; }
+    .ai-card-quota { margin-top: 8px; font-size: 10px; color: #6a6f7b; text-align: right; }
+
+    /* ── 백테스팅 카드 (Pro 전용) ────────────────────────── */
+    .backtest-card {
+      margin: 4px 10px 8px;
+      padding: 10px 12px;
+      background: #16171a;
+      border: 1px solid #2d2d30;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #d1d4dc;
+    }
+    .bt-card-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .bt-card-title { font-weight: 700; color: #e0e3ea; font-size: 12px; }
+    .bt-card-sub { margin-left: auto; font-size: 10px; color: #6a6f7b; }
+    .bt-card-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      margin-bottom: 8px;
+    }
+    .bt-cell {
+      background: #0f1012; border: 1px solid #1f1f24; border-radius: 4px;
+      padding: 6px 4px; text-align: center;
+    }
+    .bt-cell-label { font-size: 10px; color: #8a8f9b; margin-bottom: 2px; letter-spacing: 0.04em; }
+    .bt-cell-val {
+      font-size: 15px; font-weight: 700; font-family: 'SF Mono', Consolas, monospace;
+      letter-spacing: -0.02em;
+    }
+    .bt-cell-val.pos { color: #ff6b35; }   /* 한국 장 관행: 상승=빨강 */
+    .bt-cell-val.neg { color: #4d9cff; }   /* 하락=파랑 */
+    .bt-cell-sub { font-size: 9px; color: #6a6f7b; margin-top: 1px; }
+    .bt-card-winrate { margin-bottom: 6px; }
+    .bt-winrate-bar {
+      height: 5px; background: #0f1012; border: 1px solid #1f1f24;
+      border-radius: 3px; overflow: hidden; margin-bottom: 4px;
+    }
+    .bt-winrate-fill {
+      height: 100%; background: linear-gradient(90deg, #ff6b35 0%, #ffb84d 100%);
+      transition: width .3s ease;
+    }
+    .bt-winrate-text { font-size: 10.5px; color: #a8aeba; text-align: center; }
+    .bt-card-disclaimer { font-size: 9.5px; color: #4a5060; text-align: center; margin-top: 4px; }
+
     /* ── 결과 카드 ───────────────────────────────────────── */
     .result-card {
       display: flex;
