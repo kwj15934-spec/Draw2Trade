@@ -17,6 +17,7 @@ JSON API:
   POST   /api/memes/{id}/report        — 신고
 """
 import logging
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -46,9 +47,16 @@ _DESC_MAX  = 300
 @router.get("/community/memes", response_class=HTMLResponse)
 async def meme_board_page(request: Request):
     user = get_optional_user(request)
+    kakao_key = os.environ.get("KAKAO_JS_APP_KEY", "").strip()
+    public_base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
     return _templates.TemplateResponse(
         "meme_board.html",
-        {"request": request, "user": user},
+        {
+            "request": request,
+            "user": user,
+            "kakao_app_key": kakao_key,
+            "public_base_url": public_base,
+        },
     )
 
 

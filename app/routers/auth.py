@@ -95,13 +95,14 @@ async def admin_users(admin=Depends(require_admin)):
 
 class SetPlanBody(BaseModel):
     uid: str
-    plan: str           # 'free' | 'pro'
-    pro_expires_at: str | None = None  # ISO8601 날짜 문자열, None이면 무기한
+    plan: str                                # 'free' | 'pro'
+    pro_expires_at: str | None = None        # ISO8601 (명시 지정 시 우선)
+    billing_period: str | None = None        # 'monthly' | 'annual'
 
 
 @router.post("/api/admin/set-plan")
 async def admin_set_plan(body: SetPlanBody, admin=Depends(require_admin)):
-    if not set_user_plan(body.uid, body.plan, body.pro_expires_at):
+    if not set_user_plan(body.uid, body.plan, body.pro_expires_at, body.billing_period):
         raise HTTPException(status_code=400, detail="플랜 변경 실패 (uid 없음 또는 잘못된 플랜)")
     return {"ok": True}
 

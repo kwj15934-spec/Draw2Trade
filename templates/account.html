@@ -188,13 +188,21 @@
         <span class="sub-label">현재 플랜</span>
         <span class="sub-value" id="sub-plan">—</span>
       </div>
+      <div class="sub-row" id="sub-billing-row" style="display:none;">
+        <span class="sub-label">구독 유형</span>
+        <span class="sub-value" id="sub-billing">—</span>
+      </div>
       <div class="sub-row" id="sub-expires-row" style="display:none;">
         <span class="sub-label">만료일</span>
         <span class="sub-value" id="sub-expires">—</span>
       </div>
+      <div class="sub-row" id="sub-remaining-row" style="display:none;">
+        <span class="sub-label">남은 일수</span>
+        <span class="sub-value" id="sub-remaining">—</span>
+      </div>
       <div id="free-upgrade" style="display:none;">
         <p style="color:var(--text-dim);font-size:13px;margin:12px 0 0;">
-          Pro 플랜으로 업그레이드하고 무제한 검색, Top 1~50 전체 결과, 자동 분석을 이용하세요.
+          Pro 플랜으로 업그레이드하고 AI 리터치·백테스팅·Top 1~50 등 모든 기능을 이용하세요.
         </p>
         <a href="/pricing" class="upgrade-cta">Pro로 업그레이드 →</a>
       </div>
@@ -266,9 +274,28 @@
       // 구독
       document.getElementById('sub-plan').textContent = u.plan === 'pro' ? 'Pro' : 'Free';
       if (u.plan === 'pro') {
+        // 구독 유형 (월/연)
+        if (u.billing_period) {
+          document.getElementById('sub-billing-row').style.display = 'flex';
+          document.getElementById('sub-billing').textContent =
+            u.billing_period === 'annual' ? '연간 ($60)' : '월간 ($6)';
+        }
         if (u.pro_expires_at) {
           document.getElementById('sub-expires-row').style.display = 'flex';
           document.getElementById('sub-expires').textContent = formatDate(u.pro_expires_at);
+
+          // 남은 일수 계산
+          var expiresMs = new Date(u.pro_expires_at).getTime();
+          var nowMs = Date.now();
+          var remainingDays = Math.max(0, Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)));
+          document.getElementById('sub-remaining-row').style.display = 'flex';
+          var remainEl = document.getElementById('sub-remaining');
+          remainEl.textContent = remainingDays + '일';
+          // 7일 이하 남으면 경고 색상
+          if (remainingDays <= 7) {
+            remainEl.style.color = '#ff6b35';
+            remainEl.style.fontWeight = '700';
+          }
         }
       } else {
         document.getElementById('free-upgrade').style.display = 'block';

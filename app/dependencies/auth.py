@@ -19,9 +19,10 @@ def get_optional_user(request: Request) -> dict | None:
     # plan은 항상 DB에서 최신값을 읽어 반영 (admin에서 변경 시 즉시 적용, pro 만료 자동 체크 포함)
     uid = user["uid"]
     user["plan"] = get_user_plan(uid)
-    # pro_expires_at도 함께 노출
+    # pro_expires_at · billing_period 함께 노출 (계정 페이지 UI 용)
     db_user = _load_users().get(uid, {})
     user["pro_expires_at"] = db_user.get("pro_expires_at")
+    user["billing_period"] = db_user.get("billing_period")
     return user
 
 

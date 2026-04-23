@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import firebase_admin
@@ -194,21 +194,56 @@ def get_user_plan(uid: str) -> str:
     return plan
 
 
-def set_user_plan(uid: str, plan: str, pro_expires_at: str | None = None) -> bool:
-    """유저 플랜 변경. plan: 'free' | 'pro', pro_expires_at: ISO8601 날짜 (pro일 때만 사용)"""
+def compute_expires_at(billing_period: str, start: datetime | None = None) -> str:
+    """
+    billing_period 에 따른 만료일 ISO8601 문자열 반환.
+    'monthly' → 30일 후 / 'annual' → 365일 후.
+    """
+    base = start or datetime.now(timezone.utc)
+    days = 365 if billing_period == "annual" else 30
+    return (base + timedelta(days=days)).isoformat()
+
+
+def set_user_plan(
+    uid: str,
+    plan: str,
+    pro_expires_at: str | None = None,
+    billing_period: str | None = None,
+) -> bool:
+    """
+    유저 플랜 변경.
+
+    plan: 'free' | 'pro'
+    pro_expires_at: ISO8601 날짜 문자열 (명시적 지정 시 우선)
+    billing_period: 'monthly' | 'annual'
+      - pro_expires_at 미지정 시 이 값으로 만료일 자동 계산
+      - users.json 에 기록되어 UI 에서 구독 유형 표시용으로 사용
+    """
     if plan not in ("free", "pro"):
+        return False
+    if billing_period and billing_period not in ("monthly", "annual"):
         return False
     users = _load_users()
     if uid not in users:
         return False
     users[uid]["plan"] = plan
     if plan == "pro":
+        if not pro_expires_at and billing_period:
+            pro_expires_at = compute_expires_at(billing_period)
         users[uid]["pro_expires_at"] = pro_expires_at  # None이면 무기한
+        if billing_period:
+            users[uid]["billing_period"] = billing_period
     else:
         users[uid]["pro_expires_at"] = None
+        users[uid].pop("billing_period", None)
     _save_users(users)
-    _firestore_upsert_user(uid, {"plan": plan, "pro_expires_at": users[uid].get("pro_expires_at")})
-    logger.info("유저 플랜 변경: %s → %s (만료: %s)", uid, plan, pro_expires_at)
+    _firestore_upsert_user(uid, {
+        "plan": plan,
+        "pro_expires_at": users[uid].get("pro_expires_at"),
+        "billing_period": users[uid].get("billing_period"),
+    })
+    logger.info("유저 플랜 변경: %s → %s (%s, 만료: %s)",
+                uid, plan, billing_period or "—", pro_expires_at)
     return True
 
 

@@ -6,16 +6,46 @@ DB / 스케줄러 / 알림 기능 없음.
 """
 import asyncio
 import logging
+import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+load_dotenv()  # draw2trade_web/.env 자동 로드 (Sentry 초기화 전에 필요)
+
+# ── Sentry 에러 모니터링 (SENTRY_DSN 설정 시에만 활성화) ─────────────────────
+# FastAPI 임포트 전에 초기화해야 자동 계측이 정상 동작
+_SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
+if _SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        sentry_sdk.init(
+            dsn=_SENTRY_DSN,
+            environment=os.environ.get("ENV", "production"),
+            release=os.environ.get("RELEASE_VERSION", "dev"),
+            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.05")),
+            profiles_sample_rate=float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+            send_default_pii=False,   # 개인정보 최소화
+            integrations=[
+                LoggingIntegration(level=None, event_level=None),  # 중복 방지 (아래서 logger.error 로만)
+            ],
+            # 필터: 401/403/404 같은 기대 가능 에러는 제외
+            before_send=lambda event, hint: None
+                if hint and isinstance(hint.get("exc_info", [None, None, None])[1], Exception)
+                and getattr(hint["exc_info"][1], "status_code", None) in (401, 403, 404, 429)
+                else event,
+        )
+    except Exception as _e:
+        # Sentry 초기화 실패해도 앱은 계속 동작
+        import logging as _lg
+        _lg.getLogger(__name__).warning("Sentry 초기화 실패: %s", _e)
+
 from fastapi import Depends, FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-
-load_dotenv()  # draw2trade_web/.env 자동 로드
 
 from fastapi import Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -439,13 +469,19 @@ async def admin_delete_notice(notice_id: int, request: Request):
 async def pro_request(request: Request, user: dict = Depends(require_user)):
     body = await request.json()
     memo = (body.get("memo") or "").strip()
+    billing = (body.get("billing_period") or "monthly").strip().lower()
+    if billing not in ("monthly", "annual"):
+        billing = "monthly"
+    # 메모 상단에 구독 유형을 태그로 저장 (관리자 승인 시 확인용)
+    tag = "[연간 $60]" if billing == "annual" else "[월 $6]"
+    prefixed = f"{tag} {memo}".strip()
     inquiry_service.save_pro_request(
         uid=user["uid"],
         name=user.get("name", ""),
         email=user.get("email", ""),
-        memo=memo,
+        memo=prefixed,
     )
-    return JSONResponse({"ok": True})
+    return JSONResponse({"ok": True, "billing_period": billing})
 
 
 @app.get("/api/admin/pro-requests")
