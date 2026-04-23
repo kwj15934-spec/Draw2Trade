@@ -33,16 +33,33 @@ logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 재시도 가능한 POST — 429/503 일 때 지수 백오프
+# 재시도 가능한 POST — 429/5xx 일 때 지수 백오프 + Retry-After 헤더 존중
 # ──────────────────────────────────────────────────────────────────────────────
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
-_MAX_RETRIES       = 2    # 총 최대 3회 호출 (초기 + 재시도 2회)
-_BASE_BACKOFF_SEC  = 1.0
+_MAX_RETRIES       = 3       # 총 최대 4회 호출 (초기 + 재시도 3회)
+_BASE_BACKOFF_SEC  = 2.0     # 무료 티어 1분 10 RPM 한도 대응
+_MAX_BACKOFF_SEC   = 15.0    # 한 번에 15초 이상 기다리지 않음
+
+
+def _parse_retry_after(resp: httpx.Response) -> float | None:
+    """Retry-After 헤더 (초 단위 또는 HTTP-date) 파싱."""
+    ra = resp.headers.get("retry-after") or resp.headers.get("Retry-After")
+    if not ra:
+        return None
+    try:
+        return min(_MAX_BACKOFF_SEC, float(ra.strip()))
+    except ValueError:
+        # HTTP-date 포맷은 무시 (거의 안 옴)
+        return None
 
 
 async def _post_with_retry(url: str, params: dict, payload: dict, timeout: float) -> httpx.Response:
-    """Gemini API POST — 429/5xx 는 지수 백오프로 재시도."""
+    """
+    Gemini API POST — 429/5xx 는 지수 백오프 + Retry-After 헤더 우선 적용.
+    총 최대 약 2+4+8 = 14초 대기 후에도 실패하면 마지막 응답 반환.
+    """
     last_exc: Exception | None = None
+    import random
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(_MAX_RETRIES + 1):
             try:
@@ -53,7 +70,15 @@ async def _post_with_retry(url: str, params: dict, payload: dict, timeout: float
                     headers={"content-type": "application/json"},
                 )
                 if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
-                    backoff = _BASE_BACKOFF_SEC * (2 ** attempt)
+                    # Retry-After 있으면 우선, 없으면 지수 백오프 + jitter
+                    ra = _parse_retry_after(resp)
+                    if ra is not None:
+                        backoff = ra
+                    else:
+                        backoff = min(
+                            _MAX_BACKOFF_SEC,
+                            _BASE_BACKOFF_SEC * (2 ** attempt) + random.uniform(0, 0.5),
+                        )
                     logger.info("Gemini %d — %.1fs 후 재시도 (%d/%d)",
                                 resp.status_code, backoff, attempt + 1, _MAX_RETRIES)
                     await asyncio.sleep(backoff)
@@ -62,7 +87,9 @@ async def _post_with_retry(url: str, params: dict, payload: dict, timeout: float
             except httpx.TimeoutException as e:
                 last_exc = e
                 if attempt < _MAX_RETRIES:
-                    await asyncio.sleep(_BASE_BACKOFF_SEC * (2 ** attempt))
+                    await asyncio.sleep(
+                        min(_MAX_BACKOFF_SEC, _BASE_BACKOFF_SEC * (2 ** attempt))
+                    )
                     continue
                 raise
     if last_exc:
@@ -73,7 +100,10 @@ async def _post_with_retry(url: str, params: dict, payload: dict, timeout: float
 def _classify_http_error(status_code: int) -> str:
     """HTTP 상태코드 → 유저 친화적 메시지."""
     if status_code == 429:
-        return "AI 가 일시적으로 바쁩니다. 잠시 후 다시 시도해주세요."
+        return (
+            "AI 분석 요청이 많아 잠시 대기가 필요합니다. "
+            "30초 후 다시 시도해주세요."
+        )
     if status_code == 403:
         return "API 키가 유효하지 않거나 권한이 부족합니다."
     if status_code == 400:

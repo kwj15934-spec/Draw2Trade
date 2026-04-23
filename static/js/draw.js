@@ -741,9 +741,38 @@
     _aiUserAnswers = {};
     _aiPreviewPoints = (data.refined_points && data.refined_points.length) ? data.refined_points : null;
 
+    // AI 가 완전히 실패한 상태 — 패턴 분석 결과 없음 (rate limit 등)
+    var aiUnavailable = !!data.error && !data.pattern_name;
+
     var parts = [];
 
-    // 헤더: 패턴명 + 신뢰도
+    if (aiUnavailable) {
+      // ── 에러 상태 전용 화면 ────────────────────────────
+      parts.push('<div class="ai-modal-error">⚠️ ', _escapeHtml(data.error), '</div>');
+      parts.push('<div style="font-size:12px;color:#7a8499;line-height:1.55;margin-bottom:12px;">');
+      parts.push('AI 분석은 일시적으로 어렵지만 <b style="color:#d1d4dc;">기본 스무딩</b>(손떨림·급등락 보정)은 적용할 수 있습니다.');
+      parts.push('</div>');
+      parts.push('<div class="ai-modal-actions">');
+      parts.push('<button type="button" class="ai-modal-btn-cancel" onclick="closeAIRetouchModal()">닫기</button>');
+      parts.push('<button type="button" class="ai-modal-btn-secondary" id="ai-retouch-retry">다시 시도</button>');
+      if (_aiPreviewPoints) {
+        parts.push('<button type="button" class="ai-modal-btn-primary" id="ai-retouch-search">기본 보정 후 검색 →</button>');
+      }
+      parts.push('</div>');
+
+      body.innerHTML = parts.join('');
+
+      var retryBtn = document.getElementById('ai-retouch-retry');
+      if (retryBtn) retryBtn.addEventListener('click', function () {
+        // 동일 API 재호출
+        if (typeof openAIRetouchModal === 'function') openAIRetouchModal();
+      });
+      var searchBtn2 = document.getElementById('ai-retouch-search');
+      if (searchBtn2) searchBtn2.addEventListener('click', function () { _applyRetouch(true); });
+      return;
+    }
+
+    // ── 정상 분석 결과 화면 ────────────────────────────
     parts.push('<div class="ai-modal-pattern-header">');
     parts.push('<span class="ai-modal-pattern-name">', _escapeHtml(data.pattern_name || 'AI 분석 패턴'), '</span>');
     if (typeof data.confidence === 'number') {
@@ -755,7 +784,7 @@
       parts.push('<div class="ai-modal-desc">', _escapeHtml(data.description), '</div>');
     }
 
-    // API 경고 (키 없음 등)
+    // 부분 경고 (AI는 성공했는데 일부 이슈)
     if (data.error) {
       parts.push('<div class="ai-modal-warn">⚠️ ', _escapeHtml(data.error), '</div>');
     }
