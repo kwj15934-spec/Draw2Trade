@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>밈 차트 게시판 · Draw2Trade</title>
+<meta name="description" content="유저가 그린 재미있는 차트 패턴을 공유하는 커뮤니티. 기영이 앞구르기부터 쿠크다스 붕괴까지.">
+<style>
+  :root {
+    --bg: #141416;
+    --bg-2: #1a1a1c;
+    --card: #1e1e21;
+    --card-hover: #242428;
+    --border: #2d2d30;
+    --border-strong: #3a3a3e;
+    --text: #d4d8e2;
+    --text-hi: #e8eaed;
+    --text-dim: #7a8499;
+    --teal: #26a69a;
+    --orange: #ff6b35;
+    --gold: #ffb84d;
+    --red: #ff5252;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
+  a { color: inherit; text-decoration: none; }
+
+  .mb-wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 80px; }
+  .mb-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .mb-title { font-size: 24px; font-weight: 800; color: var(--text-hi); letter-spacing: -0.02em; }
+  .mb-sub { color: var(--text-dim); font-size: 13px; }
+  .mb-back { color: var(--teal); font-size: 13px; margin-left: auto; }
+  .mb-back:hover { text-decoration: underline; }
+
+  .mb-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0 18px; align-items: center; }
+  .mb-tabs { display: flex; gap: 4px; }
+  .mb-tab {
+    background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 7px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .mb-tab:hover { color: var(--text-hi); border-color: var(--border-strong); }
+  .mb-tab.active { background: var(--teal); color: #0b1413; border-color: var(--teal); }
+
+  .mb-create-btn {
+    margin-left: auto;
+    background: var(--teal); color: #0b1413; border: none;
+    padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .mb-create-btn:hover { background: #1f8f84; }
+  .mb-create-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── 그리드 ── */
+  .mb-grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 860px) { .mb-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .mb-grid { grid-template-columns: 1fr; } }
+
+  .mb-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+    cursor: pointer; transition: all .15s;
+    position: relative;
+  }
+  .mb-card:hover {
+    border-color: var(--teal);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+  }
+  .mb-card-rank {
+    position: absolute; top: 8px; left: 8px; z-index: 2;
+    background: rgba(0,0,0,0.65); color: #fff;
+    padding: 3px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .mb-card-rank.gold { background: var(--gold); color: #0b1413; }
+  .mb-card-rank.silver { background: #c0c5d0; color: #0b1413; }
+  .mb-card-rank.bronze { background: #cd7f32; color: #0b1413; }
+
+  .mb-thumb {
+    width: 100%; aspect-ratio: 2/1;
+    background: #0f1012;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mb-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .mb-thumb-fallback { color: var(--text-dim); font-size: 11px; }
+
+  .mb-card-body { padding: 12px 14px; }
+  .mb-card-title {
+    font-size: 14px; font-weight: 700; color: var(--text-hi);
+    line-height: 1.35; margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mb-card-desc {
+    font-size: 11.5px; color: var(--text-dim); line-height: 1.45;
+    margin-bottom: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mb-card-meta { display: flex; gap: 10px; font-size: 11px; color: var(--text-dim); }
+  .mb-card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+
+  .mb-empty {
+    text-align: center; padding: 60px 16px;
+    color: var(--text-dim); font-size: 13px; line-height: 1.6;
+  }
+  .mb-empty b { color: var(--text-hi); }
+
+  .mb-loader { text-align: center; padding: 40px; color: var(--text-dim); font-size: 12px; }
+  .mb-loader::before {
+    content: ''; display: inline-block;
+    width: 18px; height: 18px; margin-right: 8px; vertical-align: middle;
+    border: 2px solid var(--border); border-top-color: var(--teal); border-radius: 50%;
+    animation: mbspin .7s linear infinite;
+  }
+  @keyframes mbspin { to { transform: rotate(360deg); } }
+
+  /* ── 모달 (생성 + 상세) ── */
+  .mb-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    padding: 20px;
+  }
+  .mb-modal.open { display: flex; }
+  .mb-modal-dialog {
+    background: #1a1b1e; border: 1px solid var(--border);
+    border-radius: 12px; width: 100%; max-width: 620px;
+    max-height: 92vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: mbModalIn .2s ease-out;
+  }
+  @keyframes mbModalIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  .mb-modal-header {
+    display: flex; align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mb-modal-title { font-size: 14px; font-weight: 700; color: var(--text-hi); flex: 1; }
+  .mb-modal-close {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 4px;
+  }
+  .mb-modal-close:hover { background: #26272a; color: var(--text-hi); }
+  .mb-modal-body { padding: 16px 18px; }
+  .mb-modal-actions { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); }
+  .mb-modal-actions button { flex: 1; padding: 9px; border-radius: 5px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .mb-btn-cancel { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dim); }
+  .mb-btn-cancel:hover { color: var(--text); border-color: #5a5a5e; }
+  .mb-btn-primary { background: var(--teal); color: #0b1413; border: none; }
+  .mb-btn-primary:hover { background: #1f8f84; }
+  .mb-btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .mb-btn-danger:hover { background: rgba(255,82,82,0.1); }
+
+  .mb-field { margin-bottom: 14px; }
+  .mb-field label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+  .mb-field input[type=text], .mb-field textarea {
+    width: 100%; box-sizing: border-box;
+    background: #0f1012; border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 9px 11px; font-size: 13px; outline: none;
+    font-family: inherit; resize: vertical;
+  }
+  .mb-field input[type=text]:focus, .mb-field textarea:focus { border-color: var(--teal); }
+  .mb-field-hint { font-size: 10.5px; color: var(--text-dim); margin-top: 4px; }
+  .mb-field-err {
+    font-size: 11px; color: var(--orange);
+    background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 4px; padding: 6px 8px; margin-top: 4px;
+  }
+
+  /* 상세 모달 내부 */
+  .mb-detail-meta { display: flex; gap: 12px; font-size: 11.5px; color: var(--text-dim); margin-bottom: 10px; flex-wrap: wrap; }
+  .mb-detail-author { color: var(--teal); font-weight: 600; }
+  .mb-detail-desc { font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 14px; white-space: pre-wrap; }
+  .mb-detail-thumb { margin-bottom: 14px; }
+  .mb-detail-thumb img { width: 100%; border-radius: 6px; border: 1px solid var(--border); }
+  .mb-detail-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .mb-like-btn, .mb-report-btn, .mb-share-btn, .mb-delete-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 5px; font-size: 12px; cursor: pointer;
+    transition: all .15s;
+  }
+  .mb-like-btn:hover, .mb-report-btn:hover, .mb-share-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .mb-like-btn.liked { background: var(--teal); color: #0b1413; border-color: var(--teal); }
+  .mb-delete-btn { border-color: var(--red); color: var(--red); }
+  .mb-delete-btn:hover { background: rgba(255,82,82,0.1); }
+
+  .mb-comments-title { font-size: 12px; color: var(--text-dim); margin: 14px 0 10px; font-weight: 600; }
+  .mb-comment {
+    padding: 8px 10px; background: #141416; border: 1px solid var(--border);
+    border-radius: 5px; margin-bottom: 6px; font-size: 12.5px;
+  }
+  .mb-comment-meta { font-size: 10.5px; color: var(--text-dim); margin-bottom: 3px; display: flex; gap: 8px; align-items: center; }
+  .mb-comment-del { margin-left: auto; background: none; border: none; color: var(--text-dim); font-size: 11px; cursor: pointer; }
+  .mb-comment-del:hover { color: var(--red); }
+  .mb-comment-content { color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+  .mb-comment-form { display: flex; gap: 6px; margin-top: 10px; }
+  .mb-comment-form input {
+    flex: 1;
+    background: #0f1012; border: 1px solid var(--border); color: var(--text);
+    border-radius: 5px; padding: 8px 10px; font-size: 12.5px; outline: none;
+  }
+  .mb-comment-form input:focus { border-color: var(--teal); }
+  .mb-comment-form button { padding: 8px 14px; border-radius: 5px; background: var(--teal); color: #0b1413; border: none; font-weight: 700; font-size: 12px; cursor: pointer; }
+
+  .mb-login-notice {
+    text-align: center; padding: 12px; background: rgba(38,166,154,0.08);
+    border: 1px dashed rgba(38,166,154,0.3); border-radius: 6px;
+    font-size: 12px; color: var(--text-dim); margin-top: 10px;
+  }
+  .mb-login-notice a { color: var(--teal); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="mb-wrap">
+  <div class="mb-header">
+    <div class="mb-title">📈 밈 차트 게시판</div>
+    <div class="mb-sub">기영이 앞구르기부터 쿠크다스 붕괴까지 — 웃긴 차트 모음</div>
+    <a href="/app" class="mb-back">← 차트로 돌아가기</a>
+  </div>
+
+  <div class="mb-toolbar">
+    <div class="mb-tabs">
+      <button class="mb-tab active" data-sort="hot">🔥 인기</button>
+      <button class="mb-tab" data-sort="new">🆕 최신</button>
+      <button class="mb-tab" data-sort="week">📅 이번주</button>
+    </div>
+    <button class="mb-create-btn" id="mb-create-btn">+ 새 밈 올리기</button>
+  </div>
+
+  <div id="mb-list" class="mb-grid"></div>
+</div>
+
+<!-- ── 새 밈 작성 모달 ─────────────────────────────── -->
+<div class="mb-modal" id="mb-create-modal">
+  <div class="mb-modal-dialog">
+    <div class="mb-modal-header">
+      <span class="mb-modal-title">🎨 새 밈 차트 올리기</span>
+      <button class="mb-modal-close" onclick="mbCloseCreate()">✕</button>
+    </div>
+    <div class="mb-modal-body">
+      <div class="mb-field">
+        <label>제목 <span style="color:var(--teal)">*</span></label>
+        <input type="text" id="mb-create-title" maxlength="60" placeholder="예: 기영이 앞구르기 차트" />
+        <div class="mb-field-hint">최대 60자</div>
+      </div>
+      <div class="mb-field">
+        <label>설명 (선택)</label>
+        <textarea id="mb-create-desc" maxlength="300" rows="3" placeholder="이 차트가 왜 웃긴지 설명해주세요"></textarea>
+        <div class="mb-field-hint">최대 300자</div>
+      </div>
+      <div class="mb-field">
+        <label>태그 (선택, 쉼표로 구분)</label>
+        <input type="text" id="mb-create-tags" maxlength="120" placeholder="예: 국장, 테마주, 상한가" />
+      </div>
+      <div class="mb-field">
+        <label>패턴 소스</label>
+        <div id="mb-create-source" style="font-size:12px;color:var(--text-dim);padding:8px 10px;background:#0f1012;border:1px solid var(--border);border-radius:5px;">
+          /app 페이지에서 그림을 그린 후 <b>"밈으로 공유"</b> 버튼을 눌러주세요.
+        </div>
+      </div>
+      <div id="mb-create-err" class="mb-field-err" style="display:none;"></div>
+    </div>
+    <div class="mb-modal-actions">
+      <button class="mb-btn-cancel" onclick="mbCloseCreate()">취소</button>
+      <button class="mb-btn-primary" id="mb-create-submit" disabled>올리기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 상세 모달 ─────────────────────────────── -->
+<div class="mb-modal" id="mb-detail-modal">
+  <div class="mb-modal-dialog">
+    <div class="mb-modal-header">
+      <span class="mb-modal-title" id="mb-detail-title">제목</span>
+      <button class="mb-modal-close" onclick="mbCloseDetail()">✕</button>
+    </div>
+    <div class="mb-modal-body" id="mb-detail-body">
+      <div class="mb-loader">불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── 유틸 ─────────────────────────────────
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function timeAgo(ts) {
+    if (!ts) return '';
+    var diff = (Date.now() / 1000) - ts;
+    if (diff < 60) return '방금';
+    if (diff < 3600) return Math.floor(diff / 60) + '분 전';
+    if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+    if (diff < 604800) return Math.floor(diff / 86400) + '일 전';
+    var d = new Date(ts * 1000);
+    return d.getFullYear().toString().slice(2) + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+  }
+
+  var _currentSort = 'hot';
+  var _authState = { user: null };
+
+  fetch('/api/auth/me').then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      _authState.user = (data && data.authenticated) ? data.user : null;
+    }).catch(function () {});
+
+  // ── 리스트 로드 ─────────────────────────
+  function loadList(sort) {
+    _currentSort = sort;
+    var listEl = document.getElementById('mb-list');
+    listEl.innerHTML = '<div class="mb-loader">불러오는 중...</div>';
+    fetch('/api/memes?sort=' + sort + '&limit=30')
+      .then(function (r) { return r.ok ? r.json() : { memes: [] }; })
+      .then(function (data) { renderList(data.memes || []); })
+      .catch(function () { listEl.innerHTML = '<div class="mb-empty">불러오기 실패</div>'; });
+  }
+
+  function renderList(memes) {
+    var el = document.getElementById('mb-list');
+    if (!memes.length) {
+      el.innerHTML = '<div class="mb-empty" style="grid-column:1/-1;">'
+        + '아직 게시물이 없어요.<br>'
+        + '<b>첫 번째 밈</b>을 올려보세요! 🎨<br><br>'
+        + '<small>/app 에서 그림을 그리고 <b>"밈으로 공유"</b> 버튼을 눌러주세요.</small>'
+        + '</div>';
+      return;
+    }
+    var html = memes.map(function (m, idx) {
+      var rank = '';
+      if (_currentSort === 'hot' && idx < 3) {
+        var cls = ['gold','silver','bronze'][idx];
+        var medal = ['🥇','🥈','🥉'][idx];
+        rank = '<div class="mb-card-rank ' + cls + '">' + medal + ' TOP ' + (idx+1) + '</div>';
+      }
+      var thumb = m.thumbnail_path
+        ? '<img src="' + esc(m.thumbnail_path) + '" alt="" loading="lazy">'
+        : '<div class="mb-thumb-fallback">🖼️ 썸네일 없음</div>';
+      return '<div class="mb-card" data-id="' + esc(m.id) + '">'
+           +   rank
+           +   '<div class="mb-thumb">' + thumb + '</div>'
+           +   '<div class="mb-card-body">'
+           +     '<div class="mb-card-title">' + esc(m.title) + '</div>'
+           +     (m.description ? '<div class="mb-card-desc">' + esc(m.description) + '</div>' : '')
+           +     '<div class="mb-card-meta">'
+           +       '<span>👤 ' + esc(m.author_name || '익명') + '</span>'
+           +       '<span>❤️ ' + (m.like_count||0) + '</span>'
+           +       '<span>💬 ' + (m.comment_count||0) + '</span>'
+           +       '<span>👁 ' + (m.view_count||0) + '</span>'
+           +       '<span style="margin-left:auto">' + timeAgo(m.created_at) + '</span>'
+           +     '</div>'
+           +   '</div>'
+           + '</div>';
+    }).join('');
+    el.innerHTML = html;
+    // 카드 클릭 → 상세
+    var cards = el.querySelectorAll('.mb-card');
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].addEventListener('click', function () {
+        openDetail(this.getAttribute('data-id'));
+      });
+    }
+  }
+
+  // ── 상세 모달 ─────────────────────────
+  var _detailMeme = null;
+  window.mbCloseDetail = function () {
+    document.getElementById('mb-detail-modal').classList.remove('open');
+    _detailMeme = null;
+  };
+
+  function openDetail(id) {
+    var modal = document.getElementById('mb-detail-modal');
+    var body  = document.getElementById('mb-detail-body');
+    var title = document.getElementById('mb-detail-title');
+    modal.classList.add('open');
+    body.innerHTML = '<div class="mb-loader">불러오는 중...</div>';
+    title.textContent = '불러오는 중...';
+
+    fetch('/api/memes/' + encodeURIComponent(id))
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(function (m) {
+        _detailMeme = m;
+        renderDetail(m);
+      })
+      .catch(function () {
+        body.innerHTML = '<div class="mb-empty">게시물을 불러올 수 없습니다.</div>';
+      });
+  }
+
+  function renderDetail(m) {
+    var title = document.getElementById('mb-detail-title');
+    var body  = document.getElementById('mb-detail-body');
+    title.textContent = m.title;
+
+    var isMine = _authState.user && _authState.user.uid === m.uid;
+    var thumb = m.thumbnail_path
+      ? '<div class="mb-detail-thumb"><img src="' + esc(m.thumbnail_path) + '" alt=""></div>'
+      : '';
+    var liked = m.liked_by_me ? ' liked' : '';
+
+    body.innerHTML =
+        thumb
+      + '<div class="mb-detail-meta">'
+      +   '<span class="mb-detail-author">👤 ' + esc(m.author_name || '익명') + '</span>'
+      +   '<span>' + timeAgo(m.created_at) + '</span>'
+      +   '<span>👁 ' + (m.view_count||0) + '</span>'
+      + '</div>'
+      + (m.description ? '<div class="mb-detail-desc">' + esc(m.description) + '</div>' : '')
+      + '<div class="mb-detail-actions">'
+      +   '<button class="mb-like-btn' + liked + '" id="mb-like-btn">❤️ <span id="mb-like-count">' + (m.like_count||0) + '</span></button>'
+      +   '<button class="mb-share-btn" id="mb-share-btn">🔗 링크 복사</button>'
+      +   '<button class="mb-report-btn" id="mb-report-btn">🚩 신고</button>'
+      +   (isMine ? '<button class="mb-delete-btn" id="mb-delete-btn">삭제</button>' : '')
+      + '</div>'
+      + '<div class="mb-comments-title">💬 댓글 ' + (m.comment_count||0) + '개</div>'
+      + '<div id="mb-comments"><div class="mb-loader">댓글 불러오는 중...</div></div>'
+      + (_authState.user
+            ? '<form class="mb-comment-form" id="mb-comment-form">'
+              + '<input type="text" id="mb-comment-input" maxlength="500" placeholder="댓글 남기기" />'
+              + '<button type="submit">등록</button>'
+              + '</form>'
+            : '<div class="mb-login-notice">댓글·좋아요를 하려면 <a href="/login">로그인</a>이 필요합니다.</div>');
+
+    // 이벤트 바인딩
+    var likeBtn = document.getElementById('mb-like-btn');
+    if (likeBtn) likeBtn.addEventListener('click', function () { toggleLike(m.id); });
+    var shareBtn = document.getElementById('mb-share-btn');
+    if (shareBtn) shareBtn.addEventListener('click', function () { shareMeme(m.id); });
+    var reportBtn = document.getElementById('mb-report-btn');
+    if (reportBtn) reportBtn.addEventListener('click', function () { reportMeme(m.id); });
+    var deleteBtn = document.getElementById('mb-delete-btn');
+    if (deleteBtn) deleteBtn.addEventListener('click', function () { deleteMeme(m.id); });
+
+    var form = document.getElementById('mb-comment-form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        submitComment(m.id);
+      });
+    }
+
+    loadComments(m.id);
+  }
+
+  function loadComments(id) {
+    var el = document.getElementById('mb-comments');
+    if (!el) return;
+    fetch('/api/memes/' + encodeURIComponent(id) + '/comments')
+      .then(function (r) { return r.ok ? r.json() : { comments: [] }; })
+      .then(function (data) { renderComments(data.comments || []); });
+  }
+
+  function renderComments(comments) {
+    var el = document.getElementById('mb-comments');
+    if (!el) return;
+    if (!comments.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:12px;">첫 댓글을 남겨보세요!</div>';
+      return;
+    }
+    var html = comments.map(function (c) {
+      var isMine = _authState.user && _authState.user.uid === c.uid;
+      return '<div class="mb-comment">'
+           +   '<div class="mb-comment-meta">'
+           +     '<span style="color:var(--teal);font-weight:600;">' + esc(c.author_name || '익명') + '</span>'
+           +     '<span>' + timeAgo(c.created_at) + '</span>'
+           +     (isMine ? '<button class="mb-comment-del" data-cid="' + esc(c.id) + '">삭제</button>' : '')
+           +   '</div>'
+           +   '<div class="mb-comment-content">' + esc(c.content) + '</div>'
+           + '</div>';
+    }).join('');
+    el.innerHTML = html;
+    var dels = el.querySelectorAll('.mb-comment-del');
+    for (var i = 0; i < dels.length; i++) {
+      dels[i].addEventListener('click', function () {
+        if (_detailMeme) deleteComment(_detailMeme.id, this.getAttribute('data-cid'));
+      });
+    }
+  }
+
+  function submitComment(id) {
+    var input = document.getElementById('mb-comment-input');
+    if (!input) return;
+    var content = (input.value || '').trim();
+    if (!content) return;
+    fetch('/api/memes/' + encodeURIComponent(id) + '/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content }),
+    }).then(function (r) {
+      return r.json().then(function (d) { if (!r.ok) throw new Error(d.detail || 'error'); return d; });
+    }).then(function () {
+      input.value = '';
+      loadComments(id);
+      // 상세 모달 헤더의 카운트 갱신은 다음 오픈 시 자동
+    }).catch(function (err) { alert(err.message || '댓글 등록 실패'); });
+  }
+
+  function deleteComment(memeId, cid) {
+    if (!confirm('댓글을 삭제할까요?')) return;
+    fetch('/api/memes/' + encodeURIComponent(memeId) + '/comments/' + encodeURIComponent(cid), {
+      method: 'DELETE',
+    }).then(function () { loadComments(memeId); });
+  }
+
+  function toggleLike(id) {
+    if (!_authState.user) { alert('로그인이 필요합니다.'); return; }
+    fetch('/api/memes/' + encodeURIComponent(id) + '/like', { method: 'POST' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        var btn = document.getElementById('mb-like-btn');
+        var cnt = document.getElementById('mb-like-count');
+        if (btn) btn.classList.toggle('liked', data.liked);
+        if (cnt) cnt.textContent = data.like_count;
+      });
+  }
+
+  function shareMeme(id) {
+    var url = window.location.origin + '/community/memes#' + id;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function () { alert('링크가 복사되었습니다.'); });
+    } else {
+      prompt('링크를 복사하세요:', url);
+    }
+  }
+
+  function reportMeme(id) {
+    if (!_authState.user) { alert('로그인이 필요합니다.'); return; }
+    if (!confirm('이 게시물을 신고할까요?\n3회 이상 신고되면 자동으로 숨김 처리됩니다.')) return;
+    fetch('/api/memes/' + encodeURIComponent(id) + '/report', { method: 'POST' })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.detail); return d; }); })
+      .then(function () { alert('신고가 접수되었습니다.'); })
+      .catch(function (err) { alert(err.message || '신고 실패'); });
+  }
+
+  function deleteMeme(id) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    fetch('/api/memes/' + encodeURIComponent(id), { method: 'DELETE' })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.detail); return d; }); })
+      .then(function () {
+        alert('삭제되었습니다.');
+        mbCloseDetail();
+        loadList(_currentSort);
+      })
+      .catch(function (err) { alert(err.message || '삭제 실패'); });
+  }
+
+  // ── 새 밈 작성 ─────────────────────────
+  window.mbCloseCreate = function () {
+    document.getElementById('mb-create-modal').classList.remove('open');
+    document.getElementById('mb-create-err').style.display = 'none';
+  };
+
+  function openCreate() {
+    if (!_authState.user) {
+      alert('로그인이 필요합니다.');
+      window.location.href = '/login';
+      return;
+    }
+    // sessionStorage 에서 draw_points 확인
+    var raw = sessionStorage.getItem('d2t_meme_draw_points');
+    var submitBtn = document.getElementById('mb-create-submit');
+    var srcBox = document.getElementById('mb-create-source');
+    if (raw) {
+      try {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length >= 10) {
+          srcBox.innerHTML = '✅ <b>/app 에서 그린 패턴</b>이 로드되었습니다. (' + parsed.length + ' points)';
+          srcBox.style.color = 'var(--teal)';
+          submitBtn.disabled = false;
+          submitBtn.dataset.ready = '1';
+          submitBtn.dataset.points = raw;
+          return;
+        }
+      } catch (e) {}
+    }
+    srcBox.innerHTML = '❌ /app 에서 그림을 그린 후 <b>"밈으로 공유"</b> 버튼을 눌러주세요.';
+    srcBox.style.color = 'var(--orange)';
+    submitBtn.disabled = true;
+    submitBtn.dataset.ready = '';
+  }
+
+  document.getElementById('mb-create-btn').addEventListener('click', function () {
+    openCreate();
+    document.getElementById('mb-create-modal').classList.add('open');
+    document.getElementById('mb-create-title').focus();
+  });
+
+  document.getElementById('mb-create-submit').addEventListener('click', function () {
+    var btn = this;
+    if (btn.disabled || !btn.dataset.ready) return;
+    var title = (document.getElementById('mb-create-title').value || '').trim();
+    var desc  = (document.getElementById('mb-create-desc').value || '').trim();
+    var tagsRaw = (document.getElementById('mb-create-tags').value || '').trim();
+    var errEl = document.getElementById('mb-create-err');
+    errEl.style.display = 'none';
+
+    if (!title) {
+      errEl.textContent = '제목을 입력해주세요.';
+      errEl.style.display = 'block';
+      return;
+    }
+    var draw_points;
+    try {
+      draw_points = JSON.parse(btn.dataset.points);
+    } catch (e) {
+      errEl.textContent = '패턴 데이터가 올바르지 않습니다.';
+      errEl.style.display = 'block';
+      return;
+    }
+    var tags = tagsRaw.split(/[,，、\s]+/).filter(function (t) { return t.trim().length > 0; }).slice(0, 6);
+
+    btn.disabled = true;
+    btn.textContent = '업로드 중...';
+    fetch('/api/memes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        description: desc,
+        draw_points: draw_points,
+        tags: tags,
+      }),
+    }).then(function (r) {
+      return r.json().then(function (d) { if (!r.ok) throw new Error(d.detail || 'error'); return d; });
+    }).then(function () {
+      sessionStorage.removeItem('d2t_meme_draw_points');
+      mbCloseCreate();
+      loadList('new');
+      document.querySelectorAll('.mb-tab').forEach(function (t) {
+        t.classList.toggle('active', t.getAttribute('data-sort') === 'new');
+      });
+    }).catch(function (err) {
+      errEl.textContent = err.message || '업로드 실패';
+      errEl.style.display = 'block';
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = '올리기';
+    });
+  });
+
+  // ── 탭 전환 ─────────────────────────
+  document.querySelectorAll('.mb-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.mb-tab').forEach(function (t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      loadList(this.getAttribute('data-sort'));
+    });
+  });
+
+  // 초기 로드
+  loadList('hot');
+
+  // URL 해시로 상세 오픈
+  if (window.location.hash && window.location.hash.length > 1) {
+    var hashId = window.location.hash.slice(1);
+    setTimeout(function () { openDetail(hashId); }, 300);
+  }
+})();
+</script>
+
+</body>
+</html>
