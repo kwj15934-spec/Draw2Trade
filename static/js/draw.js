@@ -2442,6 +2442,31 @@
     var _btnRetouch = document.getElementById('btn-ai-retouch');
     if (_btnRetouch) _btnRetouch.addEventListener('click', openAIRetouchModal);
 
+    // 밈으로 공유 버튼 — draw_points 를 sessionStorage 에 저장 후 밈 게시판 이동
+    var _btnShareMeme = document.getElementById('btn-share-meme');
+    if (_btnShareMeme) _btnShareMeme.addEventListener('click', function () {
+      if (drawPoints.length < 2) {
+        showStatus('먼저 패턴을 그려주세요', 'error');
+        return;
+      }
+      if (!window._isLoggedIn) {
+        window.location.href = '/login';
+        return;
+      }
+      var pts = penPointsTo150(drawPoints);
+      if (!pts || pts.length < 10) {
+        showStatus('패턴 데이터가 부족합니다', 'error');
+        return;
+      }
+      try {
+        sessionStorage.setItem('d2t_meme_draw_points', JSON.stringify(pts));
+      } catch (e) {
+        showStatus('브라우저 저장소 오류', 'error');
+        return;
+      }
+      window.location.href = '/community/memes';
+    });
+
     // AI 차트 요청 버튼 (Pro) — 텍스트로 패턴 생성
     var _btnTextReq = document.getElementById('btn-ai-text-request');
     if (_btnTextReq) _btnTextReq.addEventListener('click', openAITextModal);
