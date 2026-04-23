@@ -792,28 +792,23 @@
           var drawNorm  = window._getDrawNormalized();
 
           if (matchNorm && matchNorm.length >= 2 && drawNorm && drawNorm.length >= 2) {
-            // 0~1 정규화 배열을 filtered 캔들 시간축에 매핑 (가격 변환 없이 그대로)
-            safeMatchData = _normToPriceSeries(matchNorm, filtered, 0, 1);
-            safeDrawData  = _normToPriceSeries(drawNorm,  filtered, 0, 1);
+            // 매치 구간의 실제 가격 범위로 역정규화 → 캔들 'right' 축과 자연스럽게 겹침.
+            // (0~1 overlay 스케일을 쓰면 캔들 축과 충돌해 Y축이 음수까지 늘어나는 버그 발생)
+            var pMin = (D2T.matchPeriodData && isFinite(D2T.matchPeriodData.priceMin))
+                        ? D2T.matchPeriodData.priceMin : 0;
+            var pMax = (D2T.matchPeriodData && isFinite(D2T.matchPeriodData.priceMax))
+                        ? D2T.matchPeriodData.priceMax : 1;
+            safeMatchData = _normToPriceSeries(matchNorm, filtered, pMin, pMax);
+            safeDrawData  = _normToPriceSeries(drawNorm,  filtered, pMin, pMax);
 
-            // 독립 price scale: 시리즈 먼저 추가 후 priceScale() 설정
-            // (v4.1.0에서 chart.priceScale('custom-id')는 시리즈 추가 전 null 반환)
             _patternDrawSeries = D2T.chart.addLineSeries({
-              color: '#ff6b35', lineWidth: 3, priceScaleId: 'pattern-overlay',
+              color: '#ff6b35', lineWidth: 3, priceScaleId: 'right',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
             _patternMatchSeries = D2T.chart.addLineSeries({
-              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'pattern-overlay',
+              color: '#26a69a', lineWidth: 3, lineStyle: 2, priceScaleId: 'right',
               crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false,
             });
-
-            // 시리즈 추가 후 scale 옵션 적용 (캔들 축에 영향 없음)
-            try {
-              _patternDrawSeries.priceScale().applyOptions({
-                scaleMargins: { top: 0.05, bottom: 0.25 },
-                visible: false,
-              });
-            } catch (_) {}
 
             _patternDrawSeries.setData(safeDrawData);
             _patternMatchSeries.setData(safeMatchData);
