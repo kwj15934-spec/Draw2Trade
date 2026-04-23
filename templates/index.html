@@ -298,6 +298,21 @@
       </svg>
       유사 종목 검색
     </button>
+    <button id="btn-ai-retouch" class="btn-d2t" aria-label="AI 가 내 그림을 보정" title="내가 그린 패턴을 AI가 분석·보정하고 거래량 등을 물어봅니다 (Pro 전용)">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l1.5 4.5H18l-3.6 2.7 1.5 4.5L12 11l-3.9 2.7 1.5-4.5L6 6.5h4.5z"/>
+        <path d="M5 21c2-2 5-2 7-2s5 0 7 2"/>
+      </svg>
+      AI 리터치
+      <span class="btn-pro-mini">PRO</span>
+    </button>
+    <button id="btn-ai-text-request" class="btn-d2t" aria-label="AI 에게 차트 패턴 요청" title="원하는 패턴을 글로 설명하면 AI가 차트로 그려줍니다 (Pro 전용)">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      AI 차트 요청
+      <span class="btn-pro-mini">PRO</span>
+    </button>
     <!-- 이미지 업로드 버튼은 UI에서 숨김 (백엔드 엔드포인트는 추후 다른 용도로 재활용 가능) -->
 
     <button id="btn-back-to-origin" class="btn-d2t"
@@ -554,41 +569,6 @@
 
       <!-- ── 유사 종목 패널 ─────────────────────── -->
       <div id="sidebar-panel-results" class="sidebar-content-panel active">
-        <!-- AI 에게 패턴 요청 (Pro 전용) -->
-        <div class="ai-prompt-box" id="ai-prompt-box">
-          <div class="ai-prompt-header">
-            <span class="ai-prompt-title">🤖 AI 에게 차트 요청</span>
-            <span class="ai-prompt-badge">PRO</span>
-          </div>
-          <div class="ai-prompt-input-row">
-            <input
-              id="ai-prompt-input"
-              type="text"
-              maxlength="200"
-              placeholder="예: 쌍바닥 패턴 · V자 반등 · 계단식 상승"
-              aria-label="AI 패턴 생성 요청"
-              autocomplete="off" />
-            <button
-              id="ai-prompt-submit"
-              type="button"
-              class="ai-prompt-btn"
-              aria-label="AI 패턴 생성">
-              생성
-            </button>
-          </div>
-          <div class="ai-prompt-examples" id="ai-prompt-examples">
-            <span class="ai-example-chip" data-example="쌍바닥 패턴">쌍바닥</span>
-            <span class="ai-example-chip" data-example="V자 반등">V자반등</span>
-            <span class="ai-example-chip" data-example="계단식 상승">계단식</span>
-            <span class="ai-example-chip" data-example="급등 후 급락">급등후급락</span>
-            <span class="ai-example-chip" data-example="박스권 돌파">박스권돌파</span>
-          </div>
-          <div id="ai-prompt-error" class="ai-prompt-error" style="display:none;"></div>
-        </div>
-
-        <!-- AI 생성 결과 배너 + 후속질문 (AI 생성 성공 시 표시) -->
-        <div class="ai-gen-banner" id="ai-gen-banner" style="display:none;"></div>
-
         <div class="d2t-sidebar-header">
           <span class="result-header-title">☰ 검색 결과</span>
           <span id="result-count" class="result-header-count" style="display:none;"></span>
@@ -679,6 +659,54 @@
       </button>
     </div>
     <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid #2d2d30;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
+  </div>
+</div>
+
+<!-- ── AI 리터치 모달 (분석 결과 + 질문) ─────────────────────── -->
+<div id="ai-retouch-modal" class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-retouch-title" style="display:none;">
+  <div class="ai-modal-backdrop" onclick="closeAIRetouchModal()"></div>
+  <div class="ai-modal-dialog">
+    <div class="ai-modal-header">
+      <span id="ai-retouch-title" class="ai-modal-title">🤖 AI 리터치</span>
+      <button type="button" class="ai-modal-close" onclick="closeAIRetouchModal()" aria-label="닫기">✕</button>
+    </div>
+    <div class="ai-modal-body" id="ai-retouch-body">
+      <div class="ai-modal-loading">AI 가 패턴을 분석 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI 차트 요청 모달 (텍스트 입력) ─────────────────────── -->
+<div id="ai-text-modal" class="ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-text-title" style="display:none;">
+  <div class="ai-modal-backdrop" onclick="closeAITextModal()"></div>
+  <div class="ai-modal-dialog">
+    <div class="ai-modal-header">
+      <span id="ai-text-title" class="ai-modal-title">💬 AI 에게 차트 요청</span>
+      <button type="button" class="ai-modal-close" onclick="closeAITextModal()" aria-label="닫기">✕</button>
+    </div>
+    <div class="ai-modal-body">
+      <div class="ai-modal-desc">원하는 패턴을 한 줄로 설명해주세요. 종목명·매매 추천 요청은 차단됩니다.</div>
+      <input
+        id="ai-text-input"
+        type="text"
+        maxlength="200"
+        placeholder="예: 쌍바닥 패턴, V자 반등, 계단식 상승"
+        aria-label="AI 패턴 생성 요청"
+        autocomplete="off" />
+      <div class="ai-modal-chips" id="ai-text-chips">
+        <span class="ai-example-chip" data-example="쌍바닥 패턴">쌍바닥</span>
+        <span class="ai-example-chip" data-example="V자 반등">V자반등</span>
+        <span class="ai-example-chip" data-example="계단식 상승">계단식</span>
+        <span class="ai-example-chip" data-example="급등 후 급락">급등후급락</span>
+        <span class="ai-example-chip" data-example="박스권 돌파">박스권돌파</span>
+        <span class="ai-example-chip" data-example="역헤드앤숄더">역헤드앤숄더</span>
+      </div>
+      <div id="ai-text-error" class="ai-modal-error" style="display:none;"></div>
+    </div>
+    <div class="ai-modal-actions">
+      <button type="button" class="ai-modal-btn-cancel" onclick="closeAITextModal()">취소</button>
+      <button type="button" class="ai-modal-btn-primary" id="ai-text-submit">생성</button>
+    </div>
   </div>
 </div>
 

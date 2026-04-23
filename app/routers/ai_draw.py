@@ -64,7 +64,6 @@ class AISmoothResponse(BaseModel):
     confidence: float | None = None
     warnings: list[str] = []
     configured: bool = True
-    quota_remaining: int | None = None
 
 
 def _quota_used_last_30d(uid: str) -> int:
@@ -103,7 +102,6 @@ async def smooth_pattern(body: AISmoothRequest, user: dict = Depends(require_pro
         confidence=result.get("confidence"),
         warnings=result.get("warnings", []),
         configured=bool(result.get("configured")),
-        quota_remaining=remaining,
     )
 
 
@@ -135,7 +133,6 @@ class ExtractImageResponse(BaseModel):
     confidence:   float | None = None
     note:         str | None = None
     error:        str | None = None
-    quota_remaining: int | None = None
 
 
 def _vision_quota_used_30d(uid: str) -> int:
@@ -183,7 +180,6 @@ async def extract_from_image(
         confidence=result.get("confidence"),
         note=result.get("note"),
         error=result.get("error"),
-        quota_remaining=remaining,
     )
 
 
@@ -240,7 +236,6 @@ class PatternFromTextResponse(BaseModel):
     follow_up_questions:  list[FollowUpQuestionOut] = []
     confidence:           float | None = None
     cleaned_prompt:       str | None = None
-    quota_remaining:      int | None = None
     error:                str | None = None
 
 
@@ -314,7 +309,6 @@ async def pattern_from_text(
         follow_up_questions=result.get("follow_up_questions", []),
         confidence=result.get("confidence"),
         cleaned_prompt=guard.cleaned if guard.cleaned != body.prompt else None,
-        quota_remaining=remaining,
         error=result.get("error"),
     )
 
@@ -358,7 +352,6 @@ class AnalyzeDrawingResponse(BaseModel):
     annotations:          list[AnnotationOut] = []
     follow_up_questions:  list[FollowUpQuestionOut] = []
     confidence:           float | None = None
-    quota_remaining:      int | None = None
     error:                str | None = None
 
 
@@ -405,7 +398,6 @@ async def analyze_drawing(
         annotations=result.get("annotations", []),
         follow_up_questions=result.get("follow_up_questions", []),
         confidence=result.get("confidence"),
-        quota_remaining=remaining,
         error=result.get("error"),
     )
 
