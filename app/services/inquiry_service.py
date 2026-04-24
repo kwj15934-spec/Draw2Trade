@@ -167,3 +167,76 @@ def count_pro_usage(uid: str, feature: str, since_ts: float) -> int:
             (uid, feature, since_ts),
         ).fetchone()
     return int(row[0]) if row else 0
+
+
+# ── 관리자용 전체 집계 ────────────────────────────────────────────────────────
+
+def usage_summary(since_ts: float) -> dict:
+    """
+    since_ts 이후 전체 기능별·유저별 집계.
+    반환:
+      {
+        "total": int,
+        "unique_users": int,
+        "by_feature": [{"feature": str, "count": int}],
+        "top_users":  [{"uid": str, "count": int}],  # 상위 10
+      }
+    """
+    with _conn() as con:
+        total_row = con.execute(
+            "SELECT COUNT(*), COUNT(DISTINCT uid) FROM pro_usage_log WHERE used_at>=?",
+            (since_ts,),
+        ).fetchone()
+        total = int(total_row[0]) if total_row else 0
+        unique_users = int(total_row[1]) if total_row else 0
+
+        by_feature_rows = con.execute(
+            "SELECT feature, COUNT(*) as c FROM pro_usage_log "
+            "WHERE used_at>=? GROUP BY feature ORDER BY c DESC",
+            (since_ts,),
+        ).fetchall()
+        by_feature = [{"feature": r[0], "count": int(r[1])} for r in by_feature_rows]
+
+        top_user_rows = con.execute(
+            "SELECT uid, COUNT(*) as c FROM pro_usage_log "
+            "WHERE used_at>=? GROUP BY uid ORDER BY c DESC LIMIT 10",
+            (since_ts,),
+        ).fetchall()
+        top_users = [{"uid": r[0], "count": int(r[1])} for r in top_user_rows]
+
+    return {
+        "total": total,
+        "unique_users": unique_users,
+        "by_feature": by_feature,
+        "top_users": top_users,
+    }
+
+
+def usage_timeline(since_ts: float, bucket_seconds: int = 3600) -> list[dict]:
+    """
+    since_ts 이후 버킷별 사용량 타임라인.
+    bucket_seconds: 집계 단위 (기본 3600 = 1시간).
+    반환: [{"ts": bucket_start, "count": int}, ...]  (시간 오름차순)
+    """
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT CAST(used_at / ? AS INTEGER) * ? AS bucket, COUNT(*) "
+            "FROM pro_usage_log WHERE used_at>=? "
+            "GROUP BY bucket ORDER BY bucket ASC",
+            (bucket_seconds, bucket_seconds, since_ts),
+        ).fetchall()
+    return [{"ts": float(r[0]), "count": int(r[1])} for r in rows]
+
+
+def usage_recent(limit: int = 50) -> list[dict]:
+    """최근 사용 이력 (감사 로그용)."""
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT uid, feature, detail, used_at FROM pro_usage_log "
+            "ORDER BY used_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [
+        {"uid": r[0], "feature": r[1], "detail": r[2] or "", "used_at": r[3]}
+        for r in rows
+    ]
