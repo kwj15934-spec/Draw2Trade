@@ -53,7 +53,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import ai_draw, auth, backtest, chart, dart, fundamental, google_auth, market, meme, pattern, user_data
+from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, meme, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -272,7 +272,6 @@ app.include_router(user_data.router)
 app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
-app.include_router(ai_draw.router)
 app.include_router(backtest.router)
 app.include_router(meme.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
@@ -511,82 +510,6 @@ async def admin_pro_usage(uid: str, request: Request):
 
 
 # ── AI 사용량 집계 (admin) ────────────────────────────────────────────────────
-
-# Gemini 단가 참고 (2026-04 기준, 변경 시 업데이트)
-# analyze_drawing / pattern_from_text / smooth (dead) ≈ $0.001/회
-# extract_from_image (Vision) ≈ $0.002/회
-# rejected 는 실제 호출 없음 → $0
-_AI_COST_PER_CALL: dict[str, float] = {
-    "ai_analyze_drawing":        0.0010,
-    "ai_pattern_gen":            0.0008,
-    "ai_extract_image":          0.0020,
-    "ai_smooth":                 0.0060,   # 레거시 (Claude, 제거됨) — 혹시 남은 로그용
-    "ai_pattern_gen_rejected":   0.0,      # 입력 가드 차단 → API 호출 없음
-    "backtest_forward":          0.0,      # 외부 API 없음
-    "pattern_search_top10":      0.0,      # 내부 검색
-}
-
-
-def _enrich_summary_with_cost(summary: dict) -> dict:
-    """by_feature 에 예상 비용 컬럼 추가."""
-    by_feature = summary.get("by_feature", [])
-    total_cost = 0.0
-    for item in by_feature:
-        cost_per = _AI_COST_PER_CALL.get(item["feature"], 0.0)
-        item_cost = round(cost_per * item["count"], 4)
-        item["cost_usd"] = item_cost
-        item["cost_per_call"] = cost_per
-        total_cost += item_cost
-    summary["total_cost_usd"] = round(total_cost, 4)
-    return summary
-
-
-@app.get("/api/admin/ai-usage/summary")
-async def admin_ai_usage_summary(request: Request, hours: int = 24):
-    """
-    최근 N시간 AI 사용량 집계 (기본 24시간).
-    hours: 24 | 168 (7일) | 720 (30일)
-    """
-    if not _is_admin(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=403)
-    import time as _time
-    hours = max(1, min(24 * 60, int(hours)))  # 최대 60일
-    since = _time.time() - hours * 3600
-    summary = inquiry_service.usage_summary(since)
-    summary = _enrich_summary_with_cost(summary)
-    summary["since_ts"] = since
-    summary["hours"] = hours
-    return JSONResponse(summary)
-
-
-@app.get("/api/admin/ai-usage/timeline")
-async def admin_ai_usage_timeline(request: Request, hours: int = 24, bucket_minutes: int = 60):
-    """
-    최근 N시간 시계열 사용량.
-    bucket_minutes: 집계 단위 (기본 60분). 24시간 조회 시 60분 / 7일 조회 시 360분 추천
-    """
-    if not _is_admin(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=403)
-    import time as _time
-    hours = max(1, min(24 * 60, int(hours)))
-    bucket_minutes = max(5, min(1440, int(bucket_minutes)))
-    since = _time.time() - hours * 3600
-    timeline = inquiry_service.usage_timeline(since, bucket_seconds=bucket_minutes * 60)
-    return JSONResponse({
-        "timeline": timeline,
-        "bucket_seconds": bucket_minutes * 60,
-        "since_ts": since,
-    })
-
-
-@app.get("/api/admin/ai-usage/recent")
-async def admin_ai_usage_recent(request: Request, limit: int = 50):
-    """최근 사용 이력 (감사 로그)."""
-    if not _is_admin(request):
-        return JSONResponse({"error": "unauthorized"}, status_code=403)
-    limit = max(1, min(500, int(limit)))
-    return JSONResponse({"recent": inquiry_service.usage_recent(limit=limit)})
-
 
 # ── 팝업 관리 (admin) ────────────────────────────────────────────────────────
 @app.get("/api/admin/popups")

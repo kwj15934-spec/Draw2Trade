@@ -5,11 +5,8 @@ GET /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·
 GET /api/v1/fundamental/{symbol}/analysis  — 재무 수치 분석 (AI 없음, 순수 DART 데이터)
 GET /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
 
-AI 재무 요약 기능은 제거됨 (Gemini API 사용량 관리 차원).
-AI API 는 다음 지정된 경로에서만 호출됩니다:
-  - POST /api/ai/analyze_drawing   (AI 리터치)
-  - POST /api/ai/pattern_from_text (AI 차트 요청)
-  - POST /api/ai/extract_from_image (이미지 → 패턴, UI 숨김)
+AI 기능은 모두 제거됨 (Gemini API 단일화 후 전면 삭제).
+재무 데이터는 DART Open API 를 통해서만 제공됩니다.
 """
 import logging
 from datetime import datetime, timezone, timedelta
