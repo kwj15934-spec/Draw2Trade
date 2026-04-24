@@ -694,6 +694,13 @@
       return;
     }
 
+    // 빈 캔버스 모드에서만 사용 가능
+    var _wrapper = document.getElementById('chart-wrapper');
+    if (!_wrapper || !_wrapper.classList.contains('blank-mode')) {
+      showStatus('AI 리터치는 빈 캔버스 모드에서만 사용할 수 있습니다', 'error');
+      return;
+    }
+
     // 그린 것이 있는지 체크
     var pts = drawPoints.length >= 2 ? penPointsTo150(drawPoints) : null;
     if (!pts) {
@@ -1244,6 +1251,21 @@
   var isBlankMode = false; // 빈 캔버스 모드 여부
   window.updatePeriodUI = function (isBlank) {
     isBlankMode = !!isBlank;
+    // AI 리터치 버튼은 빈 캔버스 모드에서만 활성화
+    var _btnRet = document.getElementById('btn-ai-retouch');
+    if (_btnRet) {
+      if (isBlankMode) {
+        _btnRet.disabled = false;
+        _btnRet.style.opacity = '';
+        _btnRet.style.cursor = '';
+        _btnRet.title = '내가 그린 패턴을 AI가 분석·보정하고 거래량 등을 물어봅니다 (Pro 전용)';
+      } else {
+        _btnRet.disabled = true;
+        _btnRet.style.opacity = '0.4';
+        _btnRet.style.cursor = 'not-allowed';
+        _btnRet.title = 'AI 리터치는 빈 캔버스 모드에서만 사용할 수 있습니다';
+      }
+    }
   };
 
   // ── 검색 로딩 헬퍼 ───────────────────────────────────────────────────────
@@ -2448,8 +2470,10 @@
     for (var _tci = 0; _tci < _textChips.length; _tci++) {
       _textChips[_tci].addEventListener('click', function (ev) {
         var ex = ev.currentTarget.getAttribute('data-example');
-        if (_aiTextInput) _aiTextInput.value = ex || '';
-        _handleAITextSubmit();
+        if (_aiTextInput) {
+          _aiTextInput.value = ex || '';
+          _aiTextInput.focus();
+        }
       });
     }
 
