@@ -3,10 +3,13 @@ Fundamental 라우터
 
 GET /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·성장성·안정성)
 GET /api/v1/fundamental/{symbol}/analysis  — 재무 요약 + AI 3줄 진단 통합 반환
+GET /api/v1/fundamental/{symbol}/ai-summary — AI 요약만 별도 호출 (버튼 클릭용)
 GET /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
 """
+import json
 import logging
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -16,6 +19,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/fundamental", tags=["fundamental"])
 
 _KST = timezone(timedelta(hours=9))
+
+# ── AI 재무 요약 디스크 캐시 ─────────────────────────────────────────────────
+# 재무제표는 분기별로만 업데이트되므로 7일 캐시로 충분
+_AI_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "ai_financial"
+_AI_CACHE_TTL_SECONDS = 7 * 24 * 3600
+
+
+def _ai_cache_path(symbol: str, year: int | None) -> Path:
+    _AI_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    suffix = str(year) if year else "latest"
+    return _AI_CACHE_DIR / f"{symbol}_{suffix}.json"
+
+
+def _ai_cache_get(symbol: str, year: int | None) -> dict | None:
+    """캐시된 AI 요약 반환. 없거나 만료 시 None."""
+    fp = _ai_cache_path(symbol, year)
+    if not fp.exists():
+        return None
+    try:
+        mtime = fp.stat().st_mtime
+        if (datetime.now().timestamp() - mtime) > _AI_CACHE_TTL_SECONDS:
+            return None
+        return json.loads(fp.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _ai_cache_set(symbol: str, year: int | None, ai_summary: dict) -> None:
+    """AI 요약 디스크 캐시 저장."""
+    fp = _ai_cache_path(symbol, year)
+    try:
+        fp.write_text(json.dumps(ai_summary, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        logger.warning("AI 요약 캐시 저장 실패 [%s]: %s", symbol, e)
 
 
 def _check_configured():
@@ -125,13 +162,10 @@ async def get_fundamental_analysis(
             detail=f"'{symbol}'의 재무 데이터를 찾을 수 없습니다.",
         )
 
-    # AI 요약 생성 (ANTHROPIC_API_KEY 미설정 시 None 필드 반환 — 오류 전파 없음)
-    ai_summary = await ai_service.generate_financial_summary(
-        stock_code=symbol,
-        summary=fundamental.get("summary", {}),
-        analysis=fundamental.get("analysis", {}),
-        years=fundamental.get("years", []),
-    )
+    # AI 요약은 더 이상 여기서 자동 생성하지 않습니다 (비용 절감).
+    # 캐시된 이전 요약이 있으면 함께 반환하고, 없으면 null — 프론트에서
+    # "AI 분석" 버튼으로 /ai-summary 엔드포인트를 명시 호출.
+    cached_ai = _ai_cache_get(symbol, year)
 
     return {
         "stock_code": fundamental["stock_code"],
@@ -139,8 +173,61 @@ async def get_fundamental_analysis(
         "years":      fundamental["years"],
         "summary":    fundamental["summary"],
         "analysis":   fundamental["analysis"],
-        "ai_summary": ai_summary,
+        "ai_summary": cached_ai,        # 캐시 hit 이면 이전 결과, miss 이면 null
     }
+
+
+# ── AI 재무 요약 (명시적 호출 전용) ──────────────────────────────────────────
+
+@router.get("/{symbol}/ai-summary")
+async def get_fundamental_ai_summary(
+    symbol: str,
+    year: int = Query(default=None),
+    force: bool = Query(default=False, description="true 면 캐시 무시하고 재생성"),
+):
+    """
+    종목의 AI 재무 요약만 반환 (Claude Haiku 4.5).
+
+    기본적으로 7일 디스크 캐시 사용. force=true 로 재생성 가능.
+    재무 데이터 로드에 실패하면 DART 직접 호출.
+    """
+    _check_configured()
+
+    # 캐시 확인
+    if not force:
+        cached = _ai_cache_get(symbol, year)
+        if cached:
+            return {"ai_summary": cached, "cached": True}
+
+    # 재무 데이터 먼저 조회
+    try:
+        fundamental = await dart_service.fetch_fundamental_summary(
+            stock_code=symbol,
+            base_year=year,
+        )
+    except Exception as e:
+        logger.exception("fundamental 조회 오류 [%s]: %s", symbol, e)
+        raise HTTPException(status_code=502, detail="DART API 호출에 실패했습니다.")
+
+    if not fundamental:
+        raise HTTPException(
+            status_code=404,
+            detail=f"'{symbol}'의 재무 데이터를 찾을 수 없습니다.",
+        )
+
+    # AI 호출
+    ai_summary = await ai_service.generate_financial_summary(
+        stock_code=symbol,
+        summary=fundamental.get("summary", {}),
+        analysis=fundamental.get("analysis", {}),
+        years=fundamental.get("years", []),
+    )
+
+    # 결과 캐시 (구성된 경우에만)
+    if ai_summary and (ai_summary.get("overview") or ai_summary.get("strength") or ai_summary.get("risk")):
+        _ai_cache_set(symbol, year, ai_summary)
+
+    return {"ai_summary": ai_summary, "cached": False}
 
 
 # ── 전체 재무제표 (IS / BS / CF 계정 전체) ───────────────────────────────────
