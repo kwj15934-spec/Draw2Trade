@@ -534,112 +534,11 @@
       ctx.fillText('유사 종목 매칭 구간 (점선)', lx + 24, ly + 4);
     }
 
-    // ⑤ AI 어노테이션 오버레이 (AI 패턴 생성 시에만 존재)
-    if (window._aiAnnotations && window._aiAnnotations.length) {
-      _renderAIAnnotations(window._aiAnnotations);
-    }
   }
 
-  // ── AI 어노테이션 렌더러 ────────────────────────────────────────────────
-  function _renderAIAnnotations(anns) {
-    if (!ctx || !canvas) return;
-    var W = canvas.width, H = canvas.height;
-
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-
-    // 1차: zone 을 제일 뒤에 (반투명 배경)
-    for (var i = 0; i < anns.length; i++) {
-      var a = anns[i];
-      if (a.type !== 'zone') continue;
-      ctx.fillStyle = a.color || 'rgba(38,166,154,0.18)';
-      var zx = a.x1 * W, zw = (a.x2 - a.x1) * W;
-      ctx.fillRect(zx, 0, zw, H);
-    }
-
-    // 2차: line (점선/실선)
-    for (var j = 0; j < anns.length; j++) {
-      var l = anns[j];
-      if (l.type !== 'line') continue;
-      ctx.strokeStyle = l.color || '#ff6b35';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash(l.style === 'dashed' ? [6, 4] : []);
-      ctx.beginPath();
-      ctx.moveTo(l.x1 * W, (1 - l.y1) * H);
-      ctx.lineTo(l.x2 * W, (1 - l.y2) * H);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // 3차: point (원 + 라벨)
-    for (var k = 0; k < anns.length; k++) {
-      var p = anns[k];
-      if (p.type !== 'point') continue;
-      var px = p.x * W, py = (1 - p.y) * H;
-      ctx.beginPath();
-      ctx.arc(px, py, 6, 0, 2 * Math.PI);
-      ctx.fillStyle = p.color || '#26a69a';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    // 4차: 모든 라벨 (겹침 최소화를 위해 마지막에)
-    ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-    ctx.textBaseline = 'middle';
-    for (var m = 0; m < anns.length; m++) {
-      var an = anns[m];
-      if (!an.label) continue;
-      var lx, ly, tx;
-      if (an.type === 'point') {
-        lx = an.x * W;
-        ly = (1 - an.y) * H - 16;
-        tx = 'center';
-      } else if (an.type === 'line') {
-        lx = an.x2 * W;
-        ly = (1 - an.y2) * H - 10;
-        tx = 'right';
-      } else { // zone
-        lx = (an.x1 + an.x2) / 2 * W;
-        ly = 14;
-        tx = 'center';
-      }
-      _drawAILabel(an.label, lx, ly, tx, an.color || '#d1d4dc');
-    }
-
-    ctx.restore();
-  }
-
-  function _drawAILabel(text, x, y, align, color) {
-    ctx.textAlign = align || 'center';
-    var padX = 5, padY = 2;
-    var metrics = ctx.measureText(text);
-    var tw = metrics.width;
-    var bx = x - (align === 'center' ? tw/2 : align === 'right' ? tw : 0) - padX;
-    var by = y - 8 - padY;
-    var bw = tw + padX * 2;
-    var bh = 16 + padY * 2;
-    // 배경
-    ctx.fillStyle = 'rgba(14,15,17,0.88)';
-    ctx.fillRect(bx, by, bw, bh);
-    // 테두리
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bx, by, bw, bh);
-    // 텍스트
-    ctx.fillStyle = '#e8eaed';
-    ctx.fillText(text, x, y);
-  }
-
-  // ── AI 패턴 생성 플로우 (Pro 전용) ──────────────────────────────────────
-  window._aiAnnotations = null;
-  window._aiSearchPending = false;   // true 면 doSearch 가 AI 분석 건너뜀 (1회성)
-  window._aiSearchHints = null;      // 검색 요청 body 에 주입될 volume_hint 등
-  var _aiLastResult = null;          // 마지막 AI 결과 (text gen + drawing analyze)
-  var _aiUserAnswers = {};           // {key: value}
-  var _aiPreviewPoints = null;       // refined_points 미리보기 (검색 시 적용)
-
+  // ──────────────────────────────────────────────────────────────────────────
+  // 패턴 정리 (클라이언트 스무딩 + 정규화, API 미사용)
+  // ──────────────────────────────────────────────────────────────────────────
   function _normalizedToPixelPointsAI(normPts) {
     if (!normPts || normPts.length < 2 || !canvas) return [];
     var out = [], W = canvas.width, H = canvas.height;
@@ -651,326 +550,50 @@
     return out;
   }
 
-  function _applyAIPatternToCanvas(data) {
-    // data.draw_points OR data.refined_points 둘 다 수용
-    var pts = data.draw_points && data.draw_points.length ? data.draw_points
-            : (data.refined_points && data.refined_points.length ? data.refined_points : null);
-    if (!pts) return;
-    pushHistory();
-    drawPoints       = _normalizedToPixelPointsAI(pts);
-    _drawChartCoords = null;
-    parallelChannels = [];
-    trendPoints = []; linePoints = []; parallelPoints = [];
-    matchPoints = null;
-    drawNormalized = null;
-    window._aiAnnotations = data.annotations || [];
-    _aiLastResult = data;
-    _aiUserAnswers = {};
-    redraw();
-    // 빈 캔버스 모드로 자동 전환
-    var wrapper = document.getElementById('chart-wrapper');
-    if (wrapper && !wrapper.classList.contains('blank-mode')) {
-      var blankBtn = document.getElementById('btn-blank');
-      if (blankBtn) blankBtn.click();
-      redraw();
+  function _smoothNormalized(pts, win) {
+    if (!pts || pts.length < 3) return pts;
+    var n = pts.length;
+    var half = Math.max(1, Math.floor(win / 2));
+    var out = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var s = Math.max(0, i - half);
+      var e = Math.min(n - 1, i + half);
+      var sum = 0, cnt = 0;
+      for (var j = s; j <= e; j++) { sum += pts[j]; cnt++; }
+      out[i] = sum / cnt;
     }
+    return out;
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // AI 리터치 모달 (유저 그림 보정)
-  // ──────────────────────────────────────────────────────────────────────────
-  // 최근 AI 호출 시간 — 15초 쿨다운 (Gemini 무료 티어 10 RPM 보호)
-  var _aiLastCallAt = 0;
-  var _AI_COOLDOWN_MS = 15000;
-
   window.openAIRetouchModal = function () {
-    // 로그인/Pro 체크
     if (!window._isLoggedIn) {
       showStatus('로그인이 필요합니다', 'error');
       return;
     }
-    if (window._userPlan !== 'pro') {
-      window.location.href = '/pricing';
-      return;
-    }
 
-    // 빈 캔버스 모드에서만 사용 가능
     var _wrapper = document.getElementById('chart-wrapper');
     if (!_wrapper || !_wrapper.classList.contains('blank-mode')) {
-      showStatus('AI 리터치는 빈 캔버스 모드에서만 사용할 수 있습니다', 'error');
+      showStatus('패턴 정리는 빈 캔버스 모드에서만 사용할 수 있습니다', 'error');
       return;
     }
 
-    // 그린 것이 있는지 체크
     var pts = drawPoints.length >= 2 ? penPointsTo150(drawPoints) : null;
     if (!pts) {
       showStatus('먼저 패턴을 그려주세요', 'error');
       return;
     }
 
-    // 쿨다운 체크 — 연속 요청 방지
-    var sinceLastMs = Date.now() - _aiLastCallAt;
-    if (_aiLastCallAt > 0 && sinceLastMs < _AI_COOLDOWN_MS) {
-      var waitSec = Math.ceil((_AI_COOLDOWN_MS - sinceLastMs) / 1000);
-      showStatus('⏱ AI 요청 쿨다운 — ' + waitSec + '초 후 다시 시도해주세요', 'error');
-      return;
-    }
+    var smoothed = _smoothNormalized(pts, 7);
+    var pixelPts = _normalizedToPixelPointsAI(smoothed);
+    if (pixelPts.length < 2) return;
 
-    var modal = document.getElementById('ai-retouch-modal');
-    var body  = document.getElementById('ai-retouch-body');
-    if (!modal || !body) return;
-    body.innerHTML = '<div class="ai-modal-loading">'
-      + '<div class="ai-modal-spinner"></div>'
-      + '<div>AI 가 패턴을 분석 중...</div>'
-      + '</div>';
-    modal.style.display = 'flex';
-    _aiLastCallAt = Date.now();
-
-    fetch('/api/ai/analyze_drawing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ draw_points: pts }),
-    })
-      .then(function (r) {
-        return r.json().then(function (data) {
-          if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
-          return data;
-        });
-      })
-      .then(function (data) {
-        _renderAIRetouchModal(data);
-      })
-      .catch(function (err) {
-        body.innerHTML = '<div class="ai-modal-error">'
-          + _escapeHtml(err.message || 'AI 분석에 실패했습니다')
-          + '</div>'
-          + '<div class="ai-modal-actions">'
-          + '<button type="button" class="ai-modal-btn-cancel" onclick="closeAIRetouchModal()">닫기</button>'
-          + '</div>';
-      });
-  };
-
-  window.closeAIRetouchModal = function () {
-    var modal = document.getElementById('ai-retouch-modal');
-    if (modal) modal.style.display = 'none';
-    _aiPreviewPoints = null;
-  };
-
-  function _renderAIRetouchModal(data) {
-    var body = document.getElementById('ai-retouch-body');
-    if (!body) return;
-
-    _aiLastResult = data;
-    _aiUserAnswers = {};
-    _aiPreviewPoints = (data.refined_points && data.refined_points.length) ? data.refined_points : null;
-
-    // AI 가 완전히 실패한 상태 — 패턴 분석 결과 없음 (rate limit 등)
-    var aiUnavailable = !!data.error && !data.pattern_name;
-
-    var parts = [];
-
-    if (aiUnavailable) {
-      // ── 에러 상태 전용 화면 ────────────────────────────
-      parts.push('<div class="ai-modal-error">⚠️ ', _escapeHtml(data.error), '</div>');
-      parts.push('<div style="font-size:12px;color:#7a8499;line-height:1.55;margin-bottom:12px;">');
-      parts.push('AI 분석은 일시적으로 어렵지만 <b style="color:#d1d4dc;">기본 스무딩</b>(손떨림·급등락 보정)은 적용할 수 있습니다.');
-      parts.push('</div>');
-      parts.push('<div class="ai-modal-actions">');
-      parts.push('<button type="button" class="ai-modal-btn-cancel" onclick="closeAIRetouchModal()">닫기</button>');
-      parts.push('<button type="button" class="ai-modal-btn-secondary" id="ai-retouch-retry">다시 시도</button>');
-      if (_aiPreviewPoints) {
-        parts.push('<button type="button" class="ai-modal-btn-primary" id="ai-retouch-search">기본 보정 후 검색 →</button>');
-      }
-      parts.push('</div>');
-
-      body.innerHTML = parts.join('');
-
-      var retryBtn = document.getElementById('ai-retouch-retry');
-      if (retryBtn) retryBtn.addEventListener('click', function () {
-        // 동일 API 재호출
-        if (typeof openAIRetouchModal === 'function') openAIRetouchModal();
-      });
-      var searchBtn2 = document.getElementById('ai-retouch-search');
-      if (searchBtn2) searchBtn2.addEventListener('click', function () { _applyRetouch(true); });
-      return;
-    }
-
-    // ── 정상 분석 결과 화면 ────────────────────────────
-    parts.push('<div class="ai-modal-pattern-header">');
-    parts.push('<span class="ai-modal-pattern-name">', _escapeHtml(data.pattern_name || 'AI 분석 패턴'), '</span>');
-    if (typeof data.confidence === 'number') {
-      parts.push('<span class="ai-modal-conf">신뢰도 ', Math.round(data.confidence * 100), '%</span>');
-    }
-    parts.push('</div>');
-
-    if (data.description) {
-      parts.push('<div class="ai-modal-desc">', _escapeHtml(data.description), '</div>');
-    }
-
-    // 부분 경고 (AI는 성공했는데 일부 이슈)
-    if (data.error) {
-      parts.push('<div class="ai-modal-warn">⚠️ ', _escapeHtml(data.error), '</div>');
-    }
-
-    // 후속질문
-    var qs = data.follow_up_questions || [];
-    if (qs.length) {
-      parts.push('<div class="ai-modal-questions">');
-      parts.push('<div class="ai-modal-q-intro">🔍 검색 정확도를 높일 질문입니다</div>');
-      for (var i = 0; i < qs.length; i++) {
-        var q = qs[i];
-        if (!q || !q.options || !q.options.length) continue;
-        parts.push('<div class="ai-modal-q">');
-        parts.push('<div class="ai-modal-q-label">', _escapeHtml(q.question), '</div>');
-        parts.push('<div class="ai-modal-q-opts">');
-        for (var j = 0; j < q.options.length; j++) {
-          var o = q.options[j];
-          parts.push('<button type="button" class="ai-modal-opt" data-qkey="', _escapeHtml(q.key),
-                     '" data-val="', _escapeHtml(o.value), '">',
-                     _escapeHtml(o.label), '</button>');
-        }
-        parts.push('</div></div>');
-      }
-      parts.push('</div>');
-    }
-
-    // 액션 버튼
-    parts.push('<div class="ai-modal-actions">');
-    parts.push('<button type="button" class="ai-modal-btn-cancel" onclick="closeAIRetouchModal()">취소</button>');
-    if (_aiPreviewPoints) {
-      parts.push('<button type="button" class="ai-modal-btn-secondary" id="ai-retouch-apply">적용만</button>');
-    }
-    parts.push('<button type="button" class="ai-modal-btn-primary" id="ai-retouch-search">',
-               _aiPreviewPoints ? '적용 후 검색 →' : '검색 →', '</button>');
-    parts.push('</div>');
-
-    body.innerHTML = parts.join('');
-
-    // 질문 옵션 토글
-    var opts = body.querySelectorAll('.ai-modal-opt');
-    for (var m = 0; m < opts.length; m++) {
-      opts[m].addEventListener('click', function (ev) {
-        var btn = ev.currentTarget;
-        _aiUserAnswers[btn.getAttribute('data-qkey')] = btn.getAttribute('data-val');
-        var siblings = btn.parentNode.querySelectorAll('.ai-modal-opt');
-        for (var n = 0; n < siblings.length; n++) siblings[n].classList.remove('selected');
-        btn.classList.add('selected');
-      });
-    }
-
-    // 액션 핸들러
-    var applyBtn = document.getElementById('ai-retouch-apply');
-    if (applyBtn) applyBtn.addEventListener('click', function () { _applyRetouch(false); });
-    var searchBtn = document.getElementById('ai-retouch-search');
-    if (searchBtn) searchBtn.addEventListener('click', function () { _applyRetouch(true); });
-  }
-
-  function _applyRetouch(runSearch) {
-    // 보정 좌표 적용
-    if (_aiPreviewPoints && _aiPreviewPoints.length >= 10) {
-      var pixelPts = _normalizedToPixelPointsAI(_aiPreviewPoints);
-      if (pixelPts.length >= 2) {
-        pushHistory();
-        drawPoints = pixelPts;
-        _drawChartCoords = null;
-        drawNormalized = null;
-      }
-    }
-    // 어노테이션은 유지 (AI 분석 결과 시각화)
-    window._aiAnnotations = (_aiLastResult && _aiLastResult.annotations) ? _aiLastResult.annotations : null;
+    pushHistory();
+    drawPoints       = pixelPts;
+    _drawChartCoords = null;
+    drawNormalized   = null;
     redraw();
-
-    // 검색 힌트 저장 (답변한 것만)
-    window._aiSearchHints = Object.keys(_aiUserAnswers).length ? _aiUserAnswers : null;
-
-    closeAIRetouchModal();
-
-    if (runSearch) {
-      showStatus('✨ 보정된 패턴으로 검색합니다', '');
-      if (typeof doSearch === 'function') doSearch();
-    } else {
-      showStatus('AI 리터치 적용 완료', '');
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // AI 차트 요청 모달 (텍스트 → 패턴)
-  // ──────────────────────────────────────────────────────────────────────────
-  window.openAITextModal = function () {
-    if (!window._isLoggedIn) {
-      showStatus('로그인이 필요합니다', 'error');
-      return;
-    }
-    if (window._userPlan !== 'pro') {
-      window.location.href = '/pricing';
-      return;
-    }
-    var modal = document.getElementById('ai-text-modal');
-    var input = document.getElementById('ai-text-input');
-    var errEl = document.getElementById('ai-text-error');
-    if (errEl) errEl.style.display = 'none';
-    if (input) input.value = '';
-    if (modal) {
-      modal.style.display = 'flex';
-      setTimeout(function () { if (input) input.focus(); }, 50);
-    }
+    showStatus('✨ 패턴 정리 완료', '');
   };
-
-  window.closeAITextModal = function () {
-    var modal = document.getElementById('ai-text-modal');
-    if (modal) modal.style.display = 'none';
-  };
-
-  function _handleAITextSubmit() {
-    var input = document.getElementById('ai-text-input');
-    var errEl = document.getElementById('ai-text-error');
-    var btn   = document.getElementById('ai-text-submit');
-    if (!input) return;
-    var prompt = (input.value || '').trim();
-    if (!prompt) {
-      _showAITextError('입력이 비어있습니다');
-      return;
-    }
-    if (errEl) errEl.style.display = 'none';
-    if (btn) { btn.disabled = true; btn.textContent = '생성 중...'; }
-
-    fetch('/api/ai/pattern_from_text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt }),
-    })
-      .then(function (r) {
-        return r.json().then(function (data) {
-          if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
-          return data;
-        });
-      })
-      .then(function (data) {
-        if (!data.draw_points || data.draw_points.length < 10) {
-          throw new Error(data.error || '패턴 생성에 실패했습니다');
-        }
-        _applyAIPatternToCanvas(data);
-        closeAITextModal();
-        var msg = '✨ "' + (data.pattern_name || 'AI 패턴') + '" 생성 완료';
-        if (data.cleaned_prompt) {
-          msg += ' (입력이 "' + data.cleaned_prompt + '" 로 정화됨)';
-        }
-        showStatus(msg, '');
-      })
-      .catch(function (err) {
-        _showAITextError(err.message || 'AI 생성 실패');
-      })
-      .then(function () {
-        if (btn) { btn.disabled = false; btn.textContent = '생성'; }
-      });
-  }
-
-  function _showAITextError(msg) {
-    var errEl = document.getElementById('ai-text-error');
-    if (!errEl) return;
-    errEl.textContent = msg;
-    errEl.style.display = 'block';
-  }
   window.clearDraw = function () {
     drawPoints           = [];
     trendPoints          = [];
@@ -1251,19 +874,19 @@
   var isBlankMode = false; // 빈 캔버스 모드 여부
   window.updatePeriodUI = function (isBlank) {
     isBlankMode = !!isBlank;
-    // AI 리터치 버튼은 빈 캔버스 모드에서만 활성화
+    // 패턴 정리 버튼은 빈 캔버스 모드에서만 활성화
     var _btnRet = document.getElementById('btn-ai-retouch');
     if (_btnRet) {
       if (isBlankMode) {
         _btnRet.disabled = false;
         _btnRet.style.opacity = '';
         _btnRet.style.cursor = '';
-        _btnRet.title = '내가 그린 패턴을 AI가 분석·보정하고 거래량 등을 물어봅니다 (Pro 전용)';
+        _btnRet.title = '내가 그린 패턴을 부드럽게 다듬고 정규화합니다';
       } else {
         _btnRet.disabled = true;
         _btnRet.style.opacity = '0.4';
         _btnRet.style.cursor = 'not-allowed';
-        _btnRet.title = 'AI 리터치는 빈 캔버스 모드에서만 사용할 수 있습니다';
+        _btnRet.title = '패턴 정리는 빈 캔버스 모드에서만 사용할 수 있습니다';
       }
     }
   };
@@ -1467,13 +1090,6 @@
     var body = { draw_points: pts, top_n: topN, market: market, timeframe: timeframe };
     // 현재 종목은 결과에서 제외
     if (window.D2T && D2T.ticker) body.exclude_ticker = D2T.ticker;
-
-    // AI 질문 답변 주입 (검색 품질 개선)
-    if (window._aiSearchHints) {
-      if (window._aiSearchHints.volume_profile)   body.volume_hint   = window._aiSearchHints.volume_profile;
-      if (window._aiSearchHints.timeframe_hint)   body.timeframe_hint = window._aiSearchHints.timeframe_hint;
-      window._aiSearchHints = null;  // 1회만 적용
-    }
 
     // 자동 분석 메타 적용
     if (_autoMeta && _searchMode !== 'chart-period') {
@@ -1720,107 +1336,6 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) { if (data) _renderBacktestCard(data); })
       .catch(function () { /* graceful */ });
-  }
-
-  function _escapeHtml(s) {
-    if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
-  // ── AI 이미지 업로드 → 패턴 좌표 추출 (Pro 전용) ─────────────────────────
-  var _UPLOAD_MAX_BYTES = 4 * 1024 * 1024; // 4MB (Gemini 한도와 일치)
-
-  function _fileToBase64(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        var result = reader.result || '';
-        // data URI prefix 제거: "data:image/png;base64,AAA..." → "AAA..."
-        var idx = result.indexOf(',');
-        resolve(idx >= 0 ? result.slice(idx + 1) : result);
-      };
-      reader.onerror = function () { reject(new Error('파일 읽기 실패')); };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function _normalizedToPixelPoints(normPts) {
-    // Gemini 반환: [0.42, 0.41, ..., 0.87] — Y 0=저가, 1=고가
-    // 캔버스: Y축 반전 (상단=고가) → py = (1 - v) * height
-    if (!normPts || normPts.length < 2 || !canvas) return [];
-    var out = [];
-    var W = canvas.width, H = canvas.height;
-    // 좌우 여백 5%
-    var padL = W * 0.05, padR = W * 0.95;
-    for (var i = 0; i < normPts.length; i++) {
-      var t = i / (normPts.length - 1);
-      var x = padL + (padR - padL) * t;
-      var y = (1 - normPts[i]) * H;
-      out.push({ x: x, y: y });
-    }
-    return out;
-  }
-
-  function _handleChartImageUpload(file) {
-    if (!file) return;
-    if (file.size > _UPLOAD_MAX_BYTES) {
-      showStatus('이미지가 너무 큽니다 (최대 4MB)', 'error');
-      return;
-    }
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
-      showStatus('PNG / JPEG / WebP 만 지원합니다', 'error');
-      return;
-    }
-
-    showStatus('AI 가 차트를 읽는 중...', '');
-    var btn = document.getElementById('btn-upload-chart');
-    if (btn) { btn.disabled = true; btn.classList.add('loading'); }
-
-    _fileToBase64(file)
-      .then(function (b64) {
-        return fetch('/api/ai/extract_from_image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_base64: b64, mime_type: file.type }),
-        });
-      })
-      .then(function (r) {
-        if (r.status === 401) throw new Error('로그인이 필요합니다');
-        if (r.status === 403) throw new Error('Pro 구독이 필요한 기능입니다');
-        if (r.status === 429) throw new Error('월간 이미지 분석 한도를 초과했습니다');
-        if (!r.ok) throw new Error('AI 분석 실패 (HTTP ' + r.status + ')');
-        return r.json();
-      })
-      .then(function (data) {
-        if (!data.is_chart || !data.draw_points || data.draw_points.length < 10) {
-          throw new Error(data.error || '차트를 인식하지 못했습니다. 더 선명한 이미지로 다시 시도해주세요.');
-        }
-        // 추출된 정규화 좌표 → 캔버스 픽셀 좌표 → drawPoints 주입
-        var pixelPts = _normalizedToPixelPoints(data.draw_points);
-        if (pixelPts.length < 2) throw new Error('좌표 변환 실패');
-
-        pushHistory();
-        drawPoints = pixelPts;
-        _drawChartCoords = null;  // 빈 캔버스 모드
-        parallelChannels = [];
-        trendPoints = []; linePoints = []; parallelPoints = [];
-        matchPoints = null;
-        drawNormalized = null;
-        redraw();
-
-        var ptName = data.pattern_type ? (' · ' + data.pattern_type) : '';
-        var conf   = (typeof data.confidence === 'number')
-                       ? (' (신뢰도 ' + Math.round(data.confidence * 100) + '%)') : '';
-        showStatus('패턴 인식 완료' + ptName + conf + ' — 검색 버튼을 누르세요', '');
-      })
-      .catch(function (err) {
-        showStatus(err.message || 'AI 분석 중 오류가 발생했습니다', 'error');
-      })
-      .then(function () {
-        if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
-      });
   }
 
   // ── 결과 렌더링 ───────────────────────────────────────────────────────────
@@ -2409,19 +1924,7 @@
     // 검색
     document.getElementById('btn-search').addEventListener('click', doSearch);
 
-    // AI 이미지 업로드 (Pro 전용) — HTS/MTS 캡처 → 패턴 좌표 추출
-    var _uploadBtn   = document.getElementById('btn-upload-chart');
-    var _uploadInput = document.getElementById('chart-image-input');
-    if (_uploadBtn && _uploadInput) {
-      _uploadBtn.addEventListener('click', function () { _uploadInput.click(); });
-      _uploadInput.addEventListener('change', function (e) {
-        var file = e.target.files && e.target.files[0];
-        e.target.value = '';
-        if (file) _handleChartImageUpload(file);
-      });
-    }
-
-    // AI 리터치 버튼 (Pro) — 유저 그림을 AI가 보정
+    // 패턴 정리 버튼 — 클라이언트 스무딩 (API 미사용)
     var _btnRetouch = document.getElementById('btn-ai-retouch');
     if (_btnRetouch) _btnRetouch.addEventListener('click', openAIRetouchModal);
 
@@ -2449,33 +1952,6 @@
       }
       window.location.href = '/community/memes';
     });
-
-    // AI 차트 요청 버튼 (Pro) — 텍스트로 패턴 생성
-    var _btnTextReq = document.getElementById('btn-ai-text-request');
-    if (_btnTextReq) _btnTextReq.addEventListener('click', openAITextModal);
-
-    // AI 차트 요청 모달 내부
-    var _aiTextSubmit = document.getElementById('ai-text-submit');
-    var _aiTextInput  = document.getElementById('ai-text-input');
-    if (_aiTextSubmit) _aiTextSubmit.addEventListener('click', _handleAITextSubmit);
-    if (_aiTextInput) {
-      _aiTextInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          _handleAITextSubmit();
-        }
-      });
-    }
-    var _textChips = document.querySelectorAll('#ai-text-chips .ai-example-chip');
-    for (var _tci = 0; _tci < _textChips.length; _tci++) {
-      _textChips[_tci].addEventListener('click', function (ev) {
-        var ex = ev.currentTarget.getAttribute('data-example');
-        if (_aiTextInput) {
-          _aiTextInput.value = ex || '';
-          _aiTextInput.focus();
-        }
-      });
-    }
 
     // 캔버스 마우스 이벤트
     canvas.addEventListener('mousedown',  onMouseDown);
