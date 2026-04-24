@@ -53,7 +53,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, meme, pattern, user_data
+from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -110,12 +110,6 @@ async def lifespan(app: FastAPI):
     from app.routers.pattern import init_process_pool
     init_process_pool()
     logger.info("PatternSearch ProcessPoolExecutor 시작.")
-    # 밈 게시판 DB 초기화 (테이블 생성)
-    try:
-        from app.services.meme_service import init_db as meme_init_db
-        meme_init_db()
-    except Exception as e:
-        logger.error("밈 게시판 DB 초기화 실패: %s", e)
     # Vite manifest 로드 (빌드 결과물이 있으면 production 모드)
     load_manifest()
     # KRX 전종목 시세 스케줄러 (매일 16:05 KST 자동 수집)
@@ -273,7 +267,6 @@ app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
 app.include_router(backtest.router)
-app.include_router(meme.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
 # app.include_router(us_chart.router)
 

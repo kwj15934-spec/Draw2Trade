@@ -78,7 +78,6 @@
     <a href="/market" class="d2t-nav-link">시장</a>
     <a href="/news" class="d2t-nav-link">뉴스</a>
     <a href="/feed" class="d2t-nav-link">피드</a>
-    <a href="/community/memes" class="d2t-nav-link">밈</a>
     <a href="/notices" class="d2t-nav-link">공지</a>
   </div>
 
@@ -308,17 +307,9 @@
       </svg>
       패턴 정리
     </button>
-    <button id="btn-share-meme" class="btn-d2t" aria-label="밈 차트 게시판에 공유" title="내가 그린 차트를 밈 게시판에 공유합니다">
-      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="18" cy="5"  r="3"/>
-        <circle cx="6"  cy="12" r="3"/>
-        <circle cx="18" cy="19" r="3"/>
-        <line x1="8.59"  y1="13.51" x2="15.42" y2="17.49"/>
-        <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49"/>
-      </svg>
-      밈으로 공유
-    </button>
     <!-- 이미지 업로드 버튼은 UI에서 숨김 (백엔드 엔드포인트는 추후 다른 용도로 재활용 가능) -->
+    <!-- 밈 차트 게시판 공유 버튼 제거 (게시판 기능 제거) -->
+
 
     <button id="btn-back-to-origin" class="btn-d2t"
       style="display:none;color:#26a69a;border-color:#26a69a;font-weight:600;"
@@ -2181,28 +2172,33 @@ function _escHtml(s) {
   })();
 
   // ── 차트 로드 시 오버레이 헤더 갱신 (데이터 로드는 오버레이가 열릴 때만) ──
+  // 실시간 구독/호가 같은 부작용 없이 중앙 정보 오버레이만 새 종목으로 리셋.
+  // 유사 종목 결과 차트 로드 시에도 호출되도록 window 전역으로 노출한다.
+  window._refreshInfoOverlay = function (ticker, market, chartName) {
+    if (!ticker) return;
+    if (chartName) {
+      _updateInfoPanelHeader(ticker, chartName);
+      _infoPanelTicker = ticker;
+      _infoPanelName = chartName;
+    } else {
+      _fetchAndSetName(ticker, market);
+    }
+    var overlay = document.getElementById('main-info-overlay');
+    var isOpen  = overlay && overlay.style.display !== 'none' && overlay.style.display !== '';
+    if (isOpen) {
+      var activeTab = document.querySelector('#main-info-overlay .info-tab-btn.active');
+      var tab = activeTab ? activeTab.dataset.itab : 'finance';
+      if (tab === 'finance')   window.loadFinanceData && window.loadFinanceData(ticker, market);
+      if (tab === 'detailed')  window.loadDetailedFinancials && window.loadDetailedFinancials(ticker, market);
+      if (tab === 'news')      window.loadNewsData && window.loadNewsData(ticker, market);
+      if (tab === 'community') window.loadCommunityData && window.loadCommunityData(ticker, market);
+    }
+  };
+
   document.addEventListener('DOMContentLoaded', function () {
     var _origOnChartLoaded = window._onChartLoaded;
     window._onChartLoaded = function (ticker, market, chartName) {
-      // 헤더만 갱신 (오버레이 열림 여부 무관)
-      if (chartName) {
-        _updateInfoPanelHeader(ticker, chartName);
-        _infoPanelTicker = ticker;
-        _infoPanelName = chartName;
-      } else {
-        _fetchAndSetName(ticker, market);
-      }
-      // 오버레이가 열려 있을 때만 데이터 로드
-      var overlay = document.getElementById('main-info-overlay');
-      var isOpen  = overlay && overlay.style.display !== 'none' && overlay.style.display !== '';
-      if (isOpen) {
-        var activeTab = document.querySelector('#main-info-overlay .info-tab-btn.active');
-        var tab = activeTab ? activeTab.dataset.itab : 'finance';
-        if (tab === 'finance')   window.loadFinanceData(ticker, market);
-        if (tab === 'detailed')  window.loadDetailedFinancials(ticker, market);
-        if (tab === 'news')      window.loadNewsData(ticker, market);
-        if (tab === 'community') window.loadCommunityData(ticker, market);
-      }
+      window._refreshInfoOverlay(ticker, market, chartName);
       if (typeof _origOnChartLoaded === 'function') _origOnChartLoaded(ticker, market);
     };
 

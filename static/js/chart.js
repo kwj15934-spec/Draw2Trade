@@ -904,12 +904,15 @@
 
         // 3) 헤더바는 실시간 데이터 수신 후 표시 (prevClose 확정 후)
 
-        // 4) 유사종목 결과 로드: 우측 패널(floating-info-widget)만 갱신
-        //    중앙 패널(_onChartLoaded)은 호출하지 않음 — 패널 오염 방지
+        // 4) 유사종목 결과 로드: 우측 FIW + 중앙 정보 오버레이(재무제표 등) 갱신
+        //    _onChartLoaded 전체(_realtime 재구독 포함)는 호출하지 않음 — 원본 종목 실시간 유지
+        var _pname = D2T._pendingResultName || '';
+        D2T._pendingResultName = '';
         if (typeof window._onFiwChartLoaded === 'function') {
-          var _pname = D2T._pendingResultName || '';
-          D2T._pendingResultName = '';
           window._onFiwChartLoaded(ticker, D2T.market || 'KR', _pname);
+        }
+        if (typeof window._refreshInfoOverlay === 'function') {
+          window._refreshInfoOverlay(ticker, D2T.market || 'KR', _pname || data.name || '');
         }
       })
       .catch(function (e) {
@@ -958,15 +961,8 @@
       window._onChartLoaded(o.ticker, D2T.market || 'KR');
     }
 
-    // fitContent() 후 차트 렌더링이 완료된 다음 프레임에서 redraw 호출
-    // (즉시 호출 시 timeToCoordinate가 아직 갱신되지 않아 그림이 깨짐)
-    if (typeof window.redraw === 'function') {
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          window.redraw();
-        });
-      });
-    }
+    // 이전 패턴/매칭 오버레이 전부 정리 (원본 캔들 축과 맞지 않아 화면이 깨짐)
+    if (typeof window.clearDraw === 'function') window.clearDraw();
   };
 
   // ── 종목 드롭다운 로딩 ────────────────────────────────────────────────────
