@@ -606,7 +606,6 @@
         <div id="result-historical-notice" style="display:none;" class="result-historical-notice">
           과거 패턴 통계 데이터입니다 — 미래 수익을 보장하지 않습니다
         </div>
-        <div id="ai-insight-card" class="ai-insight-card" style="display:none;"></div>
         <div id="backtest-card" class="backtest-card" style="display:none;"></div>
         <div id="d2t-disclaimer-banner" class="d2t-disclaimer-banner">
           <span class="d2t-disclaimer-banner-text">
@@ -1807,44 +1806,6 @@ function _escHtml(s) {
     '003670': '포스코퓨처엠', '002790': '아모레G',
   };
 
-  // ── AI 재무 요약 on-demand 로드 (버튼 클릭 시에만) ─────────────────
-  window._loadAIFinancialSummary = function (ticker) {
-    if (!ticker) return;
-    var bodyEl = document.getElementById('fund-ai-body-' + ticker);
-    if (!bodyEl) return;
-    bodyEl.innerHTML = '<div style="text-align:center;padding:14px;color:#7a8499;font-size:12px;">'
-      + '<div class="ai-modal-spinner" style="margin:0 auto 8px;width:20px;height:20px;border-width:2px;"></div>'
-      + 'AI 가 재무 수치를 분석 중...'
-      + '</div>';
-
-    fetch('/api/v1/fundamental/' + encodeURIComponent(ticker) + '/ai-summary')
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        var ai = data && data.ai_summary ? data.ai_summary : {};
-        if (!ai.overview && !ai.strength && !ai.risk) {
-          bodyEl.innerHTML = '<div style="text-align:center;padding:12px;color:#ff6b35;font-size:11.5px;">'
-            + 'AI 분석 결과가 비어있습니다. API 한도에 걸렸을 수 있어요. 잠시 후 다시 시도해주세요.'
-            + '</div>';
-          return;
-        }
-        var row = function (tag, tagCls, text) {
-          if (!text) return '';
-          return '<div class="fund-ai-row">'
-            + '<span class="fund-ai-tag ' + tagCls + '">' + tag + '</span>'
-            + '<span class="fund-ai-text">' + text + '</span>'
-            + '</div>';
-        };
-        bodyEl.innerHTML = row('개요', 'fund-ai-tag-overview', ai.overview)
-          + row('강점', 'fund-ai-tag-strength', ai.strength)
-          + row('리스크', 'fund-ai-tag-risk', ai.risk);
-      })
-      .catch(function () {
-        bodyEl.innerHTML = '<div style="text-align:center;padding:12px;color:#ff6b35;font-size:11.5px;">'
-          + 'AI 분석 호출에 실패했습니다.'
-          + '</div>';
-      });
-  };
-
   // ── 메인 차트 종목 헤더 갱신 ─────────────────────────────────────
   var _infoPanelTicker = '';
   var _infoPanelName   = '';
@@ -2049,39 +2010,7 @@ function _escHtml(s) {
             + '</div>';
         }
 
-        // ── ④ AI 요약 카드 (Claude, 캐시된 경우만 자동 표시) ──────────
-        // 캐시에 없으면 "AI 분석 보기" 버튼 → 유저가 눌러야 호출
-        if (dart) {
-          var ai = dart.ai_summary || {};
-          var aiRow = function (tag, tagCls, text) {
-            if (!text) return '';
-            return '<div class="fund-ai-row">'
-              + '<span class="fund-ai-tag ' + tagCls + '">' + tag + '</span>'
-              + '<span class="fund-ai-text">' + text + '</span>'
-              + '</div>';
-          };
-          var hasAI = ai.overview || ai.strength || ai.risk;
-          html += '<div class="fund-ai-card" id="fund-ai-card-' + ticker + '">'
-            + '<div class="fund-ai-header">'
-            + '<div class="fund-ai-icon">✦</div>'
-            + '<span class="fund-ai-title">재무 특이사항 요약</span>'
-            + '</div>'
-            + '<div class="fund-ai-disclaimer">AI가 공시 수치를 요약한 참고 정보입니다. 투자 권유가 아닙니다.</div>'
-            + '<div id="fund-ai-body-' + ticker + '">'
-            +   (hasAI
-                  ? (aiRow('개요', 'fund-ai-tag-overview', ai.overview)
-                     + aiRow('강점', 'fund-ai-tag-strength', ai.strength)
-                     + aiRow('리스크', 'fund-ai-tag-risk', ai.risk))
-                  : ('<div style="text-align:center;padding:8px 4px 12px;">'
-                     + '<button type="button" onclick="_loadAIFinancialSummary(\'' + ticker + '\')" '
-                     + 'style="background:#26a69a;color:#0b1413;border:none;border-radius:4px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">'
-                     + '✦ AI 분석 보기 (1회 호출)'
-                     + '</button>'
-                     + '<div style="font-size:10.5px;color:#7a8499;margin-top:6px;">AI가 재무 수치를 3줄로 해석합니다</div>'
-                     + '</div>'))
-            + '</div>'
-            + '</div>';
-        }
+        // (AI 재무 요약 기능은 제거됨 — Gemini API 사용량 관리 차원)
 
         if (!html) {
           html = '<div class="info-empty">재무 데이터를 불러오지 못했습니다.</div>';
