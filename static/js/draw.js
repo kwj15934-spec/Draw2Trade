@@ -679,6 +679,10 @@
   // ──────────────────────────────────────────────────────────────────────────
   // AI 리터치 모달 (유저 그림 보정)
   // ──────────────────────────────────────────────────────────────────────────
+  // 최근 AI 호출 시간 — 15초 쿨다운 (Gemini 무료 티어 10 RPM 보호)
+  var _aiLastCallAt = 0;
+  var _AI_COOLDOWN_MS = 15000;
+
   window.openAIRetouchModal = function () {
     // 로그인/Pro 체크
     if (!window._isLoggedIn) {
@@ -697,11 +701,23 @@
       return;
     }
 
+    // 쿨다운 체크 — 연속 요청 방지
+    var sinceLastMs = Date.now() - _aiLastCallAt;
+    if (_aiLastCallAt > 0 && sinceLastMs < _AI_COOLDOWN_MS) {
+      var waitSec = Math.ceil((_AI_COOLDOWN_MS - sinceLastMs) / 1000);
+      showStatus('⏱ AI 요청 쿨다운 — ' + waitSec + '초 후 다시 시도해주세요', 'error');
+      return;
+    }
+
     var modal = document.getElementById('ai-retouch-modal');
     var body  = document.getElementById('ai-retouch-body');
     if (!modal || !body) return;
-    body.innerHTML = '<div class="ai-modal-loading"><div class="ai-modal-spinner"></div>AI 가 패턴을 분석 중...</div>';
+    body.innerHTML = '<div class="ai-modal-loading">'
+      + '<div class="ai-modal-spinner"></div>'
+      + '<div>AI 가 패턴을 분석 중...</div>'
+      + '</div>';
     modal.style.display = 'flex';
+    _aiLastCallAt = Date.now();
 
     fetch('/api/ai/analyze_drawing', {
       method: 'POST',
