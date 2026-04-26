@@ -11,7 +11,7 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Draw2Trade — 차트를 그리면 유사 종목이 나온다</title>
+  <title>Draw2Trade</title>
 
   <!-- SEO -->
   <meta name="description" content="차트 패턴을 직접 그리면 KOSPI/KOSDAQ 전 종목에서 유사한 구간을 찾아주는 주식 패턴 검색 서비스. 유사 종목 자동 탐색, 패턴 비교, 실시간 시세 제공.">
@@ -136,18 +136,19 @@
     }
 
     /* layout */
-    .page{position:relative;z-index:10;display:flex;min-height:100vh;width:100%;padding:24px;gap:24px}
-    .panel-l{position:relative;flex:0 0 56%;display:flex;flex-direction:column;min-height:calc(100vh - 48px)}
-    .panel-r{position:relative;flex:1;display:flex;flex-direction:column;gap:20px;min-height:calc(100vh - 48px)}
+    .page{position:relative;z-index:10;display:flex;min-height:calc(100vh - 48px);width:100%;padding:24px;gap:24px}
+    .panel-l{position:relative;flex:0 0 56%;display:flex;flex-direction:column}
+    .panel-r{position:relative;flex:1;display:flex;flex-direction:column;gap:20px}
     .panel-l-glass{position:absolute;inset:0;border-radius:32px;pointer-events:none}
 
     .nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:28px 36px;gap:14px;flex-wrap:wrap}
-    .logo{display:flex;align-items:center;gap:12px;cursor:pointer}
-    .logo-mark{width:34px;height:34px;border-radius:9px;
-      background:linear-gradient(135deg,var(--teal),var(--teal2));
-      display:flex;align-items:center;justify-content:center;color:#001810;font-weight:700;font-size:15px;letter-spacing:-1px;
+    .logo{display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none}
+    .logo-mark{width:36px;height:36px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
       box-shadow:0 0 22px var(--tealGlow);
+      overflow:hidden;background:#0b1413;
     }
+    .logo-mark img{width:100%;height:100%;object-fit:cover;display:block}
     .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.04em}
     .logo-text em{font-family:var(--serif);font-style:italic;font-weight:400;color:rgba(250,251,252,0.78);margin-left:2px}
 
@@ -168,7 +169,7 @@
     .hero h1 em{font-family:var(--serif);font-style:italic;font-weight:300;color:rgba(250,251,252,0.78)}
     .hero h1 .mint{color:var(--teal);font-style:italic;font-family:var(--serif);font-weight:300;text-shadow:0 0 30px var(--tealGlow)}
 
-    .hero-sub{margin:24px 0 36px;font-size:16px;color:rgba(250,251,252,0.62);max-width:520px;line-height:1.55;font-weight:400}
+    .hero-sub{margin:24px 0 36px;font-size:16px;color:rgba(250,251,252,0.62);max-width:620px;line-height:1.55;font-weight:400;word-break:keep-all;overflow-wrap:break-word}
     .hero-sub em{font-family:var(--serif);font-style:italic;color:var(--teal)}
 
     .cta-row{display:flex;gap:12px;align-items:center;margin-bottom:36px;flex-wrap:wrap;justify-content:center}
@@ -250,14 +251,97 @@
     .menu-close{width:34px;height:34px;border-radius:17px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;transition:background .2s}
     .menu-close:hover{background:rgba(255,255,255,0.16)}
     .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .menu-link{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.04);transition:background .2s,transform .2s;border:1px solid rgba(255,255,255,0.06)}
-    .menu-link:hover{background:rgba(91,255,198,0.10);border-color:rgba(91,255,198,0.30);transform:translateY(-1px)}
+    .menu-link{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.04);transition:background .08s ease-out,border-color .08s ease-out;border:1px solid rgba(255,255,255,0.06)}
+    .menu-link:hover{background:rgba(91,255,198,0.12);border-color:rgba(91,255,198,0.35)}
     .menu-link .mi{width:32px;height:32px;border-radius:9px;background:rgba(91,255,198,0.10);color:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .menu-link .mt{display:flex;flex-direction:column;gap:2px;min-width:0}
     .menu-link .mt b{font-size:14px;font-weight:600;letter-spacing:-0.01em}
     .menu-link .mt span{font-size:11px;color:rgba(250,251,252,0.55)}
     .menu-foot{margin-top:18px;font-size:11px;color:rgba(250,251,252,0.45);line-height:1.55;text-align:center}
     .menu-foot a{color:rgba(250,251,252,0.6);text-decoration:underline}
+
+    /* ── Sections below hero ───────────────────────────────────── */
+    .section{position:relative;z-index:10;padding:96px 24px;max-width:1240px;margin:0 auto}
+    .section-head{margin-bottom:48px;text-align:center}
+    .section-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
+    .section-eyebrow::before{content:"";width:24px;height:1px;background:var(--teal)}
+    .section-eyebrow::after{content:"";width:24px;height:1px;background:var(--teal)}
+    .section-title{margin:0;font-size:42px;font-weight:500;letter-spacing:-0.04em;line-height:1.1;color:#fff}
+    .section-title em{font-family:var(--serif);font-style:italic;font-weight:300;color:var(--teal)}
+    .section-sub{margin:14px auto 0;font-size:15px;color:rgba(250,251,252,0.6);max-width:560px;line-height:1.6;word-break:keep-all}
+
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .feature-row{padding:24px;border-radius:22px;display:flex;flex-direction:column;gap:14px;min-height:240px}
+    .feature-row .ic{width:40px;height:40px;border-radius:12px;background:rgba(91,255,198,0.10);color:var(--teal);display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--tealGlow)}
+    .feature-row h3{margin:0;font-size:18px;font-weight:500;letter-spacing:-0.02em;color:#fff}
+    .feature-row h3 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .feature-row ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:13px;color:rgba(250,251,252,0.65);line-height:1.55}
+    .feature-row ul li{display:flex;gap:8px;align-items:flex-start}
+    .feature-row ul li::before{content:"";flex-shrink:0;width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 6px var(--teal);margin-top:7px}
+
+    /* pricing */
+    .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px;margin:0 auto}
+    .plan-card{padding:32px 28px;border-radius:24px;display:flex;flex-direction:column;gap:14px;position:relative}
+    .plan-card.featured{box-shadow:0 0 48px var(--tealGlow)}
+    .plan-badge{position:absolute;top:-10px;right:24px;padding:5px 14px;border-radius:999px;background:var(--teal);color:#001810;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.05em}
+    .plan-name{font-size:14px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(250,251,252,0.7);font-weight:600}
+    .plan-name.pro{color:var(--teal)}
+    .plan-price{font-family:var(--mono);font-size:38px;font-weight:500;letter-spacing:-0.03em;color:#fff;line-height:1}
+    .plan-price small{font-family:var(--font);font-size:14px;font-weight:400;color:rgba(250,251,252,0.55);margin-left:6px}
+    .plan-sub{font-size:12px;color:rgba(250,251,252,0.55)}
+    .plan-features{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:rgba(250,251,252,0.7);line-height:1.5}
+    .plan-features li{display:flex;align-items:flex-start;gap:8px}
+    .plan-features li svg{flex-shrink:0;margin-top:3px}
+    .plan-features li.yes svg{color:var(--teal)}
+    .plan-features li.no{color:rgba(250,251,252,0.35)}
+    .plan-features li.no svg{color:rgba(250,251,252,0.35)}
+    .plan-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:600;text-decoration:none;transition:transform .15s}
+    .plan-cta.primary{background:var(--teal);color:#001810;box-shadow:0 0 22px var(--tealGlow)}
+    .plan-cta.primary:hover{transform:translateY(-1px)}
+    .plan-cta.ghost{color:#fff;border:1px solid rgba(255,255,255,0.18)}
+    .plan-cta.ghost:hover{border-color:var(--teal);color:var(--teal)}
+    .pricing-disclaimer{max-width:880px;margin:24px auto 0;padding:14px 18px;border-left:2px solid rgba(91,255,198,0.5);background:rgba(91,255,198,0.05);font-size:12px;color:rgba(250,251,252,0.6);line-height:1.6;border-radius:0 8px 8px 0}
+
+    /* FAQ */
+    .faq-list{max-width:760px;margin:0 auto;display:flex;flex-direction:column}
+    .faq-item{border-top:1px solid rgba(255,255,255,0.10);padding:22px 0}
+    .faq-item:last-child{border-bottom:1px solid rgba(255,255,255,0.10)}
+    .faq-q{display:flex;align-items:center;gap:18px;width:100%;text-align:left;padding:0;font-size:16px;font-weight:500;color:#fff;letter-spacing:-0.01em;background:none;border:none;cursor:pointer}
+    .faq-q::before{content:"Q";font-family:var(--mono);font-size:13px;color:var(--teal);width:18px;flex-shrink:0;font-weight:600}
+    .faq-q-text{flex-grow:1}
+    .faq-icon{margin-left:auto;color:rgba(250,251,252,0.5);transition:transform .2s;flex-shrink:0}
+    .faq-item.open .faq-icon{transform:rotate(45deg);color:var(--teal)}
+    .faq-a{overflow:hidden;max-height:0;transition:max-height .3s ease,margin .3s ease}
+    .faq-item.open .faq-a{max-height:260px;margin-top:14px}
+    .faq-a-inner{display:flex;gap:18px;color:rgba(250,251,252,0.62);font-size:14px;line-height:1.7;word-break:keep-all}
+    .faq-a-inner::before{content:"A";font-family:var(--mono);font-size:13px;color:#FF8E5E;width:18px;flex-shrink:0;font-weight:600}
+
+    /* CTA band */
+    .cta-band{position:relative;z-index:10;padding:80px 24px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08);background:radial-gradient(60% 80% at 50% 50%,rgba(91,255,198,0.08),transparent 70%)}
+    .cta-band h2{margin:0;font-size:34px;font-weight:500;letter-spacing:-0.03em;color:#fff;line-height:1.2;word-break:keep-all}
+    .cta-band h2 em{font-family:var(--serif);font-style:italic;color:var(--teal)}
+    .cta-band p{margin:14px auto 28px;color:rgba(250,251,252,0.6);font-size:15px;max-width:520px;line-height:1.55;word-break:keep-all}
+
+    /* Footer */
+    .site-footer{position:relative;z-index:10;padding:48px 24px 56px;color:rgba(250,251,252,0.55);font-size:13px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(6,7,10,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .footer-inner{max-width:1240px;margin:0 auto}
+    .footer-top{display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+    .footer-brand{display:flex;align-items:center;gap:12px;color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.02em;text-decoration:none}
+    .footer-brand img{width:30px;height:30px;border-radius:8px;object-fit:cover}
+    .footer-links{display:flex;flex-wrap:wrap;gap:22px;font-size:13px}
+    .footer-links a{color:rgba(250,251,252,0.6);text-decoration:none;transition:color .15s}
+    .footer-links a:hover{color:#fff}
+    .footer-biz{margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);font-size:11.5px;color:rgba(250,251,252,0.45);line-height:1.7}
+    .footer-biz a{color:rgba(250,251,252,0.55)}
+    .footer-bottom{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:10.5px;color:rgba(250,251,252,0.4);letter-spacing:0.04em}
+
+    @media (max-width: 720px){
+      .section{padding:64px 18px}
+      .section-title{font-size:32px}
+      .cta-band{padding:60px 18px}
+      .cta-band h2{font-size:26px}
+      .footer-top{flex-direction:column;align-items:flex-start;gap:14px}
+    }
 
     /* Toast for share copy */
     .toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%) translateY(20px);z-index:80;
@@ -306,7 +390,7 @@
 
     <header class="nav">
       <a href="/" class="logo" aria-label="Draw2Trade 홈">
-        <div class="logo-mark">D2</div>
+        <div class="logo-mark"><img src="/static/img/logo.png" alt="Draw2Trade"/></div>
         <div class="logo-text">draw2trade<em>kr</em></div>
       </a>
       <div class="nav-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -327,7 +411,7 @@
       </div>
       <h1>
         Draw the chart.<br/>
-        <em>Let AI find the</em> <span class="mint">stock.</span>
+        <span class="mint">차트를 그려보세요.</span>
       </h1>
       <p class="hero-sub">
         마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.
@@ -352,18 +436,6 @@
       </div>
     </div>
 
-    <div class="quote-block">
-      <div class="quote-label">DESIGN PHILOSOPHY · 2026</div>
-      <div class="quote-text">
-        "차트는 <em>그림</em>이다.<br/>
-        우리는 그림을 <em>읽는 법</em>을 가르친다."
-      </div>
-      <div class="quote-author">
-        <span class="ln"></span>
-        <span>DRAW2TRADE · KR MARKET</span>
-        <span class="ln"></span>
-      </div>
-    </div>
   </section>
 
   <!-- RIGHT PANEL -->
@@ -406,7 +478,7 @@
           </div>
           <div>
             <h4>AI <em>Pattern Match</em></h4>
-            <p>그린 패턴을 정규화 후 코사인 유사도로 매칭, 상위 50개 종목을 즉시 반환합니다.</p>
+            <p>그린 패턴과 유사한 종목을 반환합니다.</p>
           </div>
           <div class="stat">
             <span class="v">2,400+</span>
@@ -453,6 +525,178 @@
     </div>
   </aside>
 </div>
+
+<!-- ==================== FEATURES ==================== -->
+<section class="section" id="features">
+  <div class="section-head">
+    <div class="section-eyebrow">FEATURES</div>
+    <h2 class="section-title">트레이더를 위한 <em>정밀한</em> 도구</h2>
+    <p class="section-sub">전 종목 스캔부터 실시간 시세까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-row liquid-glass">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+      <h3>전 종목 <em>패턴 스캔</em></h3>
+      <ul>
+        <li>KOSPI · KOSDAQ 2,400+ 종목 동시 검색</li>
+        <li>일봉 · 주봉 · 월봉 전 시간대 지원</li>
+        <li>약 0.2초 내 결과 반환 — 즉각 비교 가능</li>
+      </ul>
+    </div>
+
+    <div class="feature-row liquid-glass">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/><circle cx="6" cy="6" r="2"/></svg></div>
+      <h3>4가지 <em>드로잉 도구</em></h3>
+      <ul>
+        <li>자유곡선 — 손으로 그리듯 자연스러운 패턴 입력</li>
+        <li>추세선 — 다중 포인트 연결</li>
+        <li>직선 — 두 점으로 간결하게</li>
+        <li>평행 채널 — 박스권 패턴 매칭에 최적화</li>
+      </ul>
+    </div>
+
+    <div class="feature-row liquid-glass">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg></div>
+      <h3>유사도 <em>시각화</em></h3>
+      <ul>
+        <li>오렌지→시안 그라디언트 게이지로 한눈에 비교</li>
+        <li>Top 3에 금·은·동 랭크 뱃지 자동 부여</li>
+        <li>1위는 항상 100% 기준, 상대 비교가 쉬움</li>
+      </ul>
+    </div>
+
+    <div class="feature-row liquid-glass">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+      <h3>실시간 <em>시세</em></h3>
+      <ul>
+        <li>당일 현재가 자동 반영 (KRX 데이터)</li>
+        <li>종목 뉴스 통합 피드</li>
+        <li>네이버 종토방 연동으로 시장 반응 확인</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRICING ==================== -->
+<section class="section" id="pricing">
+  <div class="section-head">
+    <div class="section-eyebrow">PRICING</div>
+    <h2 class="section-title">필요한 만큼만 <em>지불</em>하세요</h2>
+    <p class="section-sub">무료로 시작하고, 더 깊은 분석이 필요할 때 Pro로 전환하세요.</p>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="plan-card liquid-glass">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">₩0<small>/월</small></div>
+      <div class="plan-sub">부담 없이 시작하기</div>
+      <ul class="plan-features">
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>KR 시장 패턴 검색 · 무제한</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>유사 종목 Top 11~50 결과</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 최대 5개</li>
+        <li class="no"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>자동 패턴 검색</li>
+      </ul>
+      <a href="/app" class="plan-cta ghost">무료로 시작하기</a>
+    </div>
+
+    <div class="plan-card liquid-glass-mint featured">
+      <span class="plan-badge">이벤트 특가</span>
+      <div class="plan-name pro">Pro</div>
+      <div class="plan-price">$6<small>/월</small></div>
+      <div class="plan-sub">PayPal로 바로 시작하세요</div>
+      <ul class="plan-features">
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Top 1~50 전체 결과 (상위 10개 포함)</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>자동 패턴 검색 (기간 지정 후 자동 분석)</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 무제한</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>속도 우선 지원</li>
+      </ul>
+      <a href="/pricing" class="plan-cta primary">Pro 시작하기</a>
+    </div>
+  </div>
+
+  <div class="pricing-disclaimer">
+    본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.
+    패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.
+  </div>
+</section>
+
+<!-- ==================== FAQ ==================== -->
+<section class="section" id="faq">
+  <div class="section-head">
+    <div class="section-eyebrow">FAQ</div>
+    <h2 class="section-title">자주 묻는 <em>질문</em></h2>
+  </div>
+
+  <div class="faq-list">
+    <div class="faq-item open">
+      <button type="button" class="faq-q" onclick="toggleFaq(this)">
+        <span class="faq-q-text">결제 후 언제 Pro가 되나요?</span>
+        <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      </button>
+      <div class="faq-a"><div class="faq-a-inner"><span>이체 확인 후 24시간 이내 수동 전환됩니다. 평균적으로 수 시간 내에 Pro 기능이 활성화됩니다.</span></div></div>
+    </div>
+    <div class="faq-item">
+      <button type="button" class="faq-q" onclick="toggleFaq(this)">
+        <span class="faq-q-text">무료 플랜에서도 패턴 검색이 되나요?</span>
+        <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      </button>
+      <div class="faq-a"><div class="faq-a-inner"><span>네, 무료 플랜도 검색 횟수 제한 없이 사용 가능합니다. 다만 상위 Top 10 결과는 Pro 전용이며, 무료 플랜에서는 11위부터 50위까지의 결과를 확인할 수 있습니다.</span></div></div>
+    </div>
+    <div class="faq-item">
+      <button type="button" class="faq-q" onclick="toggleFaq(this)">
+        <span class="faq-q-text">미국 주식(US)도 지원하나요?</span>
+        <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      </button>
+      <div class="faq-a"><div class="faq-a-inner"><span>현재는 KR(KOSPI/KOSDAQ) 시장만 지원합니다. 해외 시장 확장은 로드맵에 포함되어 있으나 구체적인 일정은 아직 공개되지 않았습니다.</span></div></div>
+    </div>
+    <div class="faq-item">
+      <button type="button" class="faq-q" onclick="toggleFaq(this)">
+        <span class="faq-q-text">차트 데이터는 얼마나 실시간인가요?</span>
+        <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      </button>
+      <div class="faq-a"><div class="faq-a-inner"><span>KRX 데이터를 기반으로 당일 현재가를 마지막 봉에 실시간 반영합니다. 패턴 검색에 사용되는 과거 데이터는 일봉 기준 종가 데이터입니다.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CTA BAND ==================== -->
+<section class="cta-band">
+  <h2>지금 <em>그려보세요</em>. 16초면 충분합니다.</h2>
+  <p>신용카드 없이 무료 시작 · 무제한 패턴 검색.</p>
+  <a href="/blank" class="plan-cta primary" style="display:inline-flex">무료로 시작하기 →</a>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <a href="/" class="footer-brand">
+        <img src="/static/img/logo.png" alt="">
+        Draw2Trade
+      </a>
+      <div class="footer-links">
+        <a href="/app">서비스 시작</a>
+        <a href="/blank">빈 캔버스</a>
+        <a href="/feed">커뮤니티</a>
+        <a href="/notices">공지사항</a>
+        <a href="/terms">이용약관</a>
+        <a href="/privacy">개인정보처리방침</a>
+        <a href="mailto:kwj15934@formeta.kr">문의</a>
+      </div>
+    </div>
+    <div class="footer-biz">
+      상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566<br>
+      사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동) &nbsp;|&nbsp;
+      전화번호 : 02-6015-9983 &nbsp;|&nbsp;
+      이메일 : <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Draw2Trade. All rights reserved.</span>
+      <span>본 서비스는 투자 참고용 정보이며, 자본시장법상 투자자문에 해당하지 않습니다.</span>
+    </div>
+  </div>
+</footer>
 
 <!-- Menu overlay -->
 <div class="menu-overlay" id="menu-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -703,6 +947,11 @@
 })();
 </script>
 
+<!-- ───── FAQ toggle (global) ───── -->
+<script>
+  function toggleFaq(btn) { btn.parentElement.classList.toggle('open'); }
+</script>
+
 <!-- ───── Menu / Share / Auth wiring ───── -->
 <script>
   (function () {
@@ -803,28 +1052,31 @@
       })
       .catch(function () {});
 
-    // Live ticker — fetches KOSPI/KOSDAQ from backend if available, else stays as "—"
-    fetch('/api/market/indices', { credentials: 'same-origin' })
+    // Live ticker — KOSPI/KOSDAQ index quotes
+    fetch('/api/v1/market/index-quotes', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data) return;
-        function fmt(v, ch) {
+        function fmt(v, rate) {
           if (v == null) return '—';
-          var sign = ch >= 0 ? '▲' : '▼';
-          var pct = ch != null ? ' ' + sign + ' ' + Math.abs(ch).toFixed(2) + '%' : '';
-          return Number(v).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + pct;
+          var r = (rate == null ? 0 : Number(rate));
+          var sign = r >= 0 ? '▲' : '▼';
+          return Number(v).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            + ' ' + sign + ' ' + Math.abs(r).toFixed(2) + '%';
         }
-        var k = data.kospi || data.KOSPI;
-        var q = data.kosdaq || data.KOSDAQ;
+        var k = data.KOSPI || data.kospi;
+        var q = data.KOSDAQ || data.kosdaq;
         var kEl = document.getElementById('kospi-val');
         var qEl = document.getElementById('kosdaq-val');
-        if (kEl && k) {
-          kEl.textContent = fmt(k.price ?? k.value, k.changePct ?? k.change_pct);
-          kEl.className = (k.changePct ?? k.change_pct ?? 0) >= 0 ? 'up' : 'dn';
+        if (kEl && k && k.price != null) {
+          var kr = k.change_rate != null ? k.change_rate : (k.changePct || 0);
+          kEl.textContent = fmt(k.price, kr);
+          kEl.className = kr >= 0 ? 'up' : 'dn';
         }
-        if (qEl && q) {
-          qEl.textContent = fmt(q.price ?? q.value, q.changePct ?? q.change_pct);
-          qEl.className = (q.changePct ?? q.change_pct ?? 0) >= 0 ? 'up' : 'dn';
+        if (qEl && q && q.price != null) {
+          var qr = q.change_rate != null ? q.change_rate : (q.changePct || 0);
+          qEl.textContent = fmt(q.price, qr);
+          qEl.className = qr >= 0 ? 'up' : 'dn';
         }
       })
       .catch(function () {});
