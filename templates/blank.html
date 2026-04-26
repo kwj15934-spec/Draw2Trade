@@ -57,12 +57,35 @@
 
   <div class="lookback-group">
     <label for="lookback-months">비교</label>
-    <select id="lookback-months" title="비교할 최근 월봉 수">
+    <select id="lookback-months" title="비교할 최근 월봉 수 (기간 미지정 시 사용)">
       <option value="24">24개월</option>
       <option value="36" selected>36개월</option>
       <option value="48">48개월</option>
       <option value="60">60개월</option>
     </select>
+  </div>
+
+  <div class="lookback-group">
+    <label for="search-date-from">기간</label>
+    <input
+      type="month"
+      id="search-date-from"
+      title="비교 시작 월 (지정 시 위 '비교' 개월수보다 우선)"
+      style="background:#1a1d29; color:#d1d4dc; border:1px solid #2a2e39; border-radius:3px; padding:3px 6px; font-size:12px; color-scheme:dark;"
+    />
+    <span style="color:#5d6273;">~</span>
+    <input
+      type="month"
+      id="search-date-to"
+      title="비교 종료 월"
+      style="background:#1a1d29; color:#d1d4dc; border:1px solid #2a2e39; border-radius:3px; padding:3px 6px; font-size:12px; color-scheme:dark;"
+    />
+    <button
+      id="btn-clear-daterange"
+      class="btn-d2t"
+      title="기간 지정 해제"
+      style="padding:3px 8px; font-size:11px;"
+    >해제</button>
   </div>
 
   <button id="btn-search" class="btn-d2t btn-d2t-primary">
