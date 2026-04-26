@@ -79,6 +79,7 @@
     <a href="/news" class="d2t-nav-link">뉴스</a>
     <a href="/feed" class="d2t-nav-link">피드</a>
     <a href="/notices" class="d2t-nav-link">공지</a>
+    <a href="/pricing" class="d2t-nav-link">요금제</a>
   </div>
 
   <!-- 우측 밀기 -->
@@ -110,11 +111,6 @@
   <!-- 마이페이지 (로그인 시) -->
   <a href="/account" id="btn-nav-account"
      class="d2t-nav-link d2t-nav-link-right" style="display:none;">마이페이지</a>
-
-  <!-- Pro 결제 -->
-  <a href="/pricing" id="btn-nav-pricing"
-     class="d2t-nav-link d2t-nav-link-right"
-     style="color:#5BFFC6 !important;font-weight:600 !important;">Pro</a>
 
   <!-- 문의 -->
   <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;"
@@ -810,7 +806,6 @@
       var loginBtn = document.getElementById('btn-nav-login');
       var userBox  = document.getElementById('nav-user-box');
       var accountBtn = document.getElementById('btn-nav-account');
-      var pricingBtn = document.getElementById('btn-nav-pricing');
       if (data.authenticated && data.user) {
         var u = data.user;
         var avatarEl = document.getElementById('nav-user-avatar');
@@ -829,13 +824,10 @@
         if (loginBtn) loginBtn.style.display = 'none';
         if (userBox)  userBox.style.display  = 'flex';
         if (accountBtn) accountBtn.style.display = 'inline-flex';
-        // Pro 사용자는 결제 링크 숨김
-        if (pricingBtn) pricingBtn.style.display = isPro ? 'none' : 'inline-flex';
       } else {
         if (loginBtn) loginBtn.style.display = 'flex';
         if (userBox)  userBox.style.display  = 'none';
         if (accountBtn) accountBtn.style.display = 'none';
-        if (pricingBtn) pricingBtn.style.display = 'inline-flex';
       }
     })
     .catch(function () {
