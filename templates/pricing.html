@@ -471,7 +471,7 @@
         return new Promise(function (resolve, reject) {
           var s = document.createElement('script');
           s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(cfg.client_id)
-                + '&vault=true&intent=subscription&currency=USD&disable-funding=paypal';
+                + '&vault=true&intent=subscription&currency=USD&enable-funding=card';
           s.setAttribute('data-sdk-integration-source', 'button-factory');
           s.onload = function () { _paypalSDKLoaded = true; resolve(); };
           s.onerror = function () { reject(new Error('PayPal SDK 로드 실패')); };
@@ -500,7 +500,8 @@
 
     var period = _billingPeriod;
     _paypalButtonInstance = window.paypal.Buttons({
-      style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'subscribe' },
+      fundingSource: window.paypal.FUNDING.CARD,
+      style: { shape: 'pill', color: 'black', layout: 'vertical' },
       createSubscription: function (_data, actions) {
         return actions.subscription.create({ plan_id: planId });
       },
