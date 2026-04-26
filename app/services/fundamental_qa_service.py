@@ -1,13 +1,16 @@
 """
-재무제표 자연어 Q&A 서비스.
+재무제표 자연어 Q&A 서비스 (Google Gemini API).
 
 DART 에서 수집한 종목의 3년치 재무 요약을 컨텍스트로 사용하여
-Anthropic Claude API 에 질문/답변 요청을 보낸다.
+Gemini API 에 질문/답변 요청을 보낸다.
 
 설계 원칙:
-- 추가 의존성 없이 httpx 만으로 직접 호출 (anthropic SDK 불필요)
+- 추가 의존성 없이 httpx 만으로 직접 호출
 - DART 데이터 외 정보 추측 금지 (시스템 프롬프트로 강제)
 - 투자 권유/주가 예측 금지
+
+환경변수:
+  GEMINI_API_KEY  — https://aistudio.google.com/apikey 에서 발급 (무료 티어 있음)
 """
 import logging
 import os
@@ -19,9 +22,12 @@ from app.services import dart_service
 
 logger = logging.getLogger(__name__)
 
-_ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-_MODEL = "claude-haiku-4-5-20251001"   # 빠르고 토큰 비용 저렴
-_MAX_TOKENS = 512
+_MODEL = "gemini-2.5-flash"   # 빠르고 저렴 (Q&A 용도에 충분)
+_API_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{_MODEL}:generateContent"
+)
+_MAX_OUTPUT_TOKENS = 512
 _TIMEOUT_S = 30.0
 _MAX_QUESTION_LEN = 300
 
@@ -39,8 +45,8 @@ _SYSTEM_PROMPT = (
 
 
 def is_configured() -> bool:
-    """ANTHROPIC_API_KEY 가 환경변수에 설정되어 있는지 확인."""
-    return bool((os.environ.get("ANTHROPIC_API_KEY") or "").strip())
+    """GEMINI_API_KEY 가 환경변수에 설정되어 있는지 확인."""
+    return bool((os.environ.get("GEMINI_API_KEY") or "").strip())
 
 
 def _format_billions(v: Optional[float]) -> str:
@@ -99,6 +105,26 @@ def _build_context(fundamental: dict, company_name: Optional[str]) -> str:
     return "\n".join(lines)
 
 
+def _extract_text(data: dict) -> str:
+    """Gemini 응답에서 text 추출 + 안전 필터/오류 처리."""
+    candidates = data.get("candidates") or []
+    if not candidates:
+        pf = data.get("promptFeedback") or {}
+        reason = pf.get("blockReason", "UNKNOWN")
+        return f"안전 필터에 차단되었어요 ({reason}). 다른 표현으로 질문해 주세요."
+
+    cand = candidates[0]
+    finish = cand.get("finishReason", "")
+    if finish == "SAFETY":
+        return "응답이 안전 필터에 의해 차단되었어요. 다른 표현으로 질문해 주세요."
+
+    parts = (cand.get("content") or {}).get("parts") or []
+    text = "".join(
+        p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")
+    ).strip()
+    return text or "AI 응답이 비어 있어요. 잠시 후 다시 시도해 주세요."
+
+
 async def answer_question(
     stock_code: str,
     question: str,
@@ -114,9 +140,9 @@ async def answer_question(
         "years":    ["2022","2023","2024"],
       }
     """
-    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    api_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
     if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY 미설정")
+        raise RuntimeError("GEMINI_API_KEY 미설정")
 
     question = (question or "").strip()
     if not question:
@@ -136,34 +162,31 @@ async def answer_question(
     user_msg = f"[재무 데이터]\n{context}\n\n[사용자 질문]\n{question}"
 
     payload = {
-        "model":      _MODEL,
-        "max_tokens": _MAX_TOKENS,
-        "system":     _SYSTEM_PROMPT,
-        "messages":   [{"role": "user", "content": user_msg}],
-    }
-    headers = {
-        "x-api-key":         api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type":      "application/json",
+        "systemInstruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
+        "contents":          [{"role": "user", "parts": [{"text": user_msg}]}],
+        "generationConfig":  {
+            "temperature":       0.4,
+            "maxOutputTokens":   _MAX_OUTPUT_TOKENS,
+            "responseMimeType":  "text/plain",
+        },
     }
 
     async with httpx.AsyncClient(timeout=_TIMEOUT_S) as client:
-        resp = await client.post(_ANTHROPIC_API_URL, headers=headers, json=payload)
+        resp = await client.post(
+            _API_URL,
+            params={"key": api_key},
+            headers={"content-type": "application/json"},
+            json=payload,
+        )
         if resp.status_code >= 400:
             logger.warning(
-                "Claude API 오류 %s: %s",
+                "Gemini API 오류 %s: %s",
                 resp.status_code, resp.text[:300],
             )
         resp.raise_for_status()
         data = resp.json()
 
-    parts = data.get("content") or []
-    answer = "".join(
-        b.get("text", "") for b in parts if isinstance(b, dict) and b.get("type") == "text"
-    ).strip()
-    if not answer:
-        answer = "AI 응답이 비어 있어요. 잠시 후 다시 시도해 주세요."
-
+    answer = _extract_text(data)
     return {
         "answer":   answer,
         "has_data": True,
