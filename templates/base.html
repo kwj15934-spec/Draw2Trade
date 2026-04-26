@@ -190,6 +190,105 @@
     ::-webkit-scrollbar-thumb { background: var(--d2t-bg-4); border-radius: 2px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--d2t-text-3); }
 
+    /* ══════════════════════════════════════════════════════
+       Liquid Glass — 랜딩페이지 동기 시스템
+       사용법: <div class="liquid-glass-strong">...</div>
+       ══════════════════════════════════════════════════════ */
+    .d2t-bg-overlay {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(70% 60% at 20% 30%, rgba(91,255,198,0.08), transparent 60%),
+        radial-gradient(60% 50% at 80% 80%, rgba(91,255,198,0.05), transparent 60%),
+        linear-gradient(180deg, rgba(6,7,10,0.55) 0%, rgba(6,7,10,0.4) 40%, rgba(6,7,10,0.7) 100%);
+    }
+    .d2t-bg-grain {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      opacity: .06; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+    }
+
+    .liquid-glass {
+      position: relative; overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(4px) saturate(1.15);
+      -webkit-backdrop-filter: blur(4px) saturate(1.15);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.10);
+    }
+    .liquid-glass::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.45) 0%,
+        rgba(255,255,255,0.15) 20%,
+        transparent 40%, transparent 60%,
+        rgba(255,255,255,0.15) 80%,
+        rgba(255,255,255,0.45) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .liquid-glass-strong {
+      position: relative; overflow: hidden;
+      background: rgba(15,18,25,0.55);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+    }
+    .liquid-glass-strong::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.5) 0%,
+        rgba(255,255,255,0.2) 20%,
+        transparent 40%, transparent 60%,
+        rgba(255,255,255,0.2) 80%,
+        rgba(255,255,255,0.5) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .liquid-glass-mint {
+      position: relative; overflow: hidden;
+      background: rgba(91,255,198,0.10);
+      backdrop-filter: blur(10px) saturate(1.25);
+      -webkit-backdrop-filter: blur(10px) saturate(1.25);
+      box-shadow: 0 0 36px rgba(91,255,198,0.35), inset 0 1px 1px rgba(255,255,255,0.18);
+    }
+    .liquid-glass-mint::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(91,255,198,0.65) 0%,
+        rgba(91,255,198,0.2) 30%,
+        rgba(255,255,255,0.1) 50%,
+        rgba(91,255,198,0.2) 70%,
+        rgba(91,255,198,0.6) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* 자동 적용: 차트 레이아웃 핵심 요소들에 글래스 보더 효과 부여 */
+    .d2t-toolbar::before,
+    .d2t-sidebar::before,
+    .info-panel-body::before {
+      content: ""; position: absolute; inset: 0;
+      padding: 1px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.18) 0%,
+        rgba(255,255,255,0.06) 25%,
+        transparent 50%,
+        rgba(255,255,255,0.06) 75%,
+        rgba(255,255,255,0.18) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .d2t-toolbar, .d2t-sidebar, .info-panel-body { position: relative; }
+
     /* ── 기본 레이아웃 ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -4151,11 +4250,15 @@
     #mobile-results-btn { display: none; }
   </style>
 </head>
-<body id="d2t-body" style="display: flex; flex-direction: column; height: 100vh; height: 100dvh;">
+<body id="d2t-body" style="display: flex; flex-direction: column; height: 100vh; height: 100dvh; background:#06070A;">
   <!-- Google Tag Manager (noscript) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-P9V5WJNJ"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
+
+  <!-- 랜딩페이지 동기 — 앰비언트 글로우 + 노이즈 그레인 -->
+  <div class="d2t-bg-overlay"></div>
+  <div class="d2t-bg-grain"></div>
 
   {% block content %}{% endblock %}
 
