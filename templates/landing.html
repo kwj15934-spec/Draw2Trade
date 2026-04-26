@@ -205,6 +205,21 @@
     .community-card h3 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .community-card p{margin:0;font-size:12px;color:rgba(250,251,252,0.6);line-height:1.5}
 
+    .notice-feed{padding:18px 20px;border-radius:24px;display:flex;flex-direction:column;gap:12px}
+    .notice-feed-head{display:flex;align-items:center;justify-content:space-between}
+    .notice-feed-head .lab{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.5);display:flex;align-items:center;gap:8px}
+    .notice-feed-head .lab .dot{width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 8px var(--teal)}
+    .notice-feed-head .more{font-size:11px;color:rgba(250,251,252,0.55);transition:color .2s}
+    .notice-feed-head .more:hover{color:var(--teal)}
+    .notice-feed-list{display:flex;flex-direction:column;gap:8px}
+    .notice-feed-item{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03);transition:background .2s,transform .2s;cursor:pointer;text-decoration:none;color:inherit}
+    .notice-feed-item:hover{background:rgba(91,255,198,0.08);transform:translateX(2px)}
+    .notice-feed-item .t{font-size:13px;font-weight:500;color:#fff;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .notice-feed-item .pin{color:var(--teal);margin-right:4px}
+    .notice-feed-item .meta{display:flex;align-items:center;gap:8px;font-size:10px;color:rgba(250,251,252,0.5);font-family:var(--mono)}
+    .notice-feed-item .badge{padding:1px 6px;border-radius:4px;background:rgba(91,255,198,0.12);color:var(--teal);font-size:9px;letter-spacing:0.05em;text-transform:uppercase}
+    .notice-feed-empty{font-size:12px;color:rgba(250,251,252,0.45);padding:10px 0;text-align:center}
+
     .feature-wrap{margin-top:auto;padding:20px;border-radius:36px;display:flex;flex-direction:column;gap:14px}
     .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .feature-card{padding:22px;border-radius:24px;display:flex;flex-direction:column;gap:14px;min-height:170px;cursor:pointer;transition:transform .2s;text-decoration:none;color:inherit}
@@ -388,7 +403,7 @@
     <header class="nav">
       <a href="/" class="logo" aria-label="Draw2Trade 홈">
         <div class="logo-mark"><img src="/static/img/logo.png" alt="Draw2Trade"/></div>
-        <div class="logo-text">draw2trade<em>kr</em></div>
+        <div class="logo-text">Draw2Trade</div>
       </a>
       <div class="nav-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div class="ticker-strip liquid-glass" id="ticker-strip">
@@ -460,6 +475,16 @@
       <h3>그리는 투자자들의 <em>커뮤니티</em></h3>
       <p>다른 트레이더의 패턴 시그널과 공시 인사이트를 모아 보세요.</p>
     </a>
+
+    <div class="notice-feed liquid-glass" aria-label="공지사항">
+      <div class="notice-feed-head">
+        <div class="lab"><span class="dot"></span> NOTICES · 공지사항</div>
+        <a href="/notices" class="more">전체보기 →</a>
+      </div>
+      <div class="notice-feed-list" id="notice-feed-list">
+        <div class="notice-feed-empty">불러오는 중...</div>
+      </div>
+    </div>
 
     <div class="feature-wrap liquid-glass-strong">
       <div class="feature-grid">
@@ -1067,6 +1092,38 @@
         }
       })
       .catch(function () {});
+  })();
+
+  /* ── notices feed (right panel) ─────────────────────── */
+  (function loadLandingNotices() {
+    var listEl = document.getElementById('notice-feed-list');
+    if (!listEl) return;
+    function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+    var TYPE_LABEL = { update:'업데이트', maintenance:'점검', event:'이벤트', notice:'공지' };
+    fetch('/api/notices')
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (list) {
+        if (!Array.isArray(list) || !list.length) {
+          listEl.innerHTML = '<div class="notice-feed-empty">등록된 공지가 없습니다.</div>';
+          return;
+        }
+        var sorted = list.slice().sort(function (a, b) {
+          if ((b.pinned ? 1 : 0) !== (a.pinned ? 1 : 0)) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+          return String(b.date || '').localeCompare(String(a.date || ''));
+        });
+        var top = sorted.slice(0, 3);
+        listEl.innerHTML = top.map(function (n) {
+          var pin = n.pinned ? '<span class="pin">📌</span>' : '';
+          var typeLabel = TYPE_LABEL[n.type] || '공지';
+          return '<a href="/notices" class="notice-feed-item">' +
+            '<div class="t">' + pin + esc(n.title) + '</div>' +
+            '<div class="meta"><span class="badge">' + esc(typeLabel) + '</span><span>' + esc(n.date) + '</span></div>' +
+          '</a>';
+        }).join('');
+      })
+      .catch(function () {
+        listEl.innerHTML = '<div class="notice-feed-empty">공지를 불러올 수 없습니다.</div>';
+      });
   })();
 </script>
 
