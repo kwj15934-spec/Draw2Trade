@@ -1,19 +1,22 @@
 """
 Fundamental 라우터
 
-GET /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·성장성·안정성)
-GET /api/v1/fundamental/{symbol}/analysis  — 재무 수치 분석 (AI 없음, 순수 DART 데이터)
-GET /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
+GET  /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·성장성·안정성)
+GET  /api/v1/fundamental/{symbol}/analysis  — 재무 수치 분석 (AI 없음, 순수 DART 데이터)
+GET  /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
+POST /api/v1/fundamental/{symbol}/qa        — DART 기반 자연어 Q&A (Claude API)
 
-AI 기능은 모두 제거됨 (Gemini API 단일화 후 전면 삭제).
 재무 데이터는 DART Open API 를 통해서만 제공됩니다.
+Q&A 만 Claude API 를 사용하며, 답변은 DART 데이터에 한정됩니다.
 """
 import logging
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
-from app.services import dart_service
+from app.dependencies.auth import require_user
+from app.services import dart_service, fundamental_qa_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/fundamental", tags=["fundamental"])
@@ -175,5 +178,43 @@ async def get_detailed_financials(
             status_code=404,
             detail=f"'{symbol}'의 상세 재무제표를 찾을 수 없습니다.",
         )
+
+    return result
+
+
+# ── 자연어 Q&A (Claude API + DART 컨텍스트) ──────────────────────────────────
+
+class _QARequest(BaseModel):
+    question:     str = Field(..., min_length=1, max_length=300)
+    company_name: str | None = Field(default=None, max_length=80)
+
+
+@router.post("/{symbol}/qa")
+async def post_fundamental_qa(
+    symbol: str,
+    body: _QARequest,
+    user: dict = Depends(require_user),
+):
+    """
+    DART 재무 데이터를 컨텍스트로 자연어 질문에 답변합니다 (로그인 필수).
+
+    예) "삼성전자 살만해?", "이 회사 빚 많아?", "성장세 어때?"
+    """
+    _check_configured()
+    if not fundamental_qa_service.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Q&A 기능이 비활성화되어 있습니다 (ANTHROPIC_API_KEY 미설정).",
+        )
+
+    try:
+        result = await fundamental_qa_service.answer_question(
+            stock_code=symbol,
+            question=body.question,
+            company_name=body.company_name,
+        )
+    except Exception as e:
+        logger.exception("fundamental Q&A 오류 [%s]: %s", symbol, e)
+        raise HTTPException(status_code=502, detail="AI 답변 생성에 실패했습니다.")
 
     return result

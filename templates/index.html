@@ -129,11 +129,17 @@
       <span id="thb-fullname" class="thb-fullname"></span>
     </div>
 
-    <!-- 중: 현재가 + 등락률 + 기준일자 -->
+    <!-- 중: 현재가 + 등락률 + 기준일자 + 종목 정보 보기 -->
     <div class="thb-center" id="thb-price-area">
       <span id="thb-price" class="thb-price">—</span>
       <span id="thb-chg"   class="thb-chg">—</span>
       <span id="thb-time"  class="thb-time"></span>
+      <a href="#" id="thb-main-info-link"
+         onclick="toggleMainInfoOverlay();return false;"
+         title="메인 종목 정보 보기"
+         style="margin-left:10px; font-size:12px; font-weight:600; color:#26a69a; text-decoration:none; padding:2px 8px; border:1px solid #26a69a; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
+         onmouseover="this.style.background='#26a69a'; this.style.color='#fff';"
+         onmouseout="this.style.background='transparent'; this.style.color='#26a69a';">[종목 정보 보기]</a>
     </div>
 
     <!-- 우: 시장 상태 + LIVE + 공지 -->
@@ -356,14 +362,6 @@
           시작 날짜를 클릭하세요 &nbsp;·&nbsp; <span style="color:#7a8499;">ESC 취소</span>
         </div>
       </div>
-
-      <!-- 차트 우상단: 메인 종목 정보 토글 버튼 -->
-      <button id="btn-main-info-toggle"
-        onclick="toggleMainInfoOverlay()"
-        title="메인 종목 정보"
-        style="position:absolute; top:8px; right:10px; z-index:30; width:28px; height:28px; background:rgba(30,30,33,0.85); border:1px solid #3a3a3e; border-radius:6px; color:#d4d8e2; cursor:pointer; font-size:16px; font-weight:300; line-height:1; display:flex; align-items:center; justify-content:center; transition:background .15s, border-color .15s;"
-        onmouseover="this.style.background='rgba(38,166,154,0.25)'; this.style.borderColor='#26a69a';"
-        onmouseout="this.style.background='rgba(30,30,33,0.85)'; this.style.borderColor='#3a3a3e';">＋</button>
 
     </div>
 
@@ -1947,12 +1945,39 @@ function _escHtml(s) {
             + '</div>';
         }
 
-        // (AI 재무 요약 기능은 제거됨 — Gemini API 사용량 관리 차원)
+        // ── ④ 재무 Q&A 카드 (Claude API + DART) ─────────────────────
+        if (dart && dart.years && dart.summary) {
+          var companyNm = (kis && (kis.name || kis.company_name)) || '';
+          var qaHtml = ''
+            + '<div class="finance-card" id="fund-qa-card">'
+            +   '<div class="finance-card-title">재무 Q&amp;A '
+            +     '<span style="font-weight:400;color:#7a8499;font-size:10px;">DART 데이터 기반 · AI 답변</span>'
+            +   '</div>'
+            +   '<div class="fund-qa-suggest">'
+            +     '<button class="fund-qa-chip" data-q="' + (companyNm || ticker) + ' 살만해?">살만해?</button>'
+            +     '<button class="fund-qa-chip" data-q="이 회사 빚 많아?">빚 많아?</button>'
+            +     '<button class="fund-qa-chip" data-q="성장세 어때?">성장세?</button>'
+            +     '<button class="fund-qa-chip" data-q="3년 연속 흑자야?">흑자 연속?</button>'
+            +   '</div>'
+            +   '<div class="fund-qa-input-row">'
+            +     '<input type="text" id="fund-qa-input" maxlength="300" '
+            +           'placeholder="재무에 대해 물어보세요 (예: 부채 안전한 편이야?)" '
+            +           'autocomplete="off">'
+            +     '<button id="fund-qa-send" class="fund-qa-send">질문</button>'
+            +   '</div>'
+            +   '<div id="fund-qa-answer" class="fund-qa-answer" style="display:none;"></div>'
+            +   '<div class="fund-qa-disclaimer">⚠ AI 답변은 DART 공시 재무 요약만 근거합니다. 투자 판단은 본인 책임입니다.</div>'
+            + '</div>';
+          html += qaHtml;
+        }
 
         if (!html) {
           html = '<div class="info-empty">재무 데이터를 불러오지 못했습니다.</div>';
         }
-        if (contentEl) contentEl.innerHTML = html;
+        if (contentEl) {
+          contentEl.innerHTML = html;
+          _wireFundamentalQA(ticker, (kis && (kis.name || kis.company_name)) || '');
+        }
       })
       .catch(function (e) {
         if (loadingEl) loadingEl.style.display = 'none';
@@ -1960,6 +1985,77 @@ function _escHtml(s) {
           '<div class="info-empty">재무 데이터를 불러오지 못했습니다.<br><small>' + (e.message||'') + '</small></div>';
       });
   };
+
+  // ── 재무 Q&A 와이어링 ─────────────────────────────────────────────
+  function _wireFundamentalQA(ticker, companyName) {
+    var card    = document.getElementById('fund-qa-card');
+    if (!card) return;
+    var input   = card.querySelector('#fund-qa-input');
+    var sendBtn = card.querySelector('#fund-qa-send');
+    var ansEl   = card.querySelector('#fund-qa-answer');
+    if (!input || !sendBtn || !ansEl) return;
+
+    function ask(question) {
+      question = (question || '').trim();
+      if (!question) { input.focus(); return; }
+      ansEl.style.display = 'block';
+      ansEl.className = 'fund-qa-answer fund-qa-loading';
+      ansEl.innerHTML = '<div class="info-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div>AI가 답변 중...';
+      sendBtn.disabled = true;
+      input.disabled = true;
+
+      fetch('/api/v1/fundamental/' + encodeURIComponent(ticker) + '/qa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ question: question, company_name: companyName || null }),
+      })
+        .then(function (r) {
+          return r.json().then(function (j) { return { ok: r.ok, status: r.status, data: j }; });
+        })
+        .then(function (res) {
+          ansEl.className = 'fund-qa-answer';
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+              ansEl.innerHTML = '<div class="fund-qa-err">로그인이 필요한 기능입니다.</div>';
+            } else if (res.status === 503) {
+              ansEl.innerHTML = '<div class="fund-qa-err">' + _esc(res.data && res.data.detail || 'Q&A 기능 비활성화') + '</div>';
+            } else {
+              ansEl.innerHTML = '<div class="fund-qa-err">답변 생성 실패: ' + _esc(res.data && res.data.detail || ('HTTP ' + res.status)) + '</div>';
+            }
+            return;
+          }
+          var d = res.data || {};
+          var ansText = d.answer || '';
+          var yrs = d.years && d.years.length ? '<div class="fund-qa-meta">근거: DART ' + d.years.join('/') + ' 사업연도</div>' : '';
+          ansEl.innerHTML =
+            '<div class="fund-qa-q">Q. ' + _esc(question) + '</div>' +
+            '<div class="fund-qa-a">' + _esc(ansText).replace(/\n/g, '<br>') + '</div>' +
+            yrs;
+        })
+        .catch(function (e) {
+          ansEl.className = 'fund-qa-answer';
+          ansEl.innerHTML = '<div class="fund-qa-err">네트워크 오류: ' + _esc(e.message || '') + '</div>';
+        })
+        .finally(function () {
+          sendBtn.disabled = false;
+          input.disabled   = false;
+        });
+    }
+
+    sendBtn.addEventListener('click', function () { ask(input.value); });
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); ask(input.value); }
+    });
+    var chips = card.querySelectorAll('.fund-qa-chip');
+    chips.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var q = btn.getAttribute('data-q') || btn.textContent;
+        input.value = q;
+        ask(q);
+      });
+    });
+  }
 
   // ── 뉴스 데이터 로드 ─────────────────────────────────────────────
   window.loadNewsData = function (ticker, market) {
