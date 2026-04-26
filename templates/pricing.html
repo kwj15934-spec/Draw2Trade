@@ -291,7 +291,7 @@
 <div class="page-wrap">
   <div class="page-label">PRICING · 요금제</div>
   <h1 class="page-title">이벤트 특가로<br><em>Pro</em>를 시작하세요</h1>
-  <p class="page-desc">월 <strong>$6</strong> · 연 <strong>$60</strong> (17% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 표시 가격에 부가세 10%가 별도로 부과됩니다.</p>
+  <p class="page-desc">월 <strong>$6</strong> · 연 <strong>$60</strong> (17% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 표시 가격에 결제 세금이 별도로 부과됩니다.</p>
 
   <div class="plans-grid">
 
@@ -356,7 +356,7 @@
 
     <div class="faq-item">
       <div class="faq-q">세금은 어떻게 부과되나요?</div>
-      <div class="faq-a">표시 가격($6 / $60)에 부가세(VAT) 10%가 별도로 부과됩니다. PayPal 결제 화면에서 최종 결제액(월 $6.60 / 연 $66.00)이 안내됩니다.</div>
+      <div class="faq-a">표시 가격($6 / $60)에 결제 세금이 별도로 부과됩니다. PayPal 결제 화면에서 최종 결제액이 안내됩니다.</div>
     </div>
 
     <div class="faq-item">
@@ -390,7 +390,7 @@
         <table>
           <tr><td>플랜</td><td id="pp-modal-plan">월간 — Draw2Trade Pro</td></tr>
           <tr><td>가격</td><td id="pp-modal-base">$6.00 / 월</td></tr>
-          <tr><td>부가세 (10%)</td><td id="pp-modal-tax">+$0.60</td></tr>
+          <tr><td>결제 세금</td><td id="pp-modal-tax">+$0.60</td></tr>
           <tr><td><strong>최종 결제액</strong></td><td class="amt" id="pp-modal-total">$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span></td></tr>
         </table>
       </div>
@@ -434,10 +434,10 @@
     var subEl   = document.getElementById('plan-price-sub');
     if (_billingPeriod === 'annual') {
       if (priceEl) priceEl.innerHTML = '$60 <span>/ 년</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 부가세 별도';
+      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 결제 세금 별도';
     } else {
       if (priceEl) priceEl.innerHTML = '$6 <span>/ 월</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 결제 · 부가세 별도 · 언제든 해지';
+      if (subEl)   subEl.innerHTML = '월 단위 결제 · 결제 세금 별도 · 언제든 해지';
     }
   }
 
