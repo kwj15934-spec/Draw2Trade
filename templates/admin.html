@@ -11,22 +11,41 @@
     html, body {
       min-height: 100%;
       margin: 0;
-      background: #0f1117;
-      color: #C9CFDA;
+      background: #06070A;
+      color: #FAFBFC;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       font-size: 14px;
+      position: relative;
     }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(60% 40% at 18% 10%, rgba(91,255,198,0.10), transparent 70%),
+        radial-gradient(50% 36% at 82% 20%, rgba(91,255,198,0.06), transparent 70%);
+      mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
 
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 16px 32px;
-      border-bottom: 1px solid #1e2130;
-      background: #11141B;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(6,7,10,0.72);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    .brand { font-size: 18px; font-weight: 700; color: #ff6b35; }
+    .brand { font-size: 18px; font-weight: 700; color: #5BFFC6; letter-spacing: 0.02em; }
     .header-right { display: flex; align-items: center; gap: 16px; }
 
     .btn-home, .btn-logout {
@@ -50,16 +69,25 @@
     /* 탭 필터 */
     .filters { display: flex; gap: 8px; margin-bottom: 20px; }
     .filter-btn {
-      background: none;
+      background: rgba(15,18,25,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      color: #666;
+      border-radius: 999px;
+      color: #8C95A8;
       font-size: 12px;
-      padding: 5px 14px;
+      padding: 6px 16px;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .filter-btn.active { border-color: #5BFFC6; color: #5BFFC6; background: rgba(91,255,198,.08); }
+    .filter-btn:hover { border-color: rgba(91,255,198,0.3); color: #C9CFDA; }
+    .filter-btn.active {
+      border-color: rgba(91,255,198,0.5);
+      color: #06070A;
+      background: linear-gradient(135deg, #5BFFC6, #4DE6B0);
+      box-shadow: 0 0 16px rgba(91,255,198,0.25);
+      font-weight: 600;
+    }
 
     /* 유저 카드 */
     .user-list { display: flex; flex-direction: column; gap: 10px; }
@@ -68,11 +96,27 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      background: #11141B;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 14px 18px;
+      position: relative;
     }
+    .user-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(91,255,198,0.16), rgba(255,255,255,0.04) 40%, rgba(91,255,198,0.06));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .user-card > * { position: relative; }
 
     .avatar {
       width: 38px;
@@ -128,8 +172,11 @@
     /* 문의 */
     .inquiry-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
     .inquiry-card {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px; padding: 16px 18px;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 16px 18px;
     }
     .inquiry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .inquiry-name { font-weight: 600; font-size: 13px; }
@@ -155,9 +202,11 @@
     .stat-card {
       flex: 1;
       min-width: 130px;
-      background: #11141B;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 14px 18px;
     }
     .stat-label { font-size: 11px; color: #555; margin-bottom: 6px; }
@@ -172,7 +221,10 @@
     }
     /* 도넛 차트 카드 */
     .kis-donut-card {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
       padding: 20px 24px; display: flex; align-items: center; gap: 20px;
       min-width: 240px;
     }
@@ -193,7 +245,7 @@
       display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 160px;
     }
     .kis-metric {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
       padding: 10px 14px;
     }
     .kis-metric-label { font-size: 11px; color: #555; margin-bottom: 3px; }
@@ -201,7 +253,7 @@
     .kis-metric-value.accent { color: #2196f3; }
     /* 히스토그램 */
     .kis-histogram-card {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
       padding: 16px 20px; margin-bottom: 20px;
     }
     .kis-histogram-title { font-size: 12px; color: #555; margin-bottom: 10px; }
@@ -225,7 +277,7 @@
     @media (max-width: 720px) { .notice-editor { grid-template-columns: 1fr; } }
 
     .notice-editor-panel {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px; overflow: hidden;
       display: flex; flex-direction: column;
     }
@@ -254,7 +306,7 @@
 
     .notice-editor-body { flex: 1; display: flex; flex-direction: column; padding: 16px 18px; gap: 12px; }
     .notice-title-inp {
-      width: 100%; background: #0f1117; border: 1px solid rgba(255,255,255,0.08);
+      width: 100%; background: rgba(11,13,18,0.55); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 6px; padding: 10px 14px;
       color: #C9CFDA; font-size: 15px; font-weight: 600; outline: none;
       transition: border-color .15s;
@@ -263,7 +315,7 @@
     .notice-title-inp::placeholder { color: #444; font-weight: 400; }
 
     .notice-content-inp {
-      width: 100%; min-height: 240px; background: #0f1117; border: 1px solid rgba(255,255,255,0.08);
+      width: 100%; min-height: 240px; background: rgba(11,13,18,0.55); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 6px; padding: 12px 14px;
       color: #C9CFDA; font-size: 14px; line-height: 1.7; outline: none;
       resize: vertical; transition: border-color .15s; font-family: inherit;
@@ -277,11 +329,13 @@
     }
     .char-count { font-size: 11px; color: #444; }
     .btn-notice-submit {
-      background: #5BFFC6; border: none; border-radius: 6px;
-      color: #fff; font-size: 13px; font-weight: 700;
-      padding: 8px 22px; cursor: pointer; transition: opacity .15s;
+      background: linear-gradient(135deg, #5BFFC6, #4DE6B0);
+      border: none; border-radius: 999px;
+      color: #06070A; font-size: 13px; font-weight: 700;
+      padding: 8px 22px; cursor: pointer; transition: all .15s;
+      box-shadow: 0 0 16px rgba(91,255,198,0.25);
     }
-    .btn-notice-submit:hover { opacity: .85; }
+    .btn-notice-submit:hover { box-shadow: 0 0 22px rgba(91,255,198,0.4); transform: translateY(-1px); }
     .btn-notice-cancel {
       background: none; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
       color: #666; font-size: 13px; padding: 8px 16px; cursor: pointer;
@@ -309,7 +363,7 @@
 
     /* 공지 목록 카드 */
     .notice-list-card {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 8px; padding: 16px 18px; margin-bottom: 10px;
     }
     .notice-list-card.pinned { border-color: rgba(91,255,198,.35); }
@@ -328,19 +382,19 @@
 
     /* 팝업 관리 */
     .popup-card {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px; padding: 18px 20px; margin-bottom: 12px;
       display: flex; gap: 16px; align-items: flex-start;
     }
     .popup-card.active-popup { border-color: rgba(91,255,198,.4); }
     .popup-thumb {
       width: 72px; height: 72px; border-radius: 6px;
-      object-fit: cover; background: #0f1117; flex-shrink: 0;
+      object-fit: cover; background: rgba(11,13,18,0.55); flex-shrink: 0;
       border: 1px solid rgba(255,255,255,0.08);
     }
     .popup-thumb-empty {
       width: 72px; height: 72px; border-radius: 6px;
-      background: #0f1117; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(11,13,18,0.55); border: 1px solid rgba(255,255,255,0.08);
       flex-shrink: 0; display: flex; align-items: center;
       justify-content: center; color: #333; font-size: 24px;
     }
@@ -366,13 +420,13 @@
     }
     .btn-popup-del:hover { opacity: .8; }
     .popup-form-panel {
-      background: #11141B; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,18,25,0.72); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px; padding: 20px 22px; margin-bottom: 20px;
     }
     .popup-form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     .popup-form-label { font-size: 11px; color: #666; font-weight: 600; letter-spacing: .5px; }
     .popup-form-inp {
-      background: #0f1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+      background: rgba(11,13,18,0.55); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
       color: #C9CFDA; font-size: 13px; padding: 9px 12px; outline: none;
       transition: border-color .15s; width: 100%;
     }
