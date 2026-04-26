@@ -372,7 +372,7 @@
 
     <div class="faq-item">
       <div class="faq-q">결제 수단은 무엇이 지원되나요?</div>
-      <div class="faq-a">PayPal 계정, 신용/체크카드(Visa, MasterCard, Amex 등) 결제를 지원합니다. PayPal 화면에서 카드 직접 입력도 가능합니다.</div>
+      <div class="faq-a">신용/체크카드(Visa, MasterCard, Amex 등) 결제를 지원합니다. 결제 처리는 PayPal의 보안 결제 시스템을 통해 안전하게 이루어집니다.</div>
     </div>
   </div>
 </div>
@@ -384,7 +384,7 @@
 
     <div id="pro-step1">
       <div class="pro-modal-title">Pro 구독 결제</div>
-      <div class="pro-modal-sub">PayPal 또는 카드로 안전하게 결제하세요.</div>
+      <div class="pro-modal-sub">신용/체크카드로 안전하게 결제하세요.</div>
 
       <div class="pay-info" style="display:block;padding:18px 20px;">
         <table>
@@ -396,7 +396,7 @@
       </div>
 
       <div id="paypal-button-container" style="margin-top:12px;min-height:50px;"></div>
-      <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;">PayPal 버튼 불러오는 중...</div>
+      <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;">결제 버튼 불러오는 중...</div>
       <div id="pro-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
     </div>
 
@@ -471,7 +471,7 @@
         return new Promise(function (resolve, reject) {
           var s = document.createElement('script');
           s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(cfg.client_id)
-                + '&vault=true&intent=subscription&currency=USD';
+                + '&vault=true&intent=subscription&currency=USD&disable-funding=paypal';
           s.setAttribute('data-sdk-integration-source', 'button-factory');
           s.onload = function () { _paypalSDKLoaded = true; resolve(); };
           s.onerror = function () { reject(new Error('PayPal SDK 로드 실패')); };
