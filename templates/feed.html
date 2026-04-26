@@ -61,56 +61,53 @@
 
     a { color: inherit; text-decoration: none; }
 
-    /* ── 네비 ─────────────────────────────────── */
+    /* ── 네비 (통일 — base.html 매칭) ────────────── */
     .d2t-nav {
       position: sticky; top: 0; z-index: 100;
-      height: 56px;
+      height: 46px;
       background: rgba(6,7,10,0.72);
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
-      border-bottom: 1px solid var(--border1);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex; align-items: center;
-      padding: 0 24px;
+      padding: 0 20px; gap: 0;
+      box-sizing: border-box;
     }
     .d2t-brand {
-      font-family: var(--font); font-size: 16px; font-weight: 700;
-      color: var(--fg0); display: flex; align-items: center;
-      gap: 8px; letter-spacing: -0.01em;
-      flex-shrink: 0; margin-right: 24px;
+      font-family: var(--font); font-size: 16px; font-weight: 800;
+      color: #ff6b35; letter-spacing: -0.2px;
+      text-decoration: none; display: flex; align-items: center;
+      gap: 8px; white-space: nowrap;
+      flex-shrink: 0; margin-right: 16px;
     }
     .d2t-brand img { height: 24px; width: 24px; object-fit: contain; }
+    .d2t-nav-sep {
+      width: 1px; height: 16px; background: #3f3f46;
+      flex-shrink: 0; margin: 0 20px 0 0;
+    }
     .d2t-nav-tabs {
-      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 30px; flex-shrink: 0;
     }
     .nav-spacer { flex: 1; min-width: 0; }
     .nav-link {
-      position: relative;
-      font-family: var(--font); font-size: 13px; font-weight: 500;
-      color: var(--fg2);
-      padding: 0 14px; line-height: 56px;
-      transition: color .18s ease;
-      white-space: nowrap;
+      font-size: 14px; font-weight: 500;
+      color: #8C95A8; text-decoration: none;
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0; margin: 0; white-space: nowrap;
+      transition: color .15s, border-color .15s;
+      line-height: 46px; display: inline-block;
+      letter-spacing: 0;
     }
-    .nav-link::after {
-      content: ''; position: absolute; left: 14px; right: 14px; bottom: 14px;
-      height: 1px; background: var(--teal); transform: scaleX(0);
-      transform-origin: center; transition: transform .25s ease;
-      box-shadow: 0 0 8px var(--tealGlow);
+    .nav-link:hover {
+      color: #C9CFDA; text-decoration: none;
+      border-bottom-color: #3f3f46;
     }
-    .nav-link:hover { color: var(--fg0); }
-    .nav-link:hover::after { transform: scaleX(0.6); }
-    .nav-link.active { color: var(--teal); font-weight: 600; }
-    .nav-link.active::after { transform: scaleX(1); }
-
-    .nav-cta {
-      font-family: var(--font); font-size: 13px; font-weight: 600;
-      color: var(--bg0);
-      background: linear-gradient(135deg, #5BFFC6 0%, #4DE6B0 100%);
-      padding: 8px 16px; border-radius: 8px;
-      box-shadow: 0 0 24px var(--tealGlow), inset 0 1px 0 rgba(255,255,255,0.2);
-      transition: transform .15s ease, box-shadow .25s ease;
+    .nav-link.active {
+      color: #5BFFC6;
+      border-bottom: 2px solid #5BFFC6;
+      font-weight: 700;
     }
-    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(91,255,198,0.3), inset 0 1px 0 rgba(255,255,255,0.3); }
 
     /* ── 레이아웃 ─────────────────────────────── */
     .page-body {
@@ -338,9 +335,12 @@
     footer .biz { font-family: var(--mono); font-size: 11px; color: var(--fg3); }
 
     @media (max-width: 600px) {
-      .d2t-nav { padding: 0 16px; }
-      .nav-link { padding: 0 10px; font-size: 12px; }
-      .d2t-brand { font-size: 15px; margin-right: 12px; }
+      .d2t-nav { padding: 0 14px; height: 44px; }
+      .d2t-brand { font-size: 14px; gap: 6px; margin-right: 12px; }
+      .d2t-brand img { height: 20px; width: 20px; }
+      .d2t-nav-tabs { gap: 18px; }
+      .d2t-nav-sep { margin: 0 12px 0 0; }
+      .nav-link { font-size: 12px; line-height: 44px; }
       .page-header h1 { font-size: 24px; }
     }
   </style>
@@ -352,6 +352,7 @@
     <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.src='/static/img/favicon.svg'">
     Draw2Trade
   </a>
+  <span class="d2t-nav-sep"></span>
   <div class="d2t-nav-tabs">
     <a href="/market"  class="nav-link">시장</a>
     <a href="/news"    class="nav-link">뉴스</a>
@@ -359,7 +360,7 @@
     <a href="/notices" class="nav-link">공지</a>
   </div>
   <div class="nav-spacer"></div>
-  <a href="/login" data-loggedin-href="/app" class="nav-cta">차트 앱 시작</a>
+  <a href="/login" data-loggedin-href="/app" class="nav-link">차트 앱 →</a>
 </nav>
 
 <div class="page-body">

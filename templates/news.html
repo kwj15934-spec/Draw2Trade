@@ -58,12 +58,13 @@
       box-sizing: border-box !important;
     }
     .d2t-brand {
-      font-size: 15px !important; font-weight: 800 !important; color: var(--orange) !important;
+      font-size: 16px !important; font-weight: 800 !important; color: #ff6b35 !important;
+      letter-spacing: -0.2px !important;
       text-decoration: none !important; display: flex !important; align-items: center !important;
-      gap: 7px !important; white-space: nowrap !important;
+      gap: 8px !important; white-space: nowrap !important;
       flex-shrink: 0 !important; margin-right: 16px !important;
     }
-    .d2t-brand img { height: 22px !important; width: 22px !important; object-fit: contain !important; }
+    .d2t-brand img { height: 24px !important; width: 24px !important; object-fit: contain !important; }
     .d2t-nav-sep {
       width: 1px !important; height: 16px !important; background: #3f3f46 !important;
       flex-shrink: 0 !important; margin: 0 20px 0 0 !important;
@@ -96,6 +97,14 @@
       border-bottom: 2px solid #5BFFC6 !important;
       font-weight: 700 !important;
       background: none !important; box-shadow: none !important;
+    }
+    @media (max-width: 640px) {
+      .d2t-nav { padding: 0 14px !important; height: 44px !important; }
+      .d2t-brand { font-size: 14px !important; gap: 6px !important; margin-right: 12px !important; }
+      .d2t-brand img { height: 20px !important; width: 20px !important; }
+      .d2t-nav-tabs { gap: 18px !important; }
+      .d2t-nav-sep { margin: 0 12px 0 0 !important; }
+      .nav-link { font-size: 12px !important; line-height: 44px !important; }
     }
 
     /* ── 레이아웃 ──────────────────────────────── */
