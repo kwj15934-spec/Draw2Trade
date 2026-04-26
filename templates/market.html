@@ -119,14 +119,24 @@
 
 <style>
 /* ═══════════════════════════════════════════════════════════════
-   Market Dashboard — Obsidian Terminal 테마 (토스 스타일 필터)
+   Market Dashboard — Liquid Glass 테마
 ═══════════════════════════════════════════════════════════════ */
+
+/* 페이지 배경 글로우 */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 15% 10%, rgba(91,255,198,0.08), transparent 60%),
+    radial-gradient(ellipse 500px 350px at 85% 90%, rgba(91,255,198,0.05), transparent 60%);
+  mask-image: radial-gradient(ellipse 100% 80% at 50% 30%, black 30%, transparent 80%);
+}
+.d2t-nav, .mkt-main { position: relative; z-index: 1; }
 
 .mkt-main {
   flex: 1;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  padding: 28px 20px 60px;
   width: 100%;
 }
 
@@ -143,18 +153,20 @@
 /* 시장 세그먼트 탭 */
 .mkt-market-seg {
   display: flex;
-  background: var(--d2t-bg-3, #181C24);
-  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
-  border-radius: 8px;
+  background: rgba(15,18,25,0.55);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
   padding: 3px;
   gap: 2px;
   flex-shrink: 0;
 }
 .mkt-seg-btn {
-  padding: 5px 14px;
+  padding: 6px 16px;
   background: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--d2t-text-2, #8C95A8);
   font-size: 12px;
   font-weight: 600;
@@ -162,10 +174,11 @@
   transition: all 180ms ease;
   white-space: nowrap;
 }
-.mkt-seg-btn:hover { color: var(--d2t-text-1, #C9CFDA); }
+.mkt-seg-btn:hover { color: var(--d2t-text-0, #FAFBFC); }
 .mkt-seg-btn.active {
-  background: var(--d2t-cyan, #5BFFC6);
-  color: #0a0a0f;
+  background: linear-gradient(135deg, #5BFFC6, #4DE6B0);
+  color: #06070A;
+  box-shadow: 0 0 16px rgba(91,255,198,0.3);
 }
 
 /* 순위 기준 칩 트랙 (가로 스크롤) */
@@ -184,10 +197,12 @@
 .mkt-chip-track::-webkit-scrollbar { display: none; }
 .mkt-chip {
   flex-shrink: 0;
-  padding: 5px 14px;
-  background: var(--d2t-bg-3, #181C24);
-  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
-  border-radius: 20px;
+  padding: 6px 16px;
+  background: rgba(15,18,25,0.55);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
   color: var(--d2t-text-2, #8C95A8);
   font-size: 12px;
   font-weight: 600;
@@ -196,13 +211,15 @@
   white-space: nowrap;
 }
 .mkt-chip:hover {
-  border-color: var(--d2t-cyan, #5BFFC6);
-  color: var(--d2t-text-1, #C9CFDA);
+  border-color: rgba(91,255,198,0.4);
+  color: var(--d2t-text-0, #FAFBFC);
+  background: rgba(91,255,198,0.06);
 }
 .mkt-chip.active {
-  background: rgba(91,255,198,0.12);
-  border-color: var(--d2t-cyan, #5BFFC6);
+  background: rgba(91,255,198,0.14);
+  border-color: rgba(91,255,198,0.5);
   color: var(--d2t-cyan, #5BFFC6);
+  box-shadow: 0 0 16px rgba(91,255,198,0.18);
 }
 /* 급하락 칩 활성: 파랑 */
 .mkt-chip[data-cat="fall"].active {
@@ -245,26 +262,28 @@
 .mkt-period-select {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--d2t-bg-3, #181C24);
-  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
-  border-radius: 8px;
+  background: rgba(15,18,25,0.55);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
   color: var(--d2t-text-1, #C9CFDA);
   font-size: 12px;
   font-weight: 600;
-  padding: 5px 28px 5px 12px;
+  padding: 6px 30px 6px 14px;
   cursor: pointer;
-  transition: border-color 180ms;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7f8e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  transition: border-color 180ms, background 180ms;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C95A8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 12px center, 0 0;
 }
 .mkt-period-select:hover,
 .mkt-period-select:focus {
-  border-color: var(--d2t-cyan, #5BFFC6);
+  border-color: rgba(91,255,198,0.4);
   outline: none;
 }
 .mkt-period-select option {
-  background: #181C24;
+  background: #11141B;
   color: #C9CFDA;
 }
 
@@ -282,15 +301,18 @@
   position: relative;
   width: 32px;
   height: 18px;
-  background: var(--d2t-bg-3, #2a2a30);
-  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.12));
+  background: rgba(15,18,25,0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 10px;
-  transition: background 200ms, border-color 200ms;
+  transition: background 200ms, border-color 200ms, box-shadow 200ms;
   flex-shrink: 0;
 }
 .mkt-toggle-input:checked + .mkt-toggle-track {
-  background: var(--d2t-cyan, #5BFFC6);
-  border-color: var(--d2t-cyan, #5BFFC6);
+  background: linear-gradient(135deg, #5BFFC6, #4DE6B0);
+  border-color: rgba(91,255,198,0.5);
+  box-shadow: 0 0 12px rgba(91,255,198,0.3);
 }
 .mkt-toggle-thumb {
   position: absolute;
@@ -319,12 +341,22 @@
   margin-bottom: 20px;
 }
 .mkt-idx-card {
-  background: var(--d2t-bg-3, #181C24);
-  border: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
-  border-radius: 12px;
-  padding: 18px 22px;
+  background: rgba(15,18,25,0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-radius: 16px;
+  padding: 20px 24px;
   position: relative;
   overflow: hidden;
+}
+.mkt-idx-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
 }
 .mkt-idx-name {
   font-size: 12px;
@@ -364,7 +396,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--d2t-bg-2, #11141B);
+  background: rgba(15,18,25,0.55);
 }
 .mkt-summary-inner { text-align: center; }
 .mkt-summary-label {
@@ -390,9 +422,21 @@
 
 .mkt-table-wrap {
   overflow-x: auto;
-  background: var(--d2t-bg-2, #11141B);
-  border: 1px solid var(--d2t-border-0, rgba(255,255,255,0.04));
-  border-radius: 12px;
+  position: relative;
+  background: rgba(15,18,25,0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-radius: 16px;
+}
+.mkt-table-wrap::before {
+  content: ''; position: absolute; inset: 0; border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
 }
 .mkt-table {
   width: 100%;
@@ -401,17 +445,20 @@
   font-size: 12px;
 }
 .mkt-table thead th {
-  padding: 12px 15px;
+  padding: 14px 16px;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--d2t-text-3, #5A6172);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--d2t-border-1, rgba(255,255,255,0.08));
+  letter-spacing: 0.14em;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--d2t-bg-2, #11141B);
+  background: rgba(11,13,18,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1;
 }
 /* 열별 너비 + 정렬 — th/td 공통 클래스로 일치 */
@@ -432,12 +479,12 @@
 .mkt-th-trend { width: 160px; text-align: left; padding-left: 12px; }
 
 .mkt-table tbody tr {
-  border-bottom: 1px solid var(--d2t-border-0, rgba(255,255,255,0.04));
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   transition: background 150ms;
   cursor: pointer;
 }
 .mkt-table tbody tr:last-child { border-bottom: none; }
-.mkt-table tbody tr:hover { background: var(--d2t-bg-3, #181C24); }
+.mkt-table tbody tr:hover { background: rgba(91,255,198,0.04); }
 .mkt-table td {
   padding: 12px 15px;
   vertical-align: middle;

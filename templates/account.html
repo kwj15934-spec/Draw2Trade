@@ -69,10 +69,7 @@
     color: var(--fg0); font-family: var(--font);
     font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
   }
-  .brand-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--teal); box-shadow: 0 0 12px var(--tealGlow);
-  }
+  .nav-brand img { height: 24px; width: 24px; object-fit: contain; }
   .nav-links { display: flex; gap: 4px; align-items: center; }
   .nav-links a {
     position: relative;
@@ -315,7 +312,7 @@
 
 <nav class="nav">
   <a href="/" class="nav-brand">
-    <span class="brand-dot"></span>
+    <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.src='/static/img/favicon.svg'">
     Draw2Trade
   </a>
   <div class="nav-links">
