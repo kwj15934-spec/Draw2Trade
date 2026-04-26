@@ -14,365 +14,342 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>로그인 - Draw2Trade</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <link rel="icon" type="image/png" href="/static/img/favicon.png" sizes="32x32">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@1,8..60,300..600&display=swap" rel="stylesheet">
+
   <!-- Firebase SDK (로컬) -->
   <script src="/static/js/firebase-app-compat.js" defer></script>
   <script src="/static/js/firebase-auth-compat.js" defer></script>
+
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-
-    html, body {
-      min-height: 100%;
-      margin: 0;
-      background: #0f1117;
-      color: #d1d4dc;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      font-size: 14px;
+    :root{
+      --bg0:#06070A;
+      --teal:#5BFFC6;
+      --teal2:#A8FFE0;
+      --tealDim:rgba(91,255,198,0.55);
+      --tealGlow:rgba(91,255,198,0.18);
+      --fg0:#FAFBFC;
+      --fg1:rgba(250,251,252,0.78);
+      --fg2:rgba(250,251,252,0.55);
+      --font:'Space Grotesk','Pretendard',system-ui,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,monospace;
     }
 
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 16px;
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0;min-height:100%;background:var(--bg0);color:var(--fg0);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+
+    /* 배경 그라디언트 + 그리드 */
+    body{
+      position:relative;
+      min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:40px 16px;
+      background:
+        radial-gradient(ellipse 60% 50% at 30% 30%, rgba(91,255,198,0.07), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(91,141,255,0.05), transparent 70%),
+        var(--bg0);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:
+        linear-gradient(rgba(91,255,198,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,255,198,0.04) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(circle at 50% 50%, #000 30%, transparent 80%);
+      -webkit-mask-image:radial-gradient(circle at 50% 50%, #000 30%, transparent 80%);
     }
 
-    .login-card {
-      width: 100%;
-      max-width: 400px;
-      background: #1e1e21;
-      border: 1px solid #2d2d30;
-      border-radius: 12px;
-      padding: 44px 36px 36px;
+    /* liquid glass */
+    .liquid-glass{
+      position:relative;overflow:hidden;
+      background:rgba(15,18,25,0.55);
+      backdrop-filter:blur(14px) saturate(1.2);
+      -webkit-backdrop-filter:blur(14px) saturate(1.2);
+      box-shadow:0 20px 60px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10);
+    }
+    .liquid-glass::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;
+      padding:1.4px;
+      background:linear-gradient(180deg,
+        rgba(255,255,255,0.5) 0%,
+        rgba(255,255,255,0.18) 25%,
+        transparent 50%, transparent 60%,
+        rgba(91,255,198,0.18) 80%,
+        rgba(91,255,198,0.45) 100%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;
+      pointer-events:none;
     }
 
-    .brand {
-      font-size: 26px;
-      font-weight: 700;
-      color: #ff6b35;
-      letter-spacing: 0.5px;
-      text-align: center;
-      margin-bottom: 4px;
+    .login-shell{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px}
+
+    .login-card{
+      width:100%;max-width:440px;
+      border-radius:24px;
+      padding:36px 32px 30px;
     }
 
-    .subtitle {
-      font-size: 12px;
-      color: #555;
-      text-align: center;
-      margin-bottom: 32px;
+    /* 상단 */
+    .btn-back{
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:999px;
+      color:var(--fg2);font-size:12px;letter-spacing:0.04em;
+      padding:6px 14px;text-decoration:none;
+      transition:color .18s ease,border-color .18s ease,background .18s ease;
     }
+    .btn-back:hover{color:var(--teal);border-color:var(--tealDim);background:rgba(91,255,198,0.06)}
 
-    /* ── 탭 ── */
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #2d2d30;
-      margin-bottom: 24px;
+    .brand-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:18px 0 4px}
+    .brand-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg, var(--teal), #5B8DFF);display:grid;place-items:center;box-shadow:0 0 22px var(--tealGlow);overflow:hidden}
+    .brand-logo img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+    .brand-text{font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#fff}
+    .subtitle{font-size:12px;color:var(--fg2);text-align:center;margin-bottom:24px;letter-spacing:0.04em}
+
+    /* 탭 */
+    .tabs{
+      display:flex;position:relative;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      margin-bottom:22px;
     }
-
-    .tab-btn {
-      flex: 1;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: #666;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 8px 0;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-      margin-bottom: -1px;
+    .tab-btn{
+      flex:1;background:none;border:none;
+      color:var(--fg2);font-size:13px;font-weight:500;font-family:var(--font);
+      padding:10px 0;cursor:pointer;
+      transition:color .18s ease;
+      position:relative;
     }
-
-    .tab-btn.active {
-      color: #26a69a;
-      border-bottom-color: #26a69a;
+    .tab-btn::after{
+      content:"";position:absolute;left:50%;bottom:-1px;
+      width:0;height:2px;background:var(--teal);border-radius:2px;
+      transform:translateX(-50%);
+      transition:width .25s cubic-bezier(.4,0,.2,1);
+      box-shadow:0 0 10px var(--tealGlow);
     }
+    .tab-btn.active{color:var(--teal)}
+    .tab-btn.active::after{width:60%}
 
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
 
-    /* ── 폼 ── */
-    .form-group { margin-bottom: 14px; }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: #888;
-      margin-bottom: 5px;
+    /* 폼 */
+    .form-group{margin-bottom:14px}
+    .form-group label{display:block;font-size:11px;color:var(--fg2);margin-bottom:6px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500}
+    .form-group label span{text-transform:none;letter-spacing:0;color:rgba(250,251,252,0.35);font-size:11px;margin-left:4px;font-weight:400}
+    .form-group input{
+      width:100%;height:42px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:8px;
+      color:var(--fg0);font-size:14px;font-family:var(--font);
+      padding:0 14px;outline:none;
+      transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
     }
+    .form-group input::placeholder{color:rgba(250,251,252,0.28)}
+    .form-group input:hover{border-color:rgba(255,255,255,0.18)}
+    .form-group input:focus{border-color:var(--tealDim);background:rgba(91,255,198,0.04);box-shadow:0 0 0 3px rgba(91,255,198,0.08)}
 
-    .form-group input {
-      width: 100%;
-      height: 38px;
-      background: #1e2130;
-      border: 1px solid #2d2d30;
-      border-radius: 5px;
-      color: #d1d4dc;
-      font-size: 13px;
-      padding: 0 10px;
-      outline: none;
-      transition: border-color 0.15s;
+    /* 버튼 */
+    .btn-primary{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;height:46px;
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);
+      border:none;border-radius:10px;
+      color:#001810;font-size:14px;font-weight:700;font-family:var(--font);letter-spacing:0.02em;
+      cursor:pointer;
+      transition:transform .15s ease,box-shadow .2s ease,filter .15s ease;
+      margin-top:8px;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
     }
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(91,255,198,0.32), inset 0 1px 0 rgba(255,255,255,0.5);filter:brightness(1.05)}
+    .btn-primary:active{transform:translateY(0)}
+    .btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none}
 
-    .form-group input:focus { border-color: #26a69a; }
-
-    /* ── 버튼 ── */
-    .btn-primary {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      height: 42px;
-      background: #26a69a;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      margin-top: 6px;
+    .btn-google{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      width:100%;height:46px;
+      background:#fff;
+      border:1px solid #dadce0;border-radius:10px;
+      color:#3c4043;font-size:14px;font-weight:500;font-family:var(--font);
+      cursor:pointer;
+      transition:transform .15s ease,box-shadow .2s ease,background .15s ease;
     }
+    .btn-google:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,0.35);background:#f8f9fa}
+    .btn-google:disabled{opacity:0.45;cursor:not-allowed;transform:none}
 
-    .btn-primary:hover { background: #e55c27; }
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    /* 구분선 */
+    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:rgba(250,251,252,0.35);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:500}
+    .divider::before,.divider::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)}
 
-    .btn-google {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      height: 42px;
-      background: #fff;
-      border: 1px solid #dadce0;
-      border-radius: 5px;
-      color: #3c4043;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    /* 에러 */
+    .error-msg{min-height:18px;font-size:12px;color:#ff7a7a;margin-top:14px;text-align:center;letter-spacing:0.02em}
+
+    /* 모달 */
+    .modal-overlay{
+      display:none;position:fixed;inset:0;z-index:1000;
+      background:rgba(6,7,10,0.78);
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+      align-items:center;justify-content:center;
+      padding:20px;
     }
-
-    .btn-google:hover { border-color: #c6c6c6; background: #f8f8f8; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-    .btn-google:disabled { opacity: 0.45; cursor: not-allowed; }
-
-    /* ── 구분선 ── */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 18px 0;
-      color: #444;
-      font-size: 11px;
+    .modal-overlay.show{display:flex}
+    .modal-box{
+      position:relative;overflow:hidden;
+      background:rgba(15,18,25,0.85);
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      border-radius:18px;
+      padding:36px 30px 28px;
+      width:360px;max-width:100%;
+      text-align:center;
+      box-shadow:0 30px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.10);
     }
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: #2d2d30;
+    .modal-box::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;
+      padding:1.4px;
+      background:linear-gradient(180deg, rgba(91,255,198,0.5), rgba(91,255,198,0.1) 50%, rgba(91,255,198,0.5));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
     }
+    .modal-icon{font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow))}
+    .modal-title{font-size:18px;font-weight:600;letter-spacing:-0.01em;color:#fff;margin-bottom:8px}
+    .modal-desc{font-size:13px;color:var(--fg2);line-height:1.65;margin-bottom:6px}
+    .modal-badge{
+      display:inline-block;
+      background:rgba(91,255,198,0.12);
+      border:1px solid var(--tealDim);
+      color:var(--teal);
+      font-size:11px;font-weight:600;letter-spacing:0.06em;
+      padding:5px 14px;border-radius:999px;
+      margin:14px 0 22px;
+      font-family:var(--mono);
+    }
+    .modal-btn{
+      width:100%;height:44px;
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);
+      border:none;border-radius:10px;
+      color:#001810;font-size:14px;font-weight:700;font-family:var(--font);
+      cursor:pointer;
+      transition:transform .15s ease,filter .15s ease;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .modal-btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
 
-    /* ── 에러 ── */
-    .error-msg {
-      min-height: 18px;
-      font-size: 12px;
-      color: #ef5350;
-      margin-top: 12px;
-      text-align: center;
+    /* 푸터 */
+    .login-footer{
+      width:100%;max-width:440px;
+      padding:18px 0 4px;
+      text-align:center;
+      color:rgba(250,251,252,0.35);
+      font-size:11px;line-height:1.8;
+      letter-spacing:0.02em;
+      position:relative;z-index:1;
     }
+    .login-footer a{color:rgba(250,251,252,0.5);text-decoration:none;transition:color .15s ease}
+    .login-footer a:hover{color:var(--teal)}
+    .login-footer .disclaimer{margin-top:8px;font-size:10.5px;color:rgba(250,251,252,0.28);line-height:1.7}
 
-    .btn-back {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: none;
-      border: 1px solid #2d2d30;
-      border-radius: 5px;
-      color: #90a4ae;
-      font-size: 13px;
-      cursor: pointer;
-      padding: 6px 14px;
-      margin-bottom: 24px;
-      text-decoration: none;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .btn-back:hover {
-      border-color: #26a69a;
-      color: #26a69a;
-      background: rgba(38,166,154,0.07);
-    }
-
-    /* ── 승인 대기 모달 ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-overlay.show { display: flex; }
-
-    .modal-box {
-      background: #1e1e21;
-      border: 1px solid #2d2d30;
-      border-radius: 14px;
-      padding: 40px 36px 32px;
-      width: 340px;
-      text-align: center;
-    }
-
-    .modal-icon {
-      font-size: 44px;
-      margin-bottom: 16px;
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #d1d4dc;
-      margin-bottom: 10px;
-    }
-
-    .modal-desc {
-      font-size: 13px;
-      color: #888;
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-
-    .modal-badge {
-      display: inline-block;
-      background: rgba(38,166,154,0.15);
-      border: 1px solid rgba(38,166,154,0.4);
-      color: #26a69a;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 14px;
-      border-radius: 20px;
-      margin: 12px 0 24px;
-    }
-
-    .modal-btn {
-      width: 100%;
-      height: 42px;
-      background: #26a69a;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .modal-btn:hover { background: #e55c27; }
-
-    .login-footer {
-      width: 100%;
-      max-width: 400px;
-      padding: 24px 0 8px;
-      text-align: center;
-      color: #4a5568;
-      font-size: 12px;
-      line-height: 1.8;
-    }
-    .login-footer a { color: #4a5568; text-decoration: none; }
-    .login-footer a:hover { color: #90a4ae; }
-
-    @media (max-width: 480px) {
-      body { padding: 24px 0; justify-content: flex-start; }
-      .login-card {
-        max-width: 100%;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        padding: 32px 20px 28px;
-      }
-      .login-footer { max-width: 100%; padding: 20px 16px 16px; }
-      .modal-box {
-        width: calc(100% - 32px);
-        padding: 32px 24px 24px;
-      }
+    @media (max-width:480px){
+      body{padding:24px 14px;justify-content:flex-start}
+      .login-card{padding:28px 20px 24px;border-radius:18px}
+      .modal-box{padding:30px 22px 22px}
     }
   </style>
 </head>
 <body>
-  <div class="login-card">
-    <a href="/" class="btn-back">&#8592; 메인으로</a>
-    <div class="brand">Draw2Trade</div>
-    <div class="subtitle">패턴 유사도 기반 종목 검색</div>
+  <div class="login-shell">
+    <div class="login-card liquid-glass">
+      <a href="/" class="btn-back">← 메인으로</a>
 
-    <!-- 탭 -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="email">로그인</button>
-      <button class="tab-btn" data-tab="signup">회원가입</button>
+      <div class="brand-row">
+        <div class="brand-logo"><img src="/static/img/logo.png" alt="Draw2Trade"></div>
+        <div class="brand-text">Draw2Trade</div>
+      </div>
+      <div class="subtitle">패턴 유사도 기반 종목 검색</div>
+
+      <!-- 탭 -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="email">로그인</button>
+        <button class="tab-btn" data-tab="signup">회원가입</button>
+      </div>
+
+      <!-- 이메일/비밀번호 로그인 탭 -->
+      <div class="tab-pane active" id="tab-email">
+        <div class="form-group">
+          <label>이메일</label>
+          <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="input-password" placeholder="비밀번호" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="btn-email-login">로그인</button>
+        <div class="divider">또는</div>
+        <button type="button" class="btn-google" id="btn-google-login">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Google로 로그인
+        </button>
+      </div>
+
+      <!-- 회원가입 탭 -->
+      <div class="tab-pane" id="tab-signup">
+        <div class="form-group">
+          <label>이름</label>
+          <input type="text" id="signup-name" placeholder="홍길동" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label>이메일</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>비밀번호 <span>(6자 이상)</span></label>
+          <input type="password" id="signup-password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>비밀번호 확인</label>
+          <input type="password" id="signup-password2" placeholder="비밀번호 재입력" autocomplete="new-password">
+        </div>
+        <button class="btn-primary" id="btn-signup">가입하기</button>
+        <div class="divider">또는</div>
+        <button type="button" class="btn-google" id="btn-google-signup">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Google로 가입
+        </button>
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
     </div>
 
-    <!-- 이메일/비밀번호 로그인 탭 -->
-    <div class="tab-pane active" id="tab-email">
-      <div class="form-group">
-        <label>이메일</label>
-        <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email">
+    <footer class="login-footer">
+      <div>&copy; 2026 Draw2Trade · FORMETA</div>
+      <div>
+        <a href="/terms">이용약관</a> &nbsp;·&nbsp;
+        <a href="/privacy">개인정보 처리방침</a>
       </div>
-      <div class="form-group">
-        <label>비밀번호</label>
-        <input type="password" id="input-password" placeholder="비밀번호" autocomplete="current-password">
-      </div>
-      <button class="btn-primary" id="btn-email-login">로그인</button>
-      <div class="divider">또는</div>
-      <button type="button" class="btn-google" id="btn-google-login">
-        <svg width="18" height="18" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        Google로 로그인
-      </button>
-    </div>
-
-    <!-- 회원가입 탭 -->
-    <div class="tab-pane" id="tab-signup">
-      <div class="form-group">
-        <label>이름</label>
-        <input type="text" id="signup-name" placeholder="홍길동" autocomplete="name">
-      </div>
-      <div class="form-group">
-        <label>이메일</label>
-        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label>비밀번호 <span style="color:#555;font-size:11px;">(6자 이상)</span></label>
-        <input type="password" id="signup-password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
-      </div>
-      <div class="form-group">
-        <label>비밀번호 확인</label>
-        <input type="password" id="signup-password2" placeholder="비밀번호 재입력" autocomplete="new-password">
-      </div>
-      <button class="btn-primary" id="btn-signup">가입하기</button>
-      <div class="divider">또는</div>
-      <button type="button" class="btn-google" id="btn-google-signup">
-        <svg width="18" height="18" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-        </svg>
-        Google로 가입
-      </button>
-    </div>
-
-    <div class="error-msg" id="error-msg"></div>
+      <div class="disclaimer">본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.</div>
+      <div class="disclaimer">02-6015-9983 &nbsp;|&nbsp; kwj15934@formeta.kr</div>
+    </footer>
   </div>
 
   <!-- 승인 대기 모달 -->
   <div class="modal-overlay" id="pending-modal">
     <div class="modal-box">
       <div class="modal-icon">📋</div>
-      <div class="modal-title">가입 신청 완료!</div>
+      <div class="modal-title">가입 신청 완료</div>
       <div class="modal-desc">
         관리자 승인 후 이용 가능합니다.<br>
         승인 시 이메일로 안내드립니다.
@@ -423,14 +400,5 @@
   {% else %}
   <script src="/static/js/auth.js"></script>
   {% endif %}
-  <footer class="login-footer">
-    <div>&copy; 2026 Draw2Trade</div>
-    <div>
-      <a href="/terms">이용약관</a> &nbsp;·&nbsp;
-      <a href="/privacy">개인정보 처리방침</a>
-    </div>
-    <div style="margin-top:4px;font-size:11px;">본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.</div>
-    <div style="margin-top:3px;font-size:11px;">전화번호: 02-6015-9983 &nbsp;|&nbsp; 이메일: kwj15934@formeta.kr</div>
-  </footer>
 </body>
 </html>
