@@ -988,6 +988,57 @@
       border-color: rgba(255,152,0,.25);
     }
 
+    /* 재무 Q&A 카드 */
+    .fund-qa-suggest {
+      display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px;
+    }
+    .fund-qa-chip {
+      background: rgba(38,166,154,.08);
+      border: 1px solid rgba(38,166,154,.25);
+      color: #26a69a; border-radius: 999px;
+      padding: 3px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .fund-qa-chip:hover { background: #26a69a; color: #fff; }
+    .fund-qa-input-row {
+      display: flex; gap: 6px; align-items: stretch;
+    }
+    #fund-qa-input {
+      flex: 1; min-width: 0;
+      background: #1a1a1e; border: 1px solid #3a3a3e; border-radius: 6px;
+      color: #d4d8e2; padding: 6px 10px; font-size: 12px; outline: none;
+      transition: border-color .15s;
+    }
+    #fund-qa-input:focus { border-color: #26a69a; }
+    #fund-qa-input:disabled { opacity: .55; cursor: wait; }
+    .fund-qa-send {
+      flex-shrink: 0;
+      background: #26a69a; border: 1px solid #26a69a; color: #fff;
+      border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .fund-qa-send:hover:not(:disabled) { background: #1f8e83; }
+    .fund-qa-send:disabled { opacity: .55; cursor: wait; }
+    .fund-qa-answer {
+      margin-top: 10px; padding: 10px 12px;
+      background: rgba(38,166,154,.05);
+      border: 1px solid rgba(38,166,154,.18);
+      border-radius: 6px; font-size: 12px; line-height: 1.55;
+    }
+    .fund-qa-answer.fund-qa-loading { color: #7a8499; }
+    .fund-qa-q {
+      font-size: 11px; color: #7a8499; font-weight: 600; margin-bottom: 6px;
+    }
+    .fund-qa-a { color: #d4d8e2; white-space: pre-wrap; word-break: keep-all; }
+    .fund-qa-meta {
+      margin-top: 8px; font-size: 10px; color: #5a6478;
+      border-top: 1px dashed #2d2d30; padding-top: 6px;
+    }
+    .fund-qa-err { color: #f04848; font-size: 11px; }
+    .fund-qa-disclaimer {
+      margin-top: 10px; font-size: 10px; color: #5a6478; line-height: 1.4;
+    }
+
     /* AI 요약 카드 */
     .fund-ai-card {
       background: linear-gradient(135deg, rgba(38,166,154,.06) 0%, rgba(91,141,239,.04) 100%);
