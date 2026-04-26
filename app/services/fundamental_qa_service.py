@@ -27,7 +27,7 @@ _API_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"{_MODEL}:generateContent"
 )
-_MAX_OUTPUT_TOKENS = 512
+_MAX_OUTPUT_TOKENS = 1024   # gemini-2.5 는 thinking 토큰을 함께 쓰므로 넉넉히
 _TIMEOUT_S = 30.0
 _MAX_QUESTION_LEN = 300
 
@@ -124,6 +124,10 @@ def _extract_text(data: dict) -> str:
     text = "".join(
         p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")
     ).strip()
+
+    # 토큰 부족으로 잘린 경우 — 안내 문구 부착
+    if finish == "MAX_TOKENS" and text:
+        text += "\n\n(답변이 길어 일부만 표시되었어요. 더 구체적으로 질문해 주세요.)"
     return text or "AI 응답이 비어 있어요. 잠시 후 다시 시도해 주세요."
 
 
@@ -170,6 +174,9 @@ async def answer_question(
             "temperature":       0.4,
             "maxOutputTokens":   _MAX_OUTPUT_TOKENS,
             "responseMimeType":  "text/plain",
+            # Gemini 2.5 의 reasoning 토큰을 비활성화 — Q&A 는 짧은 사실 답변이라
+            # thinking 으로 토큰을 소진하면 실제 출력이 잘려 나오는 문제 발생
+            "thinkingConfig":    {"thinkingBudget": 0},
         },
     }
 
