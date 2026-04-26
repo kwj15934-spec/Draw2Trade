@@ -2423,6 +2423,211 @@
     .spm-list::-webkit-scrollbar { width: 4px; }
     .spm-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
+    /* ══════════════════════════════════════════════════════
+       위젯 시스템 — 사이드바 드래그/접기/숨김
+       ══════════════════════════════════════════════════════ */
+    .widget-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(6,7,10,0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      position: relative;
+      z-index: 5;
+    }
+    .widget-toolbar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 24px;
+      padding: 0 9px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      color: #C9CFDA;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .widget-toolbar-btn:hover {
+      background: rgba(91,255,198,0.10);
+      border-color: rgba(91,255,198,0.35);
+      color: #5BFFC6;
+    }
+    .widget-toolbar-btn svg { width: 12px; height: 12px; }
+    .widget-toolbar-spacer { flex: 1; }
+
+    .widget-menu {
+      position: absolute;
+      top: calc(100% + 4px); left: 8px;
+      min-width: 180px;
+      background: rgba(15,18,25,0.92);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 6px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+      display: none;
+      z-index: 50;
+    }
+    .widget-menu.open { display: block; }
+    .widget-menu label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #C9CFDA;
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s;
+    }
+    .widget-menu label:hover { background: rgba(91,255,198,0.10); color: #5BFFC6; }
+    .widget-menu input[type="checkbox"] {
+      width: 13px; height: 13px;
+      accent-color: #5BFFC6;
+      cursor: pointer;
+    }
+
+    #widget-container {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    #widget-container::-webkit-scrollbar { width: 4px; }
+    #widget-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    .widget-card {
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: rgba(15,18,25,0.55);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      border-radius: 12px;
+      box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.10);
+      overflow: hidden;
+      transition: transform .18s var(--d2t-ease), opacity .18s var(--d2t-ease);
+    }
+    .widget-card::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1.2px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.4) 0%,
+        rgba(255,255,255,0.12) 25%,
+        transparent 50%,
+        rgba(255,255,255,0.12) 75%,
+        rgba(255,255,255,0.4) 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .widget-card[hidden] { display: none !important; }
+    .widget-card.dragging { opacity: 0.4; transform: scale(0.98); }
+    .widget-card.drag-over-top { box-shadow: 0 -2px 0 0 #5BFFC6, 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.10); }
+    .widget-card.drag-over-bottom { box-shadow: 0 2px 0 0 #5BFFC6, 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.10); }
+
+    /* 결과 위젯은 flex로 늘어나서 남은 공간 차지 */
+    .widget-card[data-widget="results"] { flex: 1; min-height: 220px; }
+
+    /* 접힘 상태 */
+    .widget-card.collapsed { flex: 0 0 auto !important; }
+    .widget-card.collapsed .widget-body { display: none; }
+
+    .widget-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      padding: 7px 10px;
+      cursor: grab;
+      user-select: none;
+      position: relative;
+      z-index: 2;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+    .widget-card.collapsed .widget-header { border-bottom-color: transparent; }
+    .widget-header:active { cursor: grabbing; }
+    .widget-grip {
+      flex-shrink: 0;
+      width: 12px; height: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #5A6172;
+      font-size: 12px;
+      letter-spacing: -2px;
+    }
+    .widget-grip::before { content: "⋮⋮"; }
+    .widget-title {
+      flex: 1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #C9CFDA;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .widget-card.collapsed .widget-title { color: #8C95A8; }
+    .widget-control {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: none;
+      border: none;
+      border-radius: 5px;
+      color: #5A6172;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      transition: background .12s, color .12s;
+    }
+    .widget-control:hover { background: rgba(255,255,255,0.06); color: #C9CFDA; }
+    .widget-control.danger:hover { background: rgba(255,92,122,0.12); color: #FF5C7A; }
+    .widget-collapse-icon { display: inline-block; transition: transform .18s; }
+    .widget-card.collapsed .widget-collapse-icon { transform: rotate(-90deg); }
+
+    .widget-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+    }
+    .widget-card[data-widget="favorites"] .widget-body,
+    .widget-card[data-widget="drawings"] .widget-body { overflow-y: auto; }
+
+    /* 위젯 내부에 있을 때 기존 패널은 항상 표시 (탭 비활성 무시) */
+    .widget-body .sidebar-content-panel {
+      display: flex !important;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* 모바일: 위젯 카드 간격 축소 */
+    @media (max-width: 768px) {
+      #widget-container { padding: 6px; gap: 6px; }
+      .widget-card { border-radius: 10px; }
+    }
+
     .results-empty {
       padding: 40px 16px;
       text-align: center;

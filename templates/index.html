@@ -107,6 +107,15 @@
   <!-- 로그인 -->
   <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
 
+  <!-- 마이페이지 (로그인 시) -->
+  <a href="/account" id="btn-nav-account"
+     class="d2t-nav-link d2t-nav-link-right" style="display:none;">마이페이지</a>
+
+  <!-- Pro 결제 -->
+  <a href="/pricing" id="btn-nav-pricing"
+     class="d2t-nav-link d2t-nav-link-right"
+     style="color:#5BFFC6 !important;font-weight:600 !important;">Pro</a>
+
   <!-- 문의 -->
   <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;"
      class="d2t-nav-link d2t-nav-link-right">문의</a>
@@ -551,17 +560,49 @@
     </div>
     <button id="fiw-restore-tab" style="display:none;" aria-hidden="true"></button>
 
-    <!-- ══ 하단 패널: 검색결과/즐겨찾기/저장 ════ -->
+    <!-- ══ 하단 패널: 위젯 시스템 ════════════════ -->
     <div id="sidebar-bottom-panel">
 
-      <!-- 탭 헤더 -->
-      <div class="sidebar-tabs">
-        <button class="sidebar-tab-btn active" data-tab="results" id="sidebar-tab-results">유사 종목</button>
-        <button class="sidebar-tab-btn" data-tab="favorites" id="sidebar-tab-favorites">즐겨찾기</button>
-        <button class="sidebar-tab-btn" data-tab="drawings" id="sidebar-tab-drawings">저장</button>
+      <!-- 위젯 툴바 -->
+      <div class="widget-toolbar">
+        <button class="widget-toolbar-btn" id="widget-menu-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          위젯
+        </button>
+        <button class="widget-toolbar-btn" id="widget-reset-btn" type="button" title="기본 레이아웃으로 초기화">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+          초기화
+        </button>
+        <div class="widget-toolbar-spacer"></div>
+        <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;">드래그로 정렬</span>
+
+        <div class="widget-menu" id="widget-menu" role="menu">
+          <label><input type="checkbox" data-widget-toggle="results" checked> 유사 종목</label>
+          <label><input type="checkbox" data-widget-toggle="favorites" checked> 즐겨찾기</label>
+          <label><input type="checkbox" data-widget-toggle="drawings" checked> 저장</label>
+        </div>
       </div>
 
-      <!-- ── 유사 종목 패널 ─────────────────────── -->
+      <!-- 위젯 컨테이너 -->
+      <div id="widget-container">
+
+      <!-- ── 유사 종목 위젯 ─────────────────────── -->
+      <section class="widget-card" data-widget="results">
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title">유사 종목</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+        </header>
+        <div class="widget-body">
       <div id="sidebar-panel-results" class="sidebar-content-panel active">
         <div class="d2t-sidebar-header">
           <span class="result-header-title">☰ 검색 결과</span>
@@ -612,15 +653,44 @@
       </div>
 
 
-      <!-- ── 즐겨찾기 패널 ──────────────────────── -->
-      <div id="sidebar-panel-favorites" class="sidebar-content-panel">
-        <div id="fav-list" style="padding:8px 0;"></div>
-      </div>
+        </div><!-- /.widget-body (results) -->
+      </section><!-- /.widget-card results -->
 
-      <!-- ── 저장된 검색 패널 ───────────────────── -->
-      <div id="sidebar-panel-drawings" class="sidebar-content-panel">
-        <div id="drawings-list" style="padding:8px 0;"></div>
-      </div>
+      <!-- ── 즐겨찾기 위젯 ──────────────────────── -->
+      <section class="widget-card" data-widget="favorites">
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title">즐겨찾기</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+        </header>
+        <div class="widget-body">
+          <div id="sidebar-panel-favorites" class="sidebar-content-panel">
+            <div id="fav-list" style="padding:8px 0;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 저장된 검색 위젯 ───────────────────── -->
+      <section class="widget-card" data-widget="drawings">
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title">저장한 검색</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+        </header>
+        <div class="widget-body">
+          <div id="sidebar-panel-drawings" class="sidebar-content-panel">
+            <div id="drawings-list" style="padding:8px 0;"></div>
+          </div>
+        </div>
+      </section>
+
+      </div><!-- /#widget-container -->
 
     </div><!-- /#sidebar-bottom-panel -->
 
@@ -739,6 +809,8 @@
     .then(function (data) {
       var loginBtn = document.getElementById('btn-nav-login');
       var userBox  = document.getElementById('nav-user-box');
+      var accountBtn = document.getElementById('btn-nav-account');
+      var pricingBtn = document.getElementById('btn-nav-pricing');
       if (data.authenticated && data.user) {
         var u = data.user;
         var avatarEl = document.getElementById('nav-user-avatar');
@@ -746,8 +818,8 @@
         else { avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase(); }
         document.getElementById('nav-user-name').textContent = u.name || u.email;
         var planBadge = document.getElementById('nav-plan-badge');
+        var isPro = (u.plan === 'pro');
         if (planBadge) {
-          var isPro = (u.plan === 'pro');
           planBadge.textContent = isPro ? 'PRO' : 'FREE';
           planBadge.style.display = 'inline';
           planBadge.style.background = isPro ? 'rgba(91,255,198,0.2)' : 'rgba(122,132,153,0.15)';
@@ -756,9 +828,14 @@
         }
         if (loginBtn) loginBtn.style.display = 'none';
         if (userBox)  userBox.style.display  = 'flex';
+        if (accountBtn) accountBtn.style.display = 'inline-flex';
+        // Pro 사용자는 결제 링크 숨김
+        if (pricingBtn) pricingBtn.style.display = isPro ? 'none' : 'inline-flex';
       } else {
         if (loginBtn) loginBtn.style.display = 'flex';
         if (userBox)  userBox.style.display  = 'none';
+        if (accountBtn) accountBtn.style.display = 'none';
+        if (pricingBtn) pricingBtn.style.display = 'inline-flex';
       }
     })
     .catch(function () {
@@ -951,9 +1028,20 @@
   };
 
   window._onSearchComplete = function(count) {
-    // 검색 완료 시 유사종목 탭으로 자동 전환
-    var tab = document.querySelector('.sidebar-tab-btn[data-tab="results"]');
-    if (tab && !tab.classList.contains('active')) tab.click();
+    // 검색 완료 시 유사 종목 위젯이 숨김/접힘 상태면 자동으로 펼침
+    var resultsCard = document.querySelector('.widget-card[data-widget="results"]');
+    if (resultsCard) {
+      resultsCard.removeAttribute('hidden');
+      resultsCard.classList.remove('collapsed');
+      var cb = document.querySelector('[data-widget-toggle="results"]');
+      if (cb) cb.checked = true;
+      // localStorage 동기화 — 위젯 시스템의 persist() 호출을 위해 change 이벤트 발생
+      try { localStorage.setItem('d2t.widgets.v1', JSON.stringify({
+        order: Array.from(document.querySelectorAll('.widget-card')).map(function(c){return c.getAttribute('data-widget');}),
+        collapsed: Array.from(document.querySelectorAll('.widget-card.collapsed')).map(function(c){return c.getAttribute('data-widget');}),
+        hidden: Array.from(document.querySelectorAll('.widget-card[hidden]')).map(function(c){return c.getAttribute('data-widget');}),
+      })); } catch (e) {}
+    }
     if (!isMobile() || count === 0) return;
     var sb = document.querySelector('.d2t-sidebar');
     if (sb && !sb.classList.contains('mobile-open')) window.toggleMobileSidebar();
@@ -2626,6 +2714,189 @@ function _escHtml(s) {
     }
   });
 
+})();
+</script>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     위젯 시스템 — 사이드바 카드 드래그/접기/숨김 + localStorage
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var STORAGE_KEY = 'd2t.widgets.v1';
+  var DEFAULT_ORDER = ['results', 'favorites', 'drawings'];
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.order)) return null;
+      return {
+        order:     s.order.filter(function (k) { return DEFAULT_ORDER.indexOf(k) !== -1; }),
+        collapsed: Array.isArray(s.collapsed) ? s.collapsed : [],
+        hidden:    Array.isArray(s.hidden)    ? s.hidden    : [],
+      };
+    } catch (e) { return null; }
+  }
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function currentState() {
+    var container = document.getElementById('widget-container');
+    if (!container) return { order: DEFAULT_ORDER.slice(), collapsed: [], hidden: [] };
+    var cards = container.querySelectorAll('.widget-card');
+    var order = [], collapsed = [], hidden = [];
+    cards.forEach(function (c) {
+      var k = c.getAttribute('data-widget');
+      if (!k) return;
+      order.push(k);
+      if (c.classList.contains('collapsed')) collapsed.push(k);
+      if (c.hasAttribute('hidden'))           hidden.push(k);
+    });
+    return { order: order, collapsed: collapsed, hidden: hidden };
+  }
+  function persist() { saveState(currentState()); }
+
+  function applyState(state) {
+    var container = document.getElementById('widget-container');
+    if (!container || !state) return;
+
+    // 정렬 — 누락된 키는 DEFAULT_ORDER 끝에 보충
+    var seen = {};
+    var finalOrder = [];
+    state.order.forEach(function (k) { if (!seen[k]) { seen[k] = 1; finalOrder.push(k); } });
+    DEFAULT_ORDER.forEach(function (k) { if (!seen[k]) finalOrder.push(k); });
+
+    var cardsByKey = {};
+    container.querySelectorAll('.widget-card').forEach(function (c) {
+      cardsByKey[c.getAttribute('data-widget')] = c;
+    });
+    finalOrder.forEach(function (k) {
+      if (cardsByKey[k]) container.appendChild(cardsByKey[k]);
+    });
+
+    // 접힘/숨김
+    container.querySelectorAll('.widget-card').forEach(function (c) {
+      var k = c.getAttribute('data-widget');
+      c.classList.toggle('collapsed', state.collapsed.indexOf(k) !== -1);
+      if (state.hidden.indexOf(k) !== -1) c.setAttribute('hidden', '');
+      else c.removeAttribute('hidden');
+    });
+
+    // 메뉴 체크박스 동기화
+    document.querySelectorAll('[data-widget-toggle]').forEach(function (cb) {
+      var k = cb.getAttribute('data-widget-toggle');
+      cb.checked = state.hidden.indexOf(k) === -1;
+    });
+  }
+
+  // 초기 상태 적용
+  var initial = loadState();
+  if (initial) applyState(initial);
+
+  // ── 컨트롤 버튼 (접기/숨김) ────────────────────────────
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.widget-control');
+    if (!btn) return;
+    var card = btn.closest('.widget-card');
+    if (!card) return;
+    var action = btn.getAttribute('data-action');
+    if (action === 'collapse') {
+      card.classList.toggle('collapsed');
+      persist();
+    } else if (action === 'hide') {
+      card.setAttribute('hidden', '');
+      var k = card.getAttribute('data-widget');
+      var cb = document.querySelector('[data-widget-toggle="' + k + '"]');
+      if (cb) cb.checked = false;
+      persist();
+    }
+  });
+
+  // ── 메뉴 토글 (위젯 표시/숨김) ────────────────────────
+  var menuBtn = document.getElementById('widget-menu-btn');
+  var menu    = document.getElementById('widget-menu');
+  if (menuBtn && menu) {
+    menuBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = menu.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!menu.contains(e.target) && e.target !== menuBtn) {
+        menu.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    menu.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        var k = cb.getAttribute('data-widget-toggle');
+        var card = document.querySelector('.widget-card[data-widget="' + k + '"]');
+        if (!card) return;
+        if (cb.checked) card.removeAttribute('hidden');
+        else            card.setAttribute('hidden', '');
+        persist();
+      });
+    });
+  }
+
+  // ── 초기화 버튼 ────────────────────────────────────────
+  var resetBtn = document.getElementById('widget-reset-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function () {
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      applyState({ order: DEFAULT_ORDER.slice(), collapsed: [], hidden: [] });
+    });
+  }
+
+  // ── 드래그 앤 드롭 정렬 ────────────────────────────────
+  var dragSrc = null;
+
+  document.querySelectorAll('.widget-header').forEach(function (header) {
+    header.addEventListener('dragstart', function (e) {
+      var card = header.closest('.widget-card');
+      if (!card) return;
+      dragSrc = card;
+      card.classList.add('dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.getAttribute('data-widget') || ''); } catch (_) {}
+    });
+    header.addEventListener('dragend', function () {
+      if (dragSrc) dragSrc.classList.remove('dragging');
+      document.querySelectorAll('.widget-card').forEach(function (c) {
+        c.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+      dragSrc = null;
+    });
+  });
+
+  var container = document.getElementById('widget-container');
+  if (container) {
+    container.addEventListener('dragover', function (e) {
+      if (!dragSrc) return;
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
+      var target = e.target.closest('.widget-card');
+      container.querySelectorAll('.widget-card').forEach(function (c) {
+        c.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+      if (!target || target === dragSrc) return;
+      var rect = target.getBoundingClientRect();
+      var before = (e.clientY - rect.top) < (rect.height / 2);
+      target.classList.add(before ? 'drag-over-top' : 'drag-over-bottom');
+    });
+    container.addEventListener('drop', function (e) {
+      if (!dragSrc) return;
+      e.preventDefault();
+      var target = e.target.closest('.widget-card');
+      if (!target || target === dragSrc) return;
+      var rect = target.getBoundingClientRect();
+      var before = (e.clientY - rect.top) < (rect.height / 2);
+      if (before) container.insertBefore(dragSrc, target);
+      else        container.insertBefore(dragSrc, target.nextSibling);
+      persist();
+    });
+  }
 })();
 </script>
 
