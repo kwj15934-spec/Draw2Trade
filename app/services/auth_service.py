@@ -138,12 +138,19 @@ def upsert_user(user_info: dict) -> None:
             return
 
     if uid not in users:
-        now = datetime.now(timezone.utc).isoformat()
-        entry = {**user_info, "plan": "free", "created_at": now}
+        now_dt = datetime.now(timezone.utc)
+        trial_expires = (now_dt + timedelta(days=7)).isoformat()
+        entry = {
+            **user_info,
+            "plan": "pro",
+            "pro_expires_at": trial_expires,
+            "billing_period": "trial",
+            "created_at": now_dt.isoformat(),
+        }
         users[uid] = entry
         _save_users(users)
         _firestore_upsert_user(uid, entry)
-        logger.info("신규 유저 등록: %s", email)
+        logger.info("신규 유저 등록 (7일 Pro 체험 자동 부여): %s", email)
     else:
         # 기존 유저: 이름/이메일 등 정보만 업데이트, 플랜은 유지
         for key in ("email", "name", "picture"):

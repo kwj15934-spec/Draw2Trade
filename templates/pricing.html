@@ -291,7 +291,7 @@
 <div class="page-wrap">
   <div class="page-label">PRICING · 요금제</div>
   <h1 class="page-title">이벤트 특가로<br><em>Pro</em>를 시작하세요</h1>
-  <p class="page-desc">지금 구독하시면 이벤트 특가 월 <strong>$6</strong>에 모든 Pro 기능을 이용할 수 있습니다.</p>
+  <p class="page-desc">월 <strong>$6</strong> · 연 <strong>$60</strong> (17% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 표시 가격에 부가세 10%가 별도로 부과됩니다.</p>
 
   <div class="plans-grid">
 
@@ -341,12 +341,22 @@
 
     <div class="faq-item">
       <div class="faq-q">결제 후 언제 Pro가 되나요?</div>
-      <div class="faq-a">이체 확인 후 24시간 이내 수동으로 Pro 플랜으로 전환해 드립니다. 평균적으로 수 시간 이내 처리됩니다.</div>
+      <div class="faq-a">PayPal 결제가 승인되면 즉시 Pro 플랜이 활성화됩니다.</div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">구독 기간은 언제부터인가요?</div>
-      <div class="faq-a">Pro 전환 처리일로부터 한 달간 적용됩니다.</div>
+      <div class="faq-q">7일 무료체험은 어떻게 되나요?</div>
+      <div class="faq-a">신규 가입 시 자동으로 7일 동안 Pro 기능을 무료로 이용할 수 있습니다. 별도의 결제 등록 없이 자동으로 만료되며, 계속 이용을 원하시면 Pro를 구독해주세요.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">구독 기간 / 자동 갱신은 어떻게 되나요?</div>
+      <div class="faq-a">월간은 매달, 연간은 매년 자동 갱신됩니다. PayPal 또는 본 사이트의 계정 페이지에서 언제든 해지할 수 있으며, 해지 후에도 다음 갱신일까지 Pro 기능을 그대로 이용할 수 있습니다.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">세금은 어떻게 부과되나요?</div>
+      <div class="faq-a">표시 가격($6 / $60)에 부가세(VAT) 10%가 별도로 부과됩니다. PayPal 결제 화면에서 최종 결제액(월 $6.60 / 연 $66.00)이 안내됩니다.</div>
     </div>
 
     <div class="faq-item">
@@ -356,13 +366,13 @@
         · Pro 기능 사용 이력이 없는 경우<br>
         · 결제 후 7일 이내 요청한 경우<br><br>
         환불 요청은 문의하기를 통해 접수해 주세요.<br>
-        환불은 확인 후 영업일 기준 3일 이내에 결제 계좌로 환불 처리됩니다.
+        환불은 확인 후 영업일 기준 3일 이내에 PayPal 또는 카드사 환불 처리됩니다.
       </div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">카드 결제는 언제 지원되나요?</div>
-      <div class="faq-a">카드 결제 시스템 도입을 준비 중입니다. 도입 전까지는 계좌이체로 운영됩니다.</div>
+      <div class="faq-q">결제 수단은 무엇이 지원되나요?</div>
+      <div class="faq-a">PayPal 계정, 신용/체크카드(Visa, MasterCard, Amex 등) 결제를 지원합니다. PayPal 화면에서 카드 직접 입력도 가능합니다.</div>
     </div>
   </div>
 </div>
@@ -373,34 +383,27 @@
     <button onclick="closeProModal()" class="pro-modal-close">✕</button>
 
     <div id="pro-step1">
-      <div class="pro-modal-title">Pro 구독 신청</div>
-      <div class="pro-modal-sub">아래 계좌로 이체 후 신청 버튼을 눌러주세요.</div>
+      <div class="pro-modal-title">Pro 구독 결제</div>
+      <div class="pro-modal-sub">PayPal 또는 카드로 안전하게 결제하세요.</div>
 
-      <div class="pay-info">
+      <div class="pay-info" style="display:block;padding:18px 20px;">
         <table>
-          <tr><td>은행</td><td>토스뱅크</td></tr>
-          <tr><td>계좌번호</td><td><span class="acct" onclick="copyAccountModal()" title="클릭하여 복사">1000-4937-1794 📋</span> <span id="copy-toast-modal" style="display:none;font-size:11px;color:var(--teal);margin-left:6px;">복사됨!</span></td></tr>
-          <tr><td>금액</td><td class="amt" id="pro-modal-amount">$6 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span></td></tr>
-          <tr><td>예금주</td><td>김원준</td></tr>
+          <tr><td>플랜</td><td id="pp-modal-plan">월간 — Draw2Trade Pro</td></tr>
+          <tr><td>가격</td><td id="pp-modal-base">$6.00 / 월</td></tr>
+          <tr><td>부가세 (10%)</td><td id="pp-modal-tax">+$0.60</td></tr>
+          <tr><td><strong>최종 결제액</strong></td><td class="amt" id="pp-modal-total">$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span></td></tr>
         </table>
-        <div class="qr-wrap">
-          <img src="/static/img/qr.png" alt="토스뱅크 QR">
-          <div class="qr-cap">토스 QR로 바로 이체</div>
-        </div>
       </div>
 
-      <div style="margin-bottom:14px;">
-        <label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:6px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500;">메모 (선택)</label>
-        <input id="pro-memo" type="text" placeholder="예) 홍길동, 이체 완료" class="pay-input">
-      </div>
-      <button onclick="submitProRequest()" id="pro-submit-btn" class="pay-submit">신청하기</button>
+      <div id="paypal-button-container" style="margin-top:12px;min-height:50px;"></div>
+      <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;">PayPal 버튼 불러오는 중...</div>
       <div id="pro-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
     </div>
 
     <div id="pro-step2" style="display:none;text-align:center;">
       <div style="font-size:48px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">✅</div>
-      <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">신청 완료</div>
-      <div style="font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:22px;">이체 확인 후 24시간 이내로<br>Pro 플랜으로 전환해 드립니다.</div>
+      <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">구독 완료</div>
+      <div style="font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:22px;">결제가 정상 처리되어<br>Pro 플랜이 즉시 활성화되었습니다.</div>
       <button onclick="closeProModal()" class="pay-submit">확인</button>
     </div>
 
@@ -414,17 +417,11 @@
 </div>
 
 <script>
-  function copyAccountModal() {
-    navigator.clipboard.writeText('1000-4937-1794').then(function() {
-      var toast = document.getElementById('copy-toast-modal');
-      toast.style.display = 'inline';
-      setTimeout(function() { toast.style.display = 'none'; }, 2000);
-    }).catch(function() {
-      prompt('계좌번호를 복사하세요:', '1000-4937-1794');
-    });
-  }
-
   var _billingPeriod = 'monthly';
+  var _paypalConfig = null;
+  var _paypalSDKLoaded = false;
+  var _paypalButtonInstance = null;
+
   function selectBillingPeriod(period) {
     _billingPeriod = period === 'annual' ? 'annual' : 'monthly';
     var opts = document.querySelectorAll('.billing-toggle .bt-opt');
@@ -437,15 +434,111 @@
     var subEl   = document.getElementById('plan-price-sub');
     if (_billingPeriod === 'annual') {
       if (priceEl) priceEl.innerHTML = '$60 <span>/ 년</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 2개월 무료';
+      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 부가세 별도';
     } else {
       if (priceEl) priceEl.innerHTML = '$6 <span>/ 월</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
+      if (subEl)   subEl.innerHTML = '월 단위 결제 · 부가세 별도 · 언제든 해지';
     }
+  }
+
+  function _updateModalAmount() {
+    var planEl  = document.getElementById('pp-modal-plan');
+    var baseEl  = document.getElementById('pp-modal-base');
+    var taxEl   = document.getElementById('pp-modal-tax');
+    var totalEl = document.getElementById('pp-modal-total');
+    if (_billingPeriod === 'annual') {
+      if (planEl)  planEl.textContent  = '연간 — Draw2Trade Pro';
+      if (baseEl)  baseEl.textContent  = '$60.00 / 년';
+      if (taxEl)   taxEl.textContent   = '+$6.00';
+      if (totalEl) totalEl.innerHTML   = '$66.00 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 년</span>';
+    } else {
+      if (planEl)  planEl.textContent  = '월간 — Draw2Trade Pro';
+      if (baseEl)  baseEl.textContent  = '$6.00 / 월';
+      if (taxEl)   taxEl.textContent   = '+$0.60';
+      if (totalEl) totalEl.innerHTML   = '$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span>';
+    }
+  }
+
+  function _loadPayPalSDK() {
+    if (_paypalSDKLoaded) return Promise.resolve();
+    return fetch('/api/payment/config')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (cfg) {
+        if (!cfg || !cfg.configured || !cfg.client_id) {
+          throw new Error('결제 시스템 설정 미완료 — 관리자에게 문의해주세요.');
+        }
+        _paypalConfig = cfg;
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(cfg.client_id)
+                + '&vault=true&intent=subscription&currency=USD';
+          s.setAttribute('data-sdk-integration-source', 'button-factory');
+          s.onload = function () { _paypalSDKLoaded = true; resolve(); };
+          s.onerror = function () { reject(new Error('PayPal SDK 로드 실패')); };
+          document.head.appendChild(s);
+        });
+      });
+  }
+
+  function _renderPayPalButton() {
+    var container = document.getElementById('paypal-button-container');
+    var loading   = document.getElementById('pp-loading');
+    var errEl     = document.getElementById('pro-error');
+    container.innerHTML = '';
+    errEl.textContent = '';
+    if (loading) loading.style.display = 'block';
+
+    if (!_paypalConfig) return;
+    var planId = (_billingPeriod === 'annual')
+      ? _paypalConfig.plan_annual
+      : _paypalConfig.plan_monthly;
+    if (!planId) {
+      errEl.textContent = '플랜이 아직 설정되지 않았습니다. 관리자에게 문의해주세요.';
+      if (loading) loading.style.display = 'none';
+      return;
+    }
+
+    var period = _billingPeriod;
+    _paypalButtonInstance = window.paypal.Buttons({
+      style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function (_data, actions) {
+        return actions.subscription.create({ plan_id: planId });
+      },
+      onApprove: function (data) {
+        return fetch('/api/payment/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ subscription_id: data.subscriptionID, billing_period: period }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.data && res.data.detail) || '서버 검증 실패');
+            document.getElementById('pro-step1').style.display = 'none';
+            document.getElementById('pro-step2').style.display = 'block';
+          })
+          .catch(function (e) {
+            errEl.textContent = '결제는 완료되었으나 서버 처리 중 오류가 발생했습니다. 문의해주세요. (' + (e.message || e) + ')';
+          });
+      },
+      onError: function (err) {
+        errEl.textContent = '결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.';
+        console.error('PayPal error:', err);
+      },
+      onCancel: function () {
+        errEl.textContent = '결제가 취소되었습니다.';
+      },
+    });
+    _paypalButtonInstance.render('#paypal-button-container').then(function () {
+      if (loading) loading.style.display = 'none';
+    });
   }
 
   async function openProModal() {
     document.getElementById('pro-modal').classList.add('show');
+    var errEl = document.getElementById('pro-error');
+    errEl.textContent = '';
+
     var loggedIn = false;
     try {
       var res = await fetch('/api/auth/me');
@@ -455,17 +548,17 @@
     document.getElementById('pro-step1').style.display = loggedIn ? 'block' : 'none';
     document.getElementById('pro-step2').style.display = 'none';
     document.getElementById('pro-step-login').style.display = loggedIn ? 'none' : 'block';
-    document.getElementById('pro-error').textContent = '';
-    document.getElementById('pro-memo').value = '';
-    var amtEl = document.getElementById('pro-modal-amount');
-    if (amtEl) {
-      amtEl.innerHTML = (_billingPeriod === 'annual')
-        ? '$60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 년 (2개월 무료)</span>'
-        : '$6 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span>';
+    if (!loggedIn) return;
+
+    _updateModalAmount();
+    try {
+      await _loadPayPalSDK();
+      _renderPayPalButton();
+    } catch (e) {
+      var loading = document.getElementById('pp-loading');
+      if (loading) loading.style.display = 'none';
+      errEl.textContent = e.message || 'PayPal 로드 실패';
     }
-    var btn = document.getElementById('pro-submit-btn');
-    btn.disabled = false;
-    btn.textContent = '신청하기';
   }
 
   function closeProModal() {
@@ -476,38 +569,18 @@
     if (e.target === this) closeProModal();
   });
 
-  async function submitProRequest() {
-    var btn = document.getElementById('pro-submit-btn');
-    var errEl = document.getElementById('pro-error');
-    var memo = document.getElementById('pro-memo').value.trim();
-    btn.disabled = true;
-    btn.textContent = '처리 중...';
-    errEl.textContent = '';
-    try {
-      var res = await fetch('/api/pro-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memo: memo, billing_period: _billingPeriod }),
-      });
-      if (res.status === 401) {
-        errEl.textContent = '로그인이 필요합니다.';
-        btn.disabled = false;
-        btn.textContent = '신청하기';
-        return;
+  // billing period 변경 시 모달이 열려있으면 버튼/금액 갱신
+  (function patchPeriodSelector() {
+    var orig = window.selectBillingPeriod;
+    window.selectBillingPeriod = function (p) {
+      orig(p);
+      var modal = document.getElementById('pro-modal');
+      if (modal && modal.classList.contains('show') && _paypalSDKLoaded) {
+        _updateModalAmount();
+        _renderPayPalButton();
       }
-      var data = await res.json();
-      if (data.ok) {
-        document.getElementById('pro-step1').style.display = 'none';
-        document.getElementById('pro-step2').style.display = 'block';
-      } else {
-        throw new Error('처리 실패');
-      }
-    } catch (e) {
-      errEl.textContent = e.message || '오류가 발생했습니다.';
-      btn.disabled = false;
-      btn.textContent = '신청하기';
-    }
-  }
+    };
+  })();
 
   // 인증 분기: 로그인 시 [data-loggedin-href]를 /app으로 업그레이드
   fetch('/api/auth/me', { credentials: 'same-origin' })

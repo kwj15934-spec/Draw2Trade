@@ -53,7 +53,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, pattern, user_data
+from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, payment, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -267,6 +267,7 @@ app.include_router(dart.router)
 app.include_router(fundamental.router)
 app.include_router(market.router)
 app.include_router(backtest.router)
+app.include_router(payment.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
 # app.include_router(us_chart.router)
 
@@ -326,9 +327,7 @@ async def pending_page(request: Request):
 
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
-    # 결제 기능 준비 중 — 임시 비활성화
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="/", status_code=302)
+    return templates.TemplateResponse("pricing.html", {"request": request})
 
 
 @app.get("/account", response_class=HTMLResponse)
