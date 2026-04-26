@@ -14,7 +14,7 @@
   <title>Draw2Trade</title>
 
   <!-- SEO -->
-  <meta name="description" content="차트 패턴을 직접 그리면 KOSPI/KOSDAQ 전 종목에서 유사한 구간을 찾아주는 주식 패턴 검색 서비스. 유사 종목 자동 탐색, 패턴 비교, 실시간 시세 제공.">
+  <meta name="description" content="차트 패턴을 직접 그리면 KOSPI/KOSDAQ 전 종목에서 유사한 구간을 찾아주는 주식 패턴 검색 서비스. 유사 종목 자동 탐색, 패턴 비교 제공.">
   <meta name="keywords" content="주식 패턴 검색, 유사 종목, KOSPI, KOSDAQ, 차트 분석, 패턴 매칭, 주식 차트, 기술적 분석, Draw2Trade">
   <meta name="author" content="Draw2Trade">
   <meta name="robots" content="index, follow">
@@ -71,10 +71,9 @@
     /* Liquid glass — light */
     .liquid-glass{
       position:relative;overflow:hidden;
-      background:rgba(255,255,255,0.012);
-      background-blend-mode:luminosity;
-      backdrop-filter:blur(6px) saturate(1.2);
-      -webkit-backdrop-filter:blur(6px) saturate(1.2);
+      background:rgba(255,255,255,0.04);
+      backdrop-filter:blur(4px) saturate(1.15);
+      -webkit-backdrop-filter:blur(4px) saturate(1.15);
       box-shadow: inset 0 1px 1px rgba(255,255,255,0.10);
     }
     .liquid-glass::before{
@@ -94,9 +93,9 @@
     /* Liquid glass — strong */
     .liquid-glass-strong{
       position:relative;overflow:hidden;
-      background:rgba(255,255,255,0.018);
-      backdrop-filter:blur(50px) saturate(1.3);
-      -webkit-backdrop-filter:blur(50px) saturate(1.3);
+      background:rgba(15,18,25,0.55);
+      backdrop-filter:blur(14px) saturate(1.2);
+      -webkit-backdrop-filter:blur(14px) saturate(1.2);
       box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
     }
     .liquid-glass-strong::before{
@@ -116,10 +115,10 @@
     /* mint accent glass */
     .liquid-glass-mint{
       position:relative;overflow:hidden;
-      background:rgba(91,255,198,0.06);
-      backdrop-filter:blur(40px) saturate(1.4);
-      -webkit-backdrop-filter:blur(40px) saturate(1.4);
-      box-shadow: 0 0 60px var(--tealGlow), inset 0 1px 1px rgba(255,255,255,0.18);
+      background:rgba(91,255,198,0.10);
+      backdrop-filter:blur(10px) saturate(1.25);
+      -webkit-backdrop-filter:blur(10px) saturate(1.25);
+      box-shadow: 0 0 36px var(--tealGlow), inset 0 1px 1px rgba(255,255,255,0.18);
     }
     .liquid-glass-mint::before{
       content:"";position:absolute;inset:0;border-radius:inherit;
@@ -166,11 +165,11 @@
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
     .hero h1{margin:0;font-size:84px;font-weight:500;letter-spacing:-0.05em;line-height:0.98;color:#fff}
-    .hero h1 em{font-family:var(--serif);font-style:italic;font-weight:300;color:rgba(250,251,252,0.78)}
-    .hero h1 .mint{color:var(--teal);font-style:italic;font-family:var(--serif);font-weight:300;text-shadow:0 0 30px var(--tealGlow)}
+    .hero h1 em{font-style:normal;font-weight:400;color:rgba(250,251,252,0.78)}
+    .hero h1 .mint{color:var(--teal);font-style:normal;font-weight:500;text-shadow:0 0 30px var(--tealGlow)}
 
     .hero-sub{margin:24px 0 36px;font-size:16px;color:rgba(250,251,252,0.62);max-width:620px;line-height:1.55;font-weight:400;word-break:keep-all;overflow-wrap:break-word}
-    .hero-sub em{font-family:var(--serif);font-style:italic;color:var(--teal)}
+    .hero-sub em{font-style:normal;color:var(--teal)}
 
     .cta-row{display:flex;gap:12px;align-items:center;margin-bottom:36px;flex-wrap:wrap;justify-content:center}
     .cta-primary{display:inline-flex;align-items:center;gap:14px;padding:8px 8px 8px 26px;border-radius:999px;color:#fff;font-size:15px;font-weight:500;letter-spacing:-0.01em;cursor:pointer;transition:transform .2s}
@@ -180,8 +179,6 @@
     .cta-secondary{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:999px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;transition:transform .2s}
     .cta-secondary:hover{transform:scale(1.04)}
 
-    .pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-    .pill{padding:8px 14px;border-radius:999px;font-size:11px;color:rgba(250,251,252,0.78);font-weight:500;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
 
     .quote-block{position:relative;z-index:2;padding:0 60px 36px;text-align:center}
     .quote-label{font-size:10px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(250,251,252,0.45);margin-bottom:14px}
@@ -205,7 +202,7 @@
     .community-card .lab{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.5);margin-bottom:10px;display:flex;align-items:center;gap:8px}
     .community-card .lab .dot{width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 8px var(--teal)}
     .community-card h3{margin:0 0 8px;font-size:18px;font-weight:500;letter-spacing:-0.02em;color:#fff}
-    .community-card h3 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .community-card h3 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .community-card p{margin:0;font-size:12px;color:rgba(250,251,252,0.6);line-height:1.5}
 
     .feature-wrap{margin-top:auto;padding:20px;border-radius:36px;display:flex;flex-direction:column;gap:14px}
@@ -215,7 +212,7 @@
     .feature-card .ic{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:center;color:#fff}
     .feature-card .ic.mint{background:var(--tealDim);color:var(--teal);box-shadow:0 0 20px var(--tealGlow)}
     .feature-card h4{margin:0;font-size:17px;font-weight:500;letter-spacing:-0.02em;color:#fff}
-    .feature-card h4 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .feature-card h4 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .feature-card p{margin:0;font-size:12px;color:rgba(250,251,252,0.58);line-height:1.5}
     .feature-card .stat{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:8px}
     .feature-card .stat .v{font-family:var(--mono);font-size:24px;font-weight:500;letter-spacing:-0.04em;color:#fff}
@@ -228,7 +225,7 @@
     .pattern-info{flex:1;min-width:0}
     .pattern-info .lab{font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.5);margin-bottom:6px}
     .pattern-info h5{margin:0 0 4px;font-size:15px;font-weight:500;letter-spacing:-0.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .pattern-info h5 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .pattern-info h5 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .pattern-info p{margin:0;font-size:11px;color:rgba(250,251,252,0.55);line-height:1.4}
     .plus-btn{flex-shrink:0;width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;transition:transform .2s}
     .plus-btn:hover{transform:scale(1.1) rotate(90deg)}
@@ -267,14 +264,14 @@
     .section-eyebrow::before{content:"";width:24px;height:1px;background:var(--teal)}
     .section-eyebrow::after{content:"";width:24px;height:1px;background:var(--teal)}
     .section-title{margin:0;font-size:42px;font-weight:500;letter-spacing:-0.04em;line-height:1.1;color:#fff}
-    .section-title em{font-family:var(--serif);font-style:italic;font-weight:300;color:var(--teal)}
+    .section-title em{font-style:normal;font-weight:500;color:var(--teal)}
     .section-sub{margin:14px auto 0;font-size:15px;color:rgba(250,251,252,0.6);max-width:560px;line-height:1.6;word-break:keep-all}
 
     .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
     .feature-row{padding:24px;border-radius:22px;display:flex;flex-direction:column;gap:14px;min-height:240px}
     .feature-row .ic{width:40px;height:40px;border-radius:12px;background:rgba(91,255,198,0.10);color:var(--teal);display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--tealGlow)}
     .feature-row h3{margin:0;font-size:18px;font-weight:500;letter-spacing:-0.02em;color:#fff}
-    .feature-row h3 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .feature-row h3 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .feature-row ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:13px;color:rgba(250,251,252,0.65);line-height:1.55}
     .feature-row ul li{display:flex;gap:8px;align-items:flex-start}
     .feature-row ul li::before{content:"";flex-shrink:0;width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 6px var(--teal);margin-top:7px}
@@ -283,7 +280,7 @@
     .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px;margin:0 auto}
     .plan-card{padding:32px 28px;border-radius:24px;display:flex;flex-direction:column;gap:14px;position:relative}
     .plan-card.featured{box-shadow:0 0 48px var(--tealGlow)}
-    .plan-badge{position:absolute;top:-10px;right:24px;padding:5px 14px;border-radius:999px;background:var(--teal);color:#001810;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.05em}
+    .plan-badge{position:absolute;top:-12px;right:24px;padding:6px 14px;border-radius:999px;background:var(--teal);color:#001810;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;line-height:1.2}
     .plan-name{font-size:14px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(250,251,252,0.7);font-weight:600}
     .plan-name.pro{color:var(--teal)}
     .plan-price{font-family:var(--mono);font-size:38px;font-weight:500;letter-spacing:-0.03em;color:#fff;line-height:1}
@@ -319,7 +316,7 @@
     /* CTA band */
     .cta-band{position:relative;z-index:10;padding:80px 24px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08);background:radial-gradient(60% 80% at 50% 50%,rgba(91,255,198,0.08),transparent 70%)}
     .cta-band h2{margin:0;font-size:34px;font-weight:500;letter-spacing:-0.03em;color:#fff;line-height:1.2;word-break:keep-all}
-    .cta-band h2 em{font-family:var(--serif);font-style:italic;color:var(--teal)}
+    .cta-band h2 em{font-style:normal;color:var(--teal)}
     .cta-band p{margin:14px auto 28px;color:rgba(250,251,252,0.6);font-size:15px;max-width:520px;line-height:1.55;word-break:keep-all}
 
     /* Footer */
@@ -417,7 +414,7 @@
         마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.
       </p>
       <div class="cta-row">
-        <a class="cta-primary liquid-glass-strong" href="/blank">
+        <a class="cta-primary liquid-glass-strong" href="/login" id="cta-draw-now" data-loggedin-href="/app">
           지금 그려보기 · Draw Now
           <span class="cta-circle">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
@@ -427,12 +424,6 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg>
           차트 모드 열기
         </a>
-      </div>
-      <div class="pills">
-        <span class="pill liquid-glass">패턴 인식 · Pattern Match</span>
-        <span class="pill liquid-glass">AI 재무 요약 · Fin Summary</span>
-        <span class="pill liquid-glass">실시간 시세 · Live Quotes</span>
-        <span class="pill liquid-glass">즐겨찾기 동기화</span>
       </div>
     </div>
 
@@ -531,7 +522,7 @@
   <div class="section-head">
     <div class="section-eyebrow">FEATURES</div>
     <h2 class="section-title">트레이더를 위한 <em>정밀한</em> 도구</h2>
-    <p class="section-sub">전 종목 스캔부터 실시간 시세까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.</p>
+    <p class="section-sub">전 종목 스캔부터 패턴 매칭까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.</p>
   </div>
 
   <div class="features-grid">
@@ -541,7 +532,6 @@
       <ul>
         <li>KOSPI · KOSDAQ 2,400+ 종목 동시 검색</li>
         <li>일봉 · 주봉 · 월봉 전 시간대 지원</li>
-        <li>약 0.2초 내 결과 반환 — 즉각 비교 가능</li>
       </ul>
     </div>
 
@@ -562,19 +552,10 @@
       <ul>
         <li>오렌지→시안 그라디언트 게이지로 한눈에 비교</li>
         <li>Top 3에 금·은·동 랭크 뱃지 자동 부여</li>
-        <li>1위는 항상 100% 기준, 상대 비교가 쉬움</li>
+        <li>1위는 항상 100% 기준</li>
       </ul>
     </div>
 
-    <div class="feature-row liquid-glass">
-      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg></div>
-      <h3>실시간 <em>시세</em></h3>
-      <ul>
-        <li>당일 현재가 자동 반영 (KRX 데이터)</li>
-        <li>종목 뉴스 통합 피드</li>
-        <li>네이버 종토방 연동으로 시장 반응 확인</li>
-      </ul>
-    </div>
   </div>
 </section>
 
@@ -757,8 +738,9 @@
   if (!c) return;
   const ctx = c.getContext('2d');
   let W, H, dpr;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const resize = () => {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, 1.25);
     W = c.clientWidth = window.innerWidth;
     H = c.clientHeight = window.innerHeight;
     c.width = W * dpr; c.height = H * dpr;
@@ -766,8 +748,8 @@
   };
   window.addEventListener('resize', resize); resize();
 
-  const TRAIL = 480;
-  const SUB = 6;
+  const TRAIL = 240;
+  const SUB = 3;
   let head = { x: 0.08, y: 0.5, vx: 0.0014, vy: 0 };
   const trail = [];
   let t = 0;
@@ -787,7 +769,7 @@
     return v;
   }
 
-  const CANDLES = 22;
+  const CANDLES = 14;
   const candles = [];
   for (let i=0;i<CANDLES;i++){
     candles.push({
@@ -797,7 +779,7 @@
       speed: 0.4 + Math.random()*1.0,
     });
   }
-  const NODES = 22;
+  const NODES = 14;
   const nodes = [];
   for (let i=0;i<NODES;i++){
     nodes.push({
@@ -896,10 +878,11 @@
       ctx.lineWidth = 6;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.shadowColor = 'rgba(91,255,198,0.5)';
-      ctx.shadowBlur = 24; ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.shadowBlur = 12; ctx.stroke(); ctx.shadowBlur = 0;
 
-      for (let i=1;i<trail.length;i++){
-        const p0=trail[i-1], p1=trail[i];
+      const STEP = 2;
+      for (let i=STEP;i<trail.length;i+=STEP){
+        const p0=trail[i-STEP], p1=trail[i];
         const lifeT = i/trail.length;
         const op = 0.05 + Math.pow(lifeT, 1.6) * 0.95;
         ctx.beginPath();
@@ -941,7 +924,7 @@
         }
       }
     }
-    requestAnimationFrame(step);
+    if (!reduceMotion) requestAnimationFrame(step);
   }
   step();
 })();
@@ -1016,12 +999,14 @@
       document.body.removeChild(ta);
     }
 
-    // Auth → swap account icon for user chip
+    // Auth → swap account icon for user chip + update Draw Now CTA target
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data || !data.user) return;
         var u = data.user;
+        var cta = document.getElementById('cta-draw-now');
+        if (cta) cta.setAttribute('href', cta.getAttribute('data-loggedin-href') || '/app');
         var iconLink = document.getElementById('link-account');
         var chip = document.getElementById('user-chip');
         var avatar = document.getElementById('user-avatar');
