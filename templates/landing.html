@@ -280,7 +280,7 @@
     .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px;margin:0 auto}
     .plan-card{padding:32px 28px;border-radius:24px;display:flex;flex-direction:column;gap:14px;position:relative}
     .plan-card.featured{box-shadow:0 0 48px var(--tealGlow)}
-    .plan-badge{position:absolute;top:-12px;right:24px;padding:6px 14px;border-radius:999px;background:var(--teal);color:#001810;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;line-height:1.2}
+    .plan-badge{position:absolute;top:16px;right:16px;padding:6px 14px;border-radius:999px;background:var(--teal);color:#001810;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:0.02em;white-space:nowrap;line-height:1.2;z-index:2;box-shadow:0 4px 12px rgba(0,0,0,0.25)}
     .plan-name{font-size:14px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(250,251,252,0.7);font-weight:600}
     .plan-name.pro{color:var(--teal)}
     .plan-price{font-family:var(--mono);font-size:38px;font-weight:500;letter-spacing:-0.03em;color:#fff;line-height:1}
@@ -297,7 +297,7 @@
     .plan-cta.primary:hover{transform:translateY(-1px)}
     .plan-cta.ghost{color:#fff;border:1px solid rgba(255,255,255,0.18)}
     .plan-cta.ghost:hover{border-color:var(--teal);color:var(--teal)}
-    .pricing-disclaimer{max-width:880px;margin:24px auto 0;padding:14px 18px;border-left:2px solid rgba(91,255,198,0.5);background:rgba(91,255,198,0.05);font-size:12px;color:rgba(250,251,252,0.6);line-height:1.6;border-radius:0 8px 8px 0}
+    .pricing-disclaimer{max-width:880px;margin:24px auto 0;padding:14px 18px;border-left:2px solid rgba(91,255,198,0.5);background:rgba(91,255,198,0.05);font-size:12px;color:rgba(250,251,252,0.6);line-height:1.7;border-radius:0 8px 8px 0;word-break:keep-all;overflow-wrap:break-word}
 
     /* FAQ */
     .faq-list{max-width:760px;margin:0 auto;display:flex;flex-direction:column}
@@ -463,7 +463,7 @@
 
     <div class="feature-wrap liquid-glass-strong">
       <div class="feature-grid">
-        <a href="/blank" class="feature-card liquid-glass">
+        <a href="/login" data-loggedin-href="/app" class="feature-card liquid-glass">
           <div class="ic mint">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/><circle cx="6" cy="6" r="2"/></svg>
           </div>
@@ -482,7 +482,7 @@
           </div>
           <div>
             <h4>AI <em>Fin Summary</em></h4>
-            <p>DART 공시·재무를 한국어로 요약, 핵심 지표와 리스크를 한 번에 정리합니다.</p>
+            <p>DART 공시·재무를 한국어로 요약,<br>핵심 지표와 리스크를 한 번에 정리합니다.</p>
           </div>
           <div class="stat">
             <span class="v">KR</span>
@@ -491,7 +491,7 @@
         </a>
       </div>
 
-      <a href="/blank" class="pattern-card liquid-glass">
+      <a href="/login" data-loggedin-href="/app" class="pattern-card liquid-glass">
         <div class="pattern-thumb">
           <svg viewBox="0 0 120 78" preserveAspectRatio="none">
             <defs>
@@ -597,7 +597,7 @@
   </div>
 
   <div class="pricing-disclaimer">
-    본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.
+    본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.<br>
     패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.
   </div>
 </section>
@@ -645,7 +645,7 @@
 <section class="cta-band">
   <h2>지금 <em>그려보세요</em>. 16초면 충분합니다.</h2>
   <p>신용카드 없이 무료 시작 · 무제한 패턴 검색.</p>
-  <a href="/blank" class="plan-cta primary" style="display:inline-flex">무료로 시작하기 →</a>
+  <a href="/login" data-loggedin-href="/app" class="plan-cta primary" style="display:inline-flex">무료로 시작하기 →</a>
 </section>
 
 <!-- ==================== FOOTER ==================== -->
@@ -658,7 +658,7 @@
       </a>
       <div class="footer-links">
         <a href="/app">서비스 시작</a>
-        <a href="/blank">빈 캔버스</a>
+        <a href="/login" data-loggedin-href="/app">빈 캔버스</a>
         <a href="/feed">커뮤니티</a>
         <a href="/notices">공지사항</a>
         <a href="/terms">이용약관</a>
@@ -689,7 +689,7 @@
       </button>
     </div>
     <div class="menu-grid">
-      <a class="menu-link" href="/blank">
+      <a class="menu-link" href="/login" data-loggedin-href="/app">
         <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/></svg></span>
         <span class="mt"><b>빈 캔버스</b><span>패턴 그리기 · 유사 종목 검색</span></span>
       </a>
@@ -1005,8 +1005,10 @@
       .then(function (data) {
         if (!data || !data.user) return;
         var u = data.user;
-        var cta = document.getElementById('cta-draw-now');
-        if (cta) cta.setAttribute('href', cta.getAttribute('data-loggedin-href') || '/app');
+        document.querySelectorAll('[data-loggedin-href]').forEach(function (el) {
+          var dest = el.getAttribute('data-loggedin-href');
+          if (dest) el.setAttribute('href', dest);
+        });
         var iconLink = document.getElementById('link-account');
         var chip = document.getElementById('user-chip');
         var avatar = document.getElementById('user-avatar');
