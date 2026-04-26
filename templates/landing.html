@@ -37,949 +37,797 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@1,300;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg:           #141416;
-      --bg-2:         #18181b;
-      --surface:      #1e1e21;
-      --surface-2:    #25252a;
-      --border:       #2d2d30;
-      --border-strong:#3a3a40;
-      --text:         #d4d8e2;
-      --text-hi:      #ffffff;
-      --muted:        #7a8499;
-      --teal:         #26a69a;
-      --teal-dim:     #1c7a72;
-      --teal-soft:    rgba(38,166,154,0.12);
-      --orange:       #ff6b35;
-      --red:          #ef5350;
-      --gold:         #e6b64c;
-      --silver:       #b7bcc7;
-      --bronze:       #cd7f32;
-      --warn:         #f59e0b;
-      --radius:       4px;
-      --radius-lg:    6px;
-      --mono: 'JetBrains Mono', ui-monospace, monospace;
-      --sans: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Malgun Gothic', sans-serif;
+      --bg0:#06070A;
+      --teal:#5BFFC6; --teal2:#34E3A8;
+      --tealDim:rgba(91,255,198,0.10);
+      --tealGlow:rgba(91,255,198,0.35);
+      --fg0:#FAFBFC;
+      --font:"Space Grotesk","Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;
+      --serif:"Source Serif 4",Georgia,serif;
+      --mono:"JetBrains Mono",ui-monospace,monospace;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      background: var(--bg); color: var(--text);
-      font-family: var(--sans); font-size: 15px; line-height: 1.55;
-      -webkit-font-smoothing: antialiased; letter-spacing: -0.005em;
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg0);color:var(--fg0);font-family:var(--font);min-height:100vh;width:100%}
+    body{overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+    /* background canvas + overlays */
+    .bg-canvas{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+    .bg-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;
+      background:
+        radial-gradient(70% 60% at 20% 30%, rgba(91,255,198,0.10), transparent 60%),
+        radial-gradient(60% 50% at 80% 80%, rgba(91,255,198,0.06), transparent 60%),
+        linear-gradient(180deg, rgba(6,7,10,0.55) 0%, rgba(6,7,10,0.4) 40%, rgba(6,7,10,0.7) 100%);
     }
-    a { color: inherit; text-decoration: none; }
-    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-
-    /* ── Layout ── */
-    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
-    @media (max-width: 640px) { .wrap { padding: 0 20px; } }
-
-    /* ── Navbar ── */
-    .nav {
-      position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 100;
-      background: rgba(20,20,22,0.82);
-      backdrop-filter: saturate(140%) blur(10px);
-      -webkit-backdrop-filter: saturate(140%) blur(10px);
-      border-bottom: 1px solid var(--border);
+    .bg-grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.08;mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
     }
-    .nav-inner {
-      height: 100%; display: flex; align-items: center; justify-content: space-between;
-      max-width: 1240px; margin: 0 auto; padding: 0 32px;
+
+    /* Liquid glass — light */
+    .liquid-glass{
+      position:relative;overflow:hidden;
+      background:rgba(255,255,255,0.012);
+      background-blend-mode:luminosity;
+      backdrop-filter:blur(6px) saturate(1.2);
+      -webkit-backdrop-filter:blur(6px) saturate(1.2);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.10);
     }
-    .brand { display: flex; align-items: center; gap: 10px; color: var(--orange); font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
-    .brand-mark { width: 26px; height: 26px; display: grid; place-items: center; border: 1.5px solid var(--orange); border-radius: 5px; }
-    .brand-mark svg { width: 16px; height: 16px; display: block; }
-    .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: var(--text); }
-    .nav-links a { color: var(--text); transition: color .15s; }
-    .nav-links a:hover { color: var(--text-hi); }
-    .nav-cta { display: flex; align-items: center; gap: 10px; margin-left: 8px; }
-    @media (max-width: 820px) { .nav-links .nav-menu-item { display: none; } }
-
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      height: 38px; padding: 0 16px; border-radius: var(--radius);
-      font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em;
-      transition: background .15s, border-color .15s, color .15s; white-space: nowrap;
+    .liquid-glass::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;
+      padding:1.4px;
+      background:linear-gradient(180deg,
+        rgba(255,255,255,0.45) 0%,
+        rgba(255,255,255,0.15) 20%,
+        transparent 40%, transparent 60%,
+        rgba(255,255,255,0.15) 80%,
+        rgba(255,255,255,0.45) 100%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+      pointer-events:none;
     }
-    .btn-teal { background: var(--teal); color: #0b1413; }
-    .btn-teal:hover { background: #2fb8ab; }
-    .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
-    .btn-ghost:hover { border-color: var(--teal); color: var(--text-hi); }
-    .btn-lg { height: 46px; padding: 0 22px; font-size: 14.5px; }
 
-    /* ── Hero ── */
-    .hero { padding-top: 140px; padding-bottom: 100px; position: relative; overflow: hidden; }
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background-image:
-        linear-gradient(to right, rgba(45,45,48,0.35) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(45,45,48,0.35) 1px, transparent 1px);
-      background-size: 56px 56px;
-      mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 80%);
-      -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 80%);
-      pointer-events: none; z-index: 0;
+    /* Liquid glass — strong */
+    .liquid-glass-strong{
+      position:relative;overflow:hidden;
+      background:rgba(255,255,255,0.018);
+      backdrop-filter:blur(50px) saturate(1.3);
+      -webkit-backdrop-filter:blur(50px) saturate(1.3);
+      box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
     }
-    .hero-grid {
-      position: relative; z-index: 1;
-      display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.15fr);
-      gap: 56px; align-items: center;
+    .liquid-glass-strong::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;
+      padding:1.4px;
+      background:linear-gradient(180deg,
+        rgba(255,255,255,0.5) 0%,
+        rgba(255,255,255,0.2) 20%,
+        transparent 40%, transparent 60%,
+        rgba(255,255,255,0.2) 80%,
+        rgba(255,255,255,0.5) 100%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+      pointer-events:none;
     }
-    @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } .hero { padding-top: 110px; padding-bottom: 72px; } }
-    .tag {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-family: var(--mono); font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.12em; color: var(--teal);
-      padding: 6px 10px; border: 1px solid rgba(38,166,154,0.25); background: var(--teal-soft); border-radius: 3px;
+
+    /* mint accent glass */
+    .liquid-glass-mint{
+      position:relative;overflow:hidden;
+      background:rgba(91,255,198,0.06);
+      backdrop-filter:blur(40px) saturate(1.4);
+      -webkit-backdrop-filter:blur(40px) saturate(1.4);
+      box-shadow: 0 0 60px var(--tealGlow), inset 0 1px 1px rgba(255,255,255,0.18);
     }
-    .tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
-    h1.hero-title {
-      color: var(--text-hi); font-size: clamp(38px,5.4vw,60px); line-height: 1.08;
-      font-weight: 800; letter-spacing: -0.035em; margin: 22px 0 20px; white-space: pre-line; text-wrap: balance;
+    .liquid-glass-mint::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;
+      padding:1.4px;
+      background:linear-gradient(180deg,
+        rgba(91,255,198,0.65) 0%,
+        rgba(91,255,198,0.2) 30%,
+        rgba(255,255,255,0.1) 50%,
+        rgba(91,255,198,0.2) 70%,
+        rgba(91,255,198,0.6) 100%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor; mask-composite:exclude;
+      pointer-events:none;
     }
-    .hero-title em { font-style: normal; color: var(--teal); }
-    .hero-sub { font-size: 17px; color: var(--muted); max-width: 520px; line-height: 1.6; }
-    .hero-ctas { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
-    .hero-meta { display: flex; gap: 24px; margin-top: 32px; font-family: var(--mono); font-size: 12px; color: var(--muted); flex-wrap: wrap; }
-    .hero-meta span strong { color: var(--text-hi); font-weight: 600; margin-right: 4px; }
 
-    /* ── Hero App Mock ── */
-    .mock {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(38,166,154,0.08);
+    /* layout */
+    .page{position:relative;z-index:10;display:flex;min-height:100vh;width:100%;padding:24px;gap:24px}
+    .panel-l{position:relative;flex:0 0 56%;display:flex;flex-direction:column;min-height:calc(100vh - 48px)}
+    .panel-r{position:relative;flex:1;display:flex;flex-direction:column;gap:20px;min-height:calc(100vh - 48px)}
+    .panel-l-glass{position:absolute;inset:0;border-radius:32px;pointer-events:none}
+
+    .nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:28px 36px;gap:14px;flex-wrap:wrap}
+    .logo{display:flex;align-items:center;gap:12px;cursor:pointer}
+    .logo-mark{width:34px;height:34px;border-radius:9px;
+      background:linear-gradient(135deg,var(--teal),var(--teal2));
+      display:flex;align-items:center;justify-content:center;color:#001810;font-weight:700;font-size:15px;letter-spacing:-1px;
+      box-shadow:0 0 22px var(--tealGlow);
     }
-    .mock-header { height: 40px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 10px; background: var(--bg-2); }
-    .mock-dots { display: flex; gap: 6px; }
-    .mock-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
-    .mock-ticker { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-left: 8px; display: flex; align-items: center; gap: 8px; }
-    .mock-ticker b { color: var(--text-hi); font-weight: 500; }
-    .mock-ticker .up { color: var(--teal); }
-    .mock-toolbar { margin-left: auto; display: flex; gap: 4px; }
-    .tool-btn { width: 26px; height: 26px; border-radius: 3px; display: grid; place-items: center; color: var(--muted); border: 1px solid transparent; }
-    .tool-btn.active { background: var(--teal-soft); color: var(--teal); border-color: rgba(38,166,154,0.3); box-shadow: 0 0 12px rgba(38,166,154,0.15); }
-    .tool-btn svg { width: 14px; height: 14px; }
-    .mock-body { display: grid; grid-template-columns: 1fr 260px; height: 440px; }
-    .mock-chart-col { display: flex; flex-direction: column; }
-    .mock-volume { height: 88px; border-top: 1px solid var(--border); background: #17171a; position: relative; flex-shrink: 0; }
-    .mock-volume-label { position: absolute; top: 6px; left: 10px; font-family: var(--mono); font-size: 9.5px; color: var(--muted); letter-spacing: 0.1em; }
-    .results-filter { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 10px; }
-    .results-filter .chip { padding: 3px 8px; border-radius: 3px; color: var(--muted); border: 1px solid var(--border); cursor: pointer; }
-    .results-filter .chip.on { color: var(--teal); border-color: rgba(38,166,154,0.4); background: var(--teal-soft); }
-    .results-filter .sort { margin-left: auto; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-    .results-more { padding: 10px 14px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-align: center; background: var(--bg-2); letter-spacing: 0.08em; }
-    .results-more span { color: var(--teal); }
-    @media (max-width: 520px) { .mock-body { grid-template-columns: 1fr; height: auto; } .mock-results { border-left: none !important; border-top: 1px solid var(--border); } .mock-volume { height: 60px; } }
-    .mock-chart {
-      position: relative;
-      background: linear-gradient(to right, rgba(45,45,48,0.5) 1px, transparent 1px) 0 0 / 40px 100%, linear-gradient(to bottom, rgba(45,45,48,0.5) 1px, transparent 1px) 0 0 / 100% 40px;
-      background-color: #17171a; overflow: hidden;
+    .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.04em}
+    .logo-text em{font-family:var(--serif);font-style:italic;font-weight:400;color:rgba(250,251,252,0.78);margin-left:2px}
+
+    .nav-pill{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;transition:transform .2s;background:transparent;border:none}
+    .nav-pill:hover{transform:scale(1.04)}
+
+    .ticker-strip{display:flex;align-items:center;gap:18px;padding:10px 18px;border-radius:999px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.7);overflow:hidden;white-space:nowrap}
+    .ticker-strip .item{display:inline-flex;gap:8px;align-items:center}
+    .ticker-strip .up{color:#FF5E6A}
+    .ticker-strip .dn{color:#5B8DFF}
+
+    .hero{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 60px;text-align:center}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.7);margin-bottom:32px}
+    .badge .dot{width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 10px var(--teal);animation:pulse 1.6s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    .hero h1{margin:0;font-size:84px;font-weight:500;letter-spacing:-0.05em;line-height:0.98;color:#fff}
+    .hero h1 em{font-family:var(--serif);font-style:italic;font-weight:300;color:rgba(250,251,252,0.78)}
+    .hero h1 .mint{color:var(--teal);font-style:italic;font-family:var(--serif);font-weight:300;text-shadow:0 0 30px var(--tealGlow)}
+
+    .hero-sub{margin:24px 0 36px;font-size:16px;color:rgba(250,251,252,0.62);max-width:520px;line-height:1.55;font-weight:400}
+    .hero-sub em{font-family:var(--serif);font-style:italic;color:var(--teal)}
+
+    .cta-row{display:flex;gap:12px;align-items:center;margin-bottom:36px;flex-wrap:wrap;justify-content:center}
+    .cta-primary{display:inline-flex;align-items:center;gap:14px;padding:8px 8px 8px 26px;border-radius:999px;color:#fff;font-size:15px;font-weight:500;letter-spacing:-0.01em;cursor:pointer;transition:transform .2s}
+    .cta-primary:hover{transform:scale(1.04)}
+    .cta-primary:active{transform:scale(0.96)}
+    .cta-circle{width:38px;height:38px;border-radius:19px;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#001810;box-shadow:0 0 18px var(--tealGlow)}
+    .cta-secondary{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:999px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;transition:transform .2s}
+    .cta-secondary:hover{transform:scale(1.04)}
+
+    .pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    .pill{padding:8px 14px;border-radius:999px;font-size:11px;color:rgba(250,251,252,0.78);font-weight:500;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
+
+    .quote-block{position:relative;z-index:2;padding:0 60px 36px;text-align:center}
+    .quote-label{font-size:10px;letter-spacing:0.4em;text-transform:uppercase;color:rgba(250,251,252,0.45);margin-bottom:14px}
+    .quote-text{font-size:20px;font-weight:400;line-height:1.4;color:rgba(250,251,252,0.85);max-width:560px;margin:0 auto 18px}
+    .quote-text em{font-family:var(--serif);font-style:italic;color:var(--teal)}
+    .quote-author{display:flex;align-items:center;justify-content:center;gap:14px;font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:rgba(250,251,252,0.55)}
+    .quote-author .ln{height:1px;width:36px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)}
+
+    /* RIGHT PANEL */
+    .top-bar{display:flex;gap:14px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+    .social-pill{display:inline-flex;align-items:center;gap:14px;padding:10px 16px;border-radius:999px}
+    .social-pill button,.social-pill a{color:#fff;display:inline-flex;transition:color .2s,transform .2s;background:none;border:none;cursor:pointer;padding:0}
+    .social-pill button:hover,.social-pill a:hover{color:var(--teal);transform:scale(1.1)}
+    .social-pill .arr{width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:center;margin-left:6px;cursor:pointer;transition:transform .2s,background .2s}
+    .social-pill .arr:hover{transform:scale(1.08);background:rgba(91,255,198,0.18)}
+    .icon-circle{width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;transition:transform .2s;text-decoration:none}
+    .icon-circle:hover{transform:scale(1.08)}
+
+    .community-card{padding:20px;border-radius:20px;width:240px;align-self:flex-start;margin-top:6px;cursor:pointer;transition:transform .2s}
+    .community-card:hover{transform:translateY(-2px)}
+    .community-card .lab{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.5);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .community-card .lab .dot{width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 8px var(--teal)}
+    .community-card h3{margin:0 0 8px;font-size:18px;font-weight:500;letter-spacing:-0.02em;color:#fff}
+    .community-card h3 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .community-card p{margin:0;font-size:12px;color:rgba(250,251,252,0.6);line-height:1.5}
+
+    .feature-wrap{margin-top:auto;padding:20px;border-radius:36px;display:flex;flex-direction:column;gap:14px}
+    .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .feature-card{padding:22px;border-radius:24px;display:flex;flex-direction:column;gap:14px;min-height:170px;cursor:pointer;transition:transform .2s;text-decoration:none;color:inherit}
+    .feature-card:hover{transform:translateY(-2px)}
+    .feature-card .ic{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:center;color:#fff}
+    .feature-card .ic.mint{background:var(--tealDim);color:var(--teal);box-shadow:0 0 20px var(--tealGlow)}
+    .feature-card h4{margin:0;font-size:17px;font-weight:500;letter-spacing:-0.02em;color:#fff}
+    .feature-card h4 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .feature-card p{margin:0;font-size:12px;color:rgba(250,251,252,0.58);line-height:1.5}
+    .feature-card .stat{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:8px}
+    .feature-card .stat .v{font-family:var(--mono);font-size:24px;font-weight:500;letter-spacing:-0.04em;color:#fff}
+    .feature-card .stat .d{font-family:var(--mono);font-size:11px;color:var(--teal)}
+
+    .pattern-card{padding:18px;border-radius:24px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:transform .2s;text-decoration:none;color:inherit}
+    .pattern-card:hover{transform:translateY(-2px)}
+    .pattern-thumb{flex-shrink:0;width:120px;height:78px;border-radius:14px;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .pattern-thumb svg{width:100%;height:100%}
+    .pattern-info{flex:1;min-width:0}
+    .pattern-info .lab{font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.5);margin-bottom:6px}
+    .pattern-info h5{margin:0 0 4px;font-size:15px;font-weight:500;letter-spacing:-0.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pattern-info h5 em{font-family:var(--serif);font-style:italic;color:rgba(255,255,255,0.7)}
+    .pattern-info p{margin:0;font-size:11px;color:rgba(250,251,252,0.55);line-height:1.4}
+    .plus-btn{flex-shrink:0;width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;transition:transform .2s}
+    .plus-btn:hover{transform:scale(1.1) rotate(90deg)}
+
+    /* user chip in top bar (logged-in state) */
+    .user-chip{display:inline-flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;color:#fff;font-size:13px;font-weight:500;text-decoration:none;transition:transform .2s}
+    .user-chip:hover{transform:scale(1.04)}
+    .user-chip .avatar{width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#001810;background:linear-gradient(135deg,var(--teal),var(--teal2));overflow:hidden}
+    .user-chip .avatar img{width:100%;height:100%;object-fit:cover}
+    .user-chip .plan-tag{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;letter-spacing:0.05em}
+    .user-chip .plan-tag.free{background:rgba(255,255,255,0.10);color:rgba(255,255,255,0.7)}
+    .user-chip .plan-tag.pro{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#001810}
+
+    /* Menu dropdown */
+    .menu-overlay{position:fixed;inset:0;z-index:50;background:rgba(6,7,10,0.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:80px 24px 40px}
+    .menu-overlay.open{display:flex}
+    .menu-panel{width:100%;max-width:520px;border-radius:24px;padding:28px;color:#fff}
+    .menu-panel .menu-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .menu-panel .menu-title{font-size:13px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(250,251,252,0.55)}
+    .menu-close{width:34px;height:34px;border-radius:17px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;transition:background .2s}
+    .menu-close:hover{background:rgba(255,255,255,0.16)}
+    .menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .menu-link{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.04);transition:background .2s,transform .2s;border:1px solid rgba(255,255,255,0.06)}
+    .menu-link:hover{background:rgba(91,255,198,0.10);border-color:rgba(91,255,198,0.30);transform:translateY(-1px)}
+    .menu-link .mi{width:32px;height:32px;border-radius:9px;background:rgba(91,255,198,0.10);color:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .menu-link .mt{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .menu-link .mt b{font-size:14px;font-weight:600;letter-spacing:-0.01em}
+    .menu-link .mt span{font-size:11px;color:rgba(250,251,252,0.55)}
+    .menu-foot{margin-top:18px;font-size:11px;color:rgba(250,251,252,0.45);line-height:1.55;text-align:center}
+    .menu-foot a{color:rgba(250,251,252,0.6);text-decoration:underline}
+
+    /* Toast for share copy */
+    .toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%) translateY(20px);z-index:80;
+      padding:11px 20px;border-radius:999px;font-size:13px;color:#001810;background:var(--teal);
+      box-shadow:0 0 26px var(--tealGlow);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;font-weight:600}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* responsive */
+    @media (max-width: 1100px){
+      .hero h1{font-size:64px}
+      .panel-l{flex:0 0 50%}
     }
-    .chart-axis { position: absolute; right: 8px; top: 0; bottom: 20px; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); padding: 8px 0; }
-    .chart-axis-x { position: absolute; left: 0; right: 40px; bottom: 4px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); padding: 0 12px; }
-    .chart-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .mock-results { border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; }
-    .results-head { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .results-head .title { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; font-family: var(--mono); font-weight: 500; }
-    .results-head .count { font-family: var(--mono); font-size: 11px; color: var(--teal); }
-    .results-list { display: flex; flex-direction: column; }
-    .result-row { padding: 11px 14px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: center; transition: background .15s; }
-    .result-row:hover { background: var(--surface-2); }
-    .result-row:last-child { border-bottom: none; }
-    .rank { font-family: var(--mono); font-size: 10px; font-weight: 600; text-align: center; color: var(--muted); width: 18px; height: 18px; display: grid; place-items: center; border-radius: 3px; }
-    .rank.gold   { background: rgba(230,182,76,0.15);  color: var(--gold);   border: 1px solid rgba(230,182,76,0.3); }
-    .rank.silver { background: rgba(183,188,199,0.15); color: var(--silver); border: 1px solid rgba(183,188,199,0.3); }
-    .rank.bronze { background: rgba(205,127,50,0.15);  color: var(--bronze); border: 1px solid rgba(205,127,50,0.3); }
-    .result-name { font-size: 12.5px; color: var(--text-hi); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .result-name small { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-    .result-score { font-family: var(--mono); font-size: 11.5px; color: var(--teal); font-weight: 600; text-align: right; }
-    .result-bar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: rgba(45,45,48,0.6); overflow: hidden; margin-top: 6px; }
-    .result-bar-fill { height: 100%; background: linear-gradient(to right, var(--orange) 0%, var(--teal) 100%); border-radius: 2px; }
-
-    /* ── Section shell ── */
-    .section { padding: 100px 0; border-top: 1px solid var(--border); position: relative; }
-    @media (max-width: 760px) { .section { padding: 72px 0; } }
-    .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--teal); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 14px; font-weight: 500; }
-    .section-title { color: var(--text-hi); font-size: clamp(28px,3.4vw,40px); line-height: 1.15; font-weight: 700; letter-spacing: -0.03em; max-width: 680px; text-wrap: balance; }
-    .section-sub { color: var(--muted); margin-top: 14px; font-size: 16px; max-width: 640px; }
-    .section-head { margin-bottom: 56px; }
-
-    /* ── How it works ── */
-    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; position: relative; }
-    .steps::before {
-      content: ''; position: absolute; top: 82px; left: 14%; right: 14%; height: 1px;
-      background: repeating-linear-gradient(to right, var(--teal) 0, var(--teal) 4px, transparent 4px, transparent 10px);
-      opacity: 0.35; z-index: 0; pointer-events: none;
+    @media (max-width: 900px){
+      .page{flex-direction:column;padding:14px;gap:14px}
+      .panel-l, .panel-r{flex:1 1 auto;min-height:auto}
+      .hero{padding:24px 24px}
+      .hero h1{font-size:52px}
+      .nav{padding:18px 22px}
+      .quote-block{padding:0 24px 24px}
+      .community-card{width:auto;align-self:stretch}
+      .ticker-strip{font-size:10px;gap:14px;padding:8px 14px}
     }
-    @media (max-width: 860px) { .steps::before { display: none; } .steps { grid-template-columns: 1fr; } }
-    .step-arrow { position: absolute; top: 76px; width: 14px; height: 14px; display: grid; place-items: center; color: var(--teal); background: var(--bg); border-radius: 50%; z-index: 1; opacity: 0.9; }
-    .step-arrow.a1 { left: calc(33.33% - 7px); }
-    .step-arrow.a2 { left: calc(66.66% - 7px); }
-    @media (max-width: 860px) { .step-arrow { display: none; } }
-    .step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; display: flex; flex-direction: column; position: relative; transition: border-color .2s; }
-    .step:hover { border-color: var(--border-strong); }
-    .step-num { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.15em; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-    .step-num::before { content: ''; width: 24px; height: 1px; background: var(--teal); }
-    .step-visual { height: 130px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 22px; position: relative; overflow: hidden; }
-    .step-title { font-size: 20px; font-weight: 700; color: var(--text-hi); letter-spacing: -0.02em; margin-bottom: 8px; }
-    .step-desc { color: var(--muted); font-size: 14px; line-height: 1.55; }
-
-    /* ── Features ── */
-    .features { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
-    @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
-    .feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; display: flex; flex-direction: column; gap: 20px; transition: border-color .2s; }
-    .feature:hover { border-color: var(--border-strong); }
-    .feature-title { font-size: 21px; font-weight: 700; color: var(--text-hi); letter-spacing: -0.02em; }
-    .feature-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .feature-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; color: var(--text); padding-top: 10px; border-top: 1px solid var(--border); }
-    .feature-list li:first-child { border-top: none; padding-top: 0; }
-    .feature-list li::before { content: ''; flex-shrink: 0; width: 5px; height: 5px; margin-top: 9px; background: var(--teal); border-radius: 50%; }
-    .feature-visual { height: 120px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); position: relative; overflow: hidden; }
-
-    /* ── Pro Perks ── */
-    .pro-perks-section { background: linear-gradient(180deg, rgba(38,166,154,0.035) 0%, transparent 100%); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-    .pro-perks-section .features { grid-template-columns: repeat(3,1fr); }
-    @media (max-width: 960px) { .pro-perks-section .features { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 640px) { .pro-perks-section .features { grid-template-columns: 1fr; } }
-    .pro-feature { position: relative; border-color: rgba(38,166,154,0.35); background: linear-gradient(180deg, rgba(38,166,154,0.04) 0%, var(--surface) 60%); }
-    .pro-feature:hover { border-color: var(--teal); }
-    .pro-badge { position: absolute; top: 14px; right: 14px; background: var(--teal); color: #0b1413; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; padding: 4px 9px; border-radius: 3px; text-transform: uppercase; }
-    .pro-badge-soon { background: transparent; color: var(--orange); border: 1px solid var(--orange); }
-    .pro-feature-soon { border-style: dashed; border-color: rgba(255,107,53,0.4); background: linear-gradient(180deg, rgba(255,107,53,0.04) 0%, var(--surface) 60%); }
-    .pro-feature-soon:hover { border-color: var(--orange); }
-    .pro-more-note { margin-top: 40px; padding: 20px 24px; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius); text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
-    .pro-more-note strong { color: var(--text-hi); font-weight: 600; }
-
-    /* ── Pricing ── */
-    .pricing { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; max-width: 860px; margin: 0 auto; }
-    @media (max-width: 760px) { .pricing { grid-template-columns: 1fr; } }
-    .plan { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; display: flex; flex-direction: column; position: relative; }
-    .plan.featured { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal), 0 0 30px rgba(38,166,154,0.08); }
-    .plan-badge { position: absolute; top: -10px; left: 32px; background: var(--teal); color: #0b1413; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; padding: 5px 10px; border-radius: 3px; text-transform: uppercase; }
-    .plan-name { font-size: 13px; color: var(--muted); font-family: var(--mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
-    .plan-price { font-size: 38px; font-weight: 700; color: var(--text-hi); letter-spacing: -0.03em; font-family: var(--mono); display: flex; align-items: baseline; gap: 4px; }
-    .plan-price small { font-size: 14px; color: var(--muted); font-weight: 400; }
-    .plan-sub { color: var(--muted); font-size: 13px; margin-top: 6px; min-height: 20px; }
-    .plan-features { list-style: none; margin: 28px 0; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
-    .plan-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text); }
-    .plan-features li svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 4px; }
-    .plan-features li.no { color: var(--muted); }
-    .plan-features li.no svg { color: var(--muted); }
-    .plan-features li.yes svg { color: var(--teal); }
-    .plan .btn { width: 100%; }
-    .plan .free-locked { margin-top: 4px; margin-bottom: 20px; padding: 12px 14px; border: 1px dashed var(--border-strong); border-radius: var(--radius); font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; letter-spacing: 0.03em; }
-    .free-locked svg { width: 12px; height: 12px; flex-shrink: 0; }
-    .pro-unlock { margin-top: 4px; margin-bottom: 20px; padding: 14px; background: rgba(38,166,154,0.05); border: 1px solid rgba(38,166,154,0.25); border-radius: var(--radius); }
-    .pro-unlock-label { font-family: var(--mono); font-size: 10px; color: var(--teal); letter-spacing: 0.1em; margin-bottom: 10px; font-weight: 500; }
-    .pro-unlock-rows { display: flex; flex-direction: column; gap: 6px; }
-    .pro-unlock-row { display: grid; grid-template-columns: 18px 40px 1fr 40px; gap: 8px; align-items: center; font-family: var(--mono); font-size: 10.5px; }
-    .pu-rank { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 3px; font-size: 10px; font-weight: 600; }
-    .pu-rank.gold   { background: rgba(230,182,76,0.15);  color: var(--gold);   border: 1px solid rgba(230,182,76,0.3); }
-    .pu-rank.silver { background: rgba(183,188,199,0.15); color: var(--silver); border: 1px solid rgba(183,188,199,0.3); }
-    .pu-rank.bronze { background: rgba(205,127,50,0.15);  color: var(--bronze); border: 1px solid rgba(205,127,50,0.3); }
-    .pu-name { color: var(--text); font-size: 11px; font-family: var(--sans); }
-    .pu-bar { height: 4px; background: rgba(45,45,48,0.6); border-radius: 2px; overflow: hidden; }
-    .pu-fill { height: 100%; background: linear-gradient(to right, var(--orange), var(--teal)); }
-    .pu-score { color: var(--teal); text-align: right; font-weight: 600; }
-    .pricing-disclaimer { max-width: 860px; margin: 20px auto 0; padding: 10px 14px; border-left: 2px solid var(--warn); background: rgba(245,158,11,0.06); font-size: 11px; color: var(--muted); line-height: 1.6; border-radius: 0 var(--radius) var(--radius) 0; }
-
-    /* ── FAQ ── */
-    .faq-list { display: flex; flex-direction: column; max-width: 860px; margin: 0 auto; }
-    .faq-item { border-top: 1px solid var(--border); padding: 24px 0; }
-    .faq-item:last-child { border-bottom: 1px solid var(--border); }
-    .faq-q { display: flex; align-items: flex-start; gap: 20px; width: 100%; text-align: left; color: var(--text-hi); font-size: 17px; font-weight: 600; letter-spacing: -0.015em; padding: 0; }
-    .faq-q::before { content: 'Q'; flex-shrink: 0; font-family: var(--mono); font-size: 13px; color: var(--teal); width: 22px; margin-top: 3px; font-weight: 500; }
-    .faq-q-text { flex-grow: 1; }
-    .faq-icon { margin-left: auto; color: var(--muted); transition: transform .2s; flex-shrink: 0; margin-top: 4px; }
-    .faq-item.open .faq-icon { transform: rotate(45deg); color: var(--teal); }
-    .faq-a { overflow: hidden; max-height: 0; transition: max-height .3s ease, margin .3s ease; }
-    .faq-item.open .faq-a { max-height: 220px; margin-top: 14px; }
-    .faq-a-inner { display: flex; gap: 20px; color: var(--muted); font-size: 15px; line-height: 1.7; }
-    .faq-a-inner::before { content: 'A'; flex-shrink: 0; font-family: var(--mono); font-size: 13px; color: var(--orange); width: 22px; font-weight: 500; }
-
-    /* ── CTA band ── */
-    .cta-band { padding: 80px 0; border-top: 1px solid var(--border); text-align: center; }
-    .cta-band h2 { font-size: clamp(28px,3.2vw,38px); color: var(--text-hi); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 14px; text-wrap: balance; }
-    .cta-band p { color: var(--muted); margin-bottom: 28px; font-size: 16px; }
-
-    /* ── Footer ── */
-    footer { border-top: 1px solid var(--border); padding: 40px 0 48px; background: var(--bg); }
-    .foot { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between; }
-    .foot-links { display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; color: var(--muted); }
-    .foot-links a:hover { color: var(--text-hi); }
-    .foot-biz { font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 20px; }
-    .foot-biz a { color: var(--muted); }
-    .foot-biz a:hover { color: var(--text-hi); }
-    .foot-bottom { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; color: var(--muted); }
-
-    /* ── Step visual helpers ── */
-    .sv-grid { position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(45,45,48,0.6) 1px, transparent 1px), linear-gradient(to bottom, rgba(45,45,48,0.6) 1px, transparent 1px); background-size: 18px 18px; }
-    .sv-label { position: absolute; top: 8px; left: 10px; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; display: flex; gap: 10px; }
-    .sv-label .on { color: var(--teal); }
-    .sv-rank-row { display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-family: var(--mono); font-size: 10px; }
-
-    /* ── Scroll reveal ── */
-    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
-    .reveal.in { opacity: 1; transform: translateY(0); }
-
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @media (max-width: 560px){
+      .hero h1{font-size:42px}
+      .feature-grid{grid-template-columns:1fr}
+      .menu-grid{grid-template-columns:1fr}
+      .logo-text{font-size:18px}
+      .panel-l-glass{border-radius:22px}
+      .nav{flex-direction:column;align-items:flex-start}
+      .nav .nav-right{width:100%;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+      .top-bar{justify-content:flex-start}
+    }
   </style>
 </head>
 <body>
 
-<!-- ==================== NAVBAR ==================== -->
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="/" class="brand">
-      <span class="brand-mark">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1.5 11 L4 7 L6.5 9 L9.5 4 L14.5 2.5"/>
-        </svg>
-      </span>
-      Draw2Trade
-    </a>
-    <div class="nav-links">
-      <a href="/market"  class="nav-menu-item">시장</a>
-      <a href="/news"    class="nav-menu-item">뉴스</a>
-      <a href="/feed"    class="nav-menu-item">피드</a>
-      <a href="/notices" class="nav-menu-item">공지</a>
-      <div class="nav-cta" id="nav-cta-guest">
-        <a href="/login" class="btn btn-ghost" style="border-color:transparent;">로그인</a>
-        <a href="/app"   class="btn btn-teal">무료 시작</a>
-      </div>
-      <div class="nav-cta" id="nav-cta-user" style="display:none;align-items:center;gap:10px;">
-        <a href="/account" id="nav-user-link" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:#d4d8e2;">
-          <div id="nav-user-avatar" style="width:28px;height:28px;border-radius:50%;background:#26a69a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;overflow:hidden;">?</div>
-          <span id="nav-user-name" style="font-size:13px;font-weight:600;"></span>
-          <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.3px;"></span>
-        </a>
-        <button id="btn-nav-logout" class="btn btn-ghost" style="height:30px;padding:0 10px;font-size:12px;border-color:#ef5350;color:#ef5350;">로그아웃</button>
-      </div>
-    </div>
-  </div>
-</nav>
+<canvas id="bg-canvas" class="bg-canvas"></canvas>
+<div class="bg-overlay"></div>
+<div class="bg-grain"></div>
 
-<!-- ==================== HERO ==================== -->
-<header class="hero">
-  <div class="wrap hero-grid">
-    <div class="hero-copy">
-      <span class="tag"><span class="tag-dot"></span>KOSPI · KOSDAQ 2,400+ 종목</span>
-      <h1 class="hero-title">차트를 그리면
-<em>유사 종목</em>이 나온다</h1>
-      <p class="hero-sub">패턴을 직접 드로잉하면 전 종목에서 유사한 구간을 자동으로 찾아드립니다.<br>손으로 그린 곡선 한 줄이면 충분합니다.</p>
-      <div class="hero-ctas">
-        <a href="/app"     class="btn btn-teal btn-lg">무료로 시작하기</a>
-        <a href="/pricing" class="btn btn-ghost btn-lg">요금제 보기</a>
-      </div>
-      <div class="hero-meta">
-        <span><strong>16s</strong> 평균 응답</span>
-        <span><strong>2,400+</strong> 스캔 종목</span>
-        <span><strong>4</strong> 드로잉 도구</span>
-      </div>
-    </div>
+<div class="page">
 
-    <!-- Hero App Mock -->
-    <div class="mock" aria-label="Draw2Trade 앱 미리보기">
-      <div class="mock-header">
-        <div class="mock-dots">
-          <div class="mock-dot"></div><div class="mock-dot"></div><div class="mock-dot"></div>
-        </div>
-        <div class="mock-ticker">
-          <b>005930</b> 삼성전자 <span class="up">▲ 74,200 +1.23%</span>
-          <span style="color:var(--muted);margin-left:8px;">일봉</span>
-        </div>
-        <div class="mock-toolbar">
-          <div class="tool-btn active" title="자유곡선">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 11 C4 7, 6 13, 8 8 S 12 3, 14 7"/></svg>
-          </div>
-          <div class="tool-btn" title="추세선">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 13 L14 3"/><circle cx="2" cy="13" r="1.5"/><circle cx="14" cy="3" r="1.5"/></svg>
-          </div>
-          <div class="tool-btn" title="직선">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 8 L14 8"/></svg>
-          </div>
-          <div class="tool-btn" title="평행채널">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5 L14 3 M2 13 L14 11"/></svg>
-          </div>
-        </div>
-      </div>
+  <!-- LEFT PANEL -->
+  <section class="panel-l">
+    <div class="panel-l-glass liquid-glass-strong"></div>
 
-      <div class="mock-body">
-        <div class="mock-chart-col">
-          <div class="mock-chart" style="flex:1;">
-            <svg class="chart-svg" viewBox="0 0 520 420" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-              <g stroke-width="1.2">
-                <g stroke="#ef5350" fill="#ef5350"><line x1="20" y1="180" x2="20" y2="230"/><rect x="16" y="190" width="8" height="32"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="34" y1="170" x2="34" y2="225"/><rect x="30" y="178" width="8" height="30"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="48" y1="195" x2="48" y2="245"/><rect x="44" y="200" width="8" height="38"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="62" y1="200" x2="62" y2="250"/><rect x="58" y="210" width="8" height="32"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="76" y1="175" x2="76" y2="240"/><rect x="72" y="185" width="8" height="45"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="90" y1="195" x2="90" y2="235"/><rect x="86" y="200" width="8" height="30"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="104" y1="190" x2="104" y2="245"/><rect x="100" y="200" width="8" height="38"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="118" y1="160" x2="118" y2="220"/><rect x="114" y="170" width="8" height="42"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="132" y1="175" x2="132" y2="230"/><rect x="128" y="185" width="8" height="36"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="146" y1="150" x2="146" y2="210"/><rect x="142" y="160" width="8" height="40"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="160" y1="135" x2="160" y2="195"/><rect x="156" y="145" width="8" height="42"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="174" y1="140" x2="174" y2="195"/><rect x="170" y="150" width="8" height="36"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="188" y1="120" x2="188" y2="180"/><rect x="184" y="130" width="8" height="44"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="202" y1="105" x2="202" y2="170"/><rect x="198" y="115" width="8" height="45"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="216" y1="115" x2="216" y2="175"/><rect x="212" y="125" width="8" height="40"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="230" y1="100" x2="230" y2="160"/><rect x="226" y="110" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="244" y1="90" x2="244" y2="155"/><rect x="240" y="100" width="8" height="45"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="258" y1="105" x2="258" y2="165"/><rect x="254" y="115" width="8" height="40"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="272" y1="120" x2="272" y2="180"/><rect x="268" y="130" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="286" y1="110" x2="286" y2="175"/><rect x="282" y="120" width="8" height="45"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="300" y1="95" x2="300" y2="160"/><rect x="296" y="105" width="8" height="45"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="314" y1="85" x2="314" y2="145"/><rect x="310" y="95" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="328" y1="75" x2="328" y2="140"/><rect x="324" y="85" width="8" height="45"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="342" y1="65" x2="342" y2="130"/><rect x="338" y="75" width="8" height="45"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="356" y1="80" x2="356" y2="140"/><rect x="352" y="90" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="370" y1="70" x2="370" y2="130"/><rect x="366" y="80" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="384" y1="55" x2="384" y2="115"/><rect x="380" y="65" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="398" y1="45" x2="398" y2="105"/><rect x="394" y="55" width="8" height="42"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="412" y1="55" x2="412" y2="115"/><rect x="408" y="65" width="8" height="40"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="426" y1="40" x2="426" y2="100"/><rect x="422" y="50" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="440" y1="30" x2="440" y2="90"/><rect x="436" y="40" width="8" height="42"/></g>
-                <g stroke="#26a69a" fill="#26a69a"><line x1="454" y1="25" x2="454" y2="80"/><rect x="450" y="35" width="8" height="38"/></g>
-                <g stroke="#ef5350" fill="#ef5350"><line x1="468" y1="35" x2="468" y2="95"/><rect x="464" y="45" width="8" height="40"/></g>
-              </g>
-              <path d="M 20 220 C 80 230, 140 170, 200 140 C 260 115, 320 85, 400 55 C 440 40, 470 35, 485 30"
-                    fill="none" stroke="#ff6b35" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
-                <animate attributeName="stroke-dashoffset" from="900" to="0" dur="2.4s" fill="freeze"/>
-                <animate attributeName="stroke-dasharray" from="0 900" to="900 0" dur="2.4s" fill="freeze"/>
-              </path>
-              <circle cx="20"  cy="220" r="3"   fill="#ff6b35"/>
-              <circle cx="200" cy="140" r="3"   fill="#ff6b35"/>
-              <circle cx="400" cy="55"  r="3"   fill="#ff6b35"/>
-              <circle cx="485" cy="30"  r="3.5" fill="#ff6b35" stroke="#141416" stroke-width="2"/>
-              <rect x="380" y="25" width="110" height="105" fill="rgba(38,166,154,0.06)" stroke="#26a69a" stroke-width="1" stroke-dasharray="3 3" rx="2"/>
-            </svg>
-            <div class="chart-axis">
-              <span>75,800</span><span>73,400</span><span>71,000</span><span>68,600</span>
-            </div>
-            <div class="chart-axis-x">
-              <span>01/15</span><span>02/05</span><span>02/26</span><span>03/19</span><span>04/09</span>
-            </div>
-          </div>
-          <div class="mock-volume">
-            <div class="mock-volume-label">VOL</div>
-            <svg viewBox="0 0 520 88" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;">
-              <g><rect x="16" y="50" width="8" height="34" fill="#ef5350" opacity="0.6"/><rect x="30" y="40" width="8" height="44" fill="#26a69a" opacity="0.6"/><rect x="44" y="55" width="8" height="29" fill="#ef5350" opacity="0.6"/><rect x="58" y="60" width="8" height="24" fill="#26a69a" opacity="0.6"/><rect x="72" y="35" width="8" height="49" fill="#26a69a" opacity="0.6"/><rect x="86" y="58" width="8" height="26" fill="#ef5350" opacity="0.6"/><rect x="100" y="45" width="8" height="39" fill="#26a69a" opacity="0.6"/><rect x="114" y="30" width="8" height="54" fill="#26a69a" opacity="0.6"/><rect x="128" y="48" width="8" height="36" fill="#ef5350" opacity="0.6"/><rect x="142" y="38" width="8" height="46" fill="#26a69a" opacity="0.6"/><rect x="156" y="25" width="8" height="59" fill="#26a69a" opacity="0.7"/><rect x="170" y="42" width="8" height="42" fill="#ef5350" opacity="0.6"/><rect x="184" y="32" width="8" height="52" fill="#26a69a" opacity="0.6"/><rect x="198" y="20" width="8" height="64" fill="#26a69a" opacity="0.7"/><rect x="212" y="40" width="8" height="44" fill="#ef5350" opacity="0.6"/><rect x="226" y="30" width="8" height="54" fill="#26a69a" opacity="0.6"/><rect x="240" y="22" width="8" height="62" fill="#26a69a" opacity="0.7"/><rect x="254" y="45" width="8" height="39" fill="#ef5350" opacity="0.6"/><rect x="268" y="50" width="8" height="34" fill="#ef5350" opacity="0.6"/><rect x="282" y="35" width="8" height="49" fill="#26a69a" opacity="0.6"/><rect x="296" y="28" width="8" height="56" fill="#26a69a" opacity="0.6"/><rect x="310" y="42" width="8" height="42" fill="#ef5350" opacity="0.6"/><rect x="324" y="20" width="8" height="64" fill="#26a69a" opacity="0.7"/><rect x="338" y="15" width="8" height="69" fill="#26a69a" opacity="0.8"/><rect x="352" y="38" width="8" height="46" fill="#ef5350" opacity="0.6"/><rect x="366" y="25" width="8" height="59" fill="#26a69a" opacity="0.7"/><rect x="380" y="18" width="8" height="66" fill="#26a69a" opacity="0.7"/><rect x="394" y="12" width="8" height="72" fill="#26a69a" opacity="0.85"/><rect x="408" y="30" width="8" height="54" fill="#ef5350" opacity="0.6"/><rect x="422" y="20" width="8" height="64" fill="#26a69a" opacity="0.75"/><rect x="436" y="10" width="8" height="74" fill="#26a69a" opacity="0.9"/><rect x="450" y="8" width="8" height="76" fill="#26a69a" opacity="0.95"/><rect x="464" y="25" width="8" height="59" fill="#ef5350" opacity="0.6"/></g>
-            </svg>
-          </div>
-        </div>
-
-        <div class="mock-results">
-          <div class="results-head">
-            <span class="title">유사 패턴</span>
-            <span class="count">TOP 50 / 2,412</span>
-          </div>
-          <div class="results-filter">
-            <span class="chip on">ALL</span>
-            <span class="chip">KOSPI</span>
-            <span class="chip">KOSDAQ</span>
-            <span class="sort">↓ 유사도</span>
-          </div>
-          <div class="results-list">
-            <div class="result-row">
-              <span class="rank gold">1</span>
-              <div class="result-name">삼성전자<small>005930 · KOSPI</small></div>
-              <div class="result-score">94.2%</div>
-              <div class="result-bar"><div class="result-bar-fill" style="width:100%"></div></div>
-            </div>
-            <div class="result-row">
-              <span class="rank silver">2</span>
-              <div class="result-name">SK하이닉스<small>000660 · KOSPI</small></div>
-              <div class="result-score">91.7%</div>
-              <div class="result-bar"><div class="result-bar-fill" style="width:88%"></div></div>
-            </div>
-            <div class="result-row">
-              <span class="rank bronze">3</span>
-              <div class="result-name">NAVER<small>035420 · KOSPI</small></div>
-              <div class="result-score">88.4%</div>
-              <div class="result-bar"><div class="result-bar-fill" style="width:74%"></div></div>
-            </div>
-            <div class="result-row">
-              <span class="rank">4</span>
-              <div class="result-name">에코프로비엠<small>247540 · KOSDAQ</small></div>
-              <div class="result-score">85.1%</div>
-              <div class="result-bar"><div class="result-bar-fill" style="width:62%"></div></div>
-            </div>
-            <div class="result-row">
-              <span class="rank">5</span>
-              <div class="result-name">카카오<small>035720 · KOSPI</small></div>
-              <div class="result-score">82.6%</div>
-              <div class="result-bar"><div class="result-bar-fill" style="width:51%"></div></div>
-            </div>
-          </div>
-          <div class="results-more">+ 45 더 보기 · <span>TOP 1~10 → Pro</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</header>
-
-<!-- ==================== HOW IT WORKS ==================== -->
-<section class="section" id="how">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="eyebrow">HOW IT WORKS — 3 STEPS</div>
-      <h2 class="section-title">세 단계로 끝나는 패턴 검색</h2>
-      <p class="section-sub">복잡한 지표도, 수식도 필요 없습니다. 머릿속에 있는 차트 모양 그대로 그리기만 하면 됩니다.</p>
-    </div>
-
-    <div class="steps">
-      <div class="step-arrow a1">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5 L8 5 M5.5 2.5 L8 5 L5.5 7.5"/></svg>
-      </div>
-      <div class="step-arrow a2">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5 L8 5 M5.5 2.5 L8 5 L5.5 7.5"/></svg>
-      </div>
-
-      <div class="step reveal">
-        <div class="step-num">STEP 01</div>
-        <div class="step-visual">
-          <div class="sv-grid"></div>
-          <div class="sv-label"><span class="on">일봉</span><span>주봉</span><span>월봉</span></div>
-          <svg viewBox="0 0 260 130" style="position:absolute;inset:0;width:100%;height:100%;" preserveAspectRatio="none">
-            <g stroke-width="1"><g stroke="#26a69a" fill="#26a69a"><rect x="30" y="60" width="6" height="30"/><line x1="33" y1="55" x2="33" y2="95"/></g><g stroke="#ef5350" fill="#ef5350"><rect x="46" y="55" width="6" height="34"/><line x1="49" y1="50" x2="49" y2="94"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="62" y="50" width="6" height="36"/><line x1="65" y1="44" x2="65" y2="92"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="78" y="44" width="6" height="36"/><line x1="81" y1="38" x2="81" y2="86"/></g><g stroke="#ef5350" fill="#ef5350"><rect x="94" y="48" width="6" height="34"/><line x1="97" y1="42" x2="97" y2="88"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="110" y="40" width="6" height="38"/><line x1="113" y1="34" x2="113" y2="84"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="126" y="34" width="6" height="38"/><line x1="129" y1="28" x2="129" y2="78"/></g><g stroke="#ef5350" fill="#ef5350"><rect x="142" y="40" width="6" height="36"/><line x1="145" y1="34" x2="145" y2="82"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="158" y="34" width="6" height="36"/><line x1="161" y1="28" x2="161" y2="76"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="174" y="28" width="6" height="38"/><line x1="177" y1="22" x2="177" y2="72"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="190" y="22" width="6" height="38"/><line x1="193" y1="16" x2="193" y2="66"/></g><g stroke="#ef5350" fill="#ef5350"><rect x="206" y="30" width="6" height="34"/><line x1="209" y1="24" x2="209" y2="70"/></g><g stroke="#26a69a" fill="#26a69a"><rect x="222" y="22" width="6" height="34"/><line x1="225" y1="16" x2="225" y2="62"/></g></g>
-          </svg>
-        </div>
-        <div class="step-title">차트를 불러온다</div>
-        <div class="step-desc">KOSPI·KOSDAQ 전 종목 중 아무거나 선택하고 일봉·주봉·월봉 중 원하는 봉을 고르세요.</div>
-      </div>
-
-      <div class="step reveal">
-        <div class="step-num">STEP 02</div>
-        <div class="step-visual">
-          <div class="sv-grid"></div>
-          <div class="sv-label"><span class="on">✎ 자유곡선</span><span>추세선</span><span>직선</span></div>
-          <svg viewBox="0 0 260 130" style="position:absolute;inset:0;width:100%;height:100%;" preserveAspectRatio="none">
-            <path d="M 20 95 C 50 100, 80 70, 120 65 C 160 60, 190 30, 240 20" fill="none" stroke="#ff6b35" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="20"  cy="95" r="2.5" fill="#ff6b35"/>
-            <circle cx="120" cy="65" r="2.5" fill="#ff6b35"/>
-            <circle cx="240" cy="20" r="3.5" fill="#ff6b35" stroke="#141416" stroke-width="1.5"/>
-          </svg>
-        </div>
-        <div class="step-title">패턴을 그린다</div>
-        <div class="step-desc">자유곡선·추세선·직선·평행채널 중 편한 도구로 찾고 싶은 모양을 그려보세요.</div>
-      </div>
-
-      <div class="step reveal">
-        <div class="step-num">STEP 03</div>
-        <div class="step-visual">
-          <div style="position:absolute;inset:14px;display:flex;flex-direction:column;gap:6px;">
-            <div class="sv-rank-row" style="background:rgba(230,182,76,0.08);border-radius:3px;border-left:2px solid var(--gold);">
-              <span style="color:var(--gold);">1</span>
-              <span style="color:var(--text-hi);font-family:var(--sans);font-size:11px;">삼성전자</span>
-              <span style="margin-left:auto;color:var(--teal);">94.2%</span>
-            </div>
-            <div style="height:3px;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:2px;width:100%;"></div>
-            <div class="sv-rank-row" style="background:rgba(183,188,199,0.06);border-radius:3px;border-left:2px solid var(--silver);">
-              <span style="color:var(--silver);">2</span>
-              <span style="color:var(--text-hi);font-family:var(--sans);font-size:11px;">SK하이닉스</span>
-              <span style="margin-left:auto;color:var(--teal);">91.7%</span>
-            </div>
-            <div style="height:3px;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:2px;width:84%;"></div>
-            <div class="sv-rank-row" style="background:rgba(205,127,50,0.06);border-radius:3px;border-left:2px solid var(--bronze);">
-              <span style="color:var(--bronze);">3</span>
-              <span style="color:var(--text-hi);font-family:var(--sans);font-size:11px;">NAVER</span>
-              <span style="margin-left:auto;color:var(--teal);">88.4%</span>
-            </div>
-            <div style="height:3px;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:2px;width:68%;"></div>
-          </div>
-        </div>
-        <div class="step-title">결과를 탐색한다</div>
-        <div class="step-desc">유사도 순으로 최대 50개 종목, 금·은·동 뱃지와 그라디언트 게이지바로 한눈에.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== FEATURES ==================== -->
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="eyebrow">FEATURES</div>
-      <h2 class="section-title">트레이더를 위한 정밀한 도구</h2>
-      <p class="section-sub">전 종목 스캔부터 실시간 시세까지 — 차트 리서치에 필요한 모든 것이 한 화면에.</p>
-    </div>
-
-    <div class="features">
-      <div class="feature reveal">
-        <div class="feature-title">전 종목 패턴 스캔</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:grid;grid-template-columns:repeat(24,1fr);grid-template-rows:repeat(6,1fr);gap:2px;" id="scan-dots"></div>
-          <div style="position:absolute;left:18px;bottom:14px;font-family:var(--mono);font-size:10px;color:var(--muted);">
-            SCAN <span style="color:var(--teal);">●</span> 2,412 <span style="color:var(--muted);">종목</span>
-            <span style="margin-left:12px;color:var(--teal);">16.2s</span>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>KOSPI + KOSDAQ 전 종목 동시 검색</li>
-          <li>일봉 · 주봉 · 월봉 전 시간대 지원</li>
-          <li>약 16초 내 결과 반환 — 즉각 비교 가능</li>
-        </ul>
-      </div>
-
-      <div class="feature reveal">
-        <div class="feature-title">4가지 드로잉 도구</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);">
-            <div style="border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;justify-content:space-between;">
-              <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:0.08em;">01 FREEHAND</span>
-              <svg viewBox="0 0 80 50" style="width:100%;height:28px;" preserveAspectRatio="none"><path d="M 4 40 C 20 38, 30 12, 50 18 S 74 8, 78 10" fill="none" stroke="#ff6b35" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </div>
-            <div style="border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;justify-content:space-between;">
-              <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:0.08em;">02 TREND</span>
-              <svg viewBox="0 0 80 50" style="width:100%;height:28px;" preserveAspectRatio="none"><path d="M 4 42 L 28 30 L 52 20 L 76 8" fill="none" stroke="#26a69a" stroke-width="1.5"/><circle cx="4" cy="42" r="2" fill="#26a69a"/><circle cx="28" cy="30" r="2" fill="#26a69a"/><circle cx="52" cy="20" r="2" fill="#26a69a"/><circle cx="76" cy="8" r="2" fill="#26a69a"/></svg>
-            </div>
-            <div style="border-right:1px solid var(--border);padding:10px;display:flex;flex-direction:column;justify-content:space-between;">
-              <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:0.08em;">03 LINE</span>
-              <svg viewBox="0 0 80 50" style="width:100%;height:28px;" preserveAspectRatio="none"><path d="M 4 40 L 76 10" fill="none" stroke="#d4d8e2" stroke-width="1.5"/><circle cx="4" cy="40" r="2" fill="#d4d8e2"/><circle cx="76" cy="10" r="2" fill="#d4d8e2"/></svg>
-            </div>
-            <div style="padding:10px;display:flex;flex-direction:column;justify-content:space-between;">
-              <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:0.08em;">04 CHANNEL</span>
-              <svg viewBox="0 0 80 50" style="width:100%;height:28px;" preserveAspectRatio="none"><path d="M 4 30 L 76 8 M 4 44 L 76 22" fill="none" stroke="#26a69a" stroke-width="1.4"/><rect x="4" y="8" width="72" height="36" fill="rgba(38,166,154,0.06)"/></svg>
-            </div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>자유곡선 — 손으로 그리듯 자연스러운 패턴 입력</li>
-          <li>추세선 — 다중 포인트 연결</li>
-          <li>직선 — 두 점으로 간결하게</li>
-          <li>평행 채널 — 박스권 패턴 매칭에 최적화</li>
-        </ul>
-      </div>
-
-      <div class="feature reveal">
-        <div class="feature-title">유사도 시각화</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;gap:8px;justify-content:center;">
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--gold);width:18px;text-align:center;background:rgba(230,182,76,0.15);border-radius:2px;padding:1px 0;">1</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:3px;"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">94.2%</span></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--silver);width:18px;text-align:center;background:rgba(183,188,199,0.15);border-radius:2px;padding:1px 0;">2</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:84%;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:3px;"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">87.5%</span></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--bronze);width:18px;text-align:center;background:rgba(205,127,50,0.15);border-radius:2px;padding:1px 0;">3</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:64%;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:3px;"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">79.8%</span></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--muted);width:18px;text-align:center;">4</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:linear-gradient(to right,var(--orange),var(--teal));border-radius:3px;"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;text-align:right;">72.1%</span></div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>오렌지→시안 그라디언트 게이지바로 한눈에 비교</li>
-          <li>Top 3에 금·은·동 랭크 뱃지 자동 부여</li>
-          <li>1위는 항상 100% 기준, 상대 비교가 쉬움</li>
-        </ul>
-      </div>
-
-      <div class="feature reveal">
-        <div class="feature-title">실시간 시세</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;gap:6px;justify-content:center;font-family:var(--mono);font-size:11px;">
-            <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:9.5px;letter-spacing:0.1em;border-bottom:1px solid var(--border);padding-bottom:4px;"><span>TICKER</span><span>PRICE</span><span>CHG</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--text-hi);">005930</span><span style="color:var(--text-hi);">74,200</span><span style="color:var(--teal);">▲ 1.23%</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--text-hi);">000660</span><span style="color:var(--text-hi);">193,500</span><span style="color:var(--red);">▼ 0.42%</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--text-hi);">247540</span><span style="color:var(--text-hi);">218,000</span><span style="color:var(--teal);">▲ 2.87%</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:4px;margin-top:2px;">
-              <span style="color:var(--muted);font-size:10px;">KRX · LIVE</span>
-              <span style="color:var(--teal);font-size:10px;display:flex;align-items:center;gap:4px;"><span style="width:5px;height:5px;background:var(--teal);border-radius:50%;box-shadow:0 0 6px var(--teal);display:inline-block;"></span>실시간</span>
-            </div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>당일 현재가 자동 반영 (KRX 데이터)</li>
-          <li>종목 뉴스 통합 피드</li>
-          <li>네이버 종토방 연동으로 시장 반응 확인</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== PRO PERKS ==================== -->
-<section class="section pro-perks-section" id="pro-perks">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="eyebrow" style="color:var(--teal);">PRO EXCLUSIVE</div>
-      <h2 class="section-title">유료 결제 시 활성화되는 도구</h2>
-      <p class="section-sub">Pro 사용자를 위한 고급 기능들 — 앞으로 계속 추가됩니다.</p>
-    </div>
-
-    <div class="features">
-      <div class="feature reveal pro-feature">
-        <span class="pro-badge">PRO</span>
-        <div class="feature-title">자동 패턴 검색</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;justify-content:center;gap:10px;font-family:var(--mono);font-size:10px;">
-            <div style="display:flex;align-items:center;gap:8px;color:var(--muted);">
-              <span style="width:60px;">START</span>
-              <div style="flex:1;height:2px;background:linear-gradient(to right,var(--teal),transparent);"></div>
-              <span style="color:var(--teal);">2024-01</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;color:var(--muted);">
-              <span style="width:60px;">END</span>
-              <div style="flex:1;height:2px;background:linear-gradient(to right,var(--teal),transparent);"></div>
-              <span style="color:var(--teal);">2024-12</span>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);">
-              <span style="width:6px;height:6px;background:var(--teal);border-radius:50%;box-shadow:0 0 8px var(--teal);"></span>
-              AUTO-ANALYZE <span style="color:var(--muted);">· 2,412 종목</span>
-            </div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>직접 그릴 필요 없이 <strong style="color:var(--teal);">기간만 지정</strong>하면 자동 분석</li>
-          <li>과거 구간 선택 시 당시 유사 패턴 종목을 찾아줌</li>
-          <li>반복적인 리서치 시간 대폭 단축</li>
-        </ul>
-      </div>
-
-      <div class="feature reveal pro-feature">
-        <span class="pro-badge">PRO</span>
-        <div class="feature-title">Top 1~10 상위 결과</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--gold);width:18px;text-align:center;background:rgba(230,182,76,0.15);border-radius:2px;padding:1px 0;">1</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">94.2%</span></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--silver);width:18px;text-align:center;background:rgba(183,188,199,0.15);border-radius:2px;padding:1px 0;">2</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:88%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">91.7%</span></div>
-            <div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:10px;color:var(--bronze);width:18px;text-align:center;background:rgba(205,127,50,0.15);border-radius:2px;padding:1px 0;">3</span><div style="flex-grow:1;height:5px;background:rgba(45,45,48,0.6);border-radius:3px;overflow:hidden;"><div style="height:100%;width:74%;background:linear-gradient(to right,var(--orange),var(--teal));"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--teal);width:40px;text-align:right;">88.4%</span></div>
-            <div style="text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted);padding-top:4px;border-top:1px solid var(--border);">FREE 제한 → PRO 전체 공개</div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>가장 유사한 <strong style="color:var(--teal);">Top 1~10 결과 완전 공개</strong> (Free는 11~50만 표시)</li>
-          <li>금·은·동 랭크 뱃지로 최상위 패턴 즉시 식별</li>
-          <li>즐겨찾기 · 검색 저장 개수 무제한</li>
-        </ul>
-      </div>
-
-      <div class="feature reveal pro-feature pro-feature-soon">
-        <span class="pro-badge pro-badge-soon">COMING SOON</span>
-        <div class="feature-title">AI 자동 생성 도구</div>
-        <div class="feature-visual">
-          <div style="position:absolute;inset:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-              <circle cx="12" cy="12" r="3.5"/>
-            </svg>
-            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;line-height:1.5;">
-              차트 자동 해석<br>패턴 자동 추천<br>리스크 진단
-            </div>
-          </div>
-        </div>
-        <ul class="feature-list">
-          <li>AI가 차트를 읽고 유사 패턴을 <strong style="color:var(--teal);">자동 제안</strong></li>
-          <li>과거 유사 구간의 이후 흐름을 통계적으로 요약</li>
-          <li>준비 중 — Pro 사용자에게 선공개 예정</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="pro-more-note reveal">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-      <span>Pro 전용 도구는 <strong>꾸준히 추가</strong>됩니다. 구독 중이시면 별도 결제 없이 모두 이용 가능합니다.</span>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== PRICING ==================== -->
-<section class="section" id="pricing">
-  <div class="wrap">
-    <div class="section-head reveal" style="text-align:center;">
-      <div class="eyebrow" style="justify-content:center;">PRICING</div>
-      <h2 class="section-title" style="margin:0 auto;">필요한 만큼만 지불하세요</h2>
-      <p class="section-sub" style="margin-left:auto;margin-right:auto;">무료로 시작하고, 더 깊은 분석이 필요할 때 Pro로 전환하세요.</p>
-    </div>
-
-    <div class="pricing">
-      <div class="plan reveal">
-        <div class="plan-name">Free</div>
-        <div class="plan-price">₩0<small>/월</small></div>
-        <div class="plan-sub">부담 없이 시작하기</div>
-        <div class="free-locked">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="2" y="5.5" width="8" height="5" rx="0.5"/><path d="M3.5 5.5 V3.5 A2.5 2.5 0 0 1 8.5 3.5 V5.5"/></svg>
-          TOP 1~10 결과는 Pro 플랜 전용
-        </div>
-        <ul class="plan-features">
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>KR 시장 패턴 검색</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>무제한 검색 횟수</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>유사 종목 Top 11~50 결과</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 최대 5개</li>
-          <li class="no"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>자동 패턴 검색</li>
-        </ul>
-        <a href="/app" class="btn btn-ghost">무료로 시작하기</a>
-      </div>
-
-      <div class="plan featured reveal">
-        <div class="plan-badge">이벤트 특가</div>
-        <div class="plan-name" style="color:var(--teal);">Pro</div>
-        <div class="plan-price">$6<small>/월</small></div>
-        <div class="plan-sub">PayPal로 바로 시작하세요</div>
-        <div class="pro-unlock">
-          <div class="pro-unlock-label">PRO 전용 — TOP 1~10 결과</div>
-          <div class="pro-unlock-rows">
-            <div class="pro-unlock-row"><span class="pu-rank gold">1</span><span class="pu-name">종목 A</span><div class="pu-bar"><div class="pu-fill" style="width:100%"></div></div><span class="pu-score">94.2%</span></div>
-            <div class="pro-unlock-row"><span class="pu-rank silver">2</span><span class="pu-name">종목 B</span><div class="pu-bar"><div class="pu-fill" style="width:88%"></div></div><span class="pu-score">91.7%</span></div>
-            <div class="pro-unlock-row"><span class="pu-rank bronze">3</span><span class="pu-name">종목 C</span><div class="pu-bar"><div class="pu-fill" style="width:74%"></div></div><span class="pu-score">88.4%</span></div>
-          </div>
-        </div>
-        <ul class="plan-features">
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>KR 시장 패턴 검색 · 무제한</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Top 1~50 전체 결과 (상위 10개 포함)</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>자동 패턴 검색 (기간 지정 후 자동 분석)</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 무제한</li>
-          <li class="yes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>속도 우선 지원</li>
-        </ul>
-        <a href="/pricing" class="btn btn-teal">Pro 시작하기</a>
-      </div>
-    </div>
-
-    <div class="pricing-disclaimer reveal">
-      본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.
-      패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.
-    </div>
-  </div>
-</section>
-
-<!-- ==================== FAQ ==================== -->
-<section class="section" id="faq">
-  <div class="wrap">
-    <div class="section-head reveal" style="text-align:center;">
-      <div class="eyebrow" style="justify-content:center;">FAQ</div>
-      <h2 class="section-title" style="margin:0 auto;">자주 묻는 질문</h2>
-    </div>
-
-    <div class="faq-list reveal">
-      <div class="faq-item open">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text">결제 후 언제 Pro가 되나요?</span>
-          <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
-        </button>
-        <div class="faq-a"><div class="faq-a-inner"><span>이체 확인 후 24시간 이내 수동 전환됩니다. 평균적으로 수 시간 내에 Pro 기능이 활성화됩니다.</span></div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text">무료 플랜에서도 패턴 검색이 되나요?</span>
-          <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
-        </button>
-        <div class="faq-a"><div class="faq-a-inner"><span>네, 무료 플랜도 검색 횟수 제한 없이 사용 가능합니다. 다만 상위 Top 10 결과는 Pro 전용이며, 무료 플랜에서는 11위부터 50위까지의 결과를 확인할 수 있습니다.</span></div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text">미국 주식(US)도 지원하나요?</span>
-          <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
-        </button>
-        <div class="faq-a"><div class="faq-a-inner"><span>현재는 KR(KOSPI/KOSDAQ) 시장만 지원합니다. 해외 시장 확장은 로드맵에 포함되어 있으나 구체적인 일정은 아직 공개되지 않았습니다.</span></div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text">차트 데이터는 얼마나 실시간인가요?</span>
-          <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
-        </button>
-        <div class="faq-a"><div class="faq-a-inner"><span>KRX 데이터를 기반으로 당일 현재가를 마지막 봉에 실시간 반영합니다. 패턴 검색에 사용되는 과거 데이터는 일봉 기준 종가 데이터입니다.</span></div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== CTA BAND ==================== -->
-<section class="cta-band">
-  <div class="wrap reveal">
-    <h2>지금 그려보세요. 16초면 충분합니다.</h2>
-    <p>신용카드 없이 무료 시작. 무제한 패턴 검색.</p>
-    <a href="/app" class="btn btn-teal btn-lg">무료로 시작하기 →</a>
-  </div>
-</section>
-
-<!-- ==================== FOOTER ==================== -->
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <a href="/" class="brand">
-        <span class="brand-mark">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 11 L4 7 L6.5 9 L9.5 4 L14.5 2.5"/></svg>
-        </span>
-        Draw2Trade
+    <header class="nav">
+      <a href="/" class="logo" aria-label="Draw2Trade 홈">
+        <div class="logo-mark">D2</div>
+        <div class="logo-text">draw2trade<em>kr</em></div>
       </a>
-      <div class="foot-links">
-        <a href="/app">서비스 시작</a>
-        <a href="/pricing">요금제</a>
-        <a href="/notices">공지사항</a>
-        <a href="/terms">이용약관</a>
-        <a href="/privacy">개인정보처리방침</a>
-        <a href="mailto:kwj15934@formeta.kr">문의</a>
+      <div class="nav-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="ticker-strip liquid-glass" id="ticker-strip">
+          <span class="item">KOSPI <span id="kospi-val" class="up">—</span></span>
+          <span class="item">KOSDAQ <span id="kosdaq-val" class="dn">—</span></span>
+        </div>
+        <button type="button" class="nav-pill liquid-glass" id="btn-menu" aria-label="메뉴 열기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          Menu
+        </button>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="badge liquid-glass" style="border-radius:999px">
+        <span class="dot"></span> AI Pattern Match · BETA
+      </div>
+      <h1>
+        Draw the chart.<br/>
+        <em>Let AI find the</em> <span class="mint">stock.</span>
+      </h1>
+      <p class="hero-sub">
+        마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.
+      </p>
+      <div class="cta-row">
+        <a class="cta-primary liquid-glass-strong" href="/blank">
+          지금 그려보기 · Draw Now
+          <span class="cta-circle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+        <a class="cta-secondary liquid-glass" href="/app">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg>
+          차트 모드 열기
+        </a>
+      </div>
+      <div class="pills">
+        <span class="pill liquid-glass">패턴 인식 · Pattern Match</span>
+        <span class="pill liquid-glass">AI 재무 요약 · Fin Summary</span>
+        <span class="pill liquid-glass">실시간 시세 · Live Quotes</span>
+        <span class="pill liquid-glass">즐겨찾기 동기화</span>
       </div>
     </div>
-    <div class="foot-biz">
-      상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566<br>
-      사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동) &nbsp;|&nbsp;
-      전화번호 : 02-6015-9983 &nbsp;|&nbsp;
-      이메일 : <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>
+
+    <div class="quote-block">
+      <div class="quote-label">DESIGN PHILOSOPHY · 2026</div>
+      <div class="quote-text">
+        "차트는 <em>그림</em>이다.<br/>
+        우리는 그림을 <em>읽는 법</em>을 가르친다."
+      </div>
+      <div class="quote-author">
+        <span class="ln"></span>
+        <span>DRAW2TRADE · KR MARKET</span>
+        <span class="ln"></span>
+      </div>
     </div>
-    <div class="foot-bottom">
-      <span>© 2026 Draw2Trade. All rights reserved.</span>
-      <span>본 서비스는 투자 참고용 정보이며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.</span>
+  </section>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel-r">
+    <div class="top-bar">
+      <div class="social-pill liquid-glass" aria-label="공유 및 외부 링크">
+        <button type="button" id="btn-share-twitter" aria-label="X(트위터)에 공유"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></button>
+        <button type="button" id="btn-share-kakao" aria-label="카카오톡 공유"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.85 5.21 4.61 6.59l-1.13 4.13c-.1.36.29.65.6.45l4.97-3.27c.32.03.65.05.95.05 5.52 0 10-3.48 10-7.95S17.52 3 12 3z"/></svg></button>
+        <button type="button" id="btn-share-copy" aria-label="링크 복사"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/></svg></button>
+        <button type="button" class="arr" id="btn-share-native" aria-label="기기 기본 공유">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16,6 12,2 8,6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+      </div>
+
+      <a href="/notices" class="icon-circle liquid-glass-mint" id="link-notices" title="공지사항" aria-label="공지사항">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7v16L3 13z"/><path d="M11 19a3 3 0 0 1-6 0v-6"/></svg>
+      </a>
+
+      <a href="/account" class="icon-circle liquid-glass" id="link-account" title="마이 페이지" aria-label="마이 페이지">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </a>
+      <a href="/account" class="user-chip liquid-glass" id="user-chip" style="display:none" aria-label="마이 페이지">
+        <span class="avatar" id="user-avatar">?</span>
+        <span id="user-name">User</span>
+        <span class="plan-tag free" id="user-plan">FREE</span>
+      </a>
+    </div>
+
+    <a href="/feed" class="community-card liquid-glass" aria-label="커뮤니티 보기">
+      <div class="lab"><span class="dot"></span> COMMUNITY</div>
+      <h3>그리는 투자자들의 <em>커뮤니티</em></h3>
+      <p>다른 트레이더의 패턴 시그널과 공시 인사이트를 모아 보세요.</p>
+    </a>
+
+    <div class="feature-wrap liquid-glass-strong">
+      <div class="feature-grid">
+        <a href="/blank" class="feature-card liquid-glass">
+          <div class="ic mint">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/><circle cx="6" cy="6" r="2"/></svg>
+          </div>
+          <div>
+            <h4>AI <em>Pattern Match</em></h4>
+            <p>그린 패턴을 정규화 후 코사인 유사도로 매칭, 상위 50개 종목을 즉시 반환합니다.</p>
+          </div>
+          <div class="stat">
+            <span class="v">2,400+</span>
+            <span class="d">listed tickers</span>
+          </div>
+        </a>
+        <a href="/app" class="feature-card liquid-glass">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M7 8h6M7 12h10M7 16h7"/></svg>
+          </div>
+          <div>
+            <h4>AI <em>Fin Summary</em></h4>
+            <p>DART 공시·재무를 한국어로 요약, 핵심 지표와 리스크를 한 번에 정리합니다.</p>
+          </div>
+          <div class="stat">
+            <span class="v">KR</span>
+            <span class="d">KOSPI · KOSDAQ</span>
+          </div>
+        </a>
+      </div>
+
+      <a href="/blank" class="pattern-card liquid-glass">
+        <div class="pattern-thumb">
+          <svg viewBox="0 0 120 78" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#5BFFC6" stop-opacity="0.45"/>
+                <stop offset="100%" stop-color="#5BFFC6" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,55 C18,52 22,38 32,42 C44,46 50,28 62,32 C74,36 80,18 92,22 C104,26 110,10 120,12 L120,78 L0,78 Z" fill="url(#g1)"/>
+            <path d="M0,55 C18,52 22,38 32,42 C44,46 50,28 62,32 C74,36 80,18 92,22 C104,26 110,10 120,12" fill="none" stroke="#5BFFC6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(91,255,198,0.6))"/>
+          </svg>
+        </div>
+        <div class="pattern-info">
+          <div class="lab">QUICK START · 빈 캔버스</div>
+          <h5>패턴을 그리고 <em>유사 종목</em> 검색</h5>
+          <p>로그인 없이 바로 시작 · 결과는 0.2초 안에</p>
+        </div>
+        <div class="plus-btn liquid-glass-mint" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </a>
+    </div>
+  </aside>
+</div>
+
+<!-- Menu overlay -->
+<div class="menu-overlay" id="menu-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="menu-panel liquid-glass-strong">
+    <div class="menu-head">
+      <span id="menu-title" class="menu-title">DRAW2TRADE · MENU</span>
+      <button type="button" class="menu-close" id="btn-menu-close" aria-label="메뉴 닫기">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+      </button>
+    </div>
+    <div class="menu-grid">
+      <a class="menu-link" href="/blank">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/></svg></span>
+        <span class="mt"><b>빈 캔버스</b><span>패턴 그리기 · 유사 종목 검색</span></span>
+      </a>
+      <a class="menu-link" href="/app">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></span>
+        <span class="mt"><b>차트 모드</b><span>실시간 차트 · 패턴 비교</span></span>
+      </a>
+      <a class="menu-link" href="/market">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></span>
+        <span class="mt"><b>마켓</b><span>KOSPI · KOSDAQ 시세</span></span>
+      </a>
+      <a class="menu-link" href="/feed">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+        <span class="mt"><b>커뮤니티</b><span>피드 · 시그널 공유</span></span>
+      </a>
+      <a class="menu-link" href="/news">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="mt"><b>뉴스</b><span>시장 · 종목 헤드라인</span></span>
+      </a>
+      <a class="menu-link" href="/notices">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7v16L3 13z"/></svg></span>
+        <span class="mt"><b>공지사항</b><span>업데이트 · 안내</span></span>
+      </a>
+      <a class="menu-link" href="/account">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
+        <span class="mt"><b>마이 페이지</b><span>계정 · 즐겨찾기 · 플랜</span></span>
+      </a>
+      <a class="menu-link" href="/login" id="menu-login">
+        <span class="mi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+        <span class="mt"><b>로그인</b><span>Google 계정으로 시작</span></span>
+      </a>
+    </div>
+    <div class="menu-foot">
+      본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 자본시장법상 투자자문에 해당하지 않습니다.<br>
+      <a href="/terms">이용약관</a> · <a href="/privacy">개인정보처리방침</a> · <a href="mailto:kwj15934@formeta.kr">문의</a>
     </div>
   </div>
-</footer>
+</div>
 
+<div class="toast" id="toast">링크가 복사되었습니다</div>
+
+<!-- ───── Animated Canvas Background ───── -->
+<script>
+(() => {
+  const c = document.getElementById('bg-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let W, H, dpr;
+  const resize = () => {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = c.clientWidth = window.innerWidth;
+    H = c.clientHeight = window.innerHeight;
+    c.width = W * dpr; c.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  };
+  window.addEventListener('resize', resize); resize();
+
+  const TRAIL = 480;
+  const SUB = 6;
+  let head = { x: 0.08, y: 0.5, vx: 0.0014, vy: 0 };
+  const trail = [];
+  let t = 0;
+
+  const seed = Array.from({length: 256}, () => Math.random());
+  function vnoise(x) {
+    const i = Math.floor(x);
+    const f = x - i;
+    const a = seed[((i % 256) + 256) % 256];
+    const b = seed[(((i+1) % 256) + 256) % 256];
+    const u = f*f*(3-2*f);
+    return a*(1-u) + b*u;
+  }
+  function fbm(x) {
+    let v=0, a=0.5, fr=1;
+    for (let i=0;i<5;i++){ v += vnoise(x*fr) * a; fr*=2; a*=0.5; }
+    return v;
+  }
+
+  const CANDLES = 22;
+  const candles = [];
+  for (let i=0;i<CANDLES;i++){
+    candles.push({
+      x: Math.random(), y: 0.2 + Math.random()*0.7,
+      h: 0.04 + Math.random()*0.16, w: 1.8 + Math.random()*2.4,
+      up: Math.random()>0.45, phase: Math.random()*Math.PI*2,
+      speed: 0.4 + Math.random()*1.0,
+    });
+  }
+  const NODES = 22;
+  const nodes = [];
+  for (let i=0;i<NODES;i++){
+    nodes.push({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random()-0.5)*0.0002, vy: (Math.random()-0.5)*0.0002,
+      pulse: Math.random()*Math.PI*2, r: 0.6 + Math.random()*1.4,
+    });
+  }
+
+  function step() {
+    t += 1;
+    for (let s=0; s<SUB; s++) {
+      const tx = (t + s/SUB) * 0.006;
+      const nx = (fbm(tx*1.0 + 7.13) - 0.5);
+      const ny = (fbm(tx*1.3 + 31.7) - 0.5);
+      head.vx = 0.0009 + nx * 0.0014;
+      head.vy = ny * 0.0042;
+      const spike = fbm(tx*0.4 + 99.2);
+      if (spike > 0.86) head.vy += (Math.random()-0.5) * 0.014;
+      head.x += head.vx; head.y += head.vy;
+      if (head.x > 1.6) { head.x = -0.04; trail.length = 0; }
+      if (head.y < 0.10) { head.y = 0.10; head.vy = Math.abs(head.vy)*0.6; }
+      if (head.y > 0.90) { head.y = 0.90; head.vy = -Math.abs(head.vy)*0.6; }
+      trail.push({ x: head.x, y: head.y, age: 0 });
+    }
+    while (trail.length > TRAIL) trail.shift();
+    trail.forEach(p => p.age += 1);
+
+    let startIdx = 0;
+    for (let i = trail.length - 1; i >= 0; i--) {
+      if (trail[i].x < -0.02) { startIdx = i + 1; break; }
+    }
+
+    ctx.fillStyle = '#06070A';
+    ctx.fillRect(0,0,W,H);
+
+    let g = ctx.createRadialGradient(W*0.28, H*0.42, 40, W*0.28, H*0.42, Math.max(W,H)*0.7);
+    g.addColorStop(0,'rgba(91,255,198,0.10)');
+    g.addColorStop(0.5,'rgba(91,255,198,0.03)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    g = ctx.createRadialGradient(W*0.85, H*0.85, 30, W*0.85, H*0.85, Math.max(W,H)*0.55);
+    g.addColorStop(0,'rgba(91,141,255,0.07)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    candles.forEach(cdl => {
+      cdl.phase += 0.008 * cdl.speed;
+      const breath = (Math.sin(cdl.phase)+1)/2;
+      const x = cdl.x*W, cy = cdl.y*H;
+      const ch = cdl.h*H*(0.6 + breath*0.5);
+      const col = cdl.up ? 'rgba(255,94,106,0.10)' : 'rgba(91,141,255,0.10)';
+      ctx.fillStyle = col;
+      ctx.fillRect(x - cdl.w/2, cy - ch/2, cdl.w, ch);
+      ctx.strokeStyle = col; ctx.lineWidth = 0.4;
+      ctx.beginPath(); ctx.moveTo(x, cy-ch/2-5); ctx.lineTo(x, cy+ch/2+5); ctx.stroke();
+    });
+
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy; n.pulse += 0.03;
+      if (n.x<0||n.x>1) n.vx*=-1;
+      if (n.y<0||n.y>1) n.vy*=-1;
+    });
+    for (let i=0;i<nodes.length;i++) {
+      for (let j=i+1;j<nodes.length;j++) {
+        const a = nodes[i], b = nodes[j];
+        const dx=(a.x-b.x)*W, dy=(a.y-b.y)*H;
+        const d=Math.hypot(dx,dy);
+        if (d<160) {
+          const op = (1 - d/160)*0.10;
+          ctx.beginPath();
+          ctx.moveTo(a.x*W,a.y*H); ctx.lineTo(b.x*W,b.y*H);
+          ctx.strokeStyle = `rgba(91,255,198,${op})`;
+          ctx.lineWidth = 0.5; ctx.stroke();
+        }
+      }
+    }
+    nodes.forEach(n => {
+      const p = (Math.sin(n.pulse)+1)/2;
+      ctx.beginPath();
+      ctx.arc(n.x*W, n.y*H, n.r*(0.7+p*0.4), 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${0.18 + p*0.18})`;
+      ctx.fill();
+    });
+
+    if (trail.length > 4) {
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x*W, trail[0].y*H);
+      for (let i=1;i<trail.length-1;i++){
+        const p0=trail[i], p1=trail[i+1];
+        const mx=(p0.x+p1.x)/2*W, my=(p0.y+p1.y)/2*H;
+        ctx.quadraticCurveTo(p0.x*W, p0.y*H, mx, my);
+      }
+      ctx.strokeStyle = 'rgba(91,255,198,0.18)';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(91,255,198,0.5)';
+      ctx.shadowBlur = 24; ctx.stroke(); ctx.shadowBlur = 0;
+
+      for (let i=1;i<trail.length;i++){
+        const p0=trail[i-1], p1=trail[i];
+        const lifeT = i/trail.length;
+        const op = 0.05 + Math.pow(lifeT, 1.6) * 0.95;
+        ctx.beginPath();
+        ctx.moveTo(p0.x*W, p0.y*H); ctx.lineTo(p1.x*W, p1.y*H);
+        ctx.strokeStyle = `rgba(180,255,225,${op})`;
+        ctx.lineWidth = 1.4; ctx.stroke();
+      }
+
+      const headPt = trail[trail.length-1];
+      const hx = headPt.x*W, hy = headPt.y*H;
+      const headOnScreen = headPt.x >= 0 && headPt.x <= 1;
+      if (headOnScreen) {
+        const pr = 6 + (Math.sin(t*0.08)+1)*4;
+        ctx.beginPath(); ctx.arc(hx, hy, pr, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(91,255,198,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(hx, hy, 3.4, 0, Math.PI*2);
+        ctx.fillStyle = '#5BFFC6';
+        ctx.shadowColor = '#5BFFC6'; ctx.shadowBlur = 22;
+        ctx.fill(); ctx.shadowBlur = 0;
+        ctx.font = '500 10px "JetBrains Mono", monospace';
+        ctx.fillStyle = 'rgba(91,255,198,0.7)';
+        const yv = ((1 - headPt.y)*100).toFixed(2);
+        ctx.fillText(`${yv}`, hx + 10, hy - 6);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText(`+${(Math.sin(t*0.03)*2 + 1.4).toFixed(2)}%`, hx + 10, hy + 8);
+      }
+
+      const recent = trail.slice(-90);
+      for (let i=4;i<recent.length-4;i++){
+        const a=recent[i-3].y, b=recent[i].y, d=recent[i+3].y;
+        if ((b<a && b<d) || (b>a && b>d)) {
+          const px = recent[i].x*W, py = recent[i].y*H;
+          const idx = trail.length - recent.length + i;
+          const lifeT = idx/trail.length;
+          const op = lifeT * 0.5;
+          ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI*2);
+          ctx.fillStyle = `rgba(255,255,255,${op})`;
+          ctx.fill();
+        }
+      }
+    }
+    requestAnimationFrame(step);
+  }
+  step();
+})();
+</script>
+
+<!-- ───── Menu / Share / Auth wiring ───── -->
 <script>
   (function () {
-    const grid = document.getElementById('scan-dots');
-    if (!grid) return;
-    for (let i = 0; i < 144; i++) {
-      const d = document.createElement('div');
-      const r = Math.random();
-      let bg = 'rgba(45,45,48,0.8)';
-      if (r > 0.93) bg = '#26a69a';
-      else if (r > 0.82) bg = 'rgba(38,166,154,0.4)';
-      else if (r > 0.72) bg = 'rgba(212,216,226,0.2)';
-      d.style.cssText = `background:${bg};border-radius:1px;animation:pulse ${2+Math.random()*3}s ease-in-out ${Math.random()*2}s infinite;`;
-      grid.appendChild(d);
+    // Menu
+    var overlay = document.getElementById('menu-overlay');
+    var btnMenu = document.getElementById('btn-menu');
+    var btnClose = document.getElementById('btn-menu-close');
+    function openMenu() { overlay.classList.add('open'); document.body.style.overflow='hidden'; }
+    function closeMenu() { overlay.classList.remove('open'); document.body.style.overflow=''; }
+    if (btnMenu) btnMenu.addEventListener('click', openMenu);
+    if (btnClose) btnClose.addEventListener('click', closeMenu);
+    if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeMenu(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+
+    // Toast
+    var toastEl = document.getElementById('toast');
+    function toast(msg) {
+      if (!toastEl) return;
+      toastEl.textContent = msg || '복사되었습니다';
+      toastEl.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
     }
-  })();
 
-  function toggleFaq(btn) { btn.parentElement.classList.toggle('open'); }
+    // Share
+    var SHARE_URL = location.href;
+    var SHARE_TITLE = 'Draw2Trade — 차트를 그리면 유사 종목이 나온다';
+    var SHARE_TEXT = '차트 패턴을 그리면 KOSPI·KOSDAQ 전 종목에서 비슷하게 움직인 종목을 찾아줍니다.';
 
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+    function btn(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+    btn('btn-share-twitter', function () {
+      var u = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(SHARE_TITLE + ' — ' + SHARE_TEXT) + '&url=' + encodeURIComponent(SHARE_URL);
+      window.open(u, '_blank', 'noopener,noreferrer');
+    });
+    btn('btn-share-kakao', function () {
+      // 카카오 SDK 미설치 — 링크 복사로 폴백
+      copyLink('카카오톡에 붙여넣을 링크가 복사되었습니다');
+    });
+    btn('btn-share-copy', function () { copyLink(); });
+    btn('btn-share-native', function () {
+      if (navigator.share) {
+        navigator.share({ title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL })
+          .catch(function () {});
+      } else {
+        copyLink();
+      }
+    });
+    function copyLink(msg) {
+      try {
+        navigator.clipboard.writeText(SHARE_URL).then(
+          function () { toast(msg || '링크가 복사되었습니다'); },
+          function () { fallbackCopy(SHARE_URL, msg); }
+        );
+      } catch (e) { fallbackCopy(SHARE_URL, msg); }
+    }
+    function fallbackCopy(text, msg) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast(msg || '링크가 복사되었습니다'); }
+      catch (e) { toast('복사에 실패했어요'); }
+      document.body.removeChild(ta);
+    }
 
-  // ── 로그인 상태 체크 → 네비 토글 ──
-  (function initNavAuth() {
-    var guest = document.getElementById('nav-cta-guest');
-    var user  = document.getElementById('nav-cta-user');
-    if (!guest || !user) return;
-
+    // Auth → swap account icon for user chip
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data || !data.user) return;
         var u = data.user;
-        guest.style.display = 'none';
-        user.style.display  = 'flex';
-        var avatar = document.getElementById('nav-user-avatar');
-        if (u.picture) { avatar.innerHTML = '<img src="' + u.picture + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; }
-        else { avatar.textContent = (u.name || u.email || '?')[0].toUpperCase(); }
-        document.getElementById('nav-user-name').textContent = u.name || u.email;
-        var badge = document.getElementById('nav-plan-badge');
-        if (u.plan === 'pro') {
-          badge.textContent = 'PRO';
-          badge.style.background = 'linear-gradient(135deg,#26a69a,#4db6ac)';
-          badge.style.color = '#fff';
-          badge.style.display = 'inline-block';
-        } else {
-          badge.textContent = 'FREE';
-          badge.style.background = '#2d2d30';
-          badge.style.color = '#7a8499';
-          badge.style.display = 'inline-block';
+        var iconLink = document.getElementById('link-account');
+        var chip = document.getElementById('user-chip');
+        var avatar = document.getElementById('user-avatar');
+        var nameEl = document.getElementById('user-name');
+        var planEl = document.getElementById('user-plan');
+        var menuLogin = document.getElementById('menu-login');
+        if (iconLink) iconLink.style.display = 'none';
+        if (chip) chip.style.display = 'inline-flex';
+        if (avatar) {
+          if (u.picture) avatar.innerHTML = '<img src="' + u.picture + '" alt="">';
+          else avatar.textContent = (u.name || u.email || '?')[0].toUpperCase();
+        }
+        if (nameEl) nameEl.textContent = u.name || u.email;
+        if (planEl) {
+          if (u.plan === 'pro') {
+            planEl.textContent = 'PRO'; planEl.className = 'plan-tag pro';
+          } else {
+            planEl.textContent = 'FREE'; planEl.className = 'plan-tag free';
+          }
+        }
+        if (menuLogin) {
+          menuLogin.setAttribute('href', '/account');
+          var b = menuLogin.querySelector('b');
+          var s = menuLogin.querySelector('span:last-child');
+          if (b) b.textContent = '계정';
+          if (s) s.textContent = (u.name || u.email || '') + ' · ' + (u.plan === 'pro' ? 'PRO' : 'FREE');
         }
       })
       .catch(function () {});
 
-    document.getElementById('btn-nav-logout').addEventListener('click', function () {
-      fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
-        .then(function () { location.reload(); });
-    });
+    // Live ticker — fetches KOSPI/KOSDAQ from backend if available, else stays as "—"
+    fetch('/api/market/indices', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        function fmt(v, ch) {
+          if (v == null) return '—';
+          var sign = ch >= 0 ? '▲' : '▼';
+          var pct = ch != null ? ' ' + sign + ' ' + Math.abs(ch).toFixed(2) + '%' : '';
+          return Number(v).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + pct;
+        }
+        var k = data.kospi || data.KOSPI;
+        var q = data.kosdaq || data.KOSDAQ;
+        var kEl = document.getElementById('kospi-val');
+        var qEl = document.getElementById('kosdaq-val');
+        if (kEl && k) {
+          kEl.textContent = fmt(k.price ?? k.value, k.changePct ?? k.change_pct);
+          kEl.className = (k.changePct ?? k.change_pct ?? 0) >= 0 ? 'up' : 'dn';
+        }
+        if (qEl && q) {
+          qEl.textContent = fmt(q.price ?? q.value, q.changePct ?? q.change_pct);
+          qEl.className = (q.changePct ?? q.change_pct ?? 0) >= 0 ? 'up' : 'dn';
+        }
+      })
+      .catch(function () {});
   })();
 </script>
 
