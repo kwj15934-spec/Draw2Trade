@@ -1190,9 +1190,22 @@
       }
       body.anchor_today = false;
     } else if (isBlankMode) {
-      // 빈 캔버스 모드: 기본 36개월
-      body.lookback_months = 36;
-      body.anchor_today = true;
+      // 빈 캔버스 모드: 기간 지정 우선, 미지정 시 lookback_months
+      var _dfEl = document.getElementById('search-date-from');
+      var _dtEl = document.getElementById('search-date-to');
+      var _df = _dfEl && _dfEl.value ? _dfEl.value.trim() : '';
+      var _dt = _dtEl && _dtEl.value ? _dtEl.value.trim() : '';
+      if (_df && _dt && _df > _dt) { var _swap = _df; _df = _dt; _dt = _swap; }
+      if (_df || _dt) {
+        if (_df) body.date_from = _df;
+        if (_dt) body.date_to   = _dt;
+        body.anchor_today = false;
+      } else {
+        var _lbEl = document.getElementById('lookback-months');
+        var _lbVal = _lbEl ? parseInt(_lbEl.value, 10) : 36;
+        body.lookback_months = isNaN(_lbVal) ? 36 : _lbVal;
+        body.anchor_today = true;
+      }
     } else {
       // 차트 모드 + 지금 이 모양과 비슷한 종목 찾기:
       // 끝=오늘 고정, 시작 날짜를 조정하며 최적 구간 탐색 (anchor_today=true)
@@ -1214,9 +1227,16 @@
     }
 
     var anchorDesc = body.date_from ? ' · 날짜 고정' : (body.anchor_today ? ' · 끝=오늘, 시작 가변' : ' · 날짜 고정 구간');
-    var searchDesc = body.lookback_bars
-      ? ('기준 ' + body.lookback_bars + '봉' + anchorDesc)
-      : (body.lookback_months ? (body.lookback_months + '개월' + anchorDesc) : '날짜 범위 고정');
+    var searchDesc;
+    if (body.lookback_bars) {
+      searchDesc = '기준 ' + body.lookback_bars + '봉' + anchorDesc;
+    } else if (body.lookback_months) {
+      searchDesc = body.lookback_months + '개월' + anchorDesc;
+    } else if (body.date_from || body.date_to) {
+      searchDesc = (body.date_from || '?') + '~' + (body.date_to || '?') + anchorDesc;
+    } else {
+      searchDesc = '날짜 범위 고정';
+    }
     _startSearchLoading(searchDesc);
 
     _lastBody = body;
@@ -1846,6 +1866,17 @@
       window.clearDraw();
       setTool(null);
     });
+
+    // 빈 캔버스 모드: 기간 지정 해제
+    var _btnClearDate = document.getElementById('btn-clear-daterange');
+    if (_btnClearDate) {
+      _btnClearDate.addEventListener('click', function () {
+        var _df = document.getElementById('search-date-from');
+        var _dt = document.getElementById('search-date-to');
+        if (_df) _df.value = '';
+        if (_dt) _dt.value = '';
+      });
+    }
 
     // loadResultMatch, redraw 전역 노출 (chart.js가 차트 로드 후 redraw 호출)
     if (window.D2T) window.D2T.loadResultMatch = loadResultMatch;
