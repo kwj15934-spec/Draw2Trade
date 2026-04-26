@@ -4,10 +4,10 @@ Fundamental 라우터
 GET  /api/v1/fundamental/{symbol}           — 종목 재무 요약 (수익성·성장성·안정성)
 GET  /api/v1/fundamental/{symbol}/analysis  — 재무 수치 분석 (AI 없음, 순수 DART 데이터)
 GET  /api/v1/fundamental/{symbol}/detailed  — 전체 재무제표 (IS/BS/CF 계정 전체)
-POST /api/v1/fundamental/{symbol}/qa        — DART 기반 자연어 Q&A (Claude API)
+POST /api/v1/fundamental/{symbol}/qa        — DART 기반 자연어 Q&A (Gemini API)
 
 재무 데이터는 DART Open API 를 통해서만 제공됩니다.
-Q&A 만 Claude API 를 사용하며, 답변은 DART 데이터에 한정됩니다.
+Q&A 만 Gemini API 를 사용하며, 답변은 DART 데이터에 한정됩니다.
 """
 import logging
 from datetime import datetime, timezone, timedelta
@@ -204,7 +204,7 @@ async def post_fundamental_qa(
     if not fundamental_qa_service.is_configured():
         raise HTTPException(
             status_code=503,
-            detail="Q&A 기능이 비활성화되어 있습니다 (ANTHROPIC_API_KEY 미설정).",
+            detail="Q&A 기능이 비활성화되어 있습니다 (GEMINI_API_KEY 미설정).",
         )
 
     try:
