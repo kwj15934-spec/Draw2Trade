@@ -1945,14 +1945,152 @@ function _escHtml(s) {
             + '</div>';
         }
 
-        // ── ④ 재무 Q&A 카드 (Claude API + DART) ─────────────────────
+        // ── ④ AI REPORT (재무 Q&A + 메트릭 타일 + 추이 차트) ─────────
         if (dart && dart.years && dart.summary) {
-          var companyNm = (kis && (kis.name || kis.company_name)) || '';
-          var qaHtml = ''
-            + '<div class="finance-card" id="fund-qa-card">'
-            +   '<div class="finance-card-title">재무 Q&amp;A '
-            +     '<span style="font-weight:400;color:#7a8499;font-size:10px;">DART 데이터 기반 · AI 답변</span>'
+          var qYears  = dart.years;
+          var qSumm   = dart.summary;
+          var qAnal   = dart.analysis || {};
+          var qLastY  = qYears[qYears.length - 1];
+          var qPrevY  = qYears.length >= 2 ? qYears[qYears.length - 2] : null;
+          var qFirstY = qYears[0];
+
+          // 큰 단위 포맷: 억원 → 조원/억원, 부호와 단위 강조
+          var fmtTile = function (v) {
+            if (v == null) return '<span style="color:#3f3f52">—</span>';
+            var abs = Math.abs(v);
+            if (abs >= 10000) return (v / 10000).toFixed(1) + '<span style="font-size:11px;color:#6b7280;font-weight:500;">조</span>';
+            return v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '<span style="font-size:11px;color:#6b7280;font-weight:500;">억</span>';
+          };
+
+          // YoY 계산: 마지막연도 vs 직전연도 (분석 데이터 있으면 우선)
+          var yoyOf = function (key) {
+            var vals = qSumm[key] || {};
+            var last = vals[qLastY], prev = qPrevY ? vals[qPrevY] : null;
+            if (last == null || prev == null || prev === 0) return null;
+            return ((last - prev) / Math.abs(prev)) * 100;
+          };
+
+          var revYoY = qAnal.revenue_growth_pct != null ? qAnal.revenue_growth_pct : yoyOf('매출액_억원');
+          var opYoY  = qAnal.op_income_growth_pct != null ? qAnal.op_income_growth_pct : yoyOf('영업이익_억원');
+          var niYoY  = yoyOf('당기순이익_억원');
+
+          var qDebt    = (qSumm['부채비율_pct'] || {})[qLastY];
+          var qDebtPrv = qPrevY ? (qSumm['부채비율_pct'] || {})[qPrevY] : null;
+          var debtChg  = (qDebt != null && qDebtPrv != null) ? (qDebt - qDebtPrv) : null;
+
+          // 변화량 라벨 (전년비 %, 부채비율은 %p)
+          var deltaHtml = function (pct, isPP) {
+            if (pct == null) return '<div class="fund-metric-delta fund-metric-delta-mute">—</div>';
+            var cls = pct > 0 ? 'fund-metric-delta-pos' : (pct < 0 ? 'fund-metric-delta-neg' : 'fund-metric-delta-mute');
+            // 부채비율은 증가가 부정적 → 색 반전
+            if (isPP) cls = pct > 0 ? 'fund-metric-delta-warn' : (pct < 0 ? 'fund-metric-delta-pos' : 'fund-metric-delta-mute');
+            var arrow = pct > 0 ? '▲' : (pct < 0 ? '▼' : '·');
+            var unit  = isPP ? 'pp' : '%';
+            return '<div class="fund-metric-delta ' + cls + '">'
+                 + arrow + ' ' + Math.abs(pct).toFixed(1) + unit + ' 전년비</div>';
+          };
+
+          // 메트릭 4개
+          var revLast = (qSumm['매출액_억원']    || {})[qLastY];
+          var opLast  = (qSumm['영업이익_억원']  || {})[qLastY];
+          var niLast  = (qSumm['당기순이익_억원']|| {})[qLastY];
+
+          var metricsHtml = ''
+            + '<div class="fund-report-metrics">'
+            +   '<div class="fund-metric-tile">'
+            +     '<div class="fund-metric-label">매출 · Revenue</div>'
+            +     '<div class="fund-metric-value">' + fmtTile(revLast) + '</div>'
+            +     deltaHtml(revYoY, false)
             +   '</div>'
+            +   '<div class="fund-metric-tile">'
+            +     '<div class="fund-metric-label">영업이익 · Op. Profit</div>'
+            +     '<div class="fund-metric-value">' + fmtTile(opLast) + '</div>'
+            +     deltaHtml(opYoY, false)
+            +   '</div>'
+            +   '<div class="fund-metric-tile">'
+            +     '<div class="fund-metric-label">순이익 · Net Income</div>'
+            +     '<div class="fund-metric-value">' + fmtTile(niLast) + '</div>'
+            +     deltaHtml(niYoY, false)
+            +   '</div>'
+            +   '<div class="fund-metric-tile">'
+            +     '<div class="fund-metric-label">부채비율 · Debt Ratio</div>'
+            +     '<div class="fund-metric-value">' + (qDebt != null
+                    ? qDebt.toFixed(1) + '<span style="font-size:11px;color:#6b7280;font-weight:500;">%</span>'
+                    : '<span style="color:#3f3f52">—</span>') + '</div>'
+            +     deltaHtml(debtChg, true)
+            +   '</div>'
+            + '</div>';
+
+          // 매출 추이 SVG 막대 차트
+          var revs = qYears.map(function (y) {
+            var v = (qSumm['매출액_억원'] || {})[y];
+            return v == null ? 0 : v;
+          });
+          var revsMax = Math.max.apply(null, revs.concat([1]));
+          var totalRevGrowth = (revs[0] && revs[revs.length - 1])
+            ? ((revs[revs.length - 1] - revs[0]) / Math.abs(revs[0])) * 100 : null;
+          var trgCls = totalRevGrowth == null ? 'fund-metric-delta-mute'
+                     : (totalRevGrowth >= 0 ? 'fund-metric-delta-pos' : 'fund-metric-delta-neg');
+          var trgTxt = totalRevGrowth == null ? '—'
+                     : (totalRevGrowth >= 0 ? '+' : '') + totalRevGrowth.toFixed(1) + '%';
+
+          // viewBox 좌표계: 100×40 (바+레이블), 높이 64px (CSS)
+          var n      = revs.length;
+          var vbW    = 300, vbH = 100;
+          var pad    = 8;
+          var labelH = 14;          // 하단 연도 라벨 영역
+          var valueH = 14;          // 상단 값 라벨 영역
+          var barAreaH = vbH - labelH - valueH;
+          var slotW  = (vbW - pad * 2) / n;
+          var barW   = Math.min(40, slotW * 0.55);
+          var bars   = '';
+          for (var bi = 0; bi < n; bi++) {
+            var v = revs[bi];
+            var h = revsMax > 0 ? (v / revsMax) * barAreaH : 0;
+            var cx = pad + slotW * bi + slotW / 2;
+            var x  = cx - barW / 2;
+            var y  = valueH + (barAreaH - h);
+            var cls = (bi === n - 1) ? 'fund-chart-bar' : 'fund-chart-bar-prev';
+            // 막대 + 값 라벨 + 연도 라벨
+            var vTxt = (v >= 10000) ? (v / 10000).toFixed(1) + '조' : v.toFixed(0) + '억';
+            bars += '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1)
+                  + '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1)
+                  + '" rx="2" ry="2"/>';
+            bars += '<text class="fund-chart-bar-value" x="' + cx.toFixed(1)
+                  + '" y="' + (y - 3).toFixed(1) + '">' + vTxt + '</text>';
+            bars += '<text class="fund-chart-bar-label" x="' + cx.toFixed(1)
+                  + '" y="' + (vbH - 2).toFixed(1) + '">' + qYears[bi] + '</text>';
+          }
+          var chartHtml = ''
+            + '<div class="fund-report-chart">'
+            +   '<div class="fund-chart-header">'
+            +     '<span class="fund-chart-label">매출 추이 · ' + n + '개 사업연도</span>'
+            +     '<span class="fund-chart-delta ' + trgCls + '">' + trgTxt + '</span>'
+            +   '</div>'
+            +   '<div class="fund-chart-bars">'
+            +     '<svg viewBox="0 0 ' + vbW + ' ' + vbH + '" preserveAspectRatio="none">' + bars + '</svg>'
+            +   '</div>'
+            + '</div>';
+
+          var qaHtml = ''
+            + '<div class="finance-card fund-report-card" id="fund-qa-card">'
+            +   '<div class="fund-report-header">'
+            +     '<div class="fund-report-eyebrow">AI REPORT</div>'
+            +     '<div class="fund-report-period">DART ' + qFirstY + '~' + qLastY + ' 사업연도</div>'
+            +   '</div>'
+            +   '<div id="fund-qa-answer" class="fund-ai-block fund-ai-block-empty">'
+            +     '<div class="fund-ai-pill">'
+            +       '<span class="fund-ai-dot"></span>'
+            +       '<span>AI ANALYSIS</span>'
+            +       '<span class="fund-ai-status">대기 중</span>'
+            +     '</div>'
+            +     '<div class="fund-ai-empty-text">'
+            +       '아래 질문 칩을 누르거나 직접 질문하면<br>'
+            +       'DART 공시 데이터 기반으로 답변합니다.'
+            +     '</div>'
+            +   '</div>'
+            +   metricsHtml
+            +   chartHtml
             +   '<div class="fund-qa-suggest">'
             +     '<button class="fund-qa-chip" data-q="최근 3년 실적 요약해줘">최근 실적</button>'
             +     '<button class="fund-qa-chip" data-q="부채 수준은 어때?">부채 수준</button>'
@@ -1965,7 +2103,6 @@ function _escHtml(s) {
             +           'autocomplete="off">'
             +     '<button id="fund-qa-send" class="fund-qa-send">질문</button>'
             +   '</div>'
-            +   '<div id="fund-qa-answer" class="fund-qa-answer" style="display:none;"></div>'
             +   '<div class="fund-qa-disclaimer">⚠ AI 답변은 DART 공시 재무 요약만 근거합니다. 투자 판단은 본인 책임입니다.</div>'
             + '</div>';
           html += qaHtml;
@@ -1995,15 +2132,31 @@ function _escHtml(s) {
     var ansEl   = card.querySelector('#fund-qa-answer');
     if (!input || !sendBtn || !ansEl) return;
 
+    // **굵게** 마크다운만 안전하게 <strong>으로 (그 외 HTML 은 이미 _esc 처리됨)
+    function _mdBold(s) {
+      return s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    }
+
     function ask(question) {
       question = (question || '').trim();
       if (!question) { input.focus(); return; }
       ansEl.style.display = 'block';
-      ansEl.className = 'fund-qa-answer fund-qa-loading';
-      ansEl.innerHTML = '<div class="info-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div>AI가 답변 중...';
+      ansEl.className = 'fund-ai-block';
+      ansEl.innerHTML =
+        '<div class="fund-ai-pill">'
+        + '<span class="fund-ai-dot"></span>'
+        + '<span>AI ANALYSIS</span>'
+        + '<span class="fund-ai-status">분석 중…</span>'
+        + '</div>'
+        + '<div class="fund-ai-q">Q. ' + _esc(question) + '</div>'
+        + '<div class="fund-ai-a" style="color:#7a8499;">'
+        + '<span class="info-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span>'
+        + 'DART 공시를 근거로 답변을 작성하고 있어요...'
+        + '</div>';
       sendBtn.disabled = true;
       input.disabled = true;
 
+      var t0 = Date.now();
       fetch('/api/v1/fundamental/' + encodeURIComponent(ticker) + '/qa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2014,28 +2167,49 @@ function _escHtml(s) {
           return r.json().then(function (j) { return { ok: r.ok, status: r.status, data: j }; });
         })
         .then(function (res) {
-          ansEl.className = 'fund-qa-answer';
+          var dur = ((Date.now() - t0) / 1000).toFixed(1);
+          ansEl.className = 'fund-ai-block';
           if (!res.ok) {
+            var errMsg;
             if (res.status === 401 || res.status === 403) {
-              ansEl.innerHTML = '<div class="fund-qa-err">로그인이 필요한 기능입니다.</div>';
+              errMsg = '로그인이 필요한 기능입니다.';
             } else if (res.status === 503) {
-              ansEl.innerHTML = '<div class="fund-qa-err">' + _esc(res.data && res.data.detail || 'Q&A 기능 비활성화') + '</div>';
+              errMsg = (res.data && res.data.detail) || 'Q&A 기능 비활성화';
             } else {
-              ansEl.innerHTML = '<div class="fund-qa-err">답변 생성 실패: ' + _esc(res.data && res.data.detail || ('HTTP ' + res.status)) + '</div>';
+              errMsg = '답변 생성 실패: ' + ((res.data && res.data.detail) || ('HTTP ' + res.status));
             }
+            ansEl.innerHTML =
+              '<div class="fund-ai-pill">'
+              + '<span class="fund-ai-dot" style="background:#f04848;box-shadow:0 0 0 2px rgba(240,72,72,.2);"></span>'
+              + '<span style="color:#f04848;">AI ANALYSIS</span>'
+              + '<span class="fund-ai-status">실패</span>'
+              + '</div>'
+              + '<div class="fund-qa-err" style="margin-top:8px;">' + _esc(errMsg) + '</div>';
             return;
           }
           var d = res.data || {};
           var ansText = d.answer || '';
-          var yrs = d.years && d.years.length ? '<div class="fund-qa-meta">근거: DART ' + d.years.join('/') + ' 사업연도</div>' : '';
+          var yrs = d.years && d.years.length
+            ? '<div class="fund-ai-a-meta">근거: DART ' + d.years.join('/') + ' 사업연도</div>' : '';
           ansEl.innerHTML =
-            '<div class="fund-qa-q">Q. ' + _esc(question) + '</div>' +
-            '<div class="fund-qa-a">' + _esc(ansText).replace(/\n/g, '<br>') + '</div>' +
-            yrs;
+            '<div class="fund-ai-pill">'
+            + '<span class="fund-ai-dot"></span>'
+            + '<span>AI ANALYSIS</span>'
+            + '<span class="fund-ai-status">완료 · ' + dur + 's</span>'
+            + '</div>'
+            + '<div class="fund-ai-q">Q. ' + _esc(question) + '</div>'
+            + '<div class="fund-ai-a">' + _mdBold(_esc(ansText)).replace(/\n/g, '<br>') + '</div>'
+            + yrs;
         })
         .catch(function (e) {
-          ansEl.className = 'fund-qa-answer';
-          ansEl.innerHTML = '<div class="fund-qa-err">네트워크 오류: ' + _esc(e.message || '') + '</div>';
+          ansEl.className = 'fund-ai-block';
+          ansEl.innerHTML =
+            '<div class="fund-ai-pill">'
+            + '<span class="fund-ai-dot" style="background:#f04848;"></span>'
+            + '<span style="color:#f04848;">AI ANALYSIS</span>'
+            + '<span class="fund-ai-status">오류</span>'
+            + '</div>'
+            + '<div class="fund-qa-err" style="margin-top:8px;">네트워크 오류: ' + _esc(e.message || '') + '</div>';
         })
         .finally(function () {
           sendBtn.disabled = false;
