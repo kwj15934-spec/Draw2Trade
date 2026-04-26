@@ -4,149 +4,320 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>마이페이지 · Draw2Trade</title>
-<style>
-  :root {
-    --bg: #141416;
-    --bg-2: #1a1a1c;
-    --card: #1e1e21;
-    --border: #2d2d30;
-    --text: #d4d8e2;
-    --text-dim: #7a8499;
-    --teal: #26a69a;
-    --orange: #ff6b35;
-    --red: #ef5350;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', Roboto, sans-serif;
-    min-height: 100vh;
-  }
-  a { color: var(--teal); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+<link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
 
-  .nav {
-    background: var(--bg-2);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg0: #06070A;
+    --bg1: #0B0D12;
+    --bg2: #11141B;
+    --teal: #5BFFC6;
+    --tealSoft: rgba(91,255,198,0.12);
+    --tealGlow: rgba(91,255,198,0.18);
+    --fg0: #FAFBFC;
+    --fg1: #C9CFDA;
+    --fg2: #8C95A8;
+    --fg3: #5A6172;
+    --border1: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.04);
+    --red: #FF5C7A;
+    --orange: #FFB35B;
+    --font: 'Space Grotesk', 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  .nav-brand { color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.3px; }
-  .nav-links { display: flex; gap: 18px; align-items: center; }
-  .nav-links a { color: var(--text-dim); font-size: 14px; }
-  .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+  html, body {
+    min-height: 100vh; background: var(--bg0); color: var(--fg1);
+    font-family: var(--font); font-size: 14px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 15% 10%, rgba(91,255,198,0.08), transparent 60%),
+      radial-gradient(ellipse 500px 350px at 85% 90%, rgba(91,255,198,0.05), transparent 60%),
+      linear-gradient(180deg, rgba(91,255,198,0.02) 0%, transparent 30%);
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 30%, black 30%, transparent 80%);
+  }
+  body > * { position: relative; z-index: 1; }
+
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: none; }
+
+  /* ── 네비 ─────────────────────────────────── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    height: 56px;
+    background: rgba(6,7,10,0.72);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border-bottom: 1px solid var(--border1);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--fg0); font-family: var(--font);
+    font-weight: 700; font-size: 16px; letter-spacing: -0.01em;
+  }
+  .brand-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--teal); box-shadow: 0 0 12px var(--tealGlow);
+  }
+  .nav-links { display: flex; gap: 4px; align-items: center; }
+  .nav-links a {
+    position: relative;
+    color: var(--fg2); font-family: var(--font); font-size: 13px; font-weight: 500;
+    padding: 0 14px; line-height: 56px;
+    transition: color .18s ease;
+  }
+  .nav-links a::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 14px;
+    height: 1px; background: var(--teal); transform: scaleX(0);
+    transition: transform .25s ease; box-shadow: 0 0 8px var(--tealGlow);
+  }
+  .nav-links a:hover { color: var(--fg0); }
+  .nav-links a:hover::after { transform: scaleX(0.6); }
+
   .btn-logout {
     background: transparent;
-    border: 1px solid var(--red);
+    border: 1px solid rgba(255,92,122,0.4);
     color: var(--red);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: var(--font); font-size: 12px; font-weight: 600;
     cursor: pointer;
+    margin-left: 8px;
+    transition: background .15s, color .15s, border-color .15s;
   }
-  .btn-logout:hover { background: var(--red); color: #fff; }
+  .btn-logout:hover { background: rgba(255,92,122,0.12); color: var(--red); border-color: var(--red); }
 
-  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 60px; }
-  h1.title { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -0.5px; }
-  .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 28px; }
+  /* ── 레이아웃 ─────────────────────────────── */
+  .wrap { max-width: 920px; margin: 0 auto; padding: 36px 24px 80px; }
 
+  .page-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    color: var(--teal); letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .page-eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--teal); box-shadow: 0 0 10px var(--tealGlow);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  h1.title {
+    font-family: var(--font); font-size: 28px; font-weight: 700;
+    color: var(--fg0); letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+  .subtitle { color: var(--fg2); font-size: 14px; margin-bottom: 28px; }
+
+  /* ── 카드 ────────────────────────────────── */
   .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px 24px;
+    position: relative;
+    background: rgba(15,18,25,0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-radius: 16px;
+    padding: 24px 26px;
     margin-bottom: 18px;
+    overflow: hidden;
   }
-  .card h2 { margin: 0 0 14px; font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+  .card::before {
+    content: ''; position: absolute; inset: 0; border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  .card h2 {
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    color: var(--fg2);
+    letter-spacing: 0.14em; text-transform: uppercase;
+    margin: 0 0 18px;
+  }
+  .card h2 .count-tag {
+    color: var(--fg3); font-weight: 500; font-size: 11px;
+    letter-spacing: 0.06em; margin-left: 6px;
+    font-family: var(--mono);
+  }
 
-  .profile-row { display: flex; align-items: center; gap: 16px; }
+  /* ── 프로필 ──────────────────────────────── */
+  .profile-row { display: flex; align-items: center; gap: 18px; }
   .profile-avatar {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--teal); color: #fff;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), #4DE6B0);
+    color: var(--bg0);
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; font-weight: 700; overflow: hidden;
+    font-family: var(--font); font-size: 24px; font-weight: 700;
+    overflow: hidden;
+    box-shadow: 0 0 24px var(--tealGlow), inset 0 1px 0 rgba(255,255,255,0.2);
   }
   .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .profile-name { font-size: 16px; font-weight: 700; color: #fff; }
-  .profile-email { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+  .profile-name { font-family: var(--font); font-size: 17px; font-weight: 600; color: var(--fg0); letter-spacing: -0.01em; }
+  .profile-email { font-family: var(--mono); font-size: 12px; color: var(--fg2); margin-top: 3px; }
 
   .plan-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-top: 6px;
+    display: inline-flex; align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    margin-top: 8px;
   }
   .plan-badge.pro {
-    background: linear-gradient(135deg, var(--teal), #4db6ac);
-    color: #fff;
+    background: linear-gradient(135deg, #5BFFC6 0%, #4DE6B0 100%);
+    color: var(--bg0);
+    box-shadow: 0 0 16px var(--tealGlow);
   }
-  .plan-badge.free { background: var(--border); color: var(--text-dim); }
+  .plan-badge.free {
+    background: rgba(255,255,255,0.04);
+    color: var(--fg2);
+    border: 1px solid var(--border1);
+  }
 
-  .sub-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .sub-row:last-child { border-bottom: none; }
-  .sub-label { color: var(--text-dim); }
-  .sub-value { color: var(--text); font-weight: 600; }
+  /* ── 구독 정보 ────────────────────────────── */
+  .sub-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border2);
+    font-size: 14px;
+  }
+  .sub-row:last-of-type { border-bottom: none; }
+  .sub-label { color: var(--fg2); font-size: 13px; }
+  .sub-value { color: var(--fg0); font-weight: 600; font-family: var(--mono); font-size: 13px; }
 
+  .free-upgrade-note {
+    color: var(--fg2); font-size: 13px; line-height: 1.7;
+    margin: 16px 0 14px;
+  }
   .upgrade-cta {
-    margin-top: 14px;
-    background: linear-gradient(135deg, var(--teal), #4db6ac);
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-weight: 700;
-    display: inline-block;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #5BFFC6 0%, #4DE6B0 100%);
+    color: var(--bg0);
+    padding: 11px 22px;
+    border-radius: 10px;
+    font-family: var(--font); font-weight: 700; font-size: 14px;
+    box-shadow: 0 0 24px var(--tealGlow), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: transform .15s ease, box-shadow .25s ease;
   }
-  .upgrade-cta:hover { text-decoration: none; filter: brightness(1.1); }
+  .upgrade-cta:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(91,255,198,0.3), inset 0 1px 0 rgba(255,255,255,0.3); }
 
+  /* ── 리스트 항목 ──────────────────────────── */
   .item-list { list-style: none; margin: 0; padding: 0; }
   .item {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+    gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border2);
+    font-size: 14px;
   }
   .item:last-child { border-bottom: none; }
   .item-main { flex: 1; min-width: 0; }
-  .item-title { color: var(--text); font-weight: 600; }
-  .item-meta { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .item-title {
+    color: var(--fg0); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .item-meta {
+    color: var(--fg3); font-size: 12px; margin-top: 3px;
+    font-family: var(--mono);
+  }
   .btn-del {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
+    border: 1px solid var(--border1);
+    color: var(--fg2);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-family: var(--font); font-size: 11px; font-weight: 500;
     cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
   }
-  .btn-del:hover { border-color: var(--red); color: var(--red); }
+  .btn-del:hover {
+    border-color: rgba(255,92,122,0.4);
+    color: var(--red);
+    background: rgba(255,92,122,0.06);
+  }
 
-  .empty { color: var(--text-dim); font-size: 13px; padding: 18px 0; text-align: center; }
+  .empty { color: var(--fg3); font-size: 13px; padding: 20px 0; text-align: center; }
 
-  .loading { text-align: center; color: var(--text-dim); padding: 40px 0; }
-  .login-prompt { text-align: center; padding: 60px 20px; }
-  .login-prompt h2 { color: #fff; font-size: 20px; margin-bottom: 8px; }
-  .login-prompt p { color: var(--text-dim); margin-bottom: 20px; }
+  /* ── 로딩 / 로그인 안내 ─────────────────── */
+  .loading {
+    text-align: center; color: var(--fg2); padding: 60px 0; font-size: 14px;
+  }
+  .loading::before {
+    content: ''; display: block; margin: 0 auto 14px;
+    width: 26px; height: 26px;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .login-prompt {
+    position: relative;
+    background: rgba(15,18,25,0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-radius: 16px;
+    text-align: center; padding: 60px 28px;
+    overflow: hidden;
+  }
+  .login-prompt::before {
+    content: ''; position: absolute; inset: 0; border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  .login-prompt h2 {
+    color: var(--fg0); font-family: var(--font);
+    font-size: 22px; font-weight: 600; letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .login-prompt p { color: var(--fg2); margin-bottom: 22px; font-size: 14px; }
   .login-prompt a {
     display: inline-block;
-    background: var(--teal);
-    color: #fff;
-    padding: 10px 22px;
-    border-radius: 8px;
-    font-weight: 700;
+    background: linear-gradient(135deg, #5BFFC6 0%, #4DE6B0 100%);
+    color: var(--bg0);
+    padding: 11px 26px;
+    border-radius: 10px;
+    font-family: var(--font); font-weight: 700; font-size: 14px;
+    box-shadow: 0 0 24px var(--tealGlow), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: transform .15s ease;
   }
-  .login-prompt a:hover { text-decoration: none; filter: brightness(1.1); }
+  .login-prompt a:hover { transform: translateY(-1px); }
+
+  @media (max-width: 600px) {
+    .nav { padding: 0 16px; }
+    .nav-links a { padding: 0 10px; font-size: 12px; }
+    .wrap { padding: 28px 18px 60px; }
+    h1.title { font-size: 24px; }
+    .card { padding: 20px; }
+  }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a href="/" class="nav-brand">Draw2Trade</a>
+  <a href="/" class="nav-brand">
+    <span class="brand-dot"></span>
+    Draw2Trade
+  </a>
   <div class="nav-links">
     <a href="/app">앱</a>
     <a href="/pricing">요금제</a>
@@ -165,6 +336,7 @@
   </div>
 
   <div id="content" style="display:none;">
+    <div class="page-eyebrow"><span class="dot"></span>MY ACCOUNT</div>
     <h1 class="title">마이페이지</h1>
     <p class="subtitle">내 정보, 구독, 즐겨찾기, 저장한 패턴을 관리하세요.</p>
 
@@ -201,7 +373,7 @@
         <span class="sub-value" id="sub-remaining">—</span>
       </div>
       <div id="free-upgrade" style="display:none;">
-        <p style="color:var(--text-dim);font-size:13px;margin:12px 0 0;">
+        <p class="free-upgrade-note">
           Pro 플랜으로 업그레이드하고 AI 리터치·백테스팅·Top 1~50 등 모든 기능을 이용하세요.
         </p>
         <a href="/pricing" class="upgrade-cta">Pro로 업그레이드 →</a>
@@ -210,14 +382,14 @@
 
     <!-- 즐겨찾기 -->
     <div class="card">
-      <h2>즐겨찾기 <span id="fav-count" style="color:var(--text-dim);font-weight:500;font-size:13px;"></span></h2>
+      <h2>즐겨찾기 <span class="count-tag" id="fav-count"></span></h2>
       <ul class="item-list" id="fav-list"></ul>
       <div class="empty" id="fav-empty" style="display:none;">즐겨찾기한 종목이 없습니다.</div>
     </div>
 
     <!-- 저장된 패턴 -->
     <div class="card">
-      <h2>저장된 패턴 <span id="dr-count" style="color:var(--text-dim);font-weight:500;font-size:13px;"></span></h2>
+      <h2>저장된 패턴 <span class="count-tag" id="dr-count"></span></h2>
       <ul class="item-list" id="dr-list"></ul>
       <div class="empty" id="dr-empty" style="display:none;">저장된 패턴이 없습니다.</div>
     </div>
@@ -274,7 +446,6 @@
       // 구독
       document.getElementById('sub-plan').textContent = u.plan === 'pro' ? 'Pro' : 'Free';
       if (u.plan === 'pro') {
-        // 구독 유형 (월/연)
         if (u.billing_period) {
           document.getElementById('sub-billing-row').style.display = 'flex';
           document.getElementById('sub-billing').textContent =
@@ -284,16 +455,14 @@
           document.getElementById('sub-expires-row').style.display = 'flex';
           document.getElementById('sub-expires').textContent = formatDate(u.pro_expires_at);
 
-          // 남은 일수 계산
           var expiresMs = new Date(u.pro_expires_at).getTime();
           var nowMs = Date.now();
           var remainingDays = Math.max(0, Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24)));
           document.getElementById('sub-remaining-row').style.display = 'flex';
           var remainEl = document.getElementById('sub-remaining');
           remainEl.textContent = remainingDays + '일';
-          // 7일 이하 남으면 경고 색상
           if (remainingDays <= 7) {
-            remainEl.style.color = '#ff6b35';
+            remainEl.style.color = '#FFB35B';
             remainEl.style.fontWeight = '700';
           }
         }

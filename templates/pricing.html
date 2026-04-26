@@ -14,219 +14,284 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>요금제 — Draw2Trade</title>
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:     #141416;
-      --bg2:    #1e1e21;
-      --bg3:    #1e2332;
-      --teal:   #26a69a;
-      --teal2:  #1a7a70;
-      --orange: #ff6b35;
-      --text:   #d4d8e2;
-      --muted:  #7a8499;
-      --border: #2d2d30;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg0:#06070A;
+      --teal:#5BFFC6;
+      --teal2:#A8FFE0;
+      --tealDim:rgba(91,255,198,0.55);
+      --tealGlow:rgba(91,255,198,0.18);
+      --orange:#FF9F5B;
+      --fg0:#FAFBFC;
+      --fg1:rgba(250,251,252,0.78);
+      --fg2:rgba(250,251,252,0.55);
+      --fg3:rgba(250,251,252,0.35);
+      --border1:rgba(255,255,255,0.08);
+      --border2:rgba(255,255,255,0.14);
+      --font:'Space Grotesk','Pretendard',system-ui,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,monospace;
+    }
+    html,body{margin:0;padding:0;background:var(--bg0);color:var(--fg1);font-family:var(--font);-webkit-font-smoothing:antialiased}
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(ellipse 60% 50% at 30% 10%, rgba(91,255,198,0.07), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(91,141,255,0.05), transparent 70%),
+        var(--bg0);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:
+        linear-gradient(rgba(91,255,198,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,255,198,0.035) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
+      -webkit-mask-image:radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
     }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
+    .lp-nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 32px;height:62px;
+      background:rgba(6,7,10,0.7);
+      backdrop-filter:blur(14px) saturate(1.2);
+      -webkit-backdrop-filter:blur(14px) saturate(1.2);
+      border-bottom:1px solid var(--border1);
+    }
+    .lp-nav-brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#fff;text-decoration:none}
+    .lp-nav-brand .logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg, var(--teal), #5B8DFF);display:grid;place-items:center;overflow:hidden;box-shadow:0 0 16px var(--tealGlow)}
+    .lp-nav-brand .logo img{width:100%;height:100%;object-fit:cover}
+    .nav-links{display:flex;gap:8px;align-items:center}
+    .btn-outline{
+      padding:7px 16px;border-radius:999px;font-size:12px;font-weight:500;letter-spacing:0.04em;
+      border:1px solid var(--border2);background:rgba(255,255,255,0.04);
+      color:var(--fg1);cursor:pointer;text-decoration:none;font-family:var(--font);
+      transition:border-color .18s ease,color .18s ease,background .18s ease;
+    }
+    .btn-outline:hover{border-color:var(--tealDim);color:var(--teal);background:rgba(91,255,198,0.06)}
+    .btn-primary-nav{
+      padding:8px 18px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:0.04em;
+      border:none;background:linear-gradient(180deg, var(--teal), #4FE6B3);
+      color:#001810;cursor:pointer;text-decoration:none;font-family:var(--font);
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
+      transition:transform .15s ease,filter .15s ease;
+    }
+    .btn-primary-nav:hover{transform:translateY(-1px);filter:brightness(1.05)}
+
+    .page-wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:130px 24px 80px}
+
+    .page-label{font-size:10px;font-weight:600;letter-spacing:0.18em;color:var(--teal);text-transform:uppercase;margin-bottom:14px;font-family:var(--mono)}
+    .page-title{font-size:clamp(32px,4.6vw,48px);font-weight:600;letter-spacing:-0.025em;color:#fff;line-height:1.15;margin-bottom:14px}
+    .page-title em{font-style:normal;color:var(--teal)}
+    .page-desc{font-size:15px;color:var(--fg2);margin-bottom:48px;line-height:1.7}
+    .page-desc strong{color:var(--teal);font-weight:600}
+
+    /* 플랜 그리드 */
+    .plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-bottom:60px}
+
+    .plan-card{
+      position:relative;overflow:hidden;
+      background:rgba(255,255,255,0.025);
+      border-radius:20px;padding:34px 30px;
+      transition:border-color .18s ease,transform .18s ease;
+    }
+    .plan-card::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1) 40%, transparent 60%, rgba(255,255,255,0.1) 80%, rgba(255,255,255,0.4));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+    }
+    .plan-card:hover{transform:translateY(-2px)}
+    .plan-card.featured{
+      background:rgba(91,255,198,0.06);
+      box-shadow:0 0 60px var(--tealGlow);
+    }
+    .plan-card.featured::before{
+      background:linear-gradient(180deg, rgba(91,255,198,0.7), rgba(91,255,198,0.2) 40%, rgba(255,255,255,0.1) 60%, rgba(91,255,198,0.2) 80%, rgba(91,255,198,0.65));
     }
 
-    /* ── 네브바 ── */
-    .lp-nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 40px; height: 60px;
-      background: rgba(13,17,23,0.95);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
+    .plan-event-badge{
+      display:inline-block;padding:5px 14px;border-radius:999px;
+      font-size:10px;font-weight:700;letter-spacing:0.04em;
+      background:var(--teal);border:none;color:#001810;
+      margin-bottom:18px;font-family:var(--font);white-space:nowrap;
+      box-shadow:0 4px 14px rgba(91,255,198,0.25);
     }
-    .lp-nav-brand {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 18px; font-weight: 700; color: var(--orange);
-      text-decoration: none;
-    }
-    .lp-nav-brand img { height: 26px; width: 26px; }
-    .nav-links { display: flex; gap: 8px; align-items: center; }
-    .btn-outline {
-      padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--text); cursor: pointer; text-decoration: none;
-      transition: border-color .2s, color .2s;
-    }
-    .btn-outline:hover { border-color: var(--teal); color: var(--teal); }
-    .btn-primary-nav {
-      padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 600;
-      border: none; background: var(--teal); color: #fff;
-      cursor: pointer; text-decoration: none;
-      transition: background .2s;
-    }
-    .btn-primary-nav:hover { background: var(--teal2); }
-
-    /* ── 본문 ── */
-    .page-wrap {
-      max-width: 900px; margin: 0 auto;
-      padding: 120px 24px 80px;
-    }
-
-    .page-label {
-      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
-      color: var(--teal); text-transform: uppercase; margin-bottom: 12px;
-    }
-    .page-title {
-      font-size: clamp(28px, 4vw, 44px); font-weight: 800;
-      color: #fff; line-height: 1.2; margin-bottom: 14px;
-    }
-    .page-desc { font-size: 16px; color: var(--muted); margin-bottom: 56px; }
-
-    /* ── 플랜 그리드 ── */
-    .plans-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      margin-bottom: 60px;
-    }
-
-    .plan-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 14px; padding: 36px 30px;
-      transition: border-color .2s;
-    }
-    .plan-card:hover { border-color: #3a4255; }
-    .plan-card.featured {
-      border-color: var(--teal);
-      background: linear-gradient(135deg, rgba(38,166,154,.08) 0%, var(--bg2) 100%);
-    }
-
-    .plan-event-badge {
-      display: inline-block; padding: 4px 12px; border-radius: 20px;
-      font-size: 11px; font-weight: 700;
-      background: rgba(38,166,154,.15); border: 1px solid rgba(38,166,154,.4);
-      color: var(--orange); margin-bottom: 18px;
-    }
-
-    .plan-name { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
-    .plan-price {
-      font-size: 40px; font-weight: 800; color: #fff; margin-bottom: 4px; line-height: 1.1;
-    }
-    .plan-price span { font-size: 16px; font-weight: 400; color: var(--muted); }
-    .plan-note { font-size: 13px; color: var(--teal); margin-bottom: 6px; }
+    .plan-name{font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:var(--fg2);font-weight:600;margin-bottom:10px}
+    .plan-card.featured .plan-name{color:var(--teal)}
+    .plan-price{font-family:var(--mono);font-size:42px;font-weight:500;letter-spacing:-0.03em;color:#fff;margin-bottom:6px;line-height:1.1}
+    .plan-price span{font-family:var(--font);font-size:14px;font-weight:400;color:var(--fg2);margin-left:4px}
+    .plan-note{font-size:12px;color:var(--teal);margin-bottom:8px;letter-spacing:0.02em}
+    .plan-note b{color:#fff;font-weight:600}
 
     /* 월/연 토글 */
-    .billing-toggle {
-      display: inline-flex;
-      background: rgba(0,0,0,0.25);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 3px;
-      margin-bottom: 14px;
-      gap: 2px;
+    .billing-toggle{
+      display:inline-flex;
+      background:rgba(0,0,0,0.3);
+      border:1px solid var(--border2);
+      border-radius:999px;padding:3px;margin-bottom:14px;gap:2px;
     }
-    .bt-opt {
-      background: transparent; border: none; color: var(--muted);
-      padding: 6px 14px; border-radius: 4px;
-      font-size: 12.5px; font-weight: 600; cursor: pointer;
-      transition: all .15s;
-      font-family: inherit;
+    .bt-opt{
+      background:transparent;border:none;color:var(--fg2);
+      padding:6px 14px;border-radius:999px;
+      font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);
+      transition:all .15s ease;
+      display:flex;align-items:center;gap:5px;
     }
-    .bt-opt:hover { color: #fff; }
-    .bt-opt.active {
-      background: var(--teal); color: #0b1413;
+    .bt-opt:hover{color:#fff}
+    .bt-opt.active{background:var(--teal);color:#001810;box-shadow:0 4px 12px rgba(91,255,198,0.25)}
+    .bt-save{
+      background:rgba(0,0,0,0.25);color:var(--teal);
+      font-size:9px;font-weight:700;
+      padding:2px 5px;border-radius:4px;font-family:var(--mono);
     }
-    .bt-save {
-      background: var(--orange); color: #fff;
-      font-size: 10px; font-weight: 700;
-      padding: 2px 5px; border-radius: 3px;
-      margin-left: 3px;
-    }
-    .bt-opt.active .bt-save { background: #0b1413; color: var(--orange); }
-    .plan-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+    .bt-opt.active .bt-save{background:rgba(0,24,16,0.4);color:#001810}
 
-    .plan-features {
-      list-style: none; display: flex; flex-direction: column;
-      gap: 12px; margin-bottom: 32px;
-    }
-    .plan-features li {
-      font-size: 14px; color: var(--text);
-      display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;
-    }
-    .plan-features li::before {
-      content: '✓'; color: var(--teal); font-weight: 700;
-      flex-shrink: 0; margin-top: 1px;
-    }
-    .plan-features li.disabled { color: var(--muted); }
-    .plan-features li.disabled::before { content: '—'; color: #3a4255; }
+    .plan-desc{font-size:13px;color:var(--fg2);margin-bottom:26px;line-height:1.65}
 
-    .btn-plan {
-      width: 100%; padding: 13px; border-radius: 8px;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; text-decoration: none; display: block; text-align: center;
-      transition: background .2s, border-color .2s, color .2s;
-      border: none;
+    .plan-features{list-style:none;display:flex;flex-direction:column;gap:11px;margin-bottom:30px}
+    .plan-features li{
+      font-size:13.5px;color:var(--fg1);
+      display:flex;align-items:flex-start;gap:10px;line-height:1.55;
     }
-    .btn-free {
-      background: transparent; color: var(--text);
-      border: 1.5px solid var(--border);
+    .plan-features li::before{
+      content:"";flex-shrink:0;margin-top:7px;
+      width:6px;height:6px;border-radius:3px;
+      background:var(--teal);box-shadow:0 0 6px var(--teal);
     }
-    .btn-free:hover { border-color: var(--teal); color: var(--teal); }
-    .btn-pro {
-      background: var(--teal); color: #fff;
-    }
-    .btn-pro:hover { background: var(--teal2); }
+    .plan-features li.disabled{color:var(--fg3)}
+    .plan-features li.disabled::before{background:var(--fg3);box-shadow:none;opacity:0.5}
 
-    .notice-box {
-      background: rgba(38,166,154,.06); border: 1px solid rgba(38,166,154,.2);
-      border-radius: 8px; padding: 16px 20px; margin-top: 20px;
-      font-size: 13px; color: #9aa0b0; line-height: 1.8;
+    .btn-plan{
+      width:100%;padding:13px;border-radius:12px;
+      font-size:14px;font-weight:700;letter-spacing:0.02em;font-family:var(--font);
+      cursor:pointer;text-decoration:none;display:block;text-align:center;
+      transition:transform .15s ease,filter .15s ease,border-color .18s ease,background .18s ease,color .18s ease;
+      border:none;
+    }
+    .btn-free{
+      background:rgba(255,255,255,0.04);color:var(--fg1);
+      border:1px solid var(--border2);
+    }
+    .btn-free:hover{border-color:var(--tealDim);color:var(--teal);background:rgba(91,255,198,0.06)}
+    .btn-pro{
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .btn-pro:hover{transform:translateY(-1px);filter:brightness(1.05)}
+
+    /* FAQ */
+    .faq-section{margin-top:64px}
+    .faq-section h2{font-size:24px;font-weight:600;letter-spacing:-0.015em;color:#fff;margin-bottom:22px}
+    .faq-item{border-bottom:1px solid var(--border1);padding:20px 0}
+    .faq-q{font-size:14px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.005em}
+    .faq-a{font-size:13px;color:var(--fg2);line-height:1.75}
+
+    footer{
+      position:relative;z-index:1;
+      padding:40px 24px;text-align:center;
+      color:var(--fg3);font-size:12px;
+      border-top:1px solid var(--border1);
+      margin-top:30px;line-height:1.9;
+    }
+    footer a{color:var(--fg2);text-decoration:none;transition:color .15s ease}
+    footer a:hover{color:var(--teal)}
+
+    @media (max-width:600px){
+      .lp-nav{padding:0 16px;height:54px}
+      .lp-nav-brand{font-size:15px}
+      .lp-nav-brand .logo{width:24px;height:24px}
+      .btn-outline,.btn-primary-nav{padding:5px 12px;font-size:11px}
+      .page-wrap{padding:100px 16px 50px}
     }
 
-    /* ── FAQ ── */
-    .faq-section { margin-top: 60px; }
-    .faq-section h2 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 20px; }
-    .faq-item { border-bottom: 1px solid var(--border); padding: 18px 0; }
-    .faq-q { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
-    .faq-a { font-size: 13px; color: var(--muted); line-height: 1.7; }
-
-    footer {
-      padding: 40px 24px; text-align: center;
-      color: var(--muted); font-size: 13px;
-      border-top: 1px solid var(--border);
-      margin-top: 20px;
+    /* Pro 모달 */
+    .pro-modal-bg{
+      display:none;position:fixed;inset:0;z-index:1000;
+      background:rgba(6,7,10,0.78);
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+      align-items:center;justify-content:center;padding:20px;
     }
-    footer a { color: var(--muted); text-decoration: none; }
-    footer a:hover { color: var(--teal); }
-
-    @media (max-width: 600px) {
-      .lp-nav { padding: 0 16px; height: 52px; }
-      .lp-nav-brand { font-size: 15px; gap: 7px; }
-      .lp-nav-brand img { height: 22px; width: 22px; }
-      .btn-outline { padding: 5px 10px; font-size: 12px; }
-      .btn-primary, .btn-primary-nav { padding: 5px 12px; font-size: 12px; }
-      .page-wrap { padding: 100px 16px 60px; }
+    .pro-modal-bg.show{display:flex}
+    .pro-modal-box{
+      position:relative;overflow:auto;
+      background:rgba(15,18,25,0.85);
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      border-radius:18px;padding:32px 32px 28px;
+      width:100%;max-width:480px;max-height:90vh;
+      box-shadow:0 30px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1);
     }
+    .pro-modal-box::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;
+      background:linear-gradient(180deg, rgba(91,255,198,0.5), rgba(91,255,198,0.1) 50%, rgba(91,255,198,0.5));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+    }
+    .pro-modal-close{
+      position:absolute;top:14px;right:14px;
+      background:rgba(0,0,0,0.4);border:1px solid var(--border2);color:var(--fg1);
+      font-size:14px;cursor:pointer;border-radius:50%;
+      width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+      z-index:10;transition:background .15s ease,color .15s ease;
+    }
+    .pro-modal-close:hover{background:rgba(91,255,198,0.15);color:var(--teal)}
+    .pro-modal-box > div{position:relative;z-index:1}
+    .pro-modal-title{font-size:20px;font-weight:600;letter-spacing:-0.015em;color:#fff;margin-bottom:6px}
+    .pro-modal-sub{font-size:12px;color:var(--fg2);margin-bottom:20px}
+    .pay-info{
+      background:rgba(255,255,255,0.03);border:1px solid var(--border1);
+      border-radius:12px;padding:16px 18px;margin-bottom:16px;
+    }
+    .pay-info table{width:100%;border-collapse:collapse;font-size:13px}
+    .pay-info td{padding:6px 0}
+    .pay-info td:first-child{color:var(--fg2);width:78px;font-size:12px;letter-spacing:0.02em}
+    .pay-info td:last-child{color:var(--fg0);font-weight:500}
+    .pay-info .acct{color:var(--teal);font-weight:600;cursor:pointer;font-size:14px;font-family:var(--mono)}
+    .pay-info .amt{color:var(--teal);font-weight:600;font-size:18px;font-family:var(--mono)}
+    .pay-info .qr-wrap{text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border1)}
+    .pay-info .qr-wrap img{width:120px;height:120px;border-radius:8px;border:1px solid var(--border2)}
+    .pay-info .qr-cap{font-size:10px;color:var(--fg3);margin-top:6px;letter-spacing:0.04em}
+    .pay-input{
+      width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border2);
+      border-radius:8px;padding:11px 12px;color:var(--fg0);font-size:13px;outline:none;
+      font-family:var(--font);
+      transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+    }
+    .pay-input:focus{border-color:var(--tealDim);background:rgba(91,255,198,0.04);box-shadow:0 0 0 3px rgba(91,255,198,0.08)}
+    .pay-submit{
+      width:100%;padding:13px;border:none;border-radius:10px;
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;
+      font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);
+      transition:transform .15s ease,filter .15s ease;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    .pay-submit:hover{transform:translateY(-1px);filter:brightness(1.05)}
+    .pay-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
   </style>
 </head>
 <body>
 
 <nav class="lp-nav">
   <a href="/" class="lp-nav-brand">
-    <img src="/static/img/favicon.svg" alt="logo" onerror="this.style.display='none'">
+    <span class="logo"><img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.style.display='none'"></span>
     Draw2Trade
   </a>
   <div class="nav-links">
     <a href="/" class="btn-outline">← 메인</a>
-    <a href="/app" class="btn-primary-nav">시작하기</a>
+    <a href="/login" data-loggedin-href="/app" class="btn-primary-nav">시작하기</a>
   </div>
 </nav>
 
 <div class="page-wrap">
-  <div class="page-label">요금제</div>
-  <h1 class="page-title">이벤트 특가로<br>Pro를 시작하세요</h1>
-  <p class="page-desc">지금 구독하시면 이벤트 특가 월 <strong style="color:var(--orange);">$6</strong>에 모든 Pro 기능을 이용할 수 있습니다.</p>
+  <div class="page-label">PRICING · 요금제</div>
+  <h1 class="page-title">이벤트 특가로<br><em>Pro</em>를 시작하세요</h1>
+  <p class="page-desc">지금 구독하시면 이벤트 특가 월 <strong>$6</strong>에 모든 Pro 기능을 이용할 수 있습니다.</p>
 
   <div class="plans-grid">
 
@@ -241,23 +306,16 @@
         <li class="disabled">자동 패턴 검색</li>
         <li>즐겨찾기 · 차트 저장 최대 5개</li>
       </ul>
-      <a href="/app" class="btn-plan btn-free">무료로 시작하기</a>
+      <a href="/login" data-loggedin-href="/app" class="btn-plan btn-free">무료로 시작하기</a>
     </div>
 
     <div class="plan-card featured">
       <div class="plan-event-badge">🎉 연간 결제 시 2개월 무료</div>
       <div class="plan-name">Pro</div>
 
-      <!-- 월/연 토글 -->
       <div class="billing-toggle" role="tablist" aria-label="결제 주기 선택">
-        <button type="button" class="bt-opt active"
-                data-period="monthly" role="tab" aria-selected="true"
-                onclick="selectBillingPeriod('monthly')">월간</button>
-        <button type="button" class="bt-opt"
-                data-period="annual" role="tab" aria-selected="false"
-                onclick="selectBillingPeriod('annual')">
-          연간 <span class="bt-save">−17%</span>
-        </button>
+        <button type="button" class="bt-opt active" data-period="monthly" role="tab" aria-selected="true" onclick="selectBillingPeriod('monthly')">월간</button>
+        <button type="button" class="bt-opt" data-period="annual" role="tab" aria-selected="false" onclick="selectBillingPeriod('annual')">연간 <span class="bt-save">−17%</span></button>
       </div>
 
       <div class="plan-price" id="plan-price-display">$6 <span>/ 월</span></div>
@@ -278,7 +336,6 @@
 
   </div>
 
-  <!-- FAQ -->
   <div class="faq-section">
     <h2>자주 묻는 질문</h2>
 
@@ -311,63 +368,47 @@
 </div>
 
 <!-- ── Pro 신청 모달 ── -->
-<div id="pro-modal" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.75); align-items:center; justify-content:center;">
-  <div style="background:#1e1e21; border:1px solid #2d2d30; border-radius:14px; padding:28px 28px 24px; width:100%; max-width:460px; margin:24px; position:relative; max-height:90vh; overflow-y:auto;">
-    <button onclick="closeProModal()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#7a8499; font-size:20px; cursor:pointer;">✕</button>
+<div id="pro-modal" class="pro-modal-bg">
+  <div class="pro-modal-box">
+    <button onclick="closeProModal()" class="pro-modal-close">✕</button>
 
     <div id="pro-step1">
-      <div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:4px;">Pro 구독 신청</div>
-      <div style="font-size:13px; color:#7a8499; margin-bottom:20px;">아래 계좌로 이체 후 신청 버튼을 눌러주세요.</div>
+      <div class="pro-modal-title">Pro 구독 신청</div>
+      <div class="pro-modal-sub">아래 계좌로 이체 후 신청 버튼을 눌러주세요.</div>
 
-      <!-- 계좌 정보 -->
-      <div style="background:#141416; border:1px solid #2d2d30; border-radius:10px; padding:16px 18px; margin-bottom:16px;">
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-          <tr>
-            <td style="color:#7a8499; padding:6px 0; width:72px;">은행</td>
-            <td style="color:#d4d8e2; font-weight:600; padding:6px 0;">토스뱅크</td>
-          </tr>
-          <tr>
-            <td style="color:#7a8499; padding:6px 0;">계좌번호</td>
-            <td style="padding:6px 0;">
-              <span onclick="copyAccountModal()" title="클릭하여 복사" style="color:#26a69a; font-weight:700; cursor:pointer; font-size:15px;">1000-4937-1794 📋</span>
-              <span id="copy-toast-modal" style="display:none; font-size:11px; color:#26a69a; margin-left:6px;">복사됨!</span>
-            </td>
-          </tr>
-          <tr>
-            <td style="color:#7a8499; padding:6px 0;">금액</td>
-            <td style="color:#26a69a; font-weight:800; font-size:18px; padding:6px 0;" id="pro-modal-amount">$6 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 월</span></td>
-          </tr>
-          <tr>
-            <td style="color:#7a8499; padding:6px 0;">예금주</td>
-            <td style="color:#d4d8e2; font-weight:600; padding:6px 0;">김원준</td>
-          </tr>
+      <div class="pay-info">
+        <table>
+          <tr><td>은행</td><td>토스뱅크</td></tr>
+          <tr><td>계좌번호</td><td><span class="acct" onclick="copyAccountModal()" title="클릭하여 복사">1000-4937-1794 📋</span> <span id="copy-toast-modal" style="display:none;font-size:11px;color:var(--teal);margin-left:6px;">복사됨!</span></td></tr>
+          <tr><td>금액</td><td class="amt" id="pro-modal-amount">$6 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span></td></tr>
+          <tr><td>예금주</td><td>김원준</td></tr>
         </table>
-        <div style="text-align:center; margin-top:14px; padding-top:14px; border-top:1px solid #2d2d30;">
-          <img src="/static/img/qr.png" alt="토스뱅크 QR" style="width:120px; height:120px; border-radius:8px; border:1px solid #2d2d30;">
-          <div style="font-size:11px; color:#555; margin-top:6px;">토스 QR로 바로 이체</div>
+        <div class="qr-wrap">
+          <img src="/static/img/qr.png" alt="토스뱅크 QR">
+          <div class="qr-cap">토스 QR로 바로 이체</div>
         </div>
       </div>
 
       <div style="margin-bottom:14px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:6px;">메모 (선택) — 이체 확인에 도움이 되는 내용</label>
-        <input id="pro-memo" type="text" placeholder="예) 홍길동, 이체 완료" style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:10px 12px; color:#d4d8e2; font-size:14px; outline:none;">
+        <label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:6px;letter-spacing:0.06em;text-transform:uppercase;font-weight:500;">메모 (선택)</label>
+        <input id="pro-memo" type="text" placeholder="예) 홍길동, 이체 완료" class="pay-input">
       </div>
-      <button onclick="submitProRequest()" id="pro-submit-btn" style="width:100%; padding:13px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer;">신청하기</button>
-      <div id="pro-error" style="margin-top:10px; font-size:12px; color:#ef5350; text-align:center; min-height:16px;"></div>
+      <button onclick="submitProRequest()" id="pro-submit-btn" class="pay-submit">신청하기</button>
+      <div id="pro-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
     </div>
 
-    <div id="pro-step2" style="display:none; text-align:center;">
-      <div style="font-size:44px; margin-bottom:16px;">✅</div>
-      <div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:10px;">신청 완료!</div>
-      <div style="font-size:14px; color:#9aa0b0; line-height:1.7; margin-bottom:24px;">이체 확인 후 24시간 이내로<br>Pro 플랜으로 전환해 드립니다.</div>
-      <button onclick="closeProModal()" style="width:100%; padding:12px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer;">확인</button>
+    <div id="pro-step2" style="display:none;text-align:center;">
+      <div style="font-size:48px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">✅</div>
+      <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">신청 완료</div>
+      <div style="font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:22px;">이체 확인 후 24시간 이내로<br>Pro 플랜으로 전환해 드립니다.</div>
+      <button onclick="closeProModal()" class="pay-submit">확인</button>
     </div>
 
-    <div id="pro-step-login" style="display:none; text-align:center;">
-      <div style="font-size:40px; margin-bottom:16px;">🔐</div>
-      <div style="font-size:18px; font-weight:700; color:#fff; margin-bottom:10px;">로그인이 필요합니다</div>
-      <div style="font-size:13px; color:#9aa0b0; margin-bottom:24px;">Pro 신청은 로그인 후 이용할 수 있습니다.</div>
-      <a href="/login" style="display:block; width:100%; padding:12px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:15px; font-weight:700; cursor:pointer; text-decoration:none; text-align:center; box-sizing:border-box;">로그인하기</a>
+    <div id="pro-step-login" style="display:none;text-align:center;">
+      <div style="font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">🔐</div>
+      <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">로그인이 필요합니다</div>
+      <div style="font-size:13px;color:var(--fg2);margin-bottom:22px;">Pro 신청은 로그인 후 이용할 수 있습니다.</div>
+      <a href="/login" class="pay-submit" style="display:block;text-decoration:none;text-align:center;box-sizing:border-box;">로그인하기</a>
     </div>
   </div>
 </div>
@@ -383,7 +424,6 @@
     });
   }
 
-  // 월/연 결제 주기 토글 상태
   var _billingPeriod = 'monthly';
   function selectBillingPeriod(period) {
     _billingPeriod = period === 'annual' ? 'annual' : 'monthly';
@@ -397,7 +437,7 @@
     var subEl   = document.getElementById('plan-price-sub');
     if (_billingPeriod === 'annual') {
       if (priceEl) priceEl.innerHTML = '$60 <span>/ 년</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b style="color:#fff;">$5</b> · 2개월 무료';
+      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 2개월 무료';
     } else {
       if (priceEl) priceEl.innerHTML = '$6 <span>/ 월</span>';
       if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
@@ -405,7 +445,7 @@
   }
 
   async function openProModal() {
-    document.getElementById('pro-modal').style.display = 'flex';
+    document.getElementById('pro-modal').classList.add('show');
     var loggedIn = false;
     try {
       var res = await fetch('/api/auth/me');
@@ -417,12 +457,11 @@
     document.getElementById('pro-step-login').style.display = loggedIn ? 'none' : 'block';
     document.getElementById('pro-error').textContent = '';
     document.getElementById('pro-memo').value = '';
-    // 선택된 결제 주기를 모달 금액에 반영
     var amtEl = document.getElementById('pro-modal-amount');
     if (amtEl) {
       amtEl.innerHTML = (_billingPeriod === 'annual')
-        ? '$60 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 년 (2개월 무료)</span>'
-        : '$6 <span style="font-size:12px;font-weight:400;color:#7a8499;">/ 월</span>';
+        ? '$60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 년 (2개월 무료)</span>'
+        : '$6 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span>';
     }
     var btn = document.getElementById('pro-submit-btn');
     btn.disabled = false;
@@ -430,7 +469,7 @@
   }
 
   function closeProModal() {
-    document.getElementById('pro-modal').style.display = 'none';
+    document.getElementById('pro-modal').classList.remove('show');
   }
 
   document.getElementById('pro-modal').addEventListener('click', function(e) {
@@ -469,21 +508,29 @@
       btn.textContent = '신청하기';
     }
   }
+
+  // 인증 분기: 로그인 시 [data-loggedin-href]를 /app으로 업그레이드
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data || !data.authenticated) return;
+      document.querySelectorAll('[data-loggedin-href]').forEach(function (el) {
+        var dest = el.getAttribute('data-loggedin-href');
+        if (dest) el.setAttribute('href', dest);
+      });
+    })
+    .catch(function () {});
 </script>
 
 <footer>
-  <p style="margin-bottom:8px;">
-    &copy; 2026 Draw2Trade &nbsp;·&nbsp;
+  <p>
+    &copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp;
     <a href="/terms">이용약관</a> &nbsp;·&nbsp;
     <a href="/terms#refund">환불 정책</a> &nbsp;·&nbsp;
     <a href="/privacy">개인정보 처리방침</a>
   </p>
-  <p style="font-size:12px; color:#4a5568;">
-    본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.
-  </p>
-  <p style="font-size:12px; color:#4a5568;">
-    상호: FORMETA &nbsp;|&nbsp; 대표자: 김원준 &nbsp;|&nbsp; 사업자등록번호: 536-32-01566 &nbsp;|&nbsp; 전화번호: 02-6015-9983 &nbsp;|&nbsp; 이메일: <a href="mailto:kwj15934@formeta.kr" style="color:#4a5568;text-decoration:none;">kwj15934@formeta.kr</a>
-  </p>
+  <p style="font-size:11px">본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.</p>
+  <p style="font-size:11px">상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a></p>
 </footer>
 </body>
 </html>
