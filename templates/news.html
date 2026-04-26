@@ -31,16 +31,28 @@
       --border: rgba(255,255,255,0.06);
     }
     html, body {
-      height: 100%; background: var(--bg); color: var(--text);
+      min-height: 100%; background: #06070A; color: var(--text);
       font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, sans-serif;
       font-size: 13px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 15% 10%, rgba(91,255,198,0.08), transparent 60%),
+        radial-gradient(ellipse 500px 350px at 85% 90%, rgba(91,255,198,0.05), transparent 60%);
+      mask-image: radial-gradient(ellipse 100% 80% at 50% 30%, black 30%, transparent 80%);
+    }
+    body > * { position: relative; z-index: 1; }
 
     /* ── 네비 ─────────────────────────────────── */
     .d2t-nav {
       position: sticky !important; top: 0 !important; z-index: 100 !important;
-      height: 46px !important; background: #0B0D12 !important;
-      border-bottom: 1px solid var(--border) !important;
+      height: 46px !important;
+      background: rgba(6,7,10,0.72) !important;
+      backdrop-filter: blur(18px) saturate(140%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
       display: flex !important; align-items: center !important;
       padding: 0 20px !important; gap: 0 !important;
       box-sizing: border-box !important;
@@ -119,22 +131,33 @@
     /* ── 검색바 ───────────────────────────────── */
     .news-search-row { display: flex; gap: 8px; margin-bottom: 18px; }
     .news-search-input {
-      flex: 1; background: var(--bg3); border: 1px solid var(--border);
-      border-radius: 7px; padding: 8px 12px; color: var(--text);
-      font-size: 12px; outline: none; transition: border-color .15s;
+      flex: 1;
+      background: rgba(15,18,25,0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 10px 14px; color: var(--text);
+      font-size: 13px; outline: none;
+      transition: border-color .15s, background .15s;
     }
-    .news-search-input:focus { border-color: var(--teal); }
+    .news-search-input:focus { border-color: rgba(91,255,198,0.4); background: rgba(15,18,25,0.7); }
     .news-search-input::placeholder { color: var(--muted); }
 
     /* ── 뉴스 카드 ────────────────────────────── */
-    .news-list { display: flex; flex-direction: column; gap: 0; }
+    .news-list { display: flex; flex-direction: column; gap: 4px; }
     .news-card {
-      display: flex; gap: 14px; padding: 14px 0;
-      border-bottom: 1px solid rgba(255,255,255,.05);
-      text-decoration: none; color: inherit; transition: background .1s;
-      border-radius: 8px;
+      display: flex; gap: 14px;
+      padding: 14px 12px;
+      border-radius: 12px;
+      text-decoration: none; color: inherit;
+      transition: background .15s ease, border-color .15s ease;
+      border: 1px solid transparent;
     }
-    .news-card:hover { background: rgba(255,255,255,.025); padding-left: 8px; padding-right: 8px; }
+    .news-card:hover {
+      background: rgba(91,255,198,0.04);
+      border-color: rgba(91,255,198,0.16);
+    }
 
     .news-thumb {
       flex-shrink: 0; width: 100px; height: 68px;
@@ -250,20 +273,46 @@
       margin-top: 24px; flex-wrap: wrap;
     }
     .page-btn {
-      width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
-      background: none; color: var(--muted); font-size: 12px; cursor: pointer;
+      width: 34px; height: 34px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,18,25,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--muted); font-size: 12px; cursor: pointer;
       transition: all .15s;
     }
-    .page-btn:hover, .page-btn.active {
-      border-color: var(--teal); color: var(--teal); background: rgba(91,255,198,.08);
+    .page-btn:hover {
+      border-color: rgba(91,255,198,0.3);
+      color: var(--teal);
+      background: rgba(91,255,198,0.06);
+    }
+    .page-btn.active {
+      border-color: rgba(91,255,198,0.5);
+      color: #06070A;
+      background: linear-gradient(135deg, #5BFFC6, #4DE6B0);
+      box-shadow: 0 0 16px rgba(91,255,198,0.25);
     }
 
     /* ── 사이드바 ─────────────────────────────── */
     .news-sidebar { display: flex; flex-direction: column; gap: 16px; }
     .sidebar-card {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 10px; overflow: hidden;
+      position: relative;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border-radius: 14px; overflow: hidden;
     }
+    .sidebar-card::before {
+      content: ''; position: absolute; inset: 0; border-radius: 14px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .sidebar-card > * { position: relative; z-index: 1; }
     .sidebar-card-head {
       padding: 12px 14px 0;
     }
@@ -352,14 +401,26 @@
     }
 
     /* 빠른 이동 */
-    .quick-links { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .quick-links { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
     .quick-link {
-      font-size: 12px; color: var(--muted); text-decoration: none;
-      padding: 6px 8px; background: var(--bg3); border-radius: 6px;
-      transition: color .15s, background .15s;
+      font-size: 13px; color: var(--text); text-decoration: none;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      transition: color .15s, background .15s, border-color .15s, transform .15s;
     }
-    .quick-link:hover { color: var(--teal); background: rgba(91,255,198,.07); }
-    .quick-link.primary { color: var(--teal); background: rgba(91,255,198,.07); }
+    .quick-link:hover {
+      color: var(--teal);
+      background: rgba(91,255,198,0.08);
+      border-color: rgba(91,255,198,0.3);
+      transform: translateX(2px);
+    }
+    .quick-link.primary {
+      color: var(--teal);
+      background: rgba(91,255,198,0.1);
+      border-color: rgba(91,255,198,0.25);
+    }
 
     /* ── 새 뉴스 slide-in 애니메이션 ─────────────── */
     @keyframes slideDown {
