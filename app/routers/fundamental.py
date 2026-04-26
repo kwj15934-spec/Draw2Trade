@@ -198,7 +198,8 @@ async def post_fundamental_qa(
     """
     DART 재무 데이터를 컨텍스트로 자연어 질문에 답변합니다 (로그인 필수).
 
-    예) "삼성전자 살만해?", "이 회사 빚 많아?", "성장세 어때?"
+    예) "최근 3년 실적", "부채 수준", "매출 성장세", "수익성"
+    투자 권유/추천은 시스템 프롬프트로 차단됩니다.
     """
     _check_configured()
     if not fundamental_qa_service.is_configured():
