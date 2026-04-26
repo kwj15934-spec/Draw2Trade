@@ -282,14 +282,28 @@
     .section-title em{font-style:normal;font-weight:500;color:var(--teal)}
     .section-sub{margin:14px auto 0;font-size:15px;color:rgba(250,251,252,0.6);max-width:560px;line-height:1.6;word-break:keep-all}
 
-    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-    .feature-row{padding:24px;border-radius:22px;display:flex;flex-direction:column;gap:14px;min-height:240px}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+    .feature-row{padding:20px;border-radius:22px;display:flex;flex-direction:column;gap:12px;min-height:240px}
     .feature-row .ic{width:40px;height:40px;border-radius:12px;background:rgba(91,255,198,0.10);color:var(--teal);display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--tealGlow)}
     .feature-row h3{margin:0;font-size:18px;font-weight:500;letter-spacing:-0.02em;color:#fff}
     .feature-row h3 em{font-style:normal;color:rgba(255,255,255,0.7)}
     .feature-row ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:13px;color:rgba(250,251,252,0.65);line-height:1.55}
     .feature-row ul li{display:flex;gap:8px;align-items:flex-start}
     .feature-row ul li::before{content:"";flex-shrink:0;width:6px;height:6px;border-radius:3px;background:var(--teal);box-shadow:0 0 6px var(--teal);margin-top:7px}
+    .feature-visual{position:relative;height:120px;margin:-4px -4px 4px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(0,0,0,0.28),rgba(0,0,0,0.08));border:1px solid rgba(255,255,255,0.04)}
+    .feature-visual svg{width:100%;height:100%;display:block}
+    .feature-visual-scan .scan-beam{transform-origin:center;animation:scan-sweep 2.8s ease-in-out infinite}
+    @keyframes scan-sweep{
+      0%   {transform:translateX(0)}
+      50%  {transform:translateX(214px)}
+      100% {transform:translateX(0)}
+    }
+    .feature-visual-rank .bar-1{animation:bar-fill-1 1.6s ease-out both}
+    .feature-visual-rank .bar-2{animation:bar-fill-2 1.6s ease-out 0.1s both}
+    .feature-visual-rank .bar-3{animation:bar-fill-3 1.6s ease-out 0.2s both}
+    @keyframes bar-fill-1{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    @keyframes bar-fill-2{from{transform:scaleX(0)}to{transform:scaleX(0.87)}}
+    @keyframes bar-fill-3{from{transform:scaleX(0)}to{transform:scaleX(0.76)}}
 
     /* pricing */
     .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px;margin:0 auto}
@@ -552,6 +566,30 @@
 
   <div class="features-grid">
     <div class="feature-row liquid-glass">
+      <div class="feature-visual feature-visual-scan">
+        <svg viewBox="0 0 220 120" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="fv1g" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="rgba(91,255,198,0)"/>
+              <stop offset="0.5" stop-color="rgba(91,255,198,0.85)"/>
+              <stop offset="1" stop-color="rgba(91,255,198,0)"/>
+            </linearGradient>
+          </defs>
+          <g stroke-width="1.3" fill="none" stroke-linecap="round">
+            <path d="M14,28 Q24,22 32,30 T48,24 T64,28" stroke="rgba(255,255,255,0.28)"/>
+            <path d="M82,28 Q92,30 100,22 T116,28 T132,24" stroke="rgba(255,255,255,0.28)"/>
+            <path d="M150,28 Q160,24 168,28 T184,22 T200,28" stroke="rgba(255,255,255,0.28)"/>
+            <path d="M14,98 Q24,92 32,98 T48,92 T64,98" stroke="rgba(255,255,255,0.28)"/>
+            <path d="M150,98 Q160,94 168,98 T184,90 T200,96" stroke="rgba(255,255,255,0.28)"/>
+          </g>
+          <g transform="translate(74,58)">
+            <rect x="0" y="0" width="72" height="38" rx="7" fill="rgba(91,255,198,0.10)" stroke="rgba(91,255,198,0.55)" stroke-width="1"/>
+            <path d="M8,24 Q16,16 22,22 T38,12 T58,20" stroke="#5BFFC6" stroke-width="1.7" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 4px rgba(91,255,198,0.6))"/>
+            <text x="36" y="34" text-anchor="middle" fill="#5BFFC6" font-family="JetBrains Mono, monospace" font-size="6.5" font-weight="600" letter-spacing="0.5">MATCH</text>
+          </g>
+          <rect class="scan-beam" x="-2" y="0" width="3" height="120" fill="url(#fv1g)"/>
+        </svg>
+      </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
       <h3>전 종목 <em>패턴 스캔</em></h3>
       <ul>
@@ -561,6 +599,25 @@
     </div>
 
     <div class="feature-row liquid-glass">
+      <div class="feature-visual feature-visual-tools">
+        <svg viewBox="0 0 220 120" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="110" y1="6" x2="110" y2="114" stroke="rgba(255,255,255,0.10)" stroke-dasharray="2,3"/>
+          <line x1="6" y1="60" x2="214" y2="60" stroke="rgba(255,255,255,0.10)" stroke-dasharray="2,3"/>
+          <text x="14" y="18" fill="rgba(91,255,198,0.55)" font-family="JetBrains Mono, monospace" font-size="6.5" font-weight="600" letter-spacing="0.5">FREEHAND</text>
+          <path d="M14,46 Q24,32 32,42 Q42,52 52,34 Q62,24 72,42 Q82,50 96,32" stroke="#5BFFC6" stroke-width="1.6" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 3px rgba(91,255,198,0.5))"/>
+          <text x="118" y="18" fill="rgba(91,255,198,0.55)" font-family="JetBrains Mono, monospace" font-size="6.5" font-weight="600" letter-spacing="0.5">TREND</text>
+          <polyline points="120,46 138,32 158,42 178,26 200,36" stroke="#5BFFC6" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <g fill="#5BFFC6"><circle cx="120" cy="46" r="2.2"/><circle cx="138" cy="32" r="2.2"/><circle cx="158" cy="42" r="2.2"/><circle cx="178" cy="26" r="2.2"/><circle cx="200" cy="36" r="2.2"/></g>
+          <text x="14" y="74" fill="rgba(91,255,198,0.55)" font-family="JetBrains Mono, monospace" font-size="6.5" font-weight="600" letter-spacing="0.5">LINE</text>
+          <line x1="22" y1="100" x2="92" y2="84" stroke="#5BFFC6" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="22" cy="100" r="2.6" fill="#5BFFC6"/><circle cx="92" cy="84" r="2.6" fill="#5BFFC6"/>
+          <text x="118" y="74" fill="rgba(91,255,198,0.55)" font-family="JetBrains Mono, monospace" font-size="6.5" font-weight="600" letter-spacing="0.5">CHANNEL</text>
+          <line x1="120" y1="98" x2="200" y2="84" stroke="#5BFFC6" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="120" y1="108" x2="200" y2="94" stroke="#5BFFC6" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="120" y1="98" x2="120" y2="108" stroke="rgba(91,255,198,0.45)" stroke-dasharray="1.5,2"/>
+          <line x1="200" y1="84" x2="200" y2="94" stroke="rgba(91,255,198,0.45)" stroke-dasharray="1.5,2"/>
+        </svg>
+      </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/><circle cx="6" cy="6" r="2"/></svg></div>
       <h3>4가지 <em>드로잉 도구</em></h3>
       <ul>
@@ -572,6 +629,31 @@
     </div>
 
     <div class="feature-row liquid-glass">
+      <div class="feature-visual feature-visual-rank">
+        <svg viewBox="0 0 220 120" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="fv3g" x1="0" x2="1">
+              <stop offset="0" stop-color="#FF8A4C"/>
+              <stop offset="1" stop-color="#5BFFC6"/>
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="22" r="10" fill="#FFD66B"/>
+          <text x="16" y="26" text-anchor="middle" fill="#1a1410" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">1</text>
+          <rect x="34" y="14" width="170" height="14" rx="7" fill="rgba(255,255,255,0.06)"/>
+          <rect class="bar-1" x="34" y="14" width="170" height="14" rx="7" fill="url(#fv3g)" style="transform-origin:34px 21px"/>
+          <text x="200" y="24" text-anchor="end" fill="#fff" font-family="JetBrains Mono, monospace" font-size="9" font-weight="600">100%</text>
+          <circle cx="16" cy="60" r="10" fill="#D4D8E0"/>
+          <text x="16" y="64" text-anchor="middle" fill="#1a1410" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">2</text>
+          <rect x="34" y="52" width="170" height="14" rx="7" fill="rgba(255,255,255,0.06)"/>
+          <rect class="bar-2" x="34" y="52" width="170" height="14" rx="7" fill="url(#fv3g)" style="transform-origin:34px 59px"/>
+          <text x="200" y="62" text-anchor="end" fill="rgba(255,255,255,0.85)" font-family="JetBrains Mono, monospace" font-size="9" font-weight="600">87%</text>
+          <circle cx="16" cy="98" r="10" fill="#D69470"/>
+          <text x="16" y="102" text-anchor="middle" fill="#1a1410" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">3</text>
+          <rect x="34" y="90" width="170" height="14" rx="7" fill="rgba(255,255,255,0.06)"/>
+          <rect class="bar-3" x="34" y="90" width="170" height="14" rx="7" fill="url(#fv3g)" style="transform-origin:34px 97px"/>
+          <text x="200" y="100" text-anchor="end" fill="rgba(255,255,255,0.85)" font-family="JetBrains Mono, monospace" font-size="9" font-weight="600">76%</text>
+        </svg>
+      </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg></div>
       <h3>유사도 <em>시각화</em></h3>
       <ul>
