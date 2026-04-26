@@ -1051,8 +1051,19 @@
       return;
     }
 
-    // 빈 캔버스 모드: 바로 검색 (AI 분석은 별도 [AI 리터치] 버튼으로 수행)
+    // 빈 캔버스 모드: 기간 선택 모달
     if (isBlankMode) {
+      var bModal = document.getElementById('blank-period-modal');
+      if (bModal) {
+        // 툴바 lookback 값으로 모달 select 동기화
+        var lbTb = document.getElementById('lookback-months');
+        var lbMd = document.getElementById('blank-modal-lookback');
+        if (lbTb && lbMd) lbMd.value = lbTb.value;
+        var errEl = document.getElementById('blank-modal-range-err');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        bModal.style.display = 'flex';
+        return;
+      }
       _doSearchActual();
       return;
     }
@@ -1062,6 +1073,43 @@
     if (modal) { modal.style.display = 'flex'; return; }
     _doSearchActual();
   }
+
+  // 빈 캔버스 모달에서 옵션 선택 → 검색 실행
+  var _blankSearchMode = 'lookback'; // 'lookback' | 'range'
+  var _blankDateFrom = '';
+  var _blankDateTo   = '';
+
+  window.runBlankSearchWithMode = function (mode) {
+    var modal = document.getElementById('blank-period-modal');
+    var errEl = document.getElementById('blank-modal-range-err');
+
+    if (mode === 'lookback') {
+      var lbMd = document.getElementById('blank-modal-lookback');
+      var lbTb = document.getElementById('lookback-months');
+      if (lbMd && lbTb) lbTb.value = lbMd.value; // 다음 검색 기본값으로 반영
+      _blankSearchMode = 'lookback';
+      _blankDateFrom = '';
+      _blankDateTo   = '';
+    } else if (mode === 'range') {
+      var dfEl = document.getElementById('blank-modal-date-from');
+      var dtEl = document.getElementById('blank-modal-date-to');
+      var df = dfEl && dfEl.value ? dfEl.value.trim() : '';
+      var dt = dtEl && dtEl.value ? dtEl.value.trim() : '';
+      if (!df && !dt) {
+        if (errEl) { errEl.textContent = '시작 또는 종료 월을 입력하세요.'; errEl.style.display = 'block'; }
+        return;
+      }
+      if (df && dt && df > dt) { var sw = df; df = dt; dt = sw; }
+      _blankSearchMode = 'range';
+      _blankDateFrom = df;
+      _blankDateTo   = dt;
+    } else {
+      return;
+    }
+
+    if (modal) modal.style.display = 'none';
+    _doSearchActual();
+  };
 
   function _doSearchActual() {
     // 작업 중인 추세선/직선이 있으면 자동 완료 (중복 호출 대비)
@@ -1190,15 +1238,10 @@
       }
       body.anchor_today = false;
     } else if (isBlankMode) {
-      // 빈 캔버스 모드: 기간 지정 우선, 미지정 시 lookback_months
-      var _dfEl = document.getElementById('search-date-from');
-      var _dtEl = document.getElementById('search-date-to');
-      var _df = _dfEl && _dfEl.value ? _dfEl.value.trim() : '';
-      var _dt = _dtEl && _dtEl.value ? _dtEl.value.trim() : '';
-      if (_df && _dt && _df > _dt) { var _swap = _df; _df = _dt; _dt = _swap; }
-      if (_df || _dt) {
-        if (_df) body.date_from = _df;
-        if (_dt) body.date_to   = _dt;
+      // 빈 캔버스 모드: 모달에서 선택한 모드/값 적용
+      if (_blankSearchMode === 'range' && (_blankDateFrom || _blankDateTo)) {
+        if (_blankDateFrom) body.date_from = _blankDateFrom;
+        if (_blankDateTo)   body.date_to   = _blankDateTo;
         body.anchor_today = false;
       } else {
         var _lbEl = document.getElementById('lookback-months');
@@ -1866,17 +1909,6 @@
       window.clearDraw();
       setTool(null);
     });
-
-    // 빈 캔버스 모드: 기간 지정 해제
-    var _btnClearDate = document.getElementById('btn-clear-daterange');
-    if (_btnClearDate) {
-      _btnClearDate.addEventListener('click', function () {
-        var _df = document.getElementById('search-date-from');
-        var _dt = document.getElementById('search-date-to');
-        if (_df) _df.value = '';
-        if (_dt) _dt.value = '';
-      });
-    }
 
     // loadResultMatch, redraw 전역 노출 (chart.js가 차트 로드 후 redraw 호출)
     if (window.D2T) window.D2T.loadResultMatch = loadResultMatch;

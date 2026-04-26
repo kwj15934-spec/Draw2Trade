@@ -42,7 +42,8 @@ logger = logging.getLogger(__name__)
 PATTERN_LEN = 150  # 고정 리샘플 포인트 수
 _EPS = 1e-9
 _OUTLIER_LOG_THRESHOLD = 0.25   # |log(P_t / P_{t-1})| > 0.25 → 이상 갭으로 간주 (≈ ±28%)
-_FLAT_REL_RANGE = 0.05          # 윈도우 (max-min)/median < 5% 면 평탄 패턴으로 제외
+_FLAT_REL_RANGE = 0.02          # 윈도우 (max-min)/median < 2% 면 평탄 패턴으로 제외
+                                # (기존 5%는 사이드웨이 종목까지 제외하여 결과 부족 → 완화)
 _LIQUIDITY_PERCENTILE = 10      # 거래대금 하위 N% 제외
 
 

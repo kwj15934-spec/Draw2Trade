@@ -56,8 +56,8 @@
   <div class="vr"></div>
 
   <div class="lookback-group">
-    <label for="lookback-months">비교</label>
-    <select id="lookback-months" title="비교할 최근 월봉 수 (기간 미지정 시 사용)">
+    <label for="lookback-months">기본</label>
+    <select id="lookback-months" title="기본 비교 개월 수 (검색 클릭 시 모달에서 변경 가능)">
       <option value="24">24개월</option>
       <option value="36" selected>36개월</option>
       <option value="48">48개월</option>
@@ -65,33 +65,64 @@
     </select>
   </div>
 
-  <div class="lookback-group">
-    <label for="search-date-from">기간</label>
-    <input
-      type="month"
-      id="search-date-from"
-      title="비교 시작 월 (지정 시 위 '비교' 개월수보다 우선)"
-      style="background:#1a1d29; color:#d1d4dc; border:1px solid #2a2e39; border-radius:3px; padding:3px 6px; font-size:12px; color-scheme:dark;"
-    />
-    <span style="color:#5d6273;">~</span>
-    <input
-      type="month"
-      id="search-date-to"
-      title="비교 종료 월"
-      style="background:#1a1d29; color:#d1d4dc; border:1px solid #2a2e39; border-radius:3px; padding:3px 6px; font-size:12px; color-scheme:dark;"
-    />
-    <button
-      id="btn-clear-daterange"
-      class="btn-d2t"
-      title="기간 지정 해제"
-      style="padding:3px 8px; font-size:11px;"
-    >해제</button>
-  </div>
-
   <button id="btn-search" class="btn-d2t btn-d2t-primary">
     🔍 유사 종목 검색
   </button>
   <span id="search-status" class="search-status"></span>
+</div>
+
+<!-- ── 빈 캔버스 모드: 검색 기간 선택 모달 ─────────────────────────────── -->
+<div id="blank-period-modal"
+  role="dialog" aria-modal="true" aria-labelledby="blank-period-modal-title"
+  style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+  <div style="background:#1e1e21;border:1px solid #2d2d30;border-radius:12px;padding:26px 26px 22px;width:100%;max-width:460px;margin:24px;">
+    <div id="blank-period-modal-title" style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">검색 기간 설정</div>
+    <div style="font-size:12px;color:#7a8499;margin-bottom:18px;">그린 패턴과 유사한 종목을 어떤 기간에서 찾을지 선택하세요.</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <!-- 옵션 ① 최근 N개월 -->
+      <div style="padding:14px 16px;background:#161618;border:1px solid #2d2d30;border-radius:8px;">
+        <div style="font-weight:700;color:#d4d8e2;font-size:13px;margin-bottom:6px;">① 최근 N개월</div>
+        <div style="font-size:11px;color:#7a8499;margin-bottom:10px;">각 종목의 최근 구간에서 가장 닮은 모양을 찾습니다.</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select id="blank-modal-lookback"
+            style="flex:1;background:#1a1d29;color:#d1d4dc;border:1px solid #2a2e39;border-radius:5px;padding:7px 10px;font-size:13px;color-scheme:dark;outline:none;">
+            <option value="12">12개월</option>
+            <option value="24">24개월</option>
+            <option value="36" selected>36개월</option>
+            <option value="48">48개월</option>
+            <option value="60">60개월</option>
+            <option value="84">84개월 (7년)</option>
+            <option value="120">120개월 (10년)</option>
+          </select>
+          <button onclick="window.runBlankSearchWithMode('lookback')"
+            style="padding:8px 18px;background:#26a69a;border:1px solid #26a69a;color:#fff;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">검색</button>
+        </div>
+      </div>
+
+      <!-- 옵션 ② 직접 기간 지정 -->
+      <div style="padding:14px 16px;background:#161618;border:1px solid #2d2d30;border-radius:8px;">
+        <div style="font-weight:700;color:#d4d8e2;font-size:13px;margin-bottom:6px;">② 직접 기간 지정 <span style="font-size:10px;color:#26a69a;font-weight:400;">(과거 특정 구간 한정)</span></div>
+        <div style="font-size:11px;color:#7a8499;margin-bottom:10px;">시작/종료 월을 지정해 그 기간 안에서만 검색합니다.</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <input type="month" id="blank-modal-date-from"
+            placeholder="YYYY-MM"
+            style="flex:1;min-width:120px;background:#1a1d29;color:#d1d4dc;border:1px solid #2a2e39;border-radius:5px;padding:7px 10px;font-size:13px;color-scheme:dark;outline:none;">
+          <span style="color:#5d6273;">~</span>
+          <input type="month" id="blank-modal-date-to"
+            placeholder="YYYY-MM"
+            style="flex:1;min-width:120px;background:#1a1d29;color:#d1d4dc;border:1px solid #2a2e39;border-radius:5px;padding:7px 10px;font-size:13px;color-scheme:dark;outline:none;">
+          <button onclick="window.runBlankSearchWithMode('range')"
+            style="padding:8px 18px;background:#26a69a;border:1px solid #26a69a;color:#fff;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">검색</button>
+        </div>
+        <div id="blank-modal-range-err"
+          style="display:none;margin-top:6px;font-size:11px;color:#f04848;"></div>
+      </div>
+    </div>
+
+    <button onclick="document.getElementById('blank-period-modal').style.display='none'"
+      style="margin-top:14px;width:100%;padding:9px;background:none;border:1px solid #2d2d30;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
+  </div>
 </div>
 
 <!-- ── 메인 영역 ─────────────────────────────────────────────────────────── -->
