@@ -89,7 +89,7 @@
   </div>
 
   <!-- 시장 시간 칩 -->
-  <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7a8499;white-space:nowrap;margin-left:8px;"></div>
+  <div id="market-hours-chip" style="display:flex;align-items:center;gap:5px;font-size:11px;color:#8C95A8;white-space:nowrap;margin-left:8px;"></div>
 
   <!-- 유저 박스 -->
   <div id="nav-user-box" class="nav-user-box" style="display:none;">
@@ -137,9 +137,9 @@
       <a href="#" id="thb-main-info-link"
          onclick="toggleMainInfoOverlay();return false;"
          title="메인 종목 정보 보기"
-         style="margin-left:10px; font-size:12px; font-weight:600; color:#26a69a; text-decoration:none; padding:2px 8px; border:1px solid #26a69a; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
-         onmouseover="this.style.background='#26a69a'; this.style.color='#fff';"
-         onmouseout="this.style.background='transparent'; this.style.color='#26a69a';">종목 정보 보기</a>
+         style="margin-left:10px; font-size:12px; font-weight:600; color:#5BFFC6; text-decoration:none; padding:2px 8px; border:1px solid #5BFFC6; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
+         onmouseover="this.style.background='#5BFFC6'; this.style.color='#fff';"
+         onmouseout="this.style.background='transparent'; this.style.color='#5BFFC6';">종목 정보 보기</a>
     </div>
 
     <!-- 우: 시장 상태 + LIVE + 공지 -->
@@ -186,7 +186,7 @@
       <!-- 차트 로드 + 즐겨찾기 -->
       <button id="btn-load"       class="btn-d2t btn-load-chart">차트 로드</button>
       <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
-      <span id="us-list-hint" style="display:none;font-size:11px;color:#7a8499;white-space:nowrap;">
+      <span id="us-list-hint" style="display:none;font-size:11px;color:#8C95A8;white-space:nowrap;">
         거래소 미선택 시 S&amp;P 500
       </span>
     </div>
@@ -318,7 +318,7 @@
 
 
     <button id="btn-back-to-origin" class="btn-d2t"
-      style="display:none;color:#26a69a;border-color:#26a69a;font-weight:600;"
+      style="display:none;color:#5BFFC6;border-color:#5BFFC6;font-weight:600;"
       onclick="D2T&&D2T.backToOrigin&&D2T.backToOrigin()"
       aria-label="내 차트로 돌아가기"
       title="내 그림이 있는 원본 차트로 돌아가기">
@@ -347,34 +347,34 @@
       <!-- 차트 로딩 스피너 -->
       <div id="chart-loading-spinner" style="display:none; position:absolute; inset:0; z-index:20; background:rgba(18,18,20,0.7); align-items:center; justify-content:center;">
         <div style="text-align:center;">
-          <div style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.15); border-top-color:#26a69a; border-radius:50%; animation:d2t-spin .7s linear infinite; margin:0 auto 10px;"></div>
-          <div style="color:#d4d8e2; font-size:13px;">차트 로딩 중...</div>
+          <div style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.15); border-top-color:#5BFFC6; border-radius:50%; animation:d2t-spin .7s linear infinite; margin:0 auto 10px;"></div>
+          <div style="color:#C9CFDA; font-size:13px;">차트 로딩 중...</div>
         </div>
       </div>
 
       <div id="auto-ruler-overlay" style="display:none; position:absolute; inset:0; z-index:15; cursor:col-resize;">
-        <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #26a69a; pointer-events:none; transition:left .03s;"></div>
-        <div id="auto-ruler-date" style="position:absolute; top:8px; background:#26a69a; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
-        <div id="auto-anchor-line" style="display:none; position:absolute; top:0; bottom:0; width:0; border-left:2px solid #26a69a; pointer-events:none;"></div>
-        <div id="auto-anchor-date" style="display:none; position:absolute; top:8px; background:#26a69a; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
-        <div id="auto-range-fill" style="display:none; position:absolute; top:0; bottom:0; background:rgba(38,166,154,0.07); pointer-events:none;"></div>
-        <div id="auto-ruler-hint" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(18,18,20,0.88); color:#d4d8e2; font-size:12px; padding:5px 14px; border-radius:6px; white-space:nowrap; pointer-events:none; border:1px solid #2d2d30;">
-          시작 날짜를 클릭하세요 &nbsp;·&nbsp; <span style="color:#7a8499;">ESC 취소</span>
+        <div id="auto-ruler-line" style="position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #5BFFC6; pointer-events:none; transition:left .03s;"></div>
+        <div id="auto-ruler-date" style="position:absolute; top:8px; background:#5BFFC6; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
+        <div id="auto-anchor-line" style="display:none; position:absolute; top:0; bottom:0; width:0; border-left:2px solid #5BFFC6; pointer-events:none;"></div>
+        <div id="auto-anchor-date" style="display:none; position:absolute; top:8px; background:#5BFFC6; color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; white-space:nowrap; transform:translateX(-50%); pointer-events:none;"></div>
+        <div id="auto-range-fill" style="display:none; position:absolute; top:0; bottom:0; background:rgba(91,255,198,0.07); pointer-events:none;"></div>
+        <div id="auto-ruler-hint" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(18,18,20,0.88); color:#C9CFDA; font-size:12px; padding:5px 14px; border-radius:6px; white-space:nowrap; pointer-events:none; border:1px solid rgba(255,255,255,0.08);">
+          시작 날짜를 클릭하세요 &nbsp;·&nbsp; <span style="color:#8C95A8;">ESC 취소</span>
         </div>
       </div>
 
     </div>
 
     <!-- ── 패턴 비교 미니 패널 ──────────────── -->
-    <div id="pattern-compare-panel" style="display:none; height:120px; background:#1a1a1e; border-top:1px solid #2d2d30; position:relative;">
+    <div id="pattern-compare-panel" style="display:none; height:120px; background:#1a1a1e; border-top:1px solid rgba(255,255,255,0.08); position:relative;">
       <div id="pattern-compare-header" style="position:absolute; top:4px; left:10px; z-index:2; display:flex; align-items:center; gap:8px;">
-        <span style="font-size:11px; color:#7a8499;">패턴 비교</span>
-        <span style="font-size:10px; color:#ff6b35;">━</span><span style="font-size:10px; color:#7a8499;">내 패턴</span>
-        <span style="font-size:10px; color:#26a69a;">╌</span><span style="font-size:10px; color:#7a8499;">매칭 패턴</span>
-        <span id="pattern-compare-score" style="font-size:10px; font-weight:700; color:#26a69a; margin-left:4px;"></span>
+        <span style="font-size:11px; color:#8C95A8;">패턴 비교</span>
+        <span style="font-size:10px; color:#ff6b35;">━</span><span style="font-size:10px; color:#8C95A8;">내 패턴</span>
+        <span style="font-size:10px; color:#5BFFC6;">╌</span><span style="font-size:10px; color:#8C95A8;">매칭 패턴</span>
+        <span id="pattern-compare-score" style="font-size:10px; font-weight:700; color:#5BFFC6; margin-left:4px;"></span>
       </div>
       <button onclick="D2T._hidePatternMiniChart&&D2T._hidePatternMiniChart()"
-        style="position:absolute; top:4px; right:8px; z-index:2; background:none; border:none; color:#7a8499; cursor:pointer; font-size:14px; line-height:1;" title="닫기">&times;</button>
+        style="position:absolute; top:4px; right:8px; z-index:2; background:none; border:none; color:#8C95A8; cursor:pointer; font-size:14px; line-height:1;" title="닫기">&times;</button>
       <div id="pattern-compare-container" style="width:100%; height:100%;"></div>
     </div>
 
@@ -384,7 +384,7 @@
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
       <button id="mobile-results-btn" onclick="toggleMobileSidebar()"
-        style="margin-left:8px; height:22px; padding:0 10px; font-size:11px; background:#26a69a; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
+        style="margin-left:8px; height:22px; padding:0 10px; font-size:11px; background:#5BFFC6; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
         결과 보기 ▲
       </button>
     </div>
@@ -464,27 +464,27 @@
   <!-- ══════════════════════════════════════════════════════════════
        메인 종목 정보 오버레이 패널 (차트 + 버튼으로 토글)
        ══════════════════════════════════════════════════════════════ -->
-  <div id="main-info-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; width:340px; z-index:200; background:#141416; border-left:1px solid #2d2d30; box-shadow:-4px 0 24px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+  <div id="main-info-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; width:340px; z-index:200; background:#06070A; border-left:1px solid rgba(255,255,255,0.08); box-shadow:-4px 0 24px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
     <!-- 좌측 드래그 리사이즈 핸들 -->
     <div id="main-overlay-resize-handle"
       style="position:absolute; top:0; left:0; bottom:0; width:5px; cursor:col-resize; z-index:10; background:transparent; transition:background .15s;"
-      onmouseover="this.style.background='rgba(38,166,154,0.25)'"
+      onmouseover="this.style.background='rgba(91,255,198,0.25)'"
       onmouseout="this.style.background='transparent'"
       title="드래그하여 너비 조절"></div>
     <!-- 오버레이 헤더 -->
-    <div style="flex-shrink:0; padding:10px 12px 8px; border-bottom:1px solid #2d2d30; display:flex; align-items:center; justify-content:space-between;">
+    <div style="flex-shrink:0; padding:10px 12px 8px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between;">
       <div>
         <div style="font-size:10px;color:#555;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">메인 종목 정보</div>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:14px;font-weight:700;color:#e8eaef;" id="info-panel-name">—</span>
-          <span style="font-size:11px;color:#7a8499;" id="info-panel-code"></span>
+          <span style="font-size:11px;color:#8C95A8;" id="info-panel-code"></span>
         </div>
         <span id="info-panel-updated" style="font-size:10px;color:#555;"></span>
       </div>
-      <button onclick="toggleMainInfoOverlay()" style="background:none;border:none;color:#7a8499;cursor:pointer;font-size:18px;line-height:1;padding:4px;" title="닫기">&times;</button>
+      <button onclick="toggleMainInfoOverlay()" style="background:none;border:none;color:#8C95A8;cursor:pointer;font-size:18px;line-height:1;padding:4px;" title="닫기">&times;</button>
     </div>
     <!-- 탭 헤더 -->
-    <div class="info-panel-tabs" style="flex-shrink:0;border-bottom:1px solid #2d2d30;">
+    <div class="info-panel-tabs" style="flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);">
       <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">개요</button>
       <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
       <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
@@ -567,7 +567,7 @@
           <span class="result-header-title">☰ 검색 결과</span>
           <span id="result-count" class="result-header-count" style="display:none;"></span>
           <select id="top-n-select" title="검색 결과 최대 개수" aria-label="검색 결과 최대 개수"
-            style="height:24px;font-size:11px;padding:0 6px;background:#1e1e21;color:#d1d4dc;border:1px solid #2d2d30;border-radius:4px;margin-left:auto;">
+            style="height:24px;font-size:11px;padding:0 6px;background:#11141B;color:#C9CFDA;border:1px solid rgba(255,255,255,0.08);border-radius:4px;margin-left:auto;">
             <option value="10">Top 10</option>
             <option value="20" selected>Top 20</option>
             <option value="30">Top 30</option>
@@ -601,7 +601,7 @@
         <div id="results-wrapper">
           <div id="results-placeholder">
             패턴을 그린 후<br>
-            <strong style="color: #26a69a;">유사 종목 검색</strong>을 클릭하세요<br><br>
+            <strong style="color: #5BFFC6;">유사 종목 검색</strong>을 클릭하세요<br><br>
             <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
           </div>
           <div id="results-list" style="display: none;"></div>
@@ -631,58 +631,58 @@
 <div id="period-select-modal"
   role="dialog" aria-modal="true" aria-labelledby="period-modal-title"
   style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
-  <div style="background:#1e1e21;border:1px solid #2d2d30;border-radius:12px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;">
+  <div style="background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;">
     <div id="period-modal-title" style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기준으로 검색할까요?</div>
-    <div style="font-size:12px;color:#7a8499;margin-bottom:20px;">내가 그린 패턴을 어떤 방식으로 찾을지 선택하세요.</div>
+    <div style="font-size:12px;color:#8C95A8;margin-bottom:20px;">내가 그린 패턴을 어떤 방식으로 찾을지 선택하세요.</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="runSearchWithMode('chart-period')" style="padding:14px 16px;background:#1e1e21;border:1px solid #2d2d30;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
-        onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2d2d30'">
+      <button onclick="runSearchWithMode('chart-period')" style="padding:14px 16px;background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#C9CFDA;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#5BFFC6'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
         <div style="font-weight:700;margin-bottom:4px;">① 차트와 같은 기간으로 찾기</div>
-        <div style="font-size:11px;color:#7a8499;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의<br>종목을 검색합니다.</div>
+        <div style="font-size:11px;color:#8C95A8;">현재 차트에 표시된 기간과 동일한 구간에서 비슷한 모양의<br>종목을 검색합니다.</div>
       </button>
-      <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#1e1e21;border:1px solid #2d2d30;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
-        onmouseover="this.style.borderColor='#26a69a'" onmouseout="this.style.borderColor='#2d2d30'">
-        <div style="font-weight:700;margin-bottom:4px;">② 지금 이 모양과 비슷한 종목 찾기 <span style="font-size:10px;color:#26a69a;font-weight:400;">(끝=오늘 고정)</span></div>
-        <div style="font-size:11px;color:#7a8499;">각 종목의 끝 시점을 오늘로 고정하고, 현재 모양과 가장 닮은 구간을 찾습니다.</div>
+      <button onclick="runSearchWithMode('today')" style="padding:14px 16px;background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#C9CFDA;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#5BFFC6'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div style="font-weight:700;margin-bottom:4px;">② 지금 이 모양과 비슷한 종목 찾기 <span style="font-size:10px;color:#5BFFC6;font-weight:400;">(끝=오늘 고정)</span></div>
+        <div style="font-size:11px;color:#8C95A8;">각 종목의 끝 시점을 오늘로 고정하고, 현재 모양과 가장 닮은 구간을 찾습니다.</div>
       </button>
-      <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#1e1e21;border:1px solid #2d2d30;border-radius:8px;color:#d4d8e2;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
-        onmouseover="this.style.borderColor='#7a8499'" onmouseout="this.style.borderColor='#2d2d30'">
+      <button onclick="runSearchWithMode('range')" style="padding:14px 16px;background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#C9CFDA;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='#8C95A8'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
         <div style="font-weight:700;margin-bottom:4px;">③ 날짜 범위 직접 지정</div>
-        <div style="font-size:11px;color:#7a8499;">특정 기간 안에서만 검색합니다.</div>
+        <div style="font-size:11px;color:#8C95A8;">특정 기간 안에서만 검색합니다.</div>
       </button>
     </div>
-    <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid #2d2d30;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">취소</button>
+    <button onclick="document.getElementById('period-select-modal').style.display='none'" style="margin-top:16px;width:100%;padding:9px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;color:#8C95A8;font-size:12px;cursor:pointer;">취소</button>
   </div>
 </div>
 
 <div id="save-drawing-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
-  <div style="background:#1e1e21;border:1px solid #2d2d30;border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;">
+  <div style="background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;">
     <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;">검색 결과 저장</div>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
-        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">이름 <span style="color:#26a69a">*</span></label>
-        <input name="label" type="text" placeholder="저장 이름을 입력하세요" style="width:100%;box-sizing:border-box;background:#141416;border:1px solid #2d2d30;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;">
+        <label style="font-size:11px;color:#8C95A8;display:block;margin-bottom:5px;">이름 <span style="color:#5BFFC6">*</span></label>
+        <input name="label" type="text" placeholder="저장 이름을 입력하세요" style="width:100%;box-sizing:border-box;background:#06070A;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 12px;color:#C9CFDA;font-size:13px;outline:none;">
       </div>
       <div>
-        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">종목명</label>
-        <input name="save-ticker" type="text" placeholder="종목명 또는 티커" style="width:100%;box-sizing:border-box;background:#141416;border:1px solid #2d2d30;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;">
+        <label style="font-size:11px;color:#8C95A8;display:block;margin-bottom:5px;">종목명</label>
+        <input name="save-ticker" type="text" placeholder="종목명 또는 티커" style="width:100%;box-sizing:border-box;background:#06070A;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 12px;color:#C9CFDA;font-size:13px;outline:none;">
       </div>
       <div>
-        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">차트 기간</label>
+        <label style="font-size:11px;color:#8C95A8;display:block;margin-bottom:5px;">차트 기간</label>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input name="save-date-from" type="text" placeholder="시작 (예: 2023-01)" style="flex:1;background:#141416;border:1px solid #2d2d30;border-radius:6px;padding:8px 10px;color:#d4d8e2;font-size:12px;outline:none;">
-          <span style="color:#7a8499;font-size:12px;">~</span>
-          <input name="save-date-to" type="text" placeholder="종료 (예: 2024-12)" style="flex:1;background:#141416;border:1px solid #2d2d30;border-radius:6px;padding:8px 10px;color:#d4d8e2;font-size:12px;outline:none;">
+          <input name="save-date-from" type="text" placeholder="시작 (예: 2023-01)" style="flex:1;background:#06070A;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px;color:#C9CFDA;font-size:12px;outline:none;">
+          <span style="color:#8C95A8;font-size:12px;">~</span>
+          <input name="save-date-to" type="text" placeholder="종료 (예: 2024-12)" style="flex:1;background:#06070A;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px;color:#C9CFDA;font-size:12px;outline:none;">
         </div>
       </div>
       <div>
-        <label style="font-size:11px;color:#7a8499;display:block;margin-bottom:5px;">메모</label>
-        <textarea name="save-memo" placeholder="메모를 입력하세요" rows="2" style="width:100%;box-sizing:border-box;background:#141416;border:1px solid #2d2d30;border-radius:6px;padding:9px 12px;color:#d4d8e2;font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
+        <label style="font-size:11px;color:#8C95A8;display:block;margin-bottom:5px;">메모</label>
+        <textarea name="save-memo" placeholder="메모를 입력하세요" rows="2" style="width:100%;box-sizing:border-box;background:#06070A;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:9px 12px;color:#C9CFDA;font-size:13px;outline:none;resize:vertical;font-family:inherit;"></textarea>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px;">
-      <button onclick="confirmSaveDrawing()" style="flex:1;padding:10px;background:#26a69a;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
-      <button onclick="closeSaveModal()" style="flex:1;padding:10px;background:transparent;border:1px solid #2d2d30;border-radius:7px;color:#7a8499;font-size:13px;cursor:pointer;">취소</button>
+      <button onclick="confirmSaveDrawing()" style="flex:1;padding:10px;background:#5BFFC6;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
+      <button onclick="closeSaveModal()" style="flex:1;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:7px;color:#8C95A8;font-size:13px;cursor:pointer;">취소</button>
     </div>
   </div>
 </div>
@@ -717,9 +717,9 @@
       if (!chip) return;
       var on = isOpen();
       var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
-        + (on ? '#26a69a' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
+        + (on ? '#5BFFC6' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
       var status = on
-        ? '<span style="color:#26a69a;font-weight:700;">개장</span>'
+        ? '<span style="color:#5BFFC6;font-weight:700;">개장</span>'
         : '<span style="color:#555;">마감</span>';
       chip.innerHTML = dot + '&nbsp;' + KR.label + '&nbsp;·&nbsp;' + status;
     });
@@ -750,9 +750,9 @@
           var isPro = (u.plan === 'pro');
           planBadge.textContent = isPro ? 'PRO' : 'FREE';
           planBadge.style.display = 'inline';
-          planBadge.style.background = isPro ? 'rgba(38,166,154,0.2)' : 'rgba(122,132,153,0.15)';
-          planBadge.style.color = isPro ? '#26a69a' : '#7a8499';
-          planBadge.style.border = isPro ? '1px solid rgba(38,166,154,0.5)' : '1px solid rgba(122,132,153,0.3)';
+          planBadge.style.background = isPro ? 'rgba(91,255,198,0.2)' : 'rgba(122,132,153,0.15)';
+          planBadge.style.color = isPro ? '#5BFFC6' : '#8C95A8';
+          planBadge.style.border = isPro ? '1px solid rgba(91,255,198,0.5)' : '1px solid rgba(122,132,153,0.3)';
         }
         if (loginBtn) loginBtn.style.display = 'none';
         if (userBox)  userBox.style.display  = 'flex';
@@ -775,27 +775,27 @@
 </script>
 
 <div id="app-contact-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7); align-items:center; justify-content:center;">
-  <div style="background:#1e1e21; border:1px solid #2d2d30; border-radius:12px; padding:32px; width:100%; max-width:440px; margin:24px; position:relative;">
-    <button onclick="closeContactModal()" style="position:absolute; top:14px; right:14px; background:none; border:none; color:#7a8499; font-size:20px; cursor:pointer;">✕</button>
+  <div style="background:#11141B; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:32px; width:100%; max-width:440px; margin:24px; position:relative;">
+    <button onclick="closeContactModal()" style="position:absolute; top:14px; right:14px; background:none; border:none; color:#8C95A8; font-size:20px; cursor:pointer;">✕</button>
     <div style="font-size:17px; font-weight:700; color:#fff; margin-bottom:6px;">문의하기</div>
-    <div style="font-size:13px; color:#7a8499; margin-bottom:16px;">회신 받을 이메일을 남겨주세요.</div>
-    <div id="app-contact-success" style="display:none; background:rgba(38,166,154,.12); border:1px solid #26a69a; border-radius:8px; padding:14px; color:#26a69a; font-size:14px; text-align:center; margin-bottom:16px;">
+    <div style="font-size:13px; color:#8C95A8; margin-bottom:16px;">회신 받을 이메일을 남겨주세요.</div>
+    <div id="app-contact-success" style="display:none; background:rgba(91,255,198,.12); border:1px solid #5BFFC6; border-radius:8px; padding:14px; color:#5BFFC6; font-size:14px; text-align:center; margin-bottom:16px;">
       문의가 접수됐습니다. 빠르게 답변 드리겠습니다.
     </div>
     <form id="app-contact-form" onsubmit="submitContactModal(event)">
       <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:5px;">이름 (선택)</label>
-        <input name="name" type="text" placeholder="홍길동" style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:9px 12px; color:#d4d8e2; font-size:14px; outline:none; box-sizing:border-box;">
+        <label style="font-size:12px; color:#8C95A8; display:block; margin-bottom:5px;">이름 (선택)</label>
+        <input name="name" type="text" placeholder="홍길동" style="width:100%; background:#06070A; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:9px 12px; color:#C9CFDA; font-size:14px; outline:none; box-sizing:border-box;">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:5px;">이메일 <span style="color:#26a69a;">*</span></label>
-        <input name="email" type="email" placeholder="example@email.com" required style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:9px 12px; color:#d4d8e2; font-size:14px; outline:none; box-sizing:border-box;">
+        <label style="font-size:12px; color:#8C95A8; display:block; margin-bottom:5px;">이메일 <span style="color:#5BFFC6;">*</span></label>
+        <input name="email" type="email" placeholder="example@email.com" required style="width:100%; background:#06070A; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:9px 12px; color:#C9CFDA; font-size:14px; outline:none; box-sizing:border-box;">
       </div>
       <div style="margin-bottom:20px;">
-        <label style="font-size:12px; color:#7a8499; display:block; margin-bottom:5px;">문의 내용 <span style="color:#26a69a;">*</span></label>
-        <textarea name="message" rows="4" placeholder="궁금한 점이나 의견을 남겨주세요." required style="width:100%; background:#141416; border:1px solid #2d2d30; border-radius:6px; padding:9px 12px; color:#d4d8e2; font-size:14px; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+        <label style="font-size:12px; color:#8C95A8; display:block; margin-bottom:5px;">문의 내용 <span style="color:#5BFFC6;">*</span></label>
+        <textarea name="message" rows="4" placeholder="궁금한 점이나 의견을 남겨주세요." required style="width:100%; background:#06070A; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:9px 12px; color:#C9CFDA; font-size:14px; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
       </div>
-      <button type="submit" id="app-contact-submit" style="width:100%; padding:11px; background:#26a69a; border:none; border-radius:8px; color:#fff; font-size:14px; font-weight:700; cursor:pointer;">보내기</button>
+      <button type="submit" id="app-contact-submit" style="width:100%; padding:11px; background:#5BFFC6; border:none; border-radius:8px; color:#fff; font-size:14px; font-weight:700; cursor:pointer;">보내기</button>
     </form>
   </div>
 </div>
@@ -831,20 +831,20 @@
 </style>
 
 <div id="notice-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-start;justify-content:center;padding-top:60px;">
-  <div style="background:#1e1e21;border:1px solid #2d2d30;border-radius:12px;width:100%;max-width:520px;margin:0 24px;position:relative;max-height:80vh;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;gap:8px;padding:18px 20px 14px;border-bottom:1px solid #2d2d30;flex-shrink:0;">
+  <div style="background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:12px;width:100%;max-width:520px;margin:0 24px;position:relative;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;gap:8px;padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
       <span id="ndm-type-badge" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid;flex-shrink:0;"></span>
       <span id="ndm-title" style="font-size:15px;font-weight:700;color:#fff;flex:1;min-width:0;"></span>
-      <button onclick="closeNoticeModal()" style="background:none;border:none;color:#7a8499;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
+      <button onclick="closeNoticeModal()" style="background:none;border:none;color:#8C95A8;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:8px 20px;font-size:11px;color:#555;flex-shrink:0;border-bottom:1px solid #1e2535;">
       <span id="ndm-date"></span>
-      <span style="color:#2d2d30;">|</span>
+      <span style="color:rgba(255,255,255,0.08);">|</span>
       <span id="ndm-views"><span id="ndm-views-count">0</span></span>
     </div>
     <div id="ndm-content" style="padding:18px 20px;font-size:13px;color:#c8ccd4;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-word;"></div>
     <div style="padding:12px 20px;border-top:1px solid #1e2535;flex-shrink:0;">
-      <button onclick="closeNoticeModal()" style="width:100%;padding:9px;background:none;border:1px solid #2d2d30;border-radius:7px;color:#7a8499;font-size:12px;cursor:pointer;">닫기</button>
+      <button onclick="closeNoticeModal()" style="width:100%;padding:9px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;color:#8C95A8;font-size:12px;cursor:pointer;">닫기</button>
     </div>
   </div>
 </div>
@@ -863,7 +863,7 @@
       .then(function (n) {
         if (!n) { titleEl.textContent = '공지를 불러올 수 없습니다.'; return; }
         var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
-        var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
+        var TYPE_COLOR = { update: '#5BFFC6', event: '#ff9800', notice: '#5c9cf5' };
         var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
         badgeEl.textContent = TYPE_LABEL[n.type] || '공지';
         badgeEl.style.cssText += ';background:' + color + '20;color:' + color + ';border-color:' + color + '40;';
@@ -881,7 +881,7 @@
 <script>
 (function () {
   var TYPE_LABEL = { update: '업데이트', event: '이벤트', notice: '공지' };
-  var TYPE_COLOR = { update: '#26a69a', event: '#ff9800', notice: '#5c9cf5' };
+  var TYPE_COLOR = { update: '#5BFFC6', event: '#ff9800', notice: '#5c9cf5' };
   function dismissKey(id) { return 'notice_dismissed_' + id; }
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -1572,7 +1572,7 @@ function _escHtml(s) {
     } else {
       overlay.style.display  = 'flex';
       if (backdrop) backdrop.style.display = 'block';
-      if (btn) { btn.textContent = '✕'; btn.style.borderColor = '#26a69a'; btn.style.background = 'rgba(38,166,154,0.18)'; }
+      if (btn) { btn.textContent = '✕'; btn.style.borderColor = '#5BFFC6'; btn.style.background = 'rgba(91,255,198,0.18)'; }
       // 열릴 때 현재 메인 종목 데이터 로드 (아직 로드 안 됐을 경우)
       var ticker = window.D2T && D2T.ticker;
       var market = window.D2T && D2T.market;
@@ -1631,7 +1631,7 @@ function _escHtml(s) {
         _startW = overlay ? overlay.offsetWidth : 340;
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'col-resize';
-        handle.style.background = 'rgba(38,166,154,0.35)';
+        handle.style.background = 'rgba(91,255,198,0.35)';
       });
 
       document.addEventListener('mousemove', function (e) {
@@ -1958,8 +1958,8 @@ function _escHtml(s) {
           var fmtTile = function (v) {
             if (v == null) return '<span style="color:#3f3f52">—</span>';
             var abs = Math.abs(v);
-            if (abs >= 10000) return (v / 10000).toFixed(1) + '<span style="font-size:11px;color:#6b7280;font-weight:500;">조</span>';
-            return v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '<span style="font-size:11px;color:#6b7280;font-weight:500;">억</span>';
+            if (abs >= 10000) return (v / 10000).toFixed(1) + '<span style="font-size:11px;color:#8C95A8;font-weight:500;">조</span>';
+            return v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '<span style="font-size:11px;color:#8C95A8;font-weight:500;">억</span>';
           };
 
           // YoY 계산: 마지막연도 vs 직전연도 (분석 데이터 있으면 우선)
@@ -2015,7 +2015,7 @@ function _escHtml(s) {
             +   '<div class="fund-metric-tile">'
             +     '<div class="fund-metric-label">부채비율 · Debt Ratio</div>'
             +     '<div class="fund-metric-value">' + (qDebt != null
-                    ? qDebt.toFixed(1) + '<span style="font-size:11px;color:#6b7280;font-weight:500;">%</span>'
+                    ? qDebt.toFixed(1) + '<span style="font-size:11px;color:#8C95A8;font-weight:500;">%</span>'
                     : '<span style="color:#3f3f52">—</span>') + '</div>'
             +     deltaHtml(debtChg, true)
             +   '</div>'
@@ -2149,7 +2149,7 @@ function _escHtml(s) {
         + '<span class="fund-ai-status">분석 중…</span>'
         + '</div>'
         + '<div class="fund-ai-q">Q. ' + _esc(question) + '</div>'
-        + '<div class="fund-ai-a" style="color:#7a8499;">'
+        + '<div class="fund-ai-a" style="color:#8C95A8;">'
         + '<span class="info-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span>'
         + 'DART 공시를 근거로 답변을 작성하고 있어요...'
         + '</div>';
@@ -2325,7 +2325,7 @@ function _escHtml(s) {
       var cls = v > 0 ? 'detfin-pos' : v < 0 ? 'detfin-neg' : '';
       return cls
         ? '<span class="' + cls + '">' + str + '</span>'
-        : '<span style="color:#7a8499">' + str + '</span>';
+        : '<span style="color:#8C95A8">' + str + '</span>';
     }
 
     // 재무제표 유형 탭 렌더링
