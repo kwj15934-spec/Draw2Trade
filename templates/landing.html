@@ -36,8 +36,13 @@
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@1,300;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,wght@1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,wght@1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  </noscript>
 
   <style>
     :root {
@@ -274,6 +279,7 @@
 
     /* ── Sections below hero ───────────────────────────────────── */
     .section{position:relative;z-index:10;padding:96px 24px;max-width:1240px;margin:0 auto}
+    .section.deferred{content-visibility:auto;contain-intrinsic-size:auto 800px}
     .section-head{margin-bottom:48px;text-align:center}
     .section-eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
     .section-eyebrow::before{content:"";width:24px;height:1px;background:var(--teal)}
@@ -557,7 +563,7 @@
 </div>
 
 <!-- ==================== FEATURES ==================== -->
-<section class="section" id="features">
+<section class="section deferred" id="features">
   <div class="section-head">
     <div class="section-eyebrow">FEATURES</div>
     <h2 class="section-title">트레이더를 위한 <em>정밀한</em> 도구</h2>
@@ -667,7 +673,7 @@
 </section>
 
 <!-- ==================== PRICING ==================== -->
-<section class="section" id="pricing">
+<section class="section deferred" id="pricing">
   <div class="section-head">
     <div class="section-eyebrow">PRICING</div>
     <h2 class="section-title">필요한 만큼만 <em>지불</em>하세요</h2>
@@ -710,7 +716,7 @@
 </section>
 
 <!-- ==================== FAQ ==================== -->
-<section class="section" id="faq">
+<section class="section deferred" id="faq">
   <div class="section-head">
     <div class="section-eyebrow">FAQ</div>
     <h2 class="section-title">자주 묻는 <em>질문</em></h2>
@@ -855,8 +861,13 @@
   };
   window.addEventListener('resize', resize); resize();
 
-  const TRAIL = 240;
-  const SUB = 3;
+  const TRAIL = 200;
+  const SUB = 2;
+  let paused = false;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { paused = true; }
+    else if (paused) { paused = false; if (!reduceMotion) requestAnimationFrame(step); }
+  });
   let head = { x: 0.08, y: 0.5, vx: 0.0014, vy: 0 };
   const trail = [];
   let t = 0;
@@ -1031,7 +1042,7 @@
         }
       }
     }
-    if (!reduceMotion) requestAnimationFrame(step);
+    if (!reduceMotion && !paused) requestAnimationFrame(step);
   }
   step();
 })();
@@ -1106,7 +1117,10 @@
       document.body.removeChild(ta);
     }
 
+    var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+
     // Auth → swap account icon for user chip + update Draw Now CTA target
+    idle(function () {
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
@@ -1145,8 +1159,10 @@
         }
       })
       .catch(function () {});
+    });
 
     // Live ticker — KOSPI/KOSDAQ index quotes
+    idle(function () {
     fetch('/api/v1/market/index-quotes', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
@@ -1174,6 +1190,7 @@
         }
       })
       .catch(function () {});
+    });
   })();
 
   /* ── notices feed (right panel) ─────────────────────── */
@@ -1182,6 +1199,8 @@
     if (!listEl) return;
     function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
     var TYPE_LABEL = { update:'업데이트', maintenance:'점검', event:'이벤트', notice:'공지' };
+    var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+    idle(function () {
     fetch('/api/notices')
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (list) {
@@ -1206,6 +1225,7 @@
       .catch(function () {
         listEl.innerHTML = '<div class="notice-feed-empty">공지를 불러올 수 없습니다.</div>';
       });
+    });
   })();
 </script>
 
