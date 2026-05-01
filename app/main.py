@@ -53,7 +53,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import get_optional_user, require_user
-from app.routers import auth, backtest, chart, dart, fundamental, google_auth, market, payment, pattern, user_data
+from app.routers import auth, backtest, bank_transfer, chart, dart, fundamental, google_auth, market, payment, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
 from app.services import activity_tracker, inquiry_service, notice_service
@@ -114,6 +114,8 @@ async def lifespan(app: FastAPI):
     load_manifest()
     # KRX 전종목 시세 스케줄러 (매일 16:05 KST 자동 수집)
     asyncio.create_task(_krx_scheduler())
+    # 오픈뱅킹 입금 자동확인 워커
+    asyncio.create_task(_bank_transfer_poller())
     yield
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()
@@ -164,6 +166,85 @@ async def _krx_scheduler():
         except Exception as e:
             logger.error("KRX 스케줄러 오류: %s", e)
             await asyncio.sleep(300)   # 5분 후 재시도
+
+
+async def _bank_transfer_poller():
+    """
+    오픈뱅킹 거래내역을 주기적으로 폴링하여 입금 신청과 자동 매칭.
+
+    - OPENBANKING_POLL_INTERVAL_SEC 미설정 또는 0 이면 비활성화
+    - 매칭 성공 시 mark_matched + Pro 활성화
+    - 만료된 신청 정리
+    """
+    from app.services import openbanking_service, payment_request_service
+    from app.routers.bank_transfer import _activate_pro
+
+    interval = int(os.getenv("OPENBANKING_POLL_INTERVAL_SEC", "0") or "0")
+    if interval <= 0:
+        logger.info("오픈뱅킹 폴러: 비활성화 (OPENBANKING_POLL_INTERVAL_SEC=0)")
+        return
+    auto_match_flag = os.getenv("BANK_TRANSFER_AUTO_MATCH", "false").strip().lower()
+    if auto_match_flag not in ("true", "1", "yes", "on"):
+        logger.info("오픈뱅킹 폴러: 수동 모드 (BANK_TRANSFER_AUTO_MATCH=false) — 비활성화")
+        return
+    if not openbanking_service.is_configured():
+        logger.warning("오픈뱅킹 폴러: 환경변수 미설정 — 비활성화")
+        return
+
+    logger.info("오픈뱅킹 입금 자동확인 폴러 시작 (주기 %d초)", interval)
+    seen_tx_keys: set[str] = set()   # 중복 매칭 방지 (date+time+amount)
+
+    while True:
+        try:
+            # 1) 만료 신청 정리
+            expired = payment_request_service.expire_old()
+            if expired:
+                logger.info("결제 신청 만료: %d건", expired)
+
+            # 2) 거래내역 조회 (당일)
+            txs = await openbanking_service.get_transactions(inquiry_type="I")
+            if txs is None:
+                logger.warning("오픈뱅킹 거래내역 조회 실패 — %d초 후 재시도", interval)
+                await asyncio.sleep(interval)
+                continue
+
+            # 3) 입금 거래만 필터 → 매칭 시도
+            for tx in txs:
+                if not openbanking_service.is_deposit(tx):
+                    continue
+                amt = int(tx.get("tran_amt", 0) or 0)
+                if amt <= 0:
+                    continue
+                key = f"{tx.get('tran_date','')}_{tx.get('tran_time','')}_{amt}"
+                if key in seen_tx_keys:
+                    continue
+
+                deposit_name = openbanking_service.get_deposit_name(tx)
+                match = payment_request_service.match_deposit(amt, deposit_name)
+                if match:
+                    req = match["request"]
+                    if payment_request_service.mark_matched(req["id"], tx):
+                        _activate_pro(req["uid"], req["plan_type"])
+                        logger.info(
+                            "입금 자동매칭 (%s): req=%d uid=%s amt=%d name=%s",
+                            match["confidence"], req["id"], req["uid"], amt, deposit_name,
+                        )
+                        seen_tx_keys.add(key)
+                else:
+                    # 매칭 안 되어도 seen 에 추가하면 다음 폴링 때 또 안 시도하므로
+                    # 의도적으로 추가하지 않음 (새 신청이 들어오면 매칭될 수 있도록)
+                    pass
+
+            # seen_tx_keys 메모리 누수 방지: 1000건 초과 시 절반만 유지
+            if len(seen_tx_keys) > 1000:
+                seen_tx_keys = set(list(seen_tx_keys)[-500:])
+
+            await asyncio.sleep(interval)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("오픈뱅킹 폴러 오류: %s", e)
+            await asyncio.sleep(interval)
 
 
 # ── FastAPI 앱 ───────────────────────────────────────────────────────────────
@@ -268,6 +349,7 @@ app.include_router(fundamental.router)
 app.include_router(market.router)
 app.include_router(backtest.router)
 app.include_router(payment.router)
+app.include_router(bank_transfer.router)
 # 미국 주식 DB 수집 완료 전까지 비활성화
 # app.include_router(us_chart.router)
 
@@ -328,6 +410,11 @@ async def pending_page(request: Request):
 @app.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
+
+
+@app.get("/refund", response_class=HTMLResponse)
+async def refund_page(request: Request):
+    return templates.TemplateResponse("refund.html", {"request": request})
 
 
 @app.get("/account", response_class=HTMLResponse)

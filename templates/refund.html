@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>환불 신청 — Draw2Trade</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg0:#06070A;
+      --teal:#5BFFC6;
+      --tealDim:rgba(91,255,198,0.55);
+      --tealGlow:rgba(91,255,198,0.18);
+      --fg0:#FAFBFC;
+      --fg1:rgba(250,251,252,0.78);
+      --fg2:rgba(250,251,252,0.55);
+      --fg3:rgba(250,251,252,0.35);
+      --border1:rgba(255,255,255,0.08);
+      --border2:rgba(255,255,255,0.14);
+      --font:'Space Grotesk','Pretendard',system-ui,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,monospace;
+    }
+    html,body{margin:0;padding:0;background:var(--bg0);color:var(--fg1);font-family:var(--font);-webkit-font-smoothing:antialiased}
+    body{min-height:100vh;background:radial-gradient(ellipse 60% 50% at 30% 10%, rgba(91,255,198,0.07), transparent 70%), var(--bg0);}
+
+    .lp-nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 32px;height:62px;
+      background:rgba(6,7,10,0.7);
+      backdrop-filter:blur(14px) saturate(1.2);
+      -webkit-backdrop-filter:blur(14px) saturate(1.2);
+      border-bottom:1px solid var(--border1);
+    }
+    .lp-nav-brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;letter-spacing:-0.01em;color:#fff;text-decoration:none}
+    .lp-nav-brand .logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg, var(--teal), #5B8DFF);display:grid;place-items:center;overflow:hidden;box-shadow:0 0 16px var(--tealGlow)}
+    .lp-nav-brand .logo img{width:100%;height:100%;object-fit:cover}
+    .btn-outline{
+      padding:7px 16px;border-radius:999px;font-size:12px;font-weight:500;letter-spacing:0.04em;
+      border:1px solid var(--border2);background:rgba(255,255,255,0.04);
+      color:var(--fg1);cursor:pointer;text-decoration:none;font-family:var(--font);
+      transition:border-color .18s ease,color .18s ease,background .18s ease;
+    }
+    .btn-outline:hover{border-color:var(--tealDim);color:var(--teal);background:rgba(91,255,198,0.06)}
+
+    .page-wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:130px 24px 80px}
+    .page-label{font-size:10px;font-weight:600;letter-spacing:0.18em;color:var(--teal);text-transform:uppercase;margin-bottom:14px;font-family:var(--mono)}
+    .page-title{font-size:clamp(28px,4vw,40px);font-weight:600;letter-spacing:-0.025em;color:#fff;line-height:1.15;margin-bottom:14px}
+    .page-desc{font-size:14px;color:var(--fg2);margin-bottom:36px;line-height:1.7}
+
+    .info-box{
+      background:rgba(91,255,198,0.05);border:1px solid rgba(91,255,198,0.18);
+      border-radius:12px;padding:16px 20px;margin-bottom:28px;
+      font-size:13px;line-height:1.8;color:var(--fg1);
+    }
+    .info-box b{color:var(--teal)}
+    .info-box ul{padding-left:20px;margin:6px 0 0}
+
+    .card{
+      position:relative;overflow:hidden;
+      background:rgba(255,255,255,0.025);
+      border-radius:16px;padding:30px 28px;margin-bottom:20px;
+    }
+    .card::before{
+      content:"";position:absolute;inset:0;border-radius:inherit;padding:1.4px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1) 40%, transparent 60%, rgba(255,255,255,0.1) 80%, rgba(255,255,255,0.4));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
+    }
+
+    .form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;position:relative;z-index:1}
+    .form-label{font-size:11.5px;letter-spacing:0.04em;color:var(--fg2);font-weight:600;text-transform:uppercase}
+    .form-label .req{color:#ff7a7a;margin-left:3px}
+    .form-input,.form-textarea,.form-select{
+      width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border2);
+      border-radius:8px;padding:12px 14px;color:var(--fg0);font-size:13px;outline:none;
+      font-family:var(--font);
+      transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+    }
+    .form-input:focus,.form-textarea:focus,.form-select:focus{
+      border-color:var(--tealDim);background:rgba(91,255,198,0.04);
+      box-shadow:0 0 0 3px rgba(91,255,198,0.08);
+    }
+    .form-textarea{resize:vertical;min-height:96px;font-family:var(--font);line-height:1.6}
+    .form-hint{font-size:11px;color:var(--fg3);margin-top:4px;line-height:1.55}
+
+    .form-grid-2{display:grid;grid-template-columns:1fr 2fr;gap:12px}
+
+    .btn-submit{
+      width:100%;padding:14px;border:none;border-radius:10px;
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;
+      font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);
+      transition:transform .15s ease,filter .15s ease;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22), inset 0 1px 0 rgba(255,255,255,0.4);
+      position:relative;z-index:1;
+    }
+    .btn-submit:hover{transform:translateY(-1px);filter:brightness(1.05)}
+    .btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .err-msg{font-size:12px;color:#ff7a7a;margin-top:10px;text-align:center;min-height:16px;position:relative;z-index:1}
+
+    .success-box{
+      background:rgba(91,255,198,0.06);border:1px solid rgba(91,255,198,0.3);
+      border-radius:14px;padding:36px 28px;text-align:center;
+    }
+    .success-box .ico{font-size:48px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow))}
+    .success-box .t{font-size:20px;font-weight:600;color:#fff;margin-bottom:10px}
+    .success-box .d{font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:18px}
+
+    footer{
+      position:relative;z-index:1;padding:30px 24px;text-align:center;
+      color:var(--fg3);font-size:12px;border-top:1px solid var(--border1);margin-top:30px;line-height:1.9;
+    }
+    footer a{color:var(--fg2);text-decoration:none}
+    footer a:hover{color:var(--teal)}
+
+    @media (max-width:600px){
+      .lp-nav{padding:0 16px;height:54px}
+      .lp-nav-brand{font-size:15px}
+      .page-wrap{padding:100px 16px 50px}
+      .form-grid-2{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="lp-nav">
+  <a href="/" class="lp-nav-brand">
+    <span class="logo"><img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.style.display='none'"></span>
+    Draw2Trade
+  </a>
+  <div class="nav-links">
+    <a href="/pricing" class="btn-outline">← 요금제</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-label">REFUND · 환불 신청</div>
+  <h1 class="page-title">환불 신청</h1>
+  <p class="page-desc">결제하신 계좌이체 금액의 환불을 신청합니다. 영업일 기준 <b style="color:var(--teal)">3일 이내</b> 검토 후 처리해드립니다.</p>
+
+  <div class="info-box">
+    <b>환불 가능 조건 (전자상거래법 + 자체 규정)</b>
+    <ul>
+      <li>결제 후 <b>7일 이내</b> 신청한 경우 — Pro 사용 이력이 없으면 전액 환불</li>
+      <li>결제 후 7일 이상이거나 사용 이력이 있는 경우 — 잔여 기간 일할 계산 환불</li>
+      <li>서비스 결함으로 인한 환불은 사용 이력과 무관하게 전액 환불</li>
+    </ul>
+  </div>
+
+  <!-- 폼 -->
+  <form id="refund-form" class="card" onsubmit="submitRefund(event)">
+
+    <div class="form-row">
+      <label class="form-label" for="rf-reason">환불 사유 <span class="req">*</span></label>
+      <textarea id="rf-reason" class="form-textarea" placeholder="환불 사유를 자세히 적어주세요. (예: 7일 이내 미사용, 서비스 결함 등)" required></textarea>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">환불 받을 계좌 <span class="req">*</span></label>
+      <div class="form-grid-2">
+        <select id="rf-bank" class="form-select" required>
+          <option value="">은행 선택</option>
+          <option>우리은행</option>
+          <option>KB국민은행</option>
+          <option>신한은행</option>
+          <option>하나은행</option>
+          <option>NH농협은행</option>
+          <option>IBK기업은행</option>
+          <option>SC제일은행</option>
+          <option>씨티은행</option>
+          <option>대구은행</option>
+          <option>부산은행</option>
+          <option>광주은행</option>
+          <option>전북은행</option>
+          <option>경남은행</option>
+          <option>제주은행</option>
+          <option>새마을금고</option>
+          <option>신협</option>
+          <option>우체국</option>
+          <option>토스뱅크</option>
+          <option>카카오뱅크</option>
+          <option>케이뱅크</option>
+        </select>
+        <input id="rf-account" class="form-input" placeholder="계좌번호 (하이픈 없이 숫자만)" pattern="[0-9-]+" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label" for="rf-holder">예금주 <span class="req">*</span></label>
+      <input id="rf-holder" class="form-input" placeholder="실명 입력 (계좌 등록 명의와 동일)" required>
+      <div class="form-hint">결제하신 본인 명의 계좌만 환불 가능합니다.</div>
+    </div>
+
+    <button type="submit" id="btn-submit" class="btn-submit">환불 신청 제출</button>
+    <div id="err-msg" class="err-msg"></div>
+
+  </form>
+
+  <!-- 성공 -->
+  <div id="success" class="card success-box" style="display:none;">
+    <div class="ico">✅</div>
+    <div class="t">환불 신청이 접수되었습니다</div>
+    <div class="d">
+      신청 번호 <b id="success-id" style="color:var(--teal)">—</b><br>
+      영업일 기준 3일 이내 등록 이메일로 처리 결과 안내드립니다.
+    </div>
+    <a href="/pricing" class="btn-outline">요금제로 돌아가기</a>
+  </div>
+
+  <!-- 비로그인 -->
+  <div id="login-required" class="card" style="display:none;text-align:center;">
+    <div style="font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">🔐</div>
+    <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:10px;">로그인이 필요합니다</div>
+    <div style="font-size:13px;color:var(--fg2);margin-bottom:22px;">환불 신청은 로그인 후 이용할 수 있습니다.</div>
+    <a href="/login" class="btn-submit" style="display:block;text-decoration:none;text-align:center;box-sizing:border-box;">로그인하기</a>
+  </div>
+
+</div>
+
+<script>
+  async function submitRefund(e) {
+    e.preventDefault();
+    var btn = document.getElementById('btn-submit');
+    var errEl = document.getElementById('err-msg');
+    errEl.textContent = '';
+
+    var reason = document.getElementById('rf-reason').value.trim();
+    var bank   = document.getElementById('rf-bank').value;
+    var acct   = document.getElementById('rf-account').value.trim();
+    var holder = document.getElementById('rf-holder').value.trim();
+
+    if (!reason || !bank || !acct || !holder) {
+      errEl.textContent = '모든 항목을 입력해주세요.';
+      return;
+    }
+    if (reason.length < 10) {
+      errEl.textContent = '환불 사유는 10자 이상 작성해주세요.';
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = '제출 중...';
+    try {
+      var r = await fetch('/api/refund/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          reason: reason,
+          refund_bank: bank,
+          refund_account: acct,
+          refund_holder: holder,
+        }),
+      });
+      var d = await r.json();
+      if (!r.ok) {
+        errEl.textContent = d.detail || '제출 실패';
+        return;
+      }
+      document.getElementById('refund-form').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      document.getElementById('success-id').textContent = '#' + d.id;
+    } catch (e2) {
+      errEl.textContent = '네트워크 오류: ' + (e2.message || e2);
+    } finally {
+      btn.disabled = false; btn.textContent = '환불 신청 제출';
+    }
+  }
+
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d || !d.authenticated) {
+        document.getElementById('refund-form').style.display = 'none';
+        document.getElementById('login-required').style.display = 'block';
+      }
+    })
+    .catch(function(){});
+</script>
+
+<footer>
+  <p>&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a></p>
+  <p style="font-size:11px">상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a></p>
+</footer>
+</body>
+</html>

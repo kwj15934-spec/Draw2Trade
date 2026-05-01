@@ -92,7 +92,6 @@
     .page-desc{font-size:15px;color:var(--fg2);margin-bottom:48px;line-height:1.7}
     .page-desc strong{color:var(--teal);font-weight:600}
 
-    /* 플랜 그리드 */
     .plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-bottom:60px}
 
     .plan-card{
@@ -130,7 +129,6 @@
     .plan-note{font-size:12px;color:var(--teal);margin-bottom:8px;letter-spacing:0.02em}
     .plan-note b{color:#fff;font-weight:600}
 
-    /* 월/연 토글 */
     .billing-toggle{
       display:inline-flex;
       background:rgba(0,0,0,0.3);
@@ -186,7 +184,6 @@
     }
     .btn-pro:hover{transform:translateY(-1px);filter:brightness(1.05)}
 
-    /* FAQ */
     .faq-section{margin-top:64px}
     .faq-section h2{font-size:24px;font-weight:600;letter-spacing:-0.015em;color:#fff;margin-bottom:22px}
     .faq-item{border-bottom:1px solid var(--border1);padding:20px 0}
@@ -211,7 +208,7 @@
       .page-wrap{padding:100px 16px 50px}
     }
 
-    /* Pro 모달 */
+    /* ── Pro 모달 ─────────────────────────────────────────────────── */
     .pro-modal-bg{
       display:none;position:fixed;inset:0;z-index:1000;
       background:rgba(6,7,10,0.78);
@@ -221,10 +218,10 @@
     .pro-modal-bg.show{display:flex}
     .pro-modal-box{
       position:relative;overflow:auto;
-      background:rgba(15,18,25,0.85);
+      background:rgba(15,18,25,0.92);
       backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
       border-radius:18px;padding:32px 32px 28px;
-      width:100%;max-width:480px;max-height:90vh;
+      width:100%;max-width:520px;max-height:92vh;
       box-shadow:0 30px 80px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1);
     }
     .pro-modal-box::before{
@@ -243,20 +240,11 @@
     .pro-modal-close:hover{background:rgba(91,255,198,0.15);color:var(--teal)}
     .pro-modal-box > div{position:relative;z-index:1}
     .pro-modal-title{font-size:20px;font-weight:600;letter-spacing:-0.015em;color:#fff;margin-bottom:6px}
-    .pro-modal-sub{font-size:12px;color:var(--fg2);margin-bottom:20px}
-    .pay-info{
-      background:rgba(255,255,255,0.03);border:1px solid var(--border1);
-      border-radius:12px;padding:16px 18px;margin-bottom:16px;
-    }
-    .pay-info table{width:100%;border-collapse:collapse;font-size:13px}
-    .pay-info td{padding:6px 0}
-    .pay-info td:first-child{color:var(--fg2);width:78px;font-size:12px;letter-spacing:0.02em}
-    .pay-info td:last-child{color:var(--fg0);font-weight:500}
-    .pay-info .acct{color:var(--teal);font-weight:600;cursor:pointer;font-size:14px;font-family:var(--mono)}
-    .pay-info .amt{color:var(--teal);font-weight:600;font-size:18px;font-family:var(--mono)}
-    .pay-info .qr-wrap{text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border1)}
-    .pay-info .qr-wrap img{width:120px;height:120px;border-radius:8px;border:1px solid var(--border2)}
-    .pay-info .qr-cap{font-size:10px;color:var(--fg3);margin-top:6px;letter-spacing:0.04em}
+    .pro-modal-sub{font-size:12px;color:var(--fg2);margin-bottom:18px}
+
+    .form-group{margin-bottom:14px}
+    .form-label{display:block;font-size:11px;color:var(--fg2);letter-spacing:0.04em;margin-bottom:6px;font-weight:600}
+    .form-label .req{color:#ff7a7a;margin-left:3px}
     .pay-input{
       width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border2);
       border-radius:8px;padding:11px 12px;color:var(--fg0);font-size:13px;outline:none;
@@ -264,6 +252,51 @@
       transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
     }
     .pay-input:focus{border-color:var(--tealDim);background:rgba(91,255,198,0.04);box-shadow:0 0 0 3px rgba(91,255,198,0.08)}
+    .pay-hint{font-size:11px;color:var(--fg3);margin-top:5px;line-height:1.55}
+
+    .bank-info{
+      background:rgba(255,255,255,0.03);border:1px solid var(--border1);
+      border-radius:12px;padding:16px 18px;margin-bottom:14px;
+    }
+    .bank-info table{width:100%;border-collapse:collapse;font-size:13px}
+    .bank-info td{padding:6px 0;vertical-align:middle}
+    .bank-info td:first-child{color:var(--fg2);width:80px;font-size:11.5px;letter-spacing:0.02em}
+    .bank-info td:last-child{color:var(--fg0);font-weight:500}
+    .bank-info .acct-num{color:var(--teal);font-weight:600;font-size:14px;font-family:var(--mono);cursor:pointer}
+    .bank-info .acct-num:hover{text-decoration:underline}
+    .bank-info .amt-pay{color:var(--teal);font-weight:700;font-size:18px;font-family:var(--mono)}
+    .bank-info .amt-pay .unique-tail{color:#FF9F5B;font-weight:700}
+
+    .copy-btn{
+      display:inline-flex;align-items:center;gap:4px;
+      background:rgba(91,255,198,0.08);color:var(--teal);
+      border:1px solid rgba(91,255,198,0.25);border-radius:6px;
+      padding:3px 10px;font-size:10.5px;font-weight:600;
+      cursor:pointer;font-family:var(--font);margin-left:8px;
+      transition:all .15s ease;
+    }
+    .copy-btn:hover{background:rgba(91,255,198,0.18)}
+    .copy-btn.copied{background:rgba(91,255,198,0.3);color:#001810}
+
+    .qr-wrap{
+      text-align:center;margin-top:14px;padding-top:14px;
+      border-top:1px solid var(--border1);
+    }
+    .qr-wrap img{
+      width:140px;height:140px;border-radius:10px;
+      border:2px solid rgba(91,255,198,0.25);
+      background:#fff;padding:6px;
+    }
+    .qr-cap{font-size:10.5px;color:var(--fg3);margin-top:8px;letter-spacing:0.04em}
+
+    .step-guide{
+      background:rgba(91,255,198,0.05);border:1px solid rgba(91,255,198,0.18);
+      border-radius:10px;padding:13px 16px;margin-bottom:16px;font-size:12px;color:var(--fg1);line-height:1.85;
+    }
+    .step-guide ol{padding-left:18px;margin:6px 0 0}
+    .step-guide ol li{margin-bottom:4px}
+    .step-guide ol li b{color:var(--teal)}
+
     .pay-submit{
       width:100%;padding:13px;border:none;border-radius:10px;
       background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;
@@ -273,6 +306,35 @@
     }
     .pay-submit:hover{transform:translateY(-1px);filter:brightness(1.05)}
     .pay-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .pay-secondary{
+      width:100%;padding:11px;background:none;
+      border:1px solid var(--border2);border-radius:10px;
+      color:var(--fg2);font-size:12.5px;cursor:pointer;font-family:var(--font);
+      margin-top:10px;transition:all .15s ease;
+    }
+    .pay-secondary:hover{border-color:var(--tealDim);color:var(--teal)}
+
+    /* 입금 대기 상태 박스 */
+    .waiting-box{
+      background:rgba(255,159,91,0.05);border:1px solid rgba(255,159,91,0.25);
+      border-radius:10px;padding:14px 16px;margin-bottom:14px;
+    }
+    .waiting-title{font-size:13px;font-weight:700;color:#FFD8B5;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .waiting-spinner{
+      display:inline-block;width:11px;height:11px;
+      border:2px solid rgba(255,159,91,0.3);border-top-color:#FF9F5B;
+      border-radius:50%;animation:spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    .waiting-meta{font-size:11.5px;color:var(--fg2);line-height:1.7}
+    .waiting-meta b{color:#fff;font-weight:600}
+
+    .refund-link{
+      display:block;text-align:center;font-size:11.5px;color:var(--fg3);
+      margin-top:14px;text-decoration:none;letter-spacing:0.02em;
+    }
+    .refund-link:hover{color:var(--fg1)}
   </style>
 </head>
 <body>
@@ -290,8 +352,8 @@
 
 <div class="page-wrap">
   <div class="page-label">PRICING · 요금제</div>
-  <h1 class="page-title">이벤트 특가로<br><em>Pro</em>를 시작하세요</h1>
-  <p class="page-desc">월 <strong>$6</strong> · 연 <strong>$60</strong> (17% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 표시 가격에 결제 세금이 별도로 부과됩니다.</p>
+  <h1 class="page-title">합리적인 가격으로<br><em>Pro</em>를 시작하세요</h1>
+  <p class="page-desc">월 <strong>₩8,900</strong> · 연 <strong>₩85,000</strong> (20% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 결제는 <strong>계좌이체</strong>로 진행되며 자동으로 Pro가 활성화됩니다.</p>
 
   <div class="plans-grid">
 
@@ -310,15 +372,15 @@
     </div>
 
     <div class="plan-card featured">
-      <div class="plan-event-badge">🎉 연간 결제 시 2개월 무료</div>
+      <div class="plan-event-badge">🎉 연간 결제 시 20% 할인</div>
       <div class="plan-name">Pro</div>
 
       <div class="billing-toggle" role="tablist" aria-label="결제 주기 선택">
         <button type="button" class="bt-opt active" data-period="monthly" role="tab" aria-selected="true" onclick="selectBillingPeriod('monthly')">월간</button>
-        <button type="button" class="bt-opt" data-period="annual" role="tab" aria-selected="false" onclick="selectBillingPeriod('annual')">연간 <span class="bt-save">−17%</span></button>
+        <button type="button" class="bt-opt" data-period="annual" role="tab" aria-selected="false" onclick="selectBillingPeriod('annual')">연간 <span class="bt-save">−20%</span></button>
       </div>
 
-      <div class="plan-price" id="plan-price-display">$6 <span>/ 월</span></div>
+      <div class="plan-price" id="plan-price-display">₩8,900 <span>/ 월</span></div>
       <div class="plan-note" id="plan-price-sub">월 단위 결제 · 언제든 해지 가능</div>
       <div class="plan-desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
       <ul class="plan-features">
@@ -340,23 +402,33 @@
     <h2>자주 묻는 질문</h2>
 
     <div class="faq-item">
+      <div class="faq-q">결제는 어떻게 진행되나요?</div>
+      <div class="faq-a">신청 시 발급되는 <b>고유 금액</b>(예: 8,923원)을 안내된 계좌로 입금하시면 자동으로 Pro 가 활성화됩니다. 입금 확인은 평균 <b>1~3분 이내</b> 처리되며, 신청 후 48시간 내 미입금 시 신청은 자동 취소됩니다.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">왜 정확히 8,900원이 아니라 8,901원~8,999원 같은 금액인가요?</div>
+      <div class="faq-a">동시에 여러 분이 결제하실 때 <b>입금자명만으로는 구분이 어려워</b>, 신청 시점에 1~99원 차이의 고유 금액을 발급해 100% 자동 매칭이 되도록 했습니다. 1~99원은 Pro 활성화 즉시 무료 사용 기간으로 보전됩니다.</div>
+    </div>
+
+    <div class="faq-item">
       <div class="faq-q">결제 후 언제 Pro가 되나요?</div>
-      <div class="faq-a">PayPal 결제가 승인되면 즉시 Pro 플랜이 활성화됩니다.</div>
+      <div class="faq-a">금융결제원 오픈뱅킹 API 로 자동 매칭됩니다. 입금 후 평균 1~3분 내 Pro 가 활성화되고, 신청 페이지에서 실시간 상태가 표시됩니다.</div>
     </div>
 
     <div class="faq-item">
       <div class="faq-q">7일 무료체험은 어떻게 되나요?</div>
-      <div class="faq-a">신규 가입 시 자동으로 7일 동안 Pro 기능을 무료로 이용할 수 있습니다. 별도의 결제 등록 없이 자동으로 만료되며, 계속 이용을 원하시면 Pro를 구독해주세요.</div>
+      <div class="faq-a">신규 가입 시 자동으로 7일 동안 Pro 기능을 무료로 이용할 수 있습니다. 별도의 결제 등록 없이 자동으로 만료되며, 계속 이용을 원하시면 Pro 를 결제해주세요.</div>
     </div>
 
     <div class="faq-item">
       <div class="faq-q">구독 기간 / 자동 갱신은 어떻게 되나요?</div>
-      <div class="faq-a">월간은 매달, 연간은 매년 자동 갱신됩니다. PayPal 또는 본 사이트의 계정 페이지에서 언제든 해지할 수 있으며, 해지 후에도 다음 갱신일까지 Pro 기능을 그대로 이용할 수 있습니다.</div>
+      <div class="faq-a">월간은 <b>30일</b>, 연간은 <b>365일</b> 동안 Pro 가 유지됩니다. 자동 갱신은 없으며, 만료 전 다시 결제하시면 기간이 연장됩니다. 갱신 알림 메일을 만료 3일 전 발송해드립니다.</div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">세금은 어떻게 부과되나요?</div>
-      <div class="faq-a">표시 가격($6 / $60)에 결제 세금이 별도로 부과됩니다. PayPal 결제 화면에서 최종 결제액이 안내됩니다.</div>
+      <div class="faq-q">세금계산서 발급이 가능한가요?</div>
+      <div class="faq-a">사업자등록번호와 함께 <a href="/refund" style="color:var(--teal)">문의</a>로 요청 주시면 발급해드립니다. 표시 가격은 부가세 포함입니다.</div>
     </div>
 
     <div class="faq-item">
@@ -365,48 +437,98 @@
         결제 후 7일 이내이며 아래 조건을 모두 충족하는 경우 전액 환불이 가능합니다.<br><br>
         · Pro 기능 사용 이력이 없는 경우<br>
         · 결제 후 7일 이내 요청한 경우<br><br>
-        환불 요청은 문의하기를 통해 접수해 주세요.<br>
-        환불은 확인 후 영업일 기준 3일 이내에 PayPal 또는 카드사 환불 처리됩니다.
+        환불은 <a href="/refund" style="color:var(--teal)">환불 신청 페이지</a>에서 접수해 주세요. 확인 후 영업일 기준 3일 이내 처리됩니다.
       </div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">결제 수단은 무엇이 지원되나요?</div>
-      <div class="faq-a">신용/체크카드(Visa, MasterCard, Amex 등) 결제를 지원합니다. 결제 처리는 PayPal의 보안 결제 시스템을 통해 안전하게 이루어집니다.</div>
+      <div class="faq-q">신용카드 결제도 가능한가요?</div>
+      <div class="faq-a">현재는 <b>국내 계좌이체</b>만 지원합니다. 카드 결제는 추후 지원 예정입니다.</div>
     </div>
   </div>
 </div>
 
-<!-- ── Pro 신청 모달 ── -->
+<!-- ── Pro 신청 모달 ─────────────────────────────────────────────────────── -->
 <div id="pro-modal" class="pro-modal-bg">
   <div class="pro-modal-box">
     <button onclick="closeProModal()" class="pro-modal-close">✕</button>
 
+    <!-- step1: 입금자명 입력 -->
     <div id="pro-step1">
-      <div class="pro-modal-title">Pro 구독 결제</div>
-      <div class="pro-modal-sub">신용/체크카드로 안전하게 결제하세요.</div>
+      <div class="pro-modal-title">Pro 결제 신청</div>
+      <div class="pro-modal-sub">입금자명을 입력하시면 입금받을 계좌와 정확한 금액을 안내해드립니다.</div>
 
-      <div class="pay-info" style="display:block;padding:18px 20px;">
-        <table>
-          <tr><td>플랜</td><td id="pp-modal-plan">월간 — Draw2Trade Pro</td></tr>
-          <tr><td>가격</td><td id="pp-modal-base">$6.00 / 월</td></tr>
-          <tr><td>결제 세금</td><td id="pp-modal-tax">+$0.60</td></tr>
-          <tr><td><strong>최종 결제액</strong></td><td class="amt" id="pp-modal-total">$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span></td></tr>
-        </table>
+      <div class="form-group">
+        <label class="form-label">결제 주기 <span class="req">*</span></label>
+        <div class="billing-toggle" style="display:flex;width:100%;margin-bottom:0;">
+          <button type="button" class="bt-opt active" data-period="monthly" onclick="selectModalPeriod('monthly')" style="flex:1;justify-content:center;">월간 ₩8,900</button>
+          <button type="button" class="bt-opt" data-period="annual" onclick="selectModalPeriod('annual')" style="flex:1;justify-content:center;">연간 ₩85,000 <span class="bt-save">−20%</span></button>
+        </div>
       </div>
 
-      <div id="paypal-button-container" style="margin-top:12px;min-height:50px;"></div>
-      <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;">결제 버튼 불러오는 중...</div>
-      <div id="pro-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
+      <div class="form-group">
+        <label class="form-label" for="depositor-name">입금자명 <span class="req">*</span></label>
+        <input id="depositor-name" type="text" class="pay-input" placeholder="예: 홍길동" maxlength="16" autocomplete="off">
+        <div class="pay-hint">계좌이체 시 입금자명 칸에 정확히 동일하게 입력해주세요. 자동 매칭에 사용됩니다.</div>
+      </div>
+
+      <button id="btn-create-request" onclick="createPaymentRequest()" class="pay-submit">계좌 정보 받기</button>
+      <div id="step1-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
     </div>
 
-    <div id="pro-step2" style="display:none;text-align:center;">
+    <!-- step2: 입금 대기 -->
+    <div id="pro-step2" style="display:none;">
+      <div class="pro-modal-title">입금을 진행해주세요</div>
+      <div class="pro-modal-sub">아래 계좌로 <b style="color:var(--teal)">정확한 금액</b>을 입금하시면 자동으로 Pro 가 활성화됩니다.</div>
+
+      <div class="bank-info">
+        <table>
+          <tr><td>은행</td><td><span id="bi-bank">우리은행</span></td></tr>
+          <tr><td>계좌번호</td><td>
+            <span id="bi-acct" class="acct-num" onclick="copyText('bi-acct', this)">1005-004-889621</span>
+            <button class="copy-btn" onclick="copyText('bi-acct', this)">복사</button>
+          </td></tr>
+          <tr><td>예금주</td><td><span id="bi-holder">김원준(포르메타)</span></td></tr>
+          <tr><td>입금자명</td><td><b id="bi-depositor">—</b></td></tr>
+          <tr><td>입금 금액</td><td>
+            <span id="bi-amount" class="amt-pay">—</span>
+            <button class="copy-btn" onclick="copyText('bi-amount-raw', this)">복사</button>
+            <input type="hidden" id="bi-amount-raw" value="">
+          </td></tr>
+        </table>
+
+        <div class="qr-wrap">
+          <img src="/static/img/payment-qr.png" alt="결제 QR" onerror="this.style.display='none';this.nextElementSibling.textContent='QR 이미지를 찾을 수 없어요'">
+          <div class="qr-cap">QR로 빠르게 송금</div>
+        </div>
+      </div>
+
+      <div class="step-guide" id="step-guide">
+        <!-- 동적으로 채워짐 (자동/수동 모드에 따라) -->
+      </div>
+
+      <div class="waiting-box" id="waiting-box">
+        <div class="waiting-title"><span class="waiting-spinner"></span> <span id="waiting-title-text">입금 확인 대기 중</span></div>
+        <div class="waiting-meta" id="waiting-meta-text">
+          신청 ID <b id="bi-request-id">—</b> · 자동 만료까지 <b id="bi-expire">48시간</b><br>
+          이 화면을 닫으셔도 입금 확인 시 자동 처리됩니다.
+        </div>
+      </div>
+
+      <button onclick="closeProModal()" class="pay-secondary">닫기</button>
+      <button onclick="cancelRequest()" class="pay-secondary" style="margin-top:6px;color:#ff9090;border-color:rgba(255,144,144,0.3);">신청 취소</button>
+      <a href="/refund" class="refund-link">환불 신청 →</a>
+    </div>
+
+    <!-- step3: 입금 완료 -->
+    <div id="pro-step3" style="display:none;text-align:center;">
       <div style="font-size:48px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">✅</div>
-      <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">구독 완료</div>
-      <div style="font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:22px;">결제가 정상 처리되어<br>Pro 플랜이 즉시 활성화되었습니다.</div>
+      <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">결제 완료</div>
+      <div style="font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:22px;">입금이 확인되어<br>Pro 플랜이 활성화되었습니다.</div>
       <button onclick="closeProModal()" class="pay-submit">확인</button>
     </div>
 
+    <!-- step-login: 비로그인 안내 -->
     <div id="pro-step-login" style="display:none;text-align:center;">
       <div style="font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">🔐</div>
       <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:10px;letter-spacing:-0.01em;">로그인이 필요합니다</div>
@@ -418,13 +540,14 @@
 
 <script>
   var _billingPeriod = 'monthly';
-  var _paypalConfig = null;
-  var _paypalSDKLoaded = false;
-  var _paypalButtonInstance = null;
+  var _bankInfo = null;
+  var _activeRequest = null;
+  var _statusPoll = null;
 
+  /** 외부(카드) 토글 */
   function selectBillingPeriod(period) {
     _billingPeriod = period === 'annual' ? 'annual' : 'monthly';
-    var opts = document.querySelectorAll('.billing-toggle .bt-opt');
+    var opts = document.querySelectorAll('.plan-card .billing-toggle .bt-opt');
     for (var i = 0; i < opts.length; i++) {
       var active = opts[i].getAttribute('data-period') === _billingPeriod;
       opts[i].classList.toggle('active', active);
@@ -433,157 +556,236 @@
     var priceEl = document.getElementById('plan-price-display');
     var subEl   = document.getElementById('plan-price-sub');
     if (_billingPeriod === 'annual') {
-      if (priceEl) priceEl.innerHTML = '$60 <span>/ 년</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>$5</b> · 결제 세금 별도';
+      if (priceEl) priceEl.innerHTML = '₩85,000 <span>/ 년</span>';
+      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>₩7,083</b> · 20% 할인 적용';
     } else {
-      if (priceEl) priceEl.innerHTML = '$6 <span>/ 월</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 결제 · 결제 세금 별도 · 언제든 해지';
+      if (priceEl) priceEl.innerHTML = '₩8,900 <span>/ 월</span>';
+      if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
     }
   }
 
-  function _updateModalAmount() {
-    var planEl  = document.getElementById('pp-modal-plan');
-    var baseEl  = document.getElementById('pp-modal-base');
-    var taxEl   = document.getElementById('pp-modal-tax');
-    var totalEl = document.getElementById('pp-modal-total');
-    if (_billingPeriod === 'annual') {
-      if (planEl)  planEl.textContent  = '연간 — Draw2Trade Pro';
-      if (baseEl)  baseEl.textContent  = '$60.00 / 년';
-      if (taxEl)   taxEl.textContent   = '+$6.00';
-      if (totalEl) totalEl.innerHTML   = '$66.00 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 년</span>';
-    } else {
-      if (planEl)  planEl.textContent  = '월간 — Draw2Trade Pro';
-      if (baseEl)  baseEl.textContent  = '$6.00 / 월';
-      if (taxEl)   taxEl.textContent   = '+$0.60';
-      if (totalEl) totalEl.innerHTML   = '$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ 월</span>';
+  /** 모달 내 토글 */
+  function selectModalPeriod(period) {
+    _billingPeriod = period === 'annual' ? 'annual' : 'monthly';
+    var opts = document.querySelectorAll('#pro-step1 .billing-toggle .bt-opt');
+    for (var i = 0; i < opts.length; i++) {
+      opts[i].classList.toggle('active', opts[i].getAttribute('data-period') === _billingPeriod);
     }
+    selectBillingPeriod(_billingPeriod);  // 카드도 동기화
   }
 
-  function _loadPayPalSDK() {
-    if (_paypalSDKLoaded) return Promise.resolve();
-    return fetch('/api/payment/config')
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (cfg) {
-        if (!cfg || !cfg.configured || !cfg.client_id) {
-          throw new Error('결제 시스템 설정 미완료 — 관리자에게 문의해주세요.');
+  function copyText(elId, btn) {
+    var el = document.getElementById(elId);
+    var v = el.value !== undefined ? el.value : (el.textContent || '');
+    v = String(v).replace(/[^0-9]/g, elId === 'bi-acct' ? '' : '');
+    if (!v) v = (el.textContent || '').trim();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(v).then(function() {
+        if (btn) {
+          var orig = btn.textContent;
+          btn.textContent = '복사됨';
+          btn.classList.add('copied');
+          setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1200);
         }
-        _paypalConfig = cfg;
-        return new Promise(function (resolve, reject) {
-          var s = document.createElement('script');
-          s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(cfg.client_id)
-                + '&vault=true&intent=subscription&currency=USD&enable-funding=card';
-          s.setAttribute('data-sdk-integration-source', 'button-factory');
-          s.onload = function () { _paypalSDKLoaded = true; resolve(); };
-          s.onerror = function () { reject(new Error('PayPal SDK 로드 실패')); };
-          document.head.appendChild(s);
-        });
       });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = v; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(_){}
+      document.body.removeChild(ta);
+    }
   }
 
-  function _renderPayPalButton() {
-    var container = document.getElementById('paypal-button-container');
-    var loading   = document.getElementById('pp-loading');
-    var errEl     = document.getElementById('pro-error');
-    container.innerHTML = '';
-    errEl.textContent = '';
-    if (loading) loading.style.display = 'block';
-
-    if (!_paypalConfig) return;
-    var planId = (_billingPeriod === 'annual')
-      ? _paypalConfig.plan_annual
-      : _paypalConfig.plan_monthly;
-    if (!planId) {
-      errEl.textContent = '플랜이 아직 설정되지 않았습니다. 관리자에게 문의해주세요.';
-      if (loading) loading.style.display = 'none';
-      return;
-    }
-
-    var period = _billingPeriod;
-    _paypalButtonInstance = window.paypal.Buttons({
-      fundingSource: window.paypal.FUNDING.CARD,
-      style: { shape: 'pill', color: 'black', layout: 'vertical' },
-      createSubscription: function (_data, actions) {
-        return actions.subscription.create({ plan_id: planId });
-      },
-      onApprove: function (data) {
-        return fetch('/api/payment/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ subscription_id: data.subscriptionID, billing_period: period }),
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-          .then(function (res) {
-            if (!res.ok) throw new Error((res.data && res.data.detail) || '서버 검증 실패');
-            document.getElementById('pro-step1').style.display = 'none';
-            document.getElementById('pro-step2').style.display = 'block';
-          })
-          .catch(function (e) {
-            errEl.textContent = '결제는 완료되었으나 서버 처리 중 오류가 발생했습니다. 문의해주세요. (' + (e.message || e) + ')';
-          });
-      },
-      onError: function (err) {
-        errEl.textContent = '결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.';
-        console.error('PayPal error:', err);
-      },
-      onCancel: function () {
-        errEl.textContent = '결제가 취소되었습니다.';
-      },
+  function _showStep(id) {
+    ['pro-step1','pro-step2','pro-step3','pro-step-login'].forEach(function(s){
+      var el = document.getElementById(s);
+      if (el) el.style.display = (s === id) ? 'block' : 'none';
     });
-    _paypalButtonInstance.render('#paypal-button-container').then(function () {
-      if (loading) loading.style.display = 'none';
-    });
+  }
+
+  async function _fetchBankInfo() {
+    if (_bankInfo) return _bankInfo;
+    var r = await fetch('/api/bank-transfer/info');
+    if (!r.ok) throw new Error('계좌 정보 로드 실패');
+    _bankInfo = await r.json();
+    return _bankInfo;
+  }
+
+  async function _checkLogin() {
+    try {
+      var r = await fetch('/api/auth/me');
+      var d = await r.json();
+      return !!(d && d.authenticated);
+    } catch (e) { return false; }
   }
 
   async function openProModal() {
-    document.getElementById('pro-modal').classList.add('show');
-    var errEl = document.getElementById('pro-error');
-    errEl.textContent = '';
+    var modal = document.getElementById('pro-modal');
+    modal.classList.add('show');
 
-    var loggedIn = false;
+    var loggedIn = await _checkLogin();
+    if (!loggedIn) { _showStep('pro-step-login'); return; }
+
+    // 기존 활성 신청 있으면 step2 로 점프
     try {
-      var res = await fetch('/api/auth/me');
-      var data = await res.json();
-      loggedIn = data.authenticated;
+      var r = await fetch('/api/bank-transfer/status');
+      if (r.ok) {
+        var d = await r.json();
+        if (d.has_request && d.request) {
+          if (d.request.status === 'pending') {
+            _activeRequest = d.request;
+            await _renderStep2();
+            _startStatusPolling();
+            return;
+          } else if (d.request.status === 'matched') {
+            _showStep('pro-step3');
+            return;
+          }
+        }
+      }
     } catch (e) {}
-    document.getElementById('pro-step1').style.display = loggedIn ? 'block' : 'none';
-    document.getElementById('pro-step2').style.display = 'none';
-    document.getElementById('pro-step-login').style.display = loggedIn ? 'none' : 'block';
-    if (!loggedIn) return;
 
-    _updateModalAmount();
-    try {
-      await _loadPayPalSDK();
-      _renderPayPalButton();
-    } catch (e) {
-      var loading = document.getElementById('pp-loading');
-      if (loading) loading.style.display = 'none';
-      errEl.textContent = e.message || 'PayPal 로드 실패';
-    }
+    // 신규 신청
+    _showStep('pro-step1');
+    var nameEl = document.getElementById('depositor-name');
+    if (nameEl) nameEl.value = '';
+    document.getElementById('step1-error').textContent = '';
   }
 
   function closeProModal() {
     document.getElementById('pro-modal').classList.remove('show');
+    _stopStatusPolling();
+  }
+
+  async function createPaymentRequest() {
+    var btn = document.getElementById('btn-create-request');
+    var errEl = document.getElementById('step1-error');
+    var nameEl = document.getElementById('depositor-name');
+    var name = (nameEl.value || '').trim();
+    errEl.textContent = '';
+
+    if (!name) { errEl.textContent = '입금자명을 입력해주세요.'; nameEl.focus(); return; }
+    if (name.length > 16) { errEl.textContent = '입금자명은 16자 이내로 입력해주세요.'; return; }
+
+    btn.disabled = true; btn.textContent = '신청 중...';
+    try {
+      var r = await fetch('/api/bank-transfer/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ plan_type: _billingPeriod, depositor_name: name }),
+      });
+      var d = await r.json();
+      if (!r.ok) {
+        errEl.textContent = d.detail || '신청 실패';
+        return;
+      }
+      _activeRequest = d;
+      await _renderStep2();
+      _startStatusPolling();
+    } catch (e) {
+      errEl.textContent = '네트워크 오류: ' + (e.message || e);
+    } finally {
+      btn.disabled = false; btn.textContent = '계좌 정보 받기';
+    }
+  }
+
+  async function _renderStep2() {
+    var info = await _fetchBankInfo();
+    var req  = _activeRequest;
+
+    document.getElementById('bi-bank').textContent      = info.bank_name;
+    document.getElementById('bi-acct').textContent      = info.account_num;
+    document.getElementById('bi-holder').textContent    = info.holder;
+    document.getElementById('bi-depositor').textContent = req.depositor_name;
+
+    var base   = req.plan_type === 'annual' ? 85000 : 8900;
+    var unique = req.amount - base;
+    var unicStr = unique > 0 ? ('+' + unique) : '';
+    document.getElementById('bi-amount').innerHTML  =
+      '₩' + base.toLocaleString() + ' <span class="unique-tail">' + unicStr + '</span>';
+    document.getElementById('bi-amount-raw').value = String(req.amount);
+    document.getElementById('bi-request-id').textContent = '#' + req.id;
+
+    // ── 자동/수동 모드별 안내 문구 ─────────────────────────────────
+    var guideEl = document.getElementById('step-guide');
+    var titleEl = document.getElementById('waiting-title-text');
+    var metaEl  = document.getElementById('waiting-meta-text');
+
+    if (info.auto_match_enabled) {
+      // 자동 매칭 (오픈뱅킹 폴링)
+      guideEl.innerHTML =
+        '<b style="color:var(--teal)">안내</b>' +
+        '<ol>' +
+          '<li><b>입금자명</b>은 위에 표시된 그대로 입력</li>' +
+          '<li><b>입금 금액</b>은 표시된 정확한 금액 (1원이라도 다르면 매칭 실패)</li>' +
+          '<li>입금 완료 후 <b>1~3분</b> 내 자동으로 Pro 활성화</li>' +
+        '</ol>';
+      titleEl.textContent = '입금 확인 대기 중';
+      metaEl.innerHTML =
+        '신청 ID <b>#' + req.id + '</b> · 자동 만료까지 <b>48시간</b><br>' +
+        '이 화면을 닫으셔도 입금 확인 시 자동 처리됩니다.';
+    } else {
+      // 수동 처리 (관리자 확인)
+      guideEl.innerHTML =
+        '<b style="color:#FF9F5B">안내 — 현재 수동 처리 중</b>' +
+        '<ol>' +
+          '<li><b>입금자명</b>은 위에 표시된 그대로 입력 (관리자 확인용)</li>' +
+          '<li><b>입금 금액</b>은 표시된 정확한 금액으로 송금</li>' +
+          '<li>관리자 확인 후 <b>영업시간 내 1~12시간</b> 안에 Pro 활성화 (이메일 안내)</li>' +
+          '<li>급한 경우 <a href="mailto:kwj15934@formeta.kr" style="color:var(--teal);text-decoration:underline;">kwj15934@formeta.kr</a> 로 입금 영수증 발송</li>' +
+        '</ol>';
+      titleEl.textContent = '관리자 확인 대기 중 (수동 처리)';
+      metaEl.innerHTML =
+        '신청 ID <b>#' + req.id + '</b> · 자동 만료까지 <b>48시간</b><br>' +
+        '관리자가 입금 확인 후 Pro 활성화해드립니다. 화면 닫으셔도 됩니다.';
+    }
+
+    _showStep('pro-step2');
+  }
+
+  function _startStatusPolling() {
+    if (_statusPoll) return;
+    _statusPoll = setInterval(async function() {
+      try {
+        var r = await fetch('/api/bank-transfer/status');
+        if (!r.ok) return;
+        var d = await r.json();
+        if (d.has_request && d.request) {
+          if (d.request.status === 'matched') {
+            _stopStatusPolling();
+            _showStep('pro-step3');
+          } else if (d.request.status === 'expired' || d.request.status === 'cancelled') {
+            _stopStatusPolling();
+            _activeRequest = null;
+            _showStep('pro-step1');
+          }
+        }
+      } catch (e) {}
+    }, 8000);
+  }
+
+  function _stopStatusPolling() {
+    if (_statusPoll) { clearInterval(_statusPoll); _statusPoll = null; }
+  }
+
+  async function cancelRequest() {
+    if (!confirm('입금 대기 중인 신청을 취소할까요?')) return;
+    try {
+      var r = await fetch('/api/bank-transfer/cancel', { method: 'POST', credentials: 'same-origin' });
+      if (r.ok) {
+        _activeRequest = null;
+        _stopStatusPolling();
+        _showStep('pro-step1');
+      }
+    } catch (e) {}
   }
 
   document.getElementById('pro-modal').addEventListener('click', function(e) {
     if (e.target === this) closeProModal();
   });
 
-  // billing period 변경 시 모달이 열려있으면 버튼/금액 갱신
-  (function patchPeriodSelector() {
-    var orig = window.selectBillingPeriod;
-    window.selectBillingPeriod = function (p) {
-      orig(p);
-      var modal = document.getElementById('pro-modal');
-      if (modal && modal.classList.contains('show') && _paypalSDKLoaded) {
-        _updateModalAmount();
-        _renderPayPalButton();
-      }
-    };
-  })();
-
-  // 인증 분기: 로그인 시 [data-loggedin-href]를 /app으로 업그레이드
+  // 인증 분기
   fetch('/api/auth/me', { credentials: 'same-origin' })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (data) {
@@ -600,7 +802,7 @@
   <p>
     &copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp;
     <a href="/terms">이용약관</a> &nbsp;·&nbsp;
-    <a href="/terms#refund">환불 정책</a> &nbsp;·&nbsp;
+    <a href="/refund">환불 신청</a> &nbsp;·&nbsp;
     <a href="/privacy">개인정보 처리방침</a>
   </p>
   <p style="font-size:11px">본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.</p>

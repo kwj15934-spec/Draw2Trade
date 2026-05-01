@@ -611,9 +611,48 @@
       <div class="empty">로딩 중...</div>
     </div>
 
-    <h1 style="margin-top:48px;">Pro 신청 내역</h1>
+    <h1 style="margin-top:48px;">Pro 신청 내역 <span style="font-size:11px;font-weight:400;color:#666;">(레거시)</span></h1>
     <div class="sub">계좌이체 완료 후 신청한 목록입니다. 확인 후 플랜을 변경해주세요.</div>
     <div id="pro-request-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+      <div class="empty">로딩 중...</div>
+    </div>
+
+    <!-- ── 계좌이체 결제 신청 (자동 매칭) ──────────────────────────────────── -->
+    <h1 style="margin-top:48px;">결제 신청 내역 <span style="font-size:11px;font-weight:400;color:#5BFFC6;">(계좌이체 자동매칭)</span></h1>
+    <div class="sub">
+      입금 자동확인은 평균 1~3분 내 처리됩니다. 매칭 안 되거나 확실히 입금받은 경우 <b style="color:#5BFFC6">수동 매칭</b> 가능.
+      <span id="pay-counter" style="margin-left:10px;color:#888;font-size:11px;"></span>
+    </div>
+    <div style="margin-top:10px;padding:12px 14px;background:rgba(15,18,25,0.55);border:1px solid rgba(91,255,198,0.18);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button onclick="testOpenBanking()" id="btn-test-ob" style="background:rgba(91,255,198,0.12);border:1px solid rgba(91,255,198,0.4);color:#5BFFC6;font-size:12px;font-weight:600;padding:6px 14px;border-radius:5px;cursor:pointer;">🔌 오픈뱅킹 연결 테스트</button>
+      <span id="ob-test-result" style="font-size:11.5px;color:#8C95A8;flex:1;"></span>
+    </div>
+    <div id="ob-test-detail" style="display:none;margin-top:8px;background:#0d0f15;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:#C9CFDA;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
+    <div class="filters" style="margin-top:14px;">
+      <button class="filter-btn active" data-pay-filter="all" onclick="filterPayments('all',this)">전체</button>
+      <button class="filter-btn" data-pay-filter="pending" onclick="filterPayments('pending',this)">대기 중</button>
+      <button class="filter-btn" data-pay-filter="matched" onclick="filterPayments('matched',this)">매칭됨</button>
+      <button class="filter-btn" data-pay-filter="expired" onclick="filterPayments('expired',this)">만료</button>
+      <button class="filter-btn" data-pay-filter="cancelled" onclick="filterPayments('cancelled',this)">취소</button>
+    </div>
+    <div id="payment-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+      <div class="empty">로딩 중...</div>
+    </div>
+
+    <!-- ── 환불 신청 ─────────────────────────────────────────────────────────── -->
+    <h1 style="margin-top:48px;">환불 신청 내역</h1>
+    <div class="sub">
+      사용자가 <code style="background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-size:11px;">/refund</code> 에서 신청한 환불 요청입니다.
+      <span id="refund-counter" style="margin-left:10px;color:#888;font-size:11px;"></span>
+    </div>
+    <div class="filters" style="margin-top:14px;">
+      <button class="filter-btn active" data-rf-filter="all" onclick="filterRefunds('all',this)">전체</button>
+      <button class="filter-btn" data-rf-filter="pending" onclick="filterRefunds('pending',this)">대기 중</button>
+      <button class="filter-btn" data-rf-filter="approved" onclick="filterRefunds('approved',this)">승인됨</button>
+      <button class="filter-btn" data-rf-filter="refunded" onclick="filterRefunds('refunded',this)">환불 완료</button>
+      <button class="filter-btn" data-rf-filter="rejected" onclick="filterRefunds('rejected',this)">거절</button>
+    </div>
+    <div id="refund-list" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
       <div class="empty">로딩 중...</div>
     </div>
 
@@ -1280,6 +1319,286 @@
       } catch(e) { /* 무시 */ }
     }
     loadInquiries();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 결제 신청 (계좌이체) 관리
+    // ════════════════════════════════════════════════════════════════════════
+
+    var _paymentsCache = [];
+    var _paymentFilter = 'all';
+
+    async function loadPayments() {
+      try {
+        var res = await fetch('/api/admin/payments');
+        if (!res.ok) {
+          document.getElementById('payment-list').innerHTML =
+            '<div class="empty" style="color:#ef5350;">권한 없음 또는 로드 실패</div>';
+          return;
+        }
+        _paymentsCache = await res.json();
+        _renderPayments();
+      } catch(e) {
+        document.getElementById('payment-list').innerHTML =
+          '<div class="empty" style="color:#ef5350;">오류: ' + e.message + '</div>';
+      }
+    }
+
+    function _renderPayments() {
+      var list = _paymentsCache;
+      var filtered = (_paymentFilter === 'all')
+        ? list
+        : list.filter(function(p){ return p.status === _paymentFilter; });
+
+      var counts = list.reduce(function(acc, p){ acc[p.status] = (acc[p.status]||0)+1; return acc; }, {});
+      document.getElementById('pay-counter').textContent =
+        '총 ' + list.length + '건 · 대기 ' + (counts.pending||0) +
+        ' · 매칭 ' + (counts.matched||0) +
+        ' · 만료 ' + (counts.expired||0);
+
+      var el = document.getElementById('payment-list');
+      if (!filtered.length) { el.innerHTML = '<div class="empty">해당 상태의 신청이 없습니다.</div>'; return; }
+
+      el.innerHTML = filtered.map(function(p) {
+        var d = new Date(p.created_at * 1000);
+        var date = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0')
+                 + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        var statusMap = {
+          pending:   { color: '#FF9F5B', label: '⏳ 입금 대기' },
+          matched:   { color: '#5BFFC6', label: '✓ 매칭 완료' },
+          expired:   { color: '#666',    label: '⌛ 만료' },
+          cancelled: { color: '#666',    label: '✕ 취소' },
+        };
+        var s = statusMap[p.status] || { color:'#888', label:p.status };
+        var planLabel = (p.plan_type === 'annual') ? '연간' : '월간';
+        var amountStr = '₩' + p.amount.toLocaleString();
+
+        var matchedHtml = '';
+        if (p.status === 'matched' && p.matched_at) {
+          var md = new Date(p.matched_at * 1000);
+          var mdStr = md.getFullYear() + '.' + String(md.getMonth()+1).padStart(2,'0') + '.' + String(md.getDate()).padStart(2,'0')
+                    + ' ' + String(md.getHours()).padStart(2,'0') + ':' + String(md.getMinutes()).padStart(2,'0');
+          matchedHtml = '<div style="font-size:11px;color:#5BFFC6;margin-top:4px;">' +
+            '✓ ' + mdStr + (p.tx_print_content ? ' · ' + p.tx_print_content.replace(/</g,'&lt;') : '') +
+            '</div>';
+        }
+
+        var actions = '';
+        if (p.status === 'pending') {
+          actions =
+            '<button onclick="adminMatchPayment(' + p.id + ')" style="background:#5BFFC6;border:none;border-radius:5px;color:#06070A;font-size:12px;font-weight:700;padding:5px 14px;cursor:pointer;">→ 수동 매칭 (Pro 활성화)</button>' +
+            '<button onclick="adminCancelPayment(' + p.id + ')" style="background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:5px;color:#8C95A8;font-size:12px;padding:5px 14px;cursor:pointer;">취소 처리</button>';
+        }
+
+        return '<div class="inquiry-card" style="border-left:3px solid ' + s.color + ';">' +
+          '<div class="inquiry-header">' +
+            '<div>' +
+              '<div class="inquiry-name">' + (p.name || '(이름 없음)') + ' · <span style="color:#5BFFC6">' + p.depositor_name.replace(/</g,'&lt;') + '</span></div>' +
+              '<div class="inquiry-email">' + (p.email || '—') + '</div>' +
+              '<div style="font-size:11px;color:#555;margin-top:2px;">uid: ' + p.uid + ' · #' + p.id + '</div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+              '<div class="inquiry-date">' + date + '</div>' +
+              '<span style="font-size:11px;font-weight:600;color:' + s.color + ';">' + s.label + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12.5px;">' +
+            '<span style="color:#8C95A8;">플랜:</span> <b style="color:#fff;">' + planLabel + '</b>' +
+            '<span style="color:#8C95A8;margin-left:8px;">금액:</span> <b style="color:#FF9F5B;font-family:monospace;">' + amountStr + '</b>' +
+          '</div>' +
+          matchedHtml +
+          (actions ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' + actions + '</div>' : '') +
+        '</div>';
+      }).join('');
+    }
+
+    window.filterPayments = function(filter, btn) {
+      _paymentFilter = filter;
+      document.querySelectorAll('[data-pay-filter]').forEach(function(b){ b.classList.toggle('active', b.dataset.payFilter === filter); });
+      _renderPayments();
+    };
+
+    window.adminMatchPayment = async function(reqId) {
+      if (!confirm('이 신청을 수동으로 매칭하고 사용자를 Pro로 활성화할까요?')) return;
+      try {
+        var memo = prompt('메모 (선택)', '관리자 수동 매칭') || 'manual';
+        var res = await fetch('/api/admin/payments/' + reqId + '/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memo: memo }),
+        });
+        if (!res.ok) {
+          var d = await res.json().catch(function(){ return {}; });
+          alert('실패: ' + (d.detail || res.status));
+          return;
+        }
+        await loadPayments();
+        await loadUsers();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    window.adminCancelPayment = async function(reqId) {
+      if (!confirm('이 신청을 취소 처리할까요?')) return;
+      try {
+        var res = await fetch('/api/admin/payments/' + reqId + '/cancel', { method: 'POST' });
+        if (!res.ok) {
+          var d = await res.json().catch(function(){ return {}; });
+          alert('실패: ' + (d.detail || res.status));
+          return;
+        }
+        await loadPayments();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    loadPayments();
+    // 30초마다 자동 새로고침 (자동 매칭이 일어나면 반영)
+    setInterval(loadPayments, 30000);
+
+    // 오픈뱅킹 연결 테스트
+    window.testOpenBanking = async function() {
+      var btn = document.getElementById('btn-test-ob');
+      var resEl = document.getElementById('ob-test-result');
+      var detailEl = document.getElementById('ob-test-detail');
+      btn.disabled = true; btn.textContent = '테스트 중...';
+      resEl.textContent = '';
+      detailEl.style.display = 'none';
+      try {
+        var res = await fetch('/api/admin/openbanking/test');
+        if (!res.ok) {
+          resEl.innerHTML = '<span style="color:#ef5350;">권한 없음 또는 ' + res.status + '</span>';
+          return;
+        }
+        var d = await res.json();
+        var icon = d.ok ? '✅' : '⚠️';
+        var summary = icon + ' ';
+        summary += 'mode=' + (d.mode||'?') + ' · ';
+        summary += 'token=' + (d.token_ok ? '✓' : '✗') + ' · ';
+        summary += 'balance=' + (d.balance_ok ? '✓' : '✗') + ' · ';
+        summary += 'tx=' + (d.tx_ok ? d.tx_count + '건' : '✗');
+        resEl.innerHTML = summary;
+        detailEl.textContent = JSON.stringify(d, null, 2);
+        detailEl.style.display = 'block';
+      } catch(e) {
+        resEl.innerHTML = '<span style="color:#ef5350;">오류: ' + e.message + '</span>';
+      } finally {
+        btn.disabled = false; btn.textContent = '🔌 오픈뱅킹 연결 테스트';
+      }
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 환불 신청 관리
+    // ════════════════════════════════════════════════════════════════════════
+
+    var _refundsCache = [];
+    var _refundFilter = 'all';
+
+    async function loadRefunds() {
+      try {
+        var res = await fetch('/api/admin/refunds');
+        if (!res.ok) {
+          document.getElementById('refund-list').innerHTML =
+            '<div class="empty" style="color:#ef5350;">권한 없음 또는 로드 실패</div>';
+          return;
+        }
+        _refundsCache = await res.json();
+        _renderRefunds();
+      } catch(e) {
+        document.getElementById('refund-list').innerHTML =
+          '<div class="empty" style="color:#ef5350;">오류: ' + e.message + '</div>';
+      }
+    }
+
+    function _renderRefunds() {
+      var list = _refundsCache;
+      var filtered = (_refundFilter === 'all')
+        ? list
+        : list.filter(function(r){ return r.status === _refundFilter; });
+
+      var counts = list.reduce(function(acc, r){ acc[r.status] = (acc[r.status]||0)+1; return acc; }, {});
+      document.getElementById('refund-counter').textContent =
+        '총 ' + list.length + '건 · 대기 ' + (counts.pending||0) +
+        ' · 승인 ' + (counts.approved||0) +
+        ' · 환불완료 ' + (counts.refunded||0);
+
+      var el = document.getElementById('refund-list');
+      if (!filtered.length) { el.innerHTML = '<div class="empty">해당 상태의 환불 신청이 없습니다.</div>'; return; }
+
+      el.innerHTML = filtered.map(function(r) {
+        var d = new Date(r.created_at * 1000);
+        var date = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0')
+                 + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        var statusMap = {
+          pending:  { color: '#FF9F5B', label: '⏳ 검토 대기' },
+          approved: { color: '#5BFFC6', label: '✓ 승인 (송금 대기)' },
+          refunded: { color: '#5BFFC6', label: '✓ 환불 완료' },
+          rejected: { color: '#ef5350', label: '✕ 거절' },
+        };
+        var s = statusMap[r.status] || { color:'#888', label:r.status };
+
+        var actions = '';
+        if (r.status === 'pending') {
+          actions =
+            '<button onclick="adminUpdateRefund(' + r.id + ',\'approved\')" style="background:#5BFFC6;border:none;border-radius:5px;color:#06070A;font-size:12px;font-weight:700;padding:5px 14px;cursor:pointer;">승인</button>' +
+            '<button onclick="adminUpdateRefund(' + r.id + ',\'rejected\')" style="background:#3a1c1c;border:1px solid #ef5350;color:#ef5350;font-size:12px;padding:5px 14px;border-radius:5px;cursor:pointer;">거절</button>';
+        } else if (r.status === 'approved') {
+          actions =
+            '<button onclick="adminUpdateRefund(' + r.id + ',\'refunded\')" style="background:#5BFFC6;border:none;border-radius:5px;color:#06070A;font-size:12px;font-weight:700;padding:5px 14px;cursor:pointer;">송금 완료 처리</button>';
+        }
+        actions += '<button onclick="showProUsage(\'' + r.uid + '\')" style="background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:5px;color:#8C95A8;font-size:12px;padding:5px 14px;cursor:pointer;">📋 Pro 사용 이력</button>';
+
+        var memoHtml = r.admin_memo
+          ? '<div style="font-size:11px;color:#888;margin-top:4px;">메모: ' + r.admin_memo.replace(/</g,'&lt;') + '</div>'
+          : '';
+
+        return '<div class="inquiry-card" style="border-left:3px solid ' + s.color + ';">' +
+          '<div class="inquiry-header">' +
+            '<div>' +
+              '<div class="inquiry-name">' + (r.name || '(이름 없음)') + '</div>' +
+              '<div class="inquiry-email">' + r.email + '</div>' +
+              '<div style="font-size:11px;color:#555;margin-top:2px;">uid: ' + r.uid + ' · #' + r.id + '</div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+              '<div class="inquiry-date">' + date + '</div>' +
+              '<span style="font-size:11px;font-weight:600;color:' + s.color + ';">' + s.label + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="inquiry-msg" style="margin-top:6px;">📝 ' + r.reason.replace(/</g,'&lt;') + '</div>' +
+          '<div style="margin-top:8px;padding:8px 12px;background:rgba(91,255,198,0.05);border-radius:6px;border:1px solid rgba(91,255,198,0.18);font-size:12px;line-height:1.7;">' +
+            '<div><span style="color:#8C95A8">환불 계좌:</span> <b>' + r.refund_bank.replace(/</g,'&lt;') + '</b> ' +
+              '<span style="font-family:monospace;color:#5BFFC6;">' + r.refund_account.replace(/</g,'&lt;') + '</span></div>' +
+            '<div><span style="color:#8C95A8">예금주:</span> <b>' + r.refund_holder.replace(/</g,'&lt;') + '</b></div>' +
+          '</div>' +
+          memoHtml +
+          (actions ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' + actions + '</div>' : '') +
+        '</div>';
+      }).join('');
+    }
+
+    window.filterRefunds = function(filter, btn) {
+      _refundFilter = filter;
+      document.querySelectorAll('[data-rf-filter]').forEach(function(b){ b.classList.toggle('active', b.dataset.rfFilter === filter); });
+      _renderRefunds();
+    };
+
+    window.adminUpdateRefund = async function(reqId, status) {
+      var labels = { approved: '승인', rejected: '거절', refunded: '환불 완료 처리' };
+      if (!confirm(labels[status] + ' 하시겠습니까?')) return;
+      var memo = prompt('메모 (선택)', '') || '';
+      try {
+        var res = await fetch('/api/admin/refunds/' + reqId + '/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: status, memo: memo }),
+        });
+        if (!res.ok) {
+          var d = await res.json().catch(function(){ return {}; });
+          alert('실패: ' + (d.detail || res.status));
+          return;
+        }
+        await loadRefunds();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    loadRefunds();
 
     window.toggleReplied = async function(id, current, btn) {
       var next = !current;
