@@ -656,6 +656,69 @@
       <div class="empty">로딩 중...</div>
     </div>
 
+    <!-- ── 피드 게시글 관리 (Firestore) ───────────────────────────────────── -->
+    <h1 style="margin-top:48px;">피드 게시글 관리 <span style="font-size:11px;font-weight:400;color:#5BFFC6;">(Firestore)</span></h1>
+    <div class="sub">
+      <code style="background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-size:11px;">/feed</code> 에 노출되는 블로그 글 관리.
+      Slug는 영문/숫자/대시만 허용 (URL: <code style="background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-size:11px;">/feed/{slug}</code>)
+      <span id="feed-counter" style="margin-left:10px;color:#888;font-size:11px;"></span>
+    </div>
+
+    <!-- 작성/수정 폼 -->
+    <div class="popup-form-panel" id="feed-form-wrap" style="margin-top:14px;">
+      <div style="font-size:13px;font-weight:700;color:#C9CFDA;margin-bottom:16px;" id="feed-form-mode-label">새 게시글 작성</div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+        <div class="popup-form-row">
+          <div class="popup-form-label">제목 *</div>
+          <input id="feed-title" class="popup-form-inp" type="text" placeholder="글 제목">
+        </div>
+        <div class="popup-form-row">
+          <div class="popup-form-label">Slug * <span style="color:#888;font-weight:400">(URL용, 영문 소문자/대시)</span></div>
+          <input id="feed-slug" class="popup-form-inp" type="text" placeholder="예: my-first-post">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        <div class="popup-form-row">
+          <div class="popup-form-label">카테고리</div>
+          <input id="feed-category" class="popup-form-inp" type="text" placeholder="예: 패턴 분석">
+        </div>
+        <div class="popup-form-row">
+          <div class="popup-form-label">표시 날짜 (선택)</div>
+          <input id="feed-display-date" class="popup-form-inp" type="text" placeholder="2026-05-02">
+        </div>
+        <div class="popup-form-row">
+          <div class="popup-form-label">태그 (쉼표 구분)</div>
+          <input id="feed-tags" class="popup-form-inp" type="text" placeholder="예: 거래량, 실전팁">
+        </div>
+      </div>
+
+      <div class="popup-form-row">
+        <div class="popup-form-label">본문 (HTML 허용 — &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;strong&gt; 등)</div>
+        <textarea id="feed-body" class="popup-form-inp" rows="12" placeholder="<p>본문...</p><h3>섹션...</h3><ul><li>...</li></ul>"></textarea>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;gap:14px;">
+          <label class="popup-active-toggle">
+            <input type="checkbox" id="feed-published" checked> 공개
+          </label>
+          <label class="popup-active-toggle">
+            <input type="checkbox" id="feed-pinned"> 📌 상단 고정
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button id="feed-cancel-btn" onclick="cancelFeedEdit()" style="display:none;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:#666;font-size:13px;padding:8px 16px;cursor:pointer;">취소</button>
+          <button id="feed-submit-btn" onclick="submitFeedPost()" style="background:#5BFFC6;border:none;border-radius:6px;color:#06070A;font-size:13px;font-weight:700;padding:8px 22px;cursor:pointer;">등록하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="feed-list" style="margin-top:14px;">
+      <div class="empty">로딩 중...</div>
+    </div>
+
     <h1 style="margin-top:48px;">문의 내역</h1>
     <div class="sub">사용자가 남긴 문의입니다.</div>
     <div class="inquiry-list" id="inquiry-list">
@@ -1599,6 +1662,156 @@
     };
 
     loadRefunds();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 피드 게시글 관리 (Firestore)
+    // ════════════════════════════════════════════════════════════════════════
+
+    var _feedCache = [];
+    var _feedEditId = null;
+
+    async function loadFeedPosts() {
+      try {
+        var res = await fetch('/api/admin/feed/posts');
+        if (!res.ok) {
+          document.getElementById('feed-list').innerHTML =
+            '<div class="empty" style="color:#ef5350;">권한 없음 또는 로드 실패</div>';
+          return;
+        }
+        _feedCache = await res.json();
+        _renderFeedPosts();
+      } catch(e) {
+        document.getElementById('feed-list').innerHTML =
+          '<div class="empty" style="color:#ef5350;">오류: ' + e.message + '</div>';
+      }
+    }
+
+    function _renderFeedPosts() {
+      var list = _feedCache;
+      document.getElementById('feed-counter').textContent = '총 ' + list.length + '건';
+      var el = document.getElementById('feed-list');
+      if (!list.length) { el.innerHTML = '<div class="empty">게시글이 없습니다.</div>'; return; }
+
+      el.innerHTML = list.map(function(p) {
+        var published = p.published ? '✓ 공개' : '⊘ 비공개';
+        var pubColor  = p.published ? '#5BFFC6' : '#888';
+        var pinned    = p.pinned ? ' · 📌 고정' : '';
+        var date = p.display_date || (p.created_at || '').slice(0, 10);
+        var tagStr = (p.tags || []).map(function(t){return '#' + t}).join(' ');
+
+        return '<div class="inquiry-card" style="border-left:3px solid ' + pubColor + ';">' +
+          '<div class="inquiry-header">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div class="inquiry-name" style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">' +
+                '<span>' + (p.title || '(제목 없음)').replace(/</g,'&lt;') + '</span>' +
+                '<span style="font-size:11px;color:#5BFFC6;font-family:monospace;">/feed/' + p.slug + '</span>' +
+              '</div>' +
+              '<div style="font-size:11px;color:#8C95A8;margin-top:2px;">' +
+                (p.category || '—') + ' · ' + date + ' · ' + tagStr +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' +
+              '<span style="font-size:11px;font-weight:600;color:' + pubColor + ';">' + published + pinned + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<a href="/feed/' + p.slug + '" target="_blank" style="background:transparent;border:1px solid rgba(255,255,255,0.08);border-radius:5px;color:#8C95A8;font-size:12px;padding:5px 14px;text-decoration:none;">↗ 미리보기</a>' +
+            '<button onclick="editFeedPost(\'' + p.id + '\')" style="background:#5BFFC6;border:none;border-radius:5px;color:#06070A;font-size:12px;font-weight:700;padding:5px 14px;cursor:pointer;">수정</button>' +
+            '<button onclick="deleteFeedPost(\'' + p.id + '\',\'' + (p.title || '').replace(/[\\\\\']/g,'') + '\')" style="background:#3a1c1c;border:1px solid #ef5350;color:#ef5350;font-size:12px;padding:5px 14px;border-radius:5px;cursor:pointer;">삭제</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function _readFeedForm() {
+      return {
+        title:        document.getElementById('feed-title').value.trim(),
+        slug:         document.getElementById('feed-slug').value.trim(),
+        category:     document.getElementById('feed-category').value.trim(),
+        display_date: document.getElementById('feed-display-date').value.trim(),
+        tags:         document.getElementById('feed-tags').value.split(',').map(function(s){return s.trim()}).filter(function(s){return s.length}),
+        body:         document.getElementById('feed-body').value,
+        published:    document.getElementById('feed-published').checked,
+        pinned:       document.getElementById('feed-pinned').checked,
+      };
+    }
+
+    function _resetFeedForm() {
+      document.getElementById('feed-title').value = '';
+      document.getElementById('feed-slug').value  = '';
+      document.getElementById('feed-category').value     = '';
+      document.getElementById('feed-display-date').value = '';
+      document.getElementById('feed-tags').value         = '';
+      document.getElementById('feed-body').value         = '';
+      document.getElementById('feed-published').checked  = true;
+      document.getElementById('feed-pinned').checked     = false;
+      document.getElementById('feed-form-mode-label').textContent = '새 게시글 작성';
+      document.getElementById('feed-submit-btn').textContent = '등록하기';
+      document.getElementById('feed-cancel-btn').style.display = 'none';
+      _feedEditId = null;
+    }
+
+    window.cancelFeedEdit = function() { _resetFeedForm(); };
+
+    window.editFeedPost = function(postId) {
+      var p = _feedCache.filter(function(x){return x.id === postId})[0];
+      if (!p) return;
+      _feedEditId = postId;
+      document.getElementById('feed-title').value        = p.title || '';
+      document.getElementById('feed-slug').value         = p.slug  || '';
+      document.getElementById('feed-category').value     = p.category || '';
+      document.getElementById('feed-display-date').value = p.display_date || '';
+      document.getElementById('feed-tags').value         = (p.tags || []).join(', ');
+      document.getElementById('feed-body').value         = p.body || '';
+      document.getElementById('feed-published').checked  = !!p.published;
+      document.getElementById('feed-pinned').checked     = !!p.pinned;
+      document.getElementById('feed-form-mode-label').textContent = '게시글 수정 (' + p.slug + ')';
+      document.getElementById('feed-submit-btn').textContent = '수정 저장';
+      document.getElementById('feed-cancel-btn').style.display = 'inline-block';
+      window.scrollTo({ top: document.getElementById('feed-form-wrap').offsetTop - 80, behavior: 'smooth' });
+    };
+
+    window.submitFeedPost = async function() {
+      var data = _readFeedForm();
+      if (!data.title || !data.slug || !data.body) {
+        alert('제목, slug, 본문은 필수입니다.');
+        return;
+      }
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(data.slug)) {
+        alert('slug는 영문 소문자/숫자/대시만 사용해주세요.');
+        return;
+      }
+      try {
+        var url = _feedEditId ? '/api/admin/feed/posts/' + _feedEditId : '/api/admin/feed/posts';
+        var method = _feedEditId ? 'PATCH' : 'POST';
+        var res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          var d = await res.json().catch(function(){return{}});
+          alert('실패: ' + (d.error || res.status));
+          return;
+        }
+        _resetFeedForm();
+        await loadFeedPosts();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    window.deleteFeedPost = async function(postId, title) {
+      if (!confirm('정말로 삭제할까요? "' + title + '"')) return;
+      try {
+        var res = await fetch('/api/admin/feed/posts/' + postId, { method: 'DELETE' });
+        if (!res.ok) {
+          alert('삭제 실패: ' + res.status);
+          return;
+        }
+        await loadFeedPosts();
+      } catch(e) { alert('오류: ' + e.message); }
+    };
+
+    loadFeedPosts();
 
     window.toggleReplied = async function(id, current, btn) {
       var next = !current;

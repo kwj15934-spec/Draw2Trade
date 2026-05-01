@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PKQR1QHPH9"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PKQR1QHPH9');
+  </script>
+  <!-- End Google tag -->
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1328581051952921"
+       crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ post.title }} — Draw2Trade</title>
+  <meta name="description" content="{{ post.title }} · Draw2Trade 시장 인사이트">
+  <link rel="canonical" href="https://draw2trade.com/feed/{{ post.slug }}">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="{{ post.title }}">
+  <meta property="og:url" content="https://draw2trade.com/feed/{{ post.slug }}">
+  <meta property="og:image" content="https://draw2trade.com/static/img/og-card.png">
+  <meta property="article:published_time" content="{{ post.created_at or '' }}">
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg0:#06070A; --bg1:#0B0D12; --bg2:#11141B;
+      --teal:#5BFFC6; --tealSoft:rgba(91,255,198,0.12); --tealGlow:rgba(91,255,198,0.18);
+      --fg0:#FAFBFC; --fg1:#C9CFDA; --fg2:#8C95A8; --fg3:#5A6172;
+      --border1:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.04);
+      --font:'Space Grotesk','Pretendard Variable','Pretendard',system-ui,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+    html,body{min-height:100%;background:var(--bg0);color:var(--fg1);font-family:var(--font);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 600px 400px at 15% 10%, rgba(91,255,198,0.08), transparent 60%), radial-gradient(ellipse 500px 350px at 85% 90%, rgba(91,255,198,0.05), transparent 60%);mask-image:radial-gradient(ellipse 100% 80% at 50% 30%, black 30%, transparent 80%)}
+    body > * { position:relative; z-index:1; }
+    a{color:inherit;text-decoration:none}
+
+    .d2t-nav{position:sticky;top:0;z-index:100;height:46px;background:rgba(6,7,10,0.72);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:0 20px;box-sizing:border-box}
+    .d2t-brand{font-family:var(--font);font-size:16px;font-weight:800;color:#ff6b35;letter-spacing:-0.2px;text-decoration:none;display:flex;align-items:center;gap:8px;flex-shrink:0;margin-right:16px}
+    .d2t-brand img{height:24px;width:24px;object-fit:contain}
+    .d2t-nav-sep{width:1px;height:16px;background:#3f3f46;flex-shrink:0;margin:0 20px 0 0}
+    .d2t-nav-tabs{display:flex;align-items:center;gap:30px;flex-shrink:0}
+    .nav-spacer{flex:1;min-width:0}
+    .nav-link{font-size:14px;font-weight:500;color:#8C95A8;text-decoration:none;border-bottom:2px solid transparent;line-height:46px;transition:color .15s,border-color .15s}
+    .nav-link:hover{color:#C9CFDA;border-bottom-color:#3f3f46}
+    .nav-link.active{color:#5BFFC6;border-bottom:2px solid #5BFFC6;font-weight:700}
+
+    .page-wrap{max-width:760px;margin:0 auto;padding:36px 24px 80px}
+
+    .breadcrumb{font-size:12px;color:var(--fg3);margin-bottom:18px;font-family:var(--mono);letter-spacing:0.04em}
+    .breadcrumb a{color:var(--fg2)}
+    .breadcrumb a:hover{color:var(--teal)}
+    .breadcrumb .sep{margin:0 8px;color:var(--fg3)}
+
+    .post-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+    .post-category{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);background:var(--tealSoft);border:1px solid rgba(91,255,198,0.18);padding:4px 12px;border-radius:999px}
+    .post-date{font-family:var(--mono);font-size:11px;color:var(--fg3)}
+    .post-views{font-family:var(--mono);font-size:11px;color:var(--fg3)}
+
+    h1.post-title{font-family:var(--font);font-size:clamp(26px, 4vw, 36px);font-weight:700;color:var(--fg0);letter-spacing:-0.02em;line-height:1.25;margin-bottom:24px}
+
+    .post-body{
+      font-size:15px;color:var(--fg1);line-height:1.85;
+      background:rgba(15,18,25,0.55);
+      backdrop-filter:blur(14px) saturate(1.2);
+      -webkit-backdrop-filter:blur(14px) saturate(1.2);
+      border-radius:16px;padding:32px 36px;
+      border:1px solid var(--border1);
+    }
+    .post-body h2{font-size:20px;font-weight:700;color:var(--fg0);margin:28px 0 12px;letter-spacing:-0.01em}
+    .post-body h3{font-size:16px;font-weight:700;color:var(--fg0);margin:22px 0 10px;letter-spacing:-0.005em}
+    .post-body h2:first-child,.post-body h3:first-child{margin-top:0}
+    .post-body p{margin-bottom:14px}
+    .post-body ul,.post-body ol{margin:8px 0 16px 24px;padding:0}
+    .post-body li{margin-bottom:6px;line-height:1.85}
+    .post-body strong{color:var(--fg0);font-weight:600}
+    .post-body em{font-style:normal;color:var(--teal);font-weight:500}
+    .post-body a{color:var(--teal);text-decoration:underline;text-underline-offset:2px}
+    .post-body .disclaimer{
+      font-size:12px;color:var(--fg3);padding:14px 16px;border-radius:10px;
+      background:rgba(255,255,255,0.03);border:1px solid var(--border1);
+      margin-top:18px;line-height:1.7;
+    }
+
+    .post-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
+    .post-tag{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.04);color:var(--fg2);border:1px solid var(--border1);transition:all .15s}
+    .post-tag:hover{color:var(--teal);border-color:rgba(91,255,198,0.4);background:var(--tealSoft)}
+
+    .post-cta{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      margin-top:32px;padding:20px 24px;
+      background:linear-gradient(135deg, rgba(91,255,198,0.05), rgba(91,141,255,0.03));
+      border-radius:14px;border:1px solid rgba(91,255,198,0.18);
+    }
+    .post-cta-text{font-size:13px;color:var(--fg1);line-height:1.6}
+    .post-cta-text b{color:var(--teal)}
+    .btn-cta{
+      padding:10px 20px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:0.02em;
+      background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;
+      box-shadow:0 6px 20px rgba(91,255,198,0.22);
+      transition:transform .15s, filter .15s;
+    }
+    .btn-cta:hover{transform:translateY(-1px);filter:brightness(1.05)}
+
+    footer{padding:30px 24px;text-align:center;color:var(--fg3);font-size:12px;border-top:1px solid var(--border1);margin-top:40px;line-height:1.9}
+    footer a{color:var(--fg2);text-decoration:none}
+    footer a:hover{color:var(--teal)}
+
+    @media (max-width:600px){
+      .post-body{padding:24px 22px}
+      h1.post-title{font-size:24px}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="d2t-nav">
+  <a href="/" class="d2t-brand">
+    <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.style.display='none'">Draw2Trade
+  </a>
+  <span class="d2t-nav-sep"></span>
+  <div class="d2t-nav-tabs">
+    <a href="/market"  class="nav-link">시장</a>
+    <a href="/news"    class="nav-link">뉴스</a>
+    <a href="/feed"    class="nav-link active">피드</a>
+    <a href="/notices" class="nav-link">공지</a>
+    <a href="/pricing" class="nav-link">요금제</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a href="/login" data-loggedin-href="/app" class="nav-link">차트 앱 →</a>
+</nav>
+
+<article class="page-wrap">
+
+  <div class="breadcrumb">
+    <a href="/">홈</a><span class="sep">›</span>
+    <a href="/feed">피드</a><span class="sep">›</span>
+    <span style="color:var(--fg2);">{{ post.category or '아티클' }}</span>
+  </div>
+
+  <div class="post-meta">
+    <span class="post-category">{{ post.category or '아티클' }}</span>
+    <span class="post-date">{{ post.display_date or (post.created_at[:10] if post.created_at else '') }}</span>
+    {% if post.views and post.views > 0 %}
+    <span class="post-views">조회 {{ post.views }}</span>
+    {% endif %}
+  </div>
+
+  <h1 class="post-title">{{ post.title }}</h1>
+
+  <div class="post-body">
+    {{ post.body | safe }}
+  </div>
+
+  {% if post.tags %}
+  <div class="post-tags">
+    {% for t in post.tags %}<span class="post-tag">#{{ t }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="post-cta">
+    <div class="post-cta-text">
+      <b>Draw2Trade</b>에서 직접 패턴을 그려<br>
+      과거 비슷한 흐름의 종목을 검색해 보세요.
+    </div>
+    <a href="/login" data-loggedin-href="/app" class="btn-cta">차트 앱으로 →</a>
+  </div>
+
+</article>
+
+<footer>
+  <p>&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a> &nbsp;·&nbsp; <a href="/feed">← 피드 목록</a></p>
+  <p style="font-size:11px">상호: FORMETA · 대표: 김원준 · 사업자: 536-32-01566</p>
+</footer>
+
+<script>
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if (!d || !d.authenticated) return;
+      document.querySelectorAll('[data-loggedin-href]').forEach(function(el){
+        var dest = el.getAttribute('data-loggedin-href');
+        if (dest) el.setAttribute('href', dest);
+      });
+    })
+    .catch(function(){});
+</script>
+
+</body>
+</html>

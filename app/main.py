@@ -56,7 +56,7 @@ from app.dependencies.auth import get_optional_user, require_user
 from app.routers import auth, backtest, bank_transfer, chart, dart, fundamental, google_auth, market, payment, pattern, user_data
 # US 라우터 비활성화 (미국 주식 DB 수집 완료 전)
 # from app.routers import us_chart
-from app.services import activity_tracker, inquiry_service, notice_service
+from app.services import activity_tracker, feed_service, inquiry_service, notice_service
 from app.services.auth_service import init_firebase
 from app.services.data_service import build_cache
 from app.services.us_data_service import build_us_name_cache
@@ -389,7 +389,19 @@ async def news_page(request: Request):
 
 @app.get("/feed", response_class=HTMLResponse)
 async def feed_page(request: Request):
-    return templates.TemplateResponse("feed.html", {"request": request})
+    posts = feed_service.get_published_posts()
+    return templates.TemplateResponse("feed.html", {"request": request, "posts": posts})
+
+
+@app.get("/feed/{slug}", response_class=HTMLResponse)
+async def feed_post_page(request: Request, slug: str):
+    post = feed_service.get_post_by_slug(slug)
+    if not post or not post.get("published", False):
+        return RedirectResponse(url="/feed", status_code=302)
+    # 비차단 조회수 증가
+    import threading as _thr
+    _thr.Thread(target=feed_service.increment_views, args=(slug,), daemon=True).start()
+    return templates.TemplateResponse("feed_post.html", {"request": request, "post": post})
 
 
 @app.get("/market", response_class=HTMLResponse)
@@ -432,6 +444,46 @@ async def privacy_page(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request})
 
 
+@app.get("/sitemap.xml", response_class=Response)
+async def sitemap_xml():
+    """동적 사이트맵 — 정적 페이지 + 피드 게시글 URL 포함."""
+    base = "https://draw2trade.com"
+    static_urls = [
+        ("/",        "1.0", "weekly"),
+        ("/pricing", "0.9", "weekly"),
+        ("/feed",    "0.9", "daily"),
+        ("/news",    "0.7", "daily"),
+        ("/market",  "0.7", "daily"),
+        ("/terms",   "0.4", "yearly"),
+        ("/privacy", "0.4", "yearly"),
+    ]
+    posts = []
+    try:
+        posts = feed_service.get_published_posts(limit=200)
+    except Exception:
+        posts = []
+
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>']
+    parts.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    for path, prio, freq in static_urls:
+        parts.append(
+            f"  <url><loc>{base}{path}</loc>"
+            f"<changefreq>{freq}</changefreq><priority>{prio}</priority></url>"
+        )
+    for p in posts:
+        slug = p.get("slug", "")
+        if not slug:
+            continue
+        lastmod = p.get("updated_at") or p.get("created_at") or ""
+        lastmod_tag = f"<lastmod>{lastmod}</lastmod>" if lastmod else ""
+        parts.append(
+            f"  <url><loc>{base}/feed/{slug}</loc>"
+            f"{lastmod_tag}<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+        )
+    parts.append("</urlset>")
+    return Response(content="\n".join(parts), media_type="application/xml")
+
+
 @app.get("/robots.txt", response_class=Response)
 async def robots_txt():
     content = (
@@ -439,6 +491,9 @@ async def robots_txt():
         "Allow: /$\n"
         "Allow: /pricing\n"
         "Allow: /market\n"
+        "Allow: /feed\n"
+        "Allow: /feed/\n"
+        "Allow: /news\n"
         "Disallow: /app\n"
         "Disallow: /login\n"
         "Disallow: /pending\n"
@@ -447,6 +502,8 @@ async def robots_txt():
         "Disallow: /blank\n"
         "Disallow: /api/\n"
         "Disallow: /static/\n"
+        "\n"
+        "Sitemap: https://draw2trade.com/sitemap.xml\n"
     )
     return Response(content=content, media_type="text/plain")
 
@@ -495,6 +552,56 @@ async def get_notice(notice_id: int):
     views = notice_service.increment_views(notice_id)
     notice["views"] = views
     return JSONResponse(notice)
+
+
+# ── 피드 (public) ────────────────────────────────────────────────────────────
+@app.get("/api/feed/posts")
+async def api_feed_posts():
+    return JSONResponse(feed_service.get_published_posts())
+
+
+@app.get("/api/feed/posts/{slug}")
+async def api_feed_post(slug: str):
+    post = feed_service.get_post_by_slug(slug)
+    if not post or not post.get("published", False):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(post)
+
+
+# ── 피드 관리 (admin) ────────────────────────────────────────────────────────
+@app.get("/api/admin/feed/posts")
+async def admin_feed_posts(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    return JSONResponse(feed_service.get_all_posts())
+
+
+@app.post("/api/admin/feed/posts")
+async def admin_feed_create(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    pid = feed_service.create_post(body)
+    if not pid:
+        return JSONResponse({"error": "slug invalid or duplicate"}, status_code=400)
+    return JSONResponse({"ok": True, "id": pid})
+
+
+@app.patch("/api/admin/feed/posts/{post_id}")
+async def admin_feed_update(post_id: str, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    body = await request.json()
+    ok = feed_service.update_post(post_id, body)
+    return JSONResponse({"ok": ok})
+
+
+@app.delete("/api/admin/feed/posts/{post_id}")
+async def admin_feed_delete(post_id: str, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "unauthorized"}, status_code=403)
+    ok = feed_service.delete_post(post_id)
+    return JSONResponse({"ok": ok})
 
 
 # ── 공지 관리 (admin) ─────────────────────────────────────────────────────────
