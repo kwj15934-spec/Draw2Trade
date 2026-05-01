@@ -3,9 +3,10 @@
 
 흐름:
   1) 사용자 /pricing → "Pro 신청" → create_request(uid, depositor_name, plan)
-     → 고유 금액(8901~8999 또는 85001~85099) 할당
-  2) 사용자가 계좌이체 (입금자명 = depositor_name, 금액 = unique_amount)
+     → 고정 금액 (8,900원 또는 85,000원)
+  2) 사용자가 계좌이체 (입금자명 = depositor_name, 금액 = 고정가)
   3) 폴링 워커가 거래내역 조회 → match_deposit(tx) → status=matched + Pro 활성화
+     매칭 기준: 입금자명 정확 일치 + 금액 일치 (단일 후보)
   4) 24시간 미매칭 → status=expired
 
 환불:
@@ -14,7 +15,6 @@
 from __future__ import annotations
 
 import logging
-import random
 import sqlite3
 import time
 from datetime import datetime, timedelta, timezone
@@ -96,30 +96,9 @@ except Exception as e:
 
 # ── 결제 신청 (입금 대기) ─────────────────────────────────────────────────────
 
-def _allocate_unique_amount(plan_type: str) -> int | None:
-    """현재 pending 중인 결제와 충돌하지 않는 고유 금액 할당.
-
-    monthly: 8901~8999 (99개 동시 가능)
-    annual : 85001~85099 (99개 동시 가능)
-    """
-    if plan_type == "annual":
-        base = PRICE_ANNUAL_BASE
-        candidates = list(range(base + 1, base + 100))
-    else:
-        base = PRICE_MONTHLY_BASE
-        candidates = list(range(base + 1, base + 100))
-
-    random.shuffle(candidates)
-    with _conn() as con:
-        used = {
-            r[0] for r in con.execute(
-                "SELECT amount FROM payment_requests WHERE status='pending'"
-            ).fetchall()
-        }
-    for amt in candidates:
-        if amt not in used:
-            return amt
-    return None  # 동시 99건 초과 (사실상 불가능)
+def _plan_amount(plan_type: str) -> int:
+    """플랜별 고정 금액 반환."""
+    return PRICE_ANNUAL_BASE if plan_type == "annual" else PRICE_MONTHLY_BASE
 
 
 def create_request(
@@ -142,11 +121,7 @@ def create_request(
             (uid,),
         )
 
-    amount = _allocate_unique_amount(plan_type)
-    if amount is None:
-        logger.error("고유 금액 슬롯 부족 (plan=%s)", plan_type)
-        return None
-
+    amount = _plan_amount(plan_type)
     now = time.time()
     with _conn() as con:
         cur = con.execute(
@@ -262,10 +237,10 @@ def match_deposit(deposit_amount: int, deposit_name: str | None) -> dict | None:
     """
     입금 거래 1건과 pending 신청 매칭.
 
-    매칭 우선순위:
-      1) 금액(unique) 일치 + 입금자명 일치 → confidence=high
-      2) 금액(unique) 일치만 (입금자명이 빈 문자열이거나 다름) → confidence=medium
-      3) 금액 일치 없음 → None
+    매칭 기준:
+      - 금액(고정가)이 일치 + 입금자명이 정확히 일치 → confidence=high
+      - 금액 일치 + 입금자명이 비어있는 거래에 대해 후보가 단일 → confidence=medium
+      - 그 외(중복/모호) → None (관리자 수동 확인)
 
     반환: { "request": {...}, "confidence": "high"|"medium" } 또는 None.
     """
@@ -275,22 +250,26 @@ def match_deposit(deposit_amount: int, deposit_name: str | None) -> dict | None:
     if not pending:
         return None
 
-    # 1) 금액으로 후보 추출
+    # 금액 일치 후보
     amount_candidates = [r for r in pending if r["amount"] == deposit_amount]
     if not amount_candidates:
         return None
 
-    # 2) 입금자명까지 일치하는 것 우선
+    # 1) 입금자명 정확 일치 → high
     if name:
-        for r in amount_candidates:
-            if r["depositor_name"].strip() == name:
-                return {"request": r, "confidence": "high"}
+        name_matches = [r for r in amount_candidates
+                        if r["depositor_name"].strip() == name]
+        if len(name_matches) == 1:
+            return {"request": name_matches[0], "confidence": "high"}
+        if len(name_matches) > 1:
+            # 동일 입금자명 + 금액 동일 = 분간 불가 → 관리자 수동
+            return None
 
-    # 3) 금액 일치가 1건이면 medium 매칭
-    if len(amount_candidates) == 1:
+    # 2) 입금자명이 빈 문자열이고 후보가 단일이면 medium
+    if not name and len(amount_candidates) == 1:
         return {"request": amount_candidates[0], "confidence": "medium"}
 
-    # 4) 금액 일치 다수 → 모호 (수동 확인 필요)
+    # 3) 모호한 경우 자동매칭 안 함
     return None
 
 
