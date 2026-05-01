@@ -529,7 +529,7 @@
     var chgAmt = (price - prevClose).toFixed(price >= 1000 ? 0 : 2);
 
     var thbPrice = document.getElementById('thb-price');
-    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
     var thbChg = document.getElementById('thb-chg');
     if (thbChg) {
       thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
@@ -555,7 +555,7 @@
     var chgAmt = q.chgAmt || 0;
 
     var thbPrice = document.getElementById('thb-price');
-    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
     var thbChg = document.getElementById('thb-chg');
     if (thbChg) {
       thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt.toLocaleString() + '</span>'

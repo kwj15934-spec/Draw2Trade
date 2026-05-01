@@ -1325,7 +1325,7 @@
     var volStr = vol >= 10000 ? (vol / 10000).toFixed(1) + '만' : vol.toLocaleString();
 
     var thbPrice = document.getElementById('thb-price');
-    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
     var thbChg = document.getElementById('thb-chg');
     if (thbChg && chgPct !== '') {
       // 실시간 등락 (전봉 대비)

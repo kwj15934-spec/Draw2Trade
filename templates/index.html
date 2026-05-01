@@ -721,6 +721,51 @@
   </div>
 </div>
 
+<!-- 빈 캔버스 전용 기간 선택 모달 -->
+<div id="blank-period-modal"
+  role="dialog" aria-modal="true" aria-labelledby="blank-period-modal-title"
+  style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+  <div style="background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:28px 28px 24px;width:100%;max-width:460px;margin:24px;">
+    <div id="blank-period-modal-title" style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">어떤 기간으로 검색할까요?</div>
+    <div style="font-size:12px;color:#8C95A8;margin-bottom:18px;">빈 캔버스 모드 — 그린 패턴을 어떤 기간 안에서 찾을지 선택하세요.</div>
+
+    <!-- ① lookback 개월 -->
+    <div style="padding:14px 16px;background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:8px;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:700;color:#C9CFDA;margin-bottom:4px;">① 최근 N개월 (오늘 기준)</div>
+      <div style="font-size:11px;color:#8C95A8;margin-bottom:10px;">각 종목의 최근 구간에서 비슷한 모양을 찾습니다.</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <select id="blank-modal-lookback" style="flex:1;padding:8px 10px;background:#0d0f15;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-size:13px;">
+          <option value="3">3개월</option>
+          <option value="6">6개월</option>
+          <option value="12">1년</option>
+          <option value="24">2년</option>
+          <option value="36" selected>3년</option>
+          <option value="60">5년</option>
+          <option value="120">10년</option>
+        </select>
+        <button onclick="runBlankSearchWithMode('lookback')" style="padding:8px 16px;background:#5BFFC6;border:none;border-radius:6px;color:#0a0d12;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">이 기간으로 검색</button>
+      </div>
+    </div>
+
+    <!-- ② 날짜 범위 -->
+    <div style="padding:14px 16px;background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+      <div style="font-size:13px;font-weight:700;color:#C9CFDA;margin-bottom:4px;">② 날짜 범위 직접 지정</div>
+      <div style="font-size:11px;color:#8C95A8;margin-bottom:10px;">YYYY-MM 형식으로 시작 / 종료 월을 입력하세요. (한쪽만 입력해도 됩니다)</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <input id="blank-modal-date-from" type="month" placeholder="시작 (YYYY-MM)"
+          style="flex:1;padding:8px 10px;background:#0d0f15;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-size:13px;">
+        <span style="color:#8C95A8;font-size:12px;">~</span>
+        <input id="blank-modal-date-to" type="month" placeholder="종료 (YYYY-MM)"
+          style="flex:1;padding:8px 10px;background:#0d0f15;border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-size:13px;">
+      </div>
+      <div id="blank-modal-range-err" style="display:none;font-size:11px;color:#ef5350;margin-bottom:8px;"></div>
+      <button onclick="runBlankSearchWithMode('range')" style="width:100%;padding:9px;background:#5BFFC6;border:none;border-radius:6px;color:#0a0d12;font-size:12px;font-weight:700;cursor:pointer;">이 범위로 검색</button>
+    </div>
+
+    <button onclick="document.getElementById('blank-period-modal').style.display='none'" style="margin-top:14px;width:100%;padding:9px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:7px;color:#8C95A8;font-size:12px;cursor:pointer;">취소</button>
+  </div>
+</div>
+
 <div id="save-drawing-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
   <div style="background:#11141B;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:28px;width:100%;max-width:400px;margin:24px;">
     <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;">검색 결과 저장</div>

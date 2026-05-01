@@ -349,7 +349,7 @@
       color  = chgPct >= 0 ? '#26a69a' : '#ef5350';
     }
 
-    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
     var thbChg = document.getElementById('thb-chg');
     if (thbChg && chgPct !== null) {
       thbChg.innerHTML = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
@@ -379,7 +379,7 @@
 
     // 헤더바 업데이트
     var thbPrice = document.getElementById('thb-price');
-    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = color; }
+    if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
     var thbName = document.getElementById('thb-name');
     if (thbName && window.D2T && D2T.ticker) thbName.textContent = D2T.ticker;
     var thbChg = document.getElementById('thb-chg');
