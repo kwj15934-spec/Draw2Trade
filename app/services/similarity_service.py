@@ -1,18 +1,27 @@
 """
-Similarity service - 복합 가중치 패턴 유사도 계산.
+Similarity service - 복합 가중치 패턴 유사도 계산 (v3).
 
-점수식:
-  FinalScore = 0.36 * ShapeCorr
-             + 0.16 * LevelCloseness
-             + 0.16 * DiffCorr
-             + 0.08 * ExtremumScore
-             + 0.04 * VolatilityScore
-             + 0.20 * VolumeSpike       ← 거래량 급증 가중치 (v2)
+점수식 (v3 — 모양 중심으로 재배분):
+  FinalScore = 0.55 * ShapeCorr        ← Pearson(가격 모양) — 사용자 드로잉의 본질
+             + 0.17 * LevelCloseness   ← 정규화된 가격 절대값 차이
+             + 0.16 * DiffCorr         ← Pearson(diff(a), diff(b)) — 변화율 모양
+             + 0.05 * ExtremumScore    ← 피크/바닥 위치 일치도
+             + 0.02 * VolatilityScore  ← 변동성 매칭
+             + 0.05 * VolumeSpike      ← 거래량 급증 (보조)
+
+v3 변경 이유:
+  - v2의 거래량 가중치(20%)가 너무 커서 사용자가 그린 모양과 무관한 매칭 발생
+  - 사용자는 가격 모양만 그리므로 거래량은 정보적 보너스 수준이어야 함
+  - Shape Pearson 가중치를 28.8% → 55%로 끌어올려 모양 매칭 정확도 향상
+
+Pearson 매핑 변경:
+  - 기존: max(0, x) — 음의 상관관계는 모두 0점 (정보 손실)
+  - v3:  (x + 1) / 2 — [-1, 1] 을 [0, 1] 로 선형 매핑
+  - 음의 상관도 0~0.5 점수로 반영하여 약하게 매칭된 윈도우의 점수 평탄화 방지
 
 VolumeSpike 계산:
   - 패턴 구간 내 거래량 이동평균 대비 최대 급증 배율을 0~1로 스케일링.
-  - 거래량 데이터가 없거나 오류 시 0.5 (중립) 처리하여 기존 점수에 영향 최소화.
-  - 의미 있는 거래량 급증(≥3σ)이 있는 구간을 우선 노출.
+  - 거래량 데이터가 없거나 오류 시 0.5 (중립) 처리.
 
 처리 파이프라인:
   사용자 드로잉 → 150포인트 리샘플 → 0~1 정규화
@@ -24,8 +33,9 @@ VolumeSpike 계산:
   - 최근 3개월 평균 거래대금(close×volume) 하위 10% 제외
   - 변동폭이 지나치게 작은 "평탄 패턴" 제외 (정규화 시 노이즈 증폭 방지)
 
-이상치(권리락/배당락) 보정:
-  - 직전 봉 대비 abs(log-return) > 0.25 인 지점 감지 → forward-adjust로 이전 구간 ratio 조정
+이상치(권리락/배당락) 보정 (v3 — 임계값 0.25 → 0.35로 완화):
+  - 직전 봉 대비 abs(log-return) > 0.35 (≈ ±42%) 인 지점만 감지
+  - 정상적 큰 단일 변동을 권리락으로 오인하여 시계열 변형되는 문제 완화
   - 차트 표시가 아닌 유사도 계산 전용 보정
 """
 import heapq
@@ -41,9 +51,8 @@ logger = logging.getLogger(__name__)
 
 PATTERN_LEN = 150  # 고정 리샘플 포인트 수
 _EPS = 1e-9
-_OUTLIER_LOG_THRESHOLD = 0.25   # |log(P_t / P_{t-1})| > 0.25 → 이상 갭으로 간주 (≈ ±28%)
+_OUTLIER_LOG_THRESHOLD = 0.35   # |log(P_t / P_{t-1})| > 0.35 → 이상 갭 (≈ ±42%, v3에서 완화)
 _FLAT_REL_RANGE = 0.02          # 윈도우 (max-min)/median < 2% 면 평탄 패턴으로 제외
-                                # (기존 5%는 사이드웨이 종목까지 제외하여 결과 부족 → 완화)
 _LIQUIDITY_PERCENTILE = 10      # 거래대금 하위 N% 제외
 
 
@@ -156,22 +165,47 @@ def _pearson_raw(a: np.ndarray, b: np.ndarray) -> float:
     return 0.0 if np.isnan(corr) else corr
 
 
+def _pearson_score(a: np.ndarray, b: np.ndarray) -> float:
+    """Pearson [-1, 1] → [0, 1] 선형 매핑 (v3).
+
+    v2의 max(0, corr) 는 음의 상관을 모두 0으로 처리하여 윈도우가
+    살짝 어긋난 경우의 점수 평탄화를 야기했음. v3 는 약한 상관도
+    부드럽게 반영하기 위해 (corr + 1) / 2 사용.
+    완전 일치=1.0, 무상관=0.5, 완전 반대=0.0.
+    """
+    return (_pearson_raw(a, b) + 1.0) * 0.5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# v3 가중치 (모양 중심 재배분, vol_weight=0.05 기준)
+# ─────────────────────────────────────────────────────────────────────────────
+_V3_BASE_WEIGHTS = {
+    "shape":      0.55,   # 모양 (Pearson)        — 가장 중요
+    "level":      0.17,   # 정규화 절대값 차이
+    "diff":       0.16,   # 변화율 모양 (diff Pearson)
+    "extremum":   0.05,   # 피크/바닥 위치
+    "volatility": 0.02,   # 변동성
+}
+_V3_BASE_VOL_WEIGHT = 0.05   # 거래량 보조 가중치
+# 합: 0.55 + 0.17 + 0.16 + 0.05 + 0.02 + 0.05 = 1.00
+
+
 def _score_components(
     a: np.ndarray,
     b: np.ndarray,
     vol_score: float = 0.5,
-    vol_weight: float = 0.20,
+    vol_weight: float = _V3_BASE_VOL_WEIGHT,
 ) -> dict:
-    """6개 컴포넌트 + total 점수를 dict로 반환.
+    """6개 컴포넌트 + total 점수를 dict로 반환 (v3).
 
     vol_score:  거래량 급증 점수 [0, 1]. 호출자가 계산해 전달. 데이터 없으면 0.5.
-    vol_weight: 거래량 가중치 (기본 0.20). AI 힌트로 0.10~0.35 범위 동적 조정 가능.
-                기타 5개 컴포넌트의 가중치는 (1-vol_weight) 에 비례 재분배.
+    vol_weight: 거래량 가중치 (기본 0.05). AI 힌트로 0.05~0.35 범위 동적 조정 가능.
+                나머지 5개 컴포넌트는 (1-vol_weight) / 0.95 스케일로 비례 조정.
     """
-    shape_corr      = max(0.0, _pearson_raw(a, b))
+    shape_corr      = _pearson_score(a, b)               # [0, 1] 선형 매핑
     level_closeness = 1.0 - float(np.mean(np.abs(a - b)))
     da, db          = np.diff(a), np.diff(b)
-    diff_corr       = max(0.0, _pearson_raw(da, db))
+    diff_corr       = _pearson_score(da, db)             # [0, 1] 선형 매핑
     n               = len(a)
     peak_diff       = abs(int(np.argmax(a)) - int(np.argmax(b))) / n
     bottom_diff     = abs(int(np.argmin(a)) - int(np.argmin(b))) / n
@@ -180,15 +214,14 @@ def _score_components(
     vb              = float(np.std(db))
     volatility_score = 1.0 - min(1.0, abs(va - vb) / max(va, vb, _EPS))
 
-    # 기본 가중치 (vol=0.20 기준): 0.36 / 0.16 / 0.16 / 0.08 / 0.04 = 합 0.80
-    # vol_weight 변경 시 나머지 5개를 (1-vol_weight)/0.80 스케일로 비례 조정
+    # vol_weight 변경 시 나머지 5개를 (1-vol_weight)/0.95 스케일로 비례 조정
     vw = max(0.05, min(0.40, vol_weight))
-    scale = (1.0 - vw) / 0.80
-    w_shape  = 0.36 * scale
-    w_level  = 0.16 * scale
-    w_diff   = 0.16 * scale
-    w_extr   = 0.08 * scale
-    w_vlt    = 0.04 * scale
+    scale = (1.0 - vw) / (1.0 - _V3_BASE_VOL_WEIGHT)   # = (1-vw) / 0.95
+    w_shape  = _V3_BASE_WEIGHTS["shape"]      * scale
+    w_level  = _V3_BASE_WEIGHTS["level"]      * scale
+    w_diff   = _V3_BASE_WEIGHTS["diff"]       * scale
+    w_extr   = _V3_BASE_WEIGHTS["extremum"]   * scale
+    w_vlt    = _V3_BASE_WEIGHTS["volatility"] * scale
 
     total = (
         w_shape * shape_corr
@@ -241,14 +274,14 @@ def _volume_spike_score(volume_arr: np.ndarray) -> float:
 
 def similarity_score(a: np.ndarray, b: np.ndarray) -> float:
     """
-    복합 유사도 점수 [0, 1].  (거래량 데이터 없는 경우 vol_score=0.5 중립)
+    복합 유사도 점수 [0, 1] — v3 (모양 중심).
 
-    ① ShapeCorr      (36%) : max(0, Pearson(a, b))
-    ② LevelCloseness (16%) : 1 - mean(|a - b|)
-    ③ DiffCorr       (16%) : max(0, Pearson(diff(a), diff(b)))
-    ④ ExtremumScore  ( 8%) : 피크·바닥 위치 유사도
-    ⑤ VolatilityScore( 4%) : 변동성 유사도
-    ⑥ VolumeSpike   (20%) : 거래량 급증 유사도
+    ① ShapeCorr      (55%) : (Pearson(a, b) + 1) / 2
+    ② LevelCloseness (17%) : 1 - mean(|a - b|)
+    ③ DiffCorr       (16%) : (Pearson(diff(a), diff(b)) + 1) / 2
+    ④ ExtremumScore  ( 5%) : 피크·바닥 위치 유사도
+    ⑤ VolatilityScore( 2%) : 변동성 유사도
+    ⑥ VolumeSpike    ( 5%) : 거래량 급증 유사도 (보조)
     """
     return _score_components(a, b, vol_score=0.5)["total"]
 
@@ -282,19 +315,20 @@ def _fast_reject(tmpl_net: float, win_slice: np.ndarray) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _VOL_HINT_WEIGHTS: dict[str, float] = {
-    "spike_at_2nd":    0.35,   # 급증 패턴 강조
-    "gradual_rise":    0.28,   # 점진적 매집
-    "decrease_at_2nd": 0.25,   # 둘째 저점에서 감소 (강세 쌍바닥)
-    "flat":            0.10,   # 거래량 약한 패턴
-    "unknown":         0.20,   # 기본값
+    # v3: 기본 5%, AI 힌트로 명시적으로 거래량을 강조한 경우만 가중치 상향
+    "spike_at_2nd":    0.30,   # 급증 패턴 강조 (AI 힌트 명시)
+    "gradual_rise":    0.20,   # 점진적 매집
+    "decrease_at_2nd": 0.18,   # 둘째 저점에서 감소 (강세 쌍바닥)
+    "flat":            0.05,   # 거래량 약한 패턴
+    "unknown":         0.05,   # 기본값 (모양 중심)
 }
 
 
 def _resolve_vol_weight(volume_hint: str | None) -> float:
-    """AI 힌트 문자열 → 거래량 가중치."""
+    """AI 힌트 문자열 → 거래량 가중치 (v3 기본 5%)."""
     if not volume_hint:
-        return 0.20
-    return _VOL_HINT_WEIGHTS.get(volume_hint, 0.20)
+        return _V3_BASE_VOL_WEIGHT
+    return _VOL_HINT_WEIGHTS.get(volume_hint, _V3_BASE_VOL_WEIGHT)
 
 
 def search_similar(
@@ -450,7 +484,8 @@ def search_similar(
             if max_search_bars is not None:
                 min_win = max(2, win // 2)
                 max_win = min(n - 1, max_search_bars)
-                n_tries = min(30, max_win - min_win + 1)
+                # v3: 30 → 60 시도로 증가. 5년치 1260봉에서 한 시도당 ~20봉 → ~10봉 간격으로 정밀화.
+                n_tries = min(60, max_win - min_win + 1)
                 x_new   = np.linspace(0.0, 1.0, PATTERN_LEN)
 
                 best_score  = -1.0
