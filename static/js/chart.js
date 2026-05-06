@@ -200,7 +200,10 @@
   D2T._hidePatternMiniChart = _hidePatternMiniChart;
 
   function chartUrl(ticker, tf) {
-    return '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=' + encodeURIComponent(tf);
+    var mkt = (window.D2T && D2T.market) ? D2T.market : 'KR';
+    return '/api/chart/' + encodeURIComponent(ticker)
+         + '?timeframe=' + encodeURIComponent(tf)
+         + '&market=' + encodeURIComponent(mkt);
   }
 
   // ── 차트 초기화 ───────────────────────────────────────────────────────────
@@ -970,6 +973,33 @@
     var sel = document.getElementById('ticker-select');
     if (!sel) return;
 
+    // CRYPTO 시장 분기
+    if ((D2T.market || 'KR') === 'CRYPTO_KRW') {
+      fetch('/api/crypto/list')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var items = data.items || [];
+          sel.innerHTML = items.map(function (t) {
+            var label = (t.ticker + '  ' + (t.name || '')).replace(/"/g, '&quot;');
+            return '<option value="' + t.ticker + '">' + label + '</option>';
+          }).join('');
+          var urlTicker = new URLSearchParams(window.location.search).get('ticker');
+          var defaultC = items.length ? items[0].ticker : 'BTC';
+          if (urlTicker) {
+            sel.value = urlTicker;
+          } else {
+            var pref = items.find(function (t) { return t.ticker === 'BTC'; });
+            sel.value = pref ? 'BTC' : defaultC;
+          }
+          if (!D2T.ticker && !D2T.loading) loadChart(sel.value);
+        })
+        .catch(function () {
+          sel.innerHTML = '<option value="BTC">BTC</option>';
+          if (!D2T.ticker && !D2T.loading) loadChart('BTC');
+        });
+      return;
+    }
+
     var endpoint = '/api/kospi/list';
     var defaultTicker = '005930';
     var params = [];
@@ -1039,14 +1069,27 @@
       return;
     }
 
-    var searchEndpoint = '/api/kospi/search?q=' + encodeURIComponent(q) + '&limit=30';
+    var isCrypto = ((window.D2T && D2T.market) === 'CRYPTO_KRW');
+    var searchEndpoint = isCrypto
+      ? '/api/crypto/list'
+      : ('/api/kospi/search?q=' + encodeURIComponent(q) + '&limit=30');
 
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(function () {
       fetch(searchEndpoint)
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var results = data.results || [];
+          var results;
+          if (isCrypto) {
+            // 클라 사이드 필터링 (대소문자 무관, ticker/name)
+            var qq = q.toUpperCase();
+            results = (data.items || []).filter(function (it) {
+              return (it.ticker || '').toUpperCase().indexOf(qq) >= 0
+                  || (it.name || '').toUpperCase().indexOf(qq) >= 0;
+            }).slice(0, 30);
+          } else {
+            results = data.results || [];
+          }
           var esc = function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
           if (results.length === 0) {
             dd.innerHTML = '<div class="search-item"><span class="search-name" style="color:#555;">검색 결과 없음</span></div>';
@@ -1123,19 +1166,31 @@
     var catGroup = document.getElementById('category-group');
     var krMktGroup = document.getElementById('kr-market-group');
     var searchInp = document.getElementById('ticker-search');
-    if (catGroup) catGroup.style.display = 'flex';
-    if (krMktGroup) krMktGroup.style.display = 'flex';
-    if (searchInp) searchInp.placeholder = '종목명/티커 검색 (KR)';
+    var isCrypto = (market === 'CRYPTO_KRW');
+
+    if (catGroup) catGroup.style.display = isCrypto ? 'none' : 'flex';
+    if (krMktGroup) krMktGroup.style.display = isCrypto ? 'none' : 'flex';
+    if (searchInp) {
+      searchInp.placeholder = isCrypto ? 'BTC / ETH / 코인 심볼 검색' : '종목명/티커 검색 (KR)';
+    }
     // 시장 필터 초기화
     D2T.exchange = '';
     D2T.krMarket = '';
     document.querySelectorAll('.kr-market-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.krmarket === '');
     });
-    // 카테고리 초기화 후 재로드
-    var catSel = document.getElementById('category-select');
-    if (catSel) catSel.innerHTML = '<option value="">전체</option>';
-    loadCategoryList();
+
+    // 차트 앱 클래스 토글 — CSS 로 크립토/주식 화면 차이 구분 가능
+    document.body.classList.toggle('market-crypto', isCrypto);
+
+    // 종목 리스트 로드 (마켓별 분기는 loadTickerList 내부에서 처리)
+    if (!isCrypto) {
+      var catSel = document.getElementById('category-select');
+      if (catSel) catSel.innerHTML = '<option value="">전체</option>';
+      loadCategoryList();
+    }
+    // 기존 차트 ticker 초기화 → 신규 마켓 첫 종목 자동 로드
+    D2T.ticker = '';
     loadTickerList('');
 
     // 날짜 범위 입력 초기화

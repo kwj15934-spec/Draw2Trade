@@ -106,6 +106,13 @@ async def lifespan(app: FastAPI):
         logger.info("US 이름 캐시 완료.")
     except Exception as e:
         logger.error("US 캐시 빌드 실패: %s", e)
+    # 크립토 캐시 (Upbit KRW 페어, 2년 일봉) — bar_db에 데이터 있으면 메모리로 로드
+    try:
+        from app.services import crypto_data_service
+        loaded = crypto_data_service.build_crypto_cache(years=2)
+        logger.info("CRYPTO_KRW 캐시: %d개 페어 로드", loaded)
+    except Exception as e:
+        logger.warning("CRYPTO_KRW 캐시 빌드 실패 (시드 미실행 가능): %s", e)
     # 패턴 검색용 ProcessPoolExecutor (GIL 우회 — CPU 병렬 처리)
     from app.routers.pattern import init_process_pool
     init_process_pool()
@@ -116,6 +123,8 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(_krx_scheduler())
     # 오픈뱅킹 입금 자동확인 워커
     asyncio.create_task(_bank_transfer_poller())
+    # 크립토 일봉 스케줄러 (매일 09:10 KST 자동 수집)
+    asyncio.create_task(_crypto_scheduler())
     yield
     from app.routers.pattern import shutdown_process_pool
     shutdown_process_pool()
@@ -166,6 +175,42 @@ async def _krx_scheduler():
         except Exception as e:
             logger.error("KRX 스케줄러 오류: %s", e)
             await asyncio.sleep(300)   # 5분 후 재시도
+
+
+async def _crypto_scheduler():
+    """
+    매일 09:10 KST 에 업비트 KRW 페어 전체 일봉을 수집한다.
+    - 첫 봉 (어제 UTC 기준)이 daily_bars 에 들어가도록 충분한 시간 후 실행
+    - bar_db 에 INSERT OR REPLACE 로 idempotent
+    - 캐시 미빌드 상태면 build_crypto_cache 도 함께 호출
+    """
+    while True:
+        try:
+            now_utc = datetime.now(timezone.utc)
+            now_kst = now_utc + timedelta(hours=9)
+            target = now_kst.replace(hour=9, minute=10, second=0, microsecond=0)
+            if now_kst >= target:
+                target = target + timedelta(days=1)
+            wait_sec = (target - now_kst).total_seconds()
+            logger.info("크립토 스케줄러: 다음 수집 %s KST (%.0f초 후)",
+                        target.strftime("%m-%d %H:%M"), wait_sec)
+            await asyncio.sleep(wait_sec)
+
+            from app.services import crypto_data_service
+            logger.info("크립토 일봉 자동 수집 시작 (Upbit KRW)")
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, crypto_data_service.fetch_all_upbit_krw_daily, 2
+            )
+            logger.info("크립토 일봉 수집 완료: %s", result)
+            # 메모리 캐시 갱신
+            await asyncio.get_event_loop().run_in_executor(
+                None, crypto_data_service.build_crypto_cache, 2
+            )
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("크립토 스케줄러 오류: %s", e)
+            await asyncio.sleep(600)   # 10분 후 재시도
 
 
 async def _bank_transfer_poller():

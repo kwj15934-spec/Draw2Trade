@@ -109,10 +109,12 @@ async def chart_data(
     timeframe: str = "daily",
     months: int = 120,
     poll: int = 0,
+    market: str = "KR",
 ):
     """
     OHLCV 반환 (Lightweight Charts candle 포맷).
 
+    market:    'KR' (KOSPI/KOSDAQ) | 'CRYPTO_KRW' (Upbit KRW pairs)
     timeframe: 'daily' | 'weekly' | 'monthly'
     Response:
         {"ticker": "...", "name": "...", "candles": [...], "timeframe": "...", "prevClose": 0}
@@ -126,6 +128,35 @@ async def chart_data(
 
     if tf not in ("monthly", "weekly", "daily"):
         tf = "daily"
+
+    market_up = (market or "KR").upper()
+
+    # ── CRYPTO_KRW 분기 ──────────────────────────────────────────────────────
+    if market_up == "CRYPTO_KRW":
+        from app.services import crypto_data_service
+        _db_end = datetime.now().strftime("%Y%m%d")
+        bars = bar_db.get_daily_bars("CRYPTO_KRW", ticker, "19900101", _db_end)
+        if not bars:
+            raise HTTPException(status_code=404, detail=f"크립토 {ticker} 데이터 없음")
+        candles = bar_db.bars_to_candles(bars, tf)
+
+        # 실시간 마지막 봉 overlay (CCXT)
+        live = crypto_data_service.get_recent_candle(ticker)
+        if live and candles:
+            today = datetime.now().strftime("%Y-%m-%d")
+            if tf == "daily" and candles[-1].get("time") != today:
+                candles.append(live)
+            elif tf == "daily":
+                candles[-1] = {**candles[-1], **live}
+
+        return {
+            "ticker":    ticker,
+            "name":      crypto_data_service.get_company_name(ticker),
+            "candles":   candles,
+            "timeframe": tf,
+            "prevClose": 0,
+            "market":    "CRYPTO_KRW",
+        }
 
     # Redis 캐시 히트 (daily timeframe만 캐시 — 실시간 봉은 캐시 우회)
     if tf != "daily":
@@ -188,6 +219,16 @@ async def chart_data(
         "timeframe": tf,
         "prevClose": 0,
     }
+
+
+@router.get("/crypto/list")
+async def crypto_list(limit: int = Query(2000, le=5000)):
+    """업비트 KRW 페어 전체 목록 (UI 종목 셀렉트박스용)."""
+    from app.services import crypto_data_service
+    names = crypto_data_service.all_crypto_names()
+    items = [{"ticker": sym, "name": nm} for sym, nm in names.items()]
+    items.sort(key=lambda x: x["ticker"])
+    return {"market": "CRYPTO_KRW", "count": len(items), "items": items[:limit]}
 
 
 @router.get("/v1/stock/news/{symbol}")

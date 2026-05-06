@@ -149,6 +149,23 @@ async def pattern_search(body: PatternSearchRequest, user: dict = Depends(requir
             effective_lookback = min(2520, body.lookback_bars * tf_to_days.get(tf, 1))  # 최대 ~10년
         else:
             effective_lookback = body.lookback_months * 22
+    elif market == "CRYPTO_KRW":
+        # 크립토는 365일/년 (주식 영업일 ~252 와 다름)
+        from app.services import crypto_data_service
+        if not crypto_data_service.is_built():
+            crypto_data_service.build_crypto_cache(years=2)
+        ohlcv_cache = crypto_data_service.all_crypto_ohlcv()
+        names_cache = crypto_data_service.all_crypto_names()
+        smooth_window = 3   # 크립토 노이즈 많음 → 가벼운 스무딩
+        if body.lookback_bars is not None:
+            tf_to_days = {"monthly": 30, "weekly": 7, "daily": 1}
+            effective_lookback = min(730, body.lookback_bars * tf_to_days.get(tf, 1))
+        else:
+            # KR 의 lookback_months 가 들어와도 그대로 일수로 환산
+            effective_lookback = body.lookback_months * 30
+        effective_lookback = max(5, min(730, effective_lookback))
+        logger.info("CRYPTO_KRW 검색: lookback=%d, 페어 %d개",
+                    effective_lookback, len(ohlcv_cache))
     elif tf == "daily":
         # KR 일봉: bar_db 일봉 데이터 사용 — 월봉 변환 없이 실제 일봉으로 패턴 비교
         from app.services.bar_db import get_daily_ohlcv_all, get_all_names_from_db as _db_names

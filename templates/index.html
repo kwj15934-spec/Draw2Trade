@@ -3,6 +3,9 @@
 {% block footer_align %}left{% endblock %}
 {% block popup_page %}app{% endblock %}
 
+{# AdSense 비활성화: 차트앱은 KR 주식 + 크립토를 동시 다루므로 광고 정책 위험 회피 #}
+{% block adsense %}{% endblock %}
+
 {% block seo %}
   <!-- ── SEO 기본 태그 ──────────────────────────────────── -->
   <meta name="description" content="차트 패턴을 직접 그리면 KOSPI/KOSDAQ 전 종목에서 유사한 구간을 찾아주는 주식 패턴 검색 서비스. 유사 종목 자동 탐색, 패턴 비교, 실시간 시세 제공.">
@@ -87,6 +90,7 @@
 
   <div class="market-selector">
     <button class="btn-d2t market-btn active" id="market-kr" data-market="KR">KR</button>
+    <button class="btn-d2t market-btn" id="market-crypto" data-market="CRYPTO_KRW" title="Upbit KRW pairs">CRYPTO</button>
   </div>
 
   <!-- 시장 시간 칩 -->
