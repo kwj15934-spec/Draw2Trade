@@ -380,16 +380,16 @@
   </a>
   <span class="d2t-nav-sep"></span>
   <div class="d2t-nav-tabs">
-    <a href="/market"  class="nav-link">시장</a>
-    <a href="/news"    class="nav-link">뉴스</a>
-    <a href="/feed"    class="nav-link active">피드</a>
-    <a href="/notices" class="nav-link">공지</a>
-    <a href="/pricing" class="nav-link">요금제</a>
+    <a href="/market"  class="nav-link" data-i18n="nav.market">시장</a>
+    <a href="/news"    class="nav-link" data-i18n="nav.news">뉴스</a>
+    <a href="/feed"    class="nav-link active" data-i18n="nav.feed">피드</a>
+    <a href="/notices" class="nav-link" data-i18n="nav.notices">공지</a>
+    <a href="/pricing" class="nav-link" data-i18n="nav.pricing">요금제</a>
   </div>
   <div class="nav-spacer"></div>
   <button type="button" data-i18n-toggle
     style="margin-right:14px;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.04em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);color:#C9CFDA;cursor:pointer;font-family:inherit;"></button>
-  <a href="/login" data-loggedin-href="/app" class="nav-link">차트 앱 →</a>
+  <a href="/login" data-loggedin-href="/app" class="nav-link" data-i18n="nav.app">차트 앱 →</a>
 </nav>
 
 <div class="page-body">
@@ -398,8 +398,8 @@
   <div class="feed-main">
     <div class="page-header">
       <div class="page-eyebrow"><span class="dot"></span>MARKET FEED</div>
-      <h1>시장 피드</h1>
-      <p>국내외 시장 지표·인사이트·이슈를 한눈에 확인하세요.</p>
+      <h1 data-i18n="feed.title">시장 피드</h1>
+      <p data-i18n="feed.desc">국내외 시장 지표·인사이트·이슈를 한눈에 확인하세요.</p>
     </div>
 
     <!-- 피드 콘텐츠 (Firestore 에서 서버 렌더) -->
@@ -423,15 +423,15 @@
           </div>
           {% endif %}
           <div style="margin-top:12px;">
-            <a href="/feed/{{ p.slug }}" style="font-size:12px;color:var(--teal);text-decoration:none;letter-spacing:0.02em;">상세 보기 →</a>
+            <a href="/feed/{{ p.slug }}" style="font-size:12px;color:var(--teal);text-decoration:none;letter-spacing:0.02em;" data-i18n="feed.read_more">상세 보기 →</a>
           </div>
         </article>
         {% endfor %}
       {% else %}
         <div class="feed-empty">
           <div class="empty-icon">📭</div>
-          아직 게시된 글이 없습니다.
-          <span class="empty-sub">곧 업데이트될 예정입니다.</span>
+          <span data-i18n="feed.empty.title">아직 게시된 글이 없습니다.</span>
+          <span class="empty-sub" data-i18n="feed.empty.sub">곧 업데이트될 예정입니다.</span>
         </div>
       {% endif %}
     </div>
@@ -441,35 +441,59 @@
   <aside class="feed-sidebar">
 
     <div class="sidebar-card">
-      <div class="sidebar-card-title">급등 종목</div>
+      <div class="sidebar-card-title" data-i18n="feed.side.gainers">급등 종목</div>
       <div id="screener-up"></div>
     </div>
 
     <div class="sidebar-card">
-      <div class="sidebar-card-title">급락 종목</div>
+      <div class="sidebar-card-title" data-i18n="feed.side.losers">급락 종목</div>
       <div id="screener-down"></div>
     </div>
 
     <div class="sidebar-card">
-      <div class="sidebar-card-title">빠른 이동</div>
+      <div class="sidebar-card-title" data-i18n="feed.side.quick">빠른 이동</div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <a href="/login" data-loggedin-href="/app" class="quick-link primary"><span class="ql-icon">📈</span>차트 앱으로</a>
-        <a href="/news"    class="quick-link"><span class="ql-icon">📰</span>시장 뉴스</a>
-        <a href="/notices" class="quick-link"><span class="ql-icon">📢</span>공지사항</a>
+        <a href="/login" data-loggedin-href="/app" class="quick-link primary"><span class="ql-icon">📈</span><span data-i18n="feed.side.q.app">차트 앱으로</span></a>
+        <a href="/news"    class="quick-link"><span class="ql-icon">📰</span><span data-i18n="feed.side.q.news">시장 뉴스</span></a>
+        <a href="/notices" class="quick-link"><span class="ql-icon">📢</span><span data-i18n="feed.side.q.notices">공지사항</span></a>
       </div>
     </div>
 
   </aside>
 </div>
 
+<script>
+D2T_I18N.add({
+  'feed.title':         { ko: '시장 피드', en: 'Market Feed' },
+  'feed.desc':          { ko: '국내외 시장 지표·인사이트·이슈를 한눈에 확인하세요.', en: 'Market metrics, insights and updates at a glance.' },
+  'feed.read_more':     { ko: '상세 보기 →', en: 'Read more →' },
+  'feed.empty.title':   { ko: '아직 게시된 글이 없습니다.', en: 'No articles yet.' },
+  'feed.empty.sub':     { ko: '곧 업데이트될 예정입니다.', en: 'Coming soon.' },
+  'feed.side.gainers':  { ko: '급등 종목', en: 'Top gainers' },
+  'feed.side.losers':   { ko: '급락 종목', en: 'Top losers' },
+  'feed.side.quick':    { ko: '빠른 이동', en: 'Quick links' },
+  'feed.side.q.app':    { ko: '차트 앱으로', en: 'Open Chart App' },
+  'feed.side.q.news':   { ko: '시장 뉴스', en: 'Market news' },
+  'feed.side.q.notices':{ ko: '공지사항', en: 'Notices' },
+});
+</script>
+
 <footer>
-  <p>
+  <p data-i18n-html data-i18n="feed.footer.links">
     &copy; 2026 Draw2Trade &nbsp;·&nbsp;
     <a href="/terms">이용약관</a> &nbsp;·&nbsp;
     <a href="/privacy">개인정보 처리방침</a>
   </p>
-  <p class="biz">상호: FORMETA &nbsp;|&nbsp; 대표: 김원준 &nbsp;|&nbsp; 사업자: 536-32-01566</p>
+  <p class="biz" data-i18n="feed.footer.biz">상호: FORMETA &nbsp;|&nbsp; 대표: 김원준 &nbsp;|&nbsp; 사업자: 536-32-01566</p>
 </footer>
+<script>
+D2T_I18N.add({
+  'feed.footer.links': { ko: '&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a>',
+                          en: '&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a>' },
+  'feed.footer.biz':   { ko: '상호: FORMETA &nbsp;|&nbsp; 대표: 김원준 &nbsp;|&nbsp; 사업자: 536-32-01566',
+                          en: 'FORMETA · CEO Won Jun Kim · Business Reg. No. 536-32-01566' },
+});
+</script>
 
 <script>
 (function () {

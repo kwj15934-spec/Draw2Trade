@@ -132,23 +132,23 @@
   </a>
   <span class="d2t-nav-sep"></span>
   <div class="d2t-nav-tabs">
-    <a href="/market"  class="nav-link">시장</a>
-    <a href="/news"    class="nav-link">뉴스</a>
-    <a href="/feed"    class="nav-link active">피드</a>
-    <a href="/notices" class="nav-link">공지</a>
-    <a href="/pricing" class="nav-link">요금제</a>
+    <a href="/market"  class="nav-link" data-i18n="nav.market">시장</a>
+    <a href="/news"    class="nav-link" data-i18n="nav.news">뉴스</a>
+    <a href="/feed"    class="nav-link active" data-i18n="nav.feed">피드</a>
+    <a href="/notices" class="nav-link" data-i18n="nav.notices">공지</a>
+    <a href="/pricing" class="nav-link" data-i18n="nav.pricing">요금제</a>
   </div>
   <div class="nav-spacer"></div>
   <button type="button" data-i18n-toggle
     style="margin-right:14px;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.04em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);color:#C9CFDA;cursor:pointer;font-family:inherit;"></button>
-  <a href="/login" data-loggedin-href="/app" class="nav-link">차트 앱 →</a>
+  <a href="/login" data-loggedin-href="/app" class="nav-link" data-i18n="nav.app">차트 앱 →</a>
 </nav>
 
 <article class="page-wrap">
 
   <div class="breadcrumb">
-    <a href="/">홈</a><span class="sep">›</span>
-    <a href="/feed">피드</a><span class="sep">›</span>
+    <a href="/" data-i18n="post.home">홈</a><span class="sep">›</span>
+    <a href="/feed" data-i18n="nav.feed">피드</a><span class="sep">›</span>
     <span style="color:var(--fg2);">{{ post.category or '아티클' }}</span>
   </div>
 
@@ -156,7 +156,7 @@
     <span class="post-category">{{ post.category or '아티클' }}</span>
     <span class="post-date">{{ post.display_date or (post.created_at[:10] if post.created_at else '') }}</span>
     {% if post.views and post.views > 0 %}
-    <span class="post-views">조회 {{ post.views }}</span>
+    <span class="post-views"><span data-i18n="post.views">조회</span> {{ post.views }}</span>
     {% endif %}
   </div>
 
@@ -173,19 +173,32 @@
   {% endif %}
 
   <div class="post-cta">
-    <div class="post-cta-text">
+    <div class="post-cta-text" data-i18n-html data-i18n="post.cta_text">
       <b>Draw2Trade</b>에서 직접 패턴을 그려<br>
       과거 비슷한 흐름의 종목을 검색해 보세요.
     </div>
-    <a href="/login" data-loggedin-href="/app" class="btn-cta">차트 앱으로 →</a>
+    <a href="/login" data-loggedin-href="/app" class="btn-cta" data-i18n="post.cta_btn">차트 앱으로 →</a>
   </div>
 
 </article>
 
 <footer>
-  <p>&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a> &nbsp;·&nbsp; <a href="/feed">← 피드 목록</a></p>
-  <p style="font-size:11px">상호: FORMETA · 대표: 김원준 · 사업자: 536-32-01566</p>
+  <p data-i18n-html data-i18n="post.footer.links">&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a> &nbsp;·&nbsp; <a href="/feed">← 피드 목록</a></p>
+  <p style="font-size:11px" data-i18n="post.footer.biz">상호: FORMETA · 대표: 김원준 · 사업자: 536-32-01566</p>
 </footer>
+<script>
+D2T_I18N.add({
+  'post.home':         { ko: '홈', en: 'Home' },
+  'post.views':        { ko: '조회', en: 'Views' },
+  'post.cta_text':     { ko: '<b>Draw2Trade</b>에서 직접 패턴을 그려<br>과거 비슷한 흐름의 종목을 검색해 보세요.',
+                          en: 'Try drawing your own pattern on <b>Draw2Trade</b><br>and discover stocks that moved the same way historically.' },
+  'post.cta_btn':      { ko: '차트 앱으로 →', en: 'Open Chart App →' },
+  'post.footer.links': { ko: '&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a> &nbsp;·&nbsp; <a href="/feed">← 피드 목록</a>',
+                          en: '&copy; 2026 Draw2Trade &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/feed">← Back to feed</a>' },
+  'post.footer.biz':   { ko: '상호: FORMETA · 대표: 김원준 · 사업자: 536-32-01566',
+                          en: 'FORMETA · CEO Won Jun Kim · Business Reg. No. 536-32-01566' },
+});
+</script>
 
 <script>
   fetch('/api/auth/me', { credentials: 'same-origin' })

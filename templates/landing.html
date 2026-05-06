@@ -465,6 +465,7 @@
     <script>
       // 랜딩 페이지 i18n 사전
       D2T_I18N.add({
+        // Hero
         'hero.title':         { ko: 'Draw the chart.<br/><span class="mint">차트를 그려보세요.</span>',
                                 en: 'Draw the chart.<br/><span class="mint">Find similar stocks.</span>' },
         'hero.sub':           { ko: '마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.',
@@ -473,6 +474,88 @@
                                 en: 'Draw Now <span class="cta-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>' },
         'hero.cta_secondary': { ko: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg> 차트 모드 열기',
                                 en: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg> Open Chart App' },
+
+        // 우측 패널
+        'lp.community.title': { ko: '그리는 투자자들의 <em>커뮤니티</em>', en: 'A <em>community</em> of chart-drawing traders' },
+        'lp.community.desc':  { ko: '다른 트레이더의 패턴 시그널과 공시 인사이트를 모아 보세요.', en: 'Browse other traders’ pattern signals and filing insights.' },
+        'lp.notices.label':   { ko: 'NOTICES · 공지사항', en: 'NOTICES' },
+        'lp.notices.more':    { ko: '전체보기 →', en: 'View all →' },
+        'lp.notices.loading': { ko: '불러오는 중...', en: 'Loading...' },
+
+        'lp.feat.pattern_match.desc': { ko: '그린 패턴과 유사한 종목을 반환합니다.', en: 'Returns stocks similar to the pattern you drew.' },
+        'lp.feat.fin_summary.desc':   { ko: 'DART 공시·재무를 한국어로 요약,<br>핵심 지표와 리스크를 한 번에 정리합니다.',
+                                         en: 'Summarises DART filings &amp; financials,<br>distilling key metrics and risks at a glance.' },
+        'lp.quickstart.label':        { ko: 'QUICK START · 빈 캔버스', en: 'QUICK START · Blank canvas' },
+        'lp.quickstart.title':        { ko: '패턴을 그리고 <em>유사 종목</em> 검색', en: 'Draw a pattern, find <em>similar stocks</em>' },
+        'lp.quickstart.desc':         { ko: '로그인 없이 바로 시작 · 결과는 0.2초 안에', en: 'No login required · results in 0.2 seconds' },
+
+        // FEATURES section
+        'lp.features.title':  { ko: '트레이더를 위한 <em>정밀한</em> 도구', en: '<em>Precision</em> tools for traders' },
+        'lp.features.sub':    { ko: '전 종목 스캔부터 패턴 매칭까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.',
+                                  en: 'From whole-market scans to pattern matching — every tool you need for chart research, on one screen.' },
+        'lp.feat.scan.title': { ko: '전 종목 <em>패턴 스캔</em>', en: 'Whole-market <em>pattern scan</em>' },
+        'lp.feat.scan.li1':   { ko: 'KOSPI · KOSDAQ 2,400+ 종목 동시 검색', en: 'Searches 2,400+ KOSPI &amp; KOSDAQ tickers simultaneously' },
+        'lp.feat.scan.li2':   { ko: '일봉 · 주봉 · 월봉 전 시간대 지원', en: 'Daily, weekly, and monthly candles supported' },
+        'lp.feat.tools.title':{ ko: '4가지 <em>드로잉 도구</em>', en: 'Four <em>drawing tools</em>' },
+        'lp.feat.tools.li1':  { ko: '자유곡선 — 손으로 그리듯 자연스러운 패턴 입력', en: 'Freehand — natural hand-drawn patterns' },
+        'lp.feat.tools.li2':  { ko: '추세선 — 다중 포인트 연결', en: 'Trend line — multi-point polyline' },
+        'lp.feat.tools.li3':  { ko: '직선 — 두 점으로 간결하게', en: 'Line — concise two-point lines' },
+        'lp.feat.tools.li4':  { ko: '평행 채널 — 박스권 패턴 매칭에 최적화', en: 'Parallel channel — optimised for box-range patterns' },
+        'lp.feat.rank.title': { ko: '유사도 <em>시각화</em>', en: 'Similarity <em>visualisation</em>' },
+        'lp.feat.rank.li1':   { ko: '오렌지→시안 그라디언트 게이지로 한눈에 비교', en: 'Orange-to-cyan gauge for at-a-glance comparison' },
+        'lp.feat.rank.li2':   { ko: 'Top 3에 금·은·동 랭크 뱃지 자동 부여', en: 'Top 3 receive gold/silver/bronze rank badges automatically' },
+        'lp.feat.rank.li3':   { ko: '1위는 항상 100% 기준', en: '#1 always anchored at 100%' },
+
+        // PRICING section
+        'lp.pricing.title':   { ko: '필요한 만큼만 <em>지불</em>하세요', en: '<em>Pay</em> only for what you need' },
+        'lp.pricing.sub':     { ko: '무료로 시작하고, 더 깊은 분석이 필요할 때 Pro로 전환하세요.', en: 'Start free, upgrade to Pro when you need deeper analysis.' },
+        'lp.free.price':      { ko: '₩0<small>/월</small>', en: '$0<small>/mo</small>' },
+        'lp.free.sub':        { ko: '부담 없이 시작하기', en: 'Start with zero commitment' },
+        'lp.free.li1':        { ko: 'KR 시장 패턴 검색 · 무제한', en: 'Korean market pattern search · unlimited' },
+        'lp.free.li2':        { ko: '유사 종목 Top 11~50 결과', en: 'Similar stocks rank 11–50' },
+        'lp.free.li3':        { ko: '즐겨찾기·차트 저장 최대 5개', en: 'Favorites &amp; saved charts up to 5' },
+        'lp.free.li4':        { ko: '자동 패턴 검색', en: 'Auto pattern search' },
+        'lp.free.cta':        { ko: '무료로 시작하기', en: 'Start free' },
+        'lp.pro.badge':       { ko: '이벤트 특가', en: 'Limited offer' },
+        'lp.pro.price':       { ko: '₩8,900<small>/월</small>', en: '$6<small>/mo</small>' },
+        'lp.pro.sub':         { ko: '계좌이체 또는 PayPal로 결제', en: 'Pay by bank transfer or PayPal' },
+        'lp.pro.li1':         { ko: 'Top 1~50 전체 결과 (상위 10개 포함)', en: 'Full Top 1–50 results (incl. top 10)' },
+        'lp.pro.li2':         { ko: '자동 패턴 검색 (기간 지정 후 자동 분석)', en: 'Auto pattern search (auto-analyse over a date range)' },
+        'lp.pro.li3':         { ko: '즐겨찾기·차트 저장 무제한', en: 'Unlimited favorites &amp; saved charts' },
+        'lp.pro.li4':         { ko: '속도 우선 지원', en: 'Priority performance' },
+        'lp.pro.cta':         { ko: 'Pro 시작하기', en: 'Start Pro' },
+        'lp.pricing.disclaimer': { ko: '본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.<br>패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.',
+                                    en: 'This service provides reference information only and does not constitute investment advice under the Capital Markets Act.<br>Pattern similarity is based on historical data and does not guarantee future returns.' },
+
+        // FAQ
+        'lp.faq.title': { ko: '자주 묻는 <em>질문</em>', en: 'Frequently asked <em>questions</em>' },
+        'lp.faq.q1':    { ko: '결제 후 언제 Pro가 되나요?', en: 'When does Pro activate after payment?' },
+        'lp.faq.a1':    { ko: '이체 확인 후 24시간 이내 수동 전환됩니다. 평균적으로 수 시간 내에 Pro 기능이 활성화됩니다.',
+                            en: 'Bank transfers are typically activated within a few hours of confirmation (within 24 hours at most). PayPal subscriptions activate immediately.' },
+        'lp.faq.q2':    { ko: '무료 플랜에서도 패턴 검색이 되나요?', en: 'Can I search patterns on the free plan?' },
+        'lp.faq.a2':    { ko: '네, 무료 플랜도 검색 횟수 제한 없이 사용 가능합니다. 다만 상위 Top 10 결과는 Pro 전용이며, 무료 플랜에서는 11위부터 50위까지의 결과를 확인할 수 있습니다.',
+                            en: 'Yes — the free plan offers unlimited searches. However, the top 10 results are Pro-only; free users see ranks 11 through 50.' },
+        'lp.faq.q3':    { ko: '미국 주식(US)도 지원하나요?', en: 'Do you support US stocks?' },
+        'lp.faq.a3':    { ko: '현재는 KR(KOSPI/KOSDAQ) 시장만 지원합니다. 해외 시장 확장은 로드맵에 포함되어 있으나 구체적인 일정은 아직 공개되지 않았습니다.',
+                            en: 'Currently we support KR markets only (KOSPI/KOSDAQ). International markets are on the roadmap but no specific timeline has been announced.' },
+        'lp.faq.q4':    { ko: '차트 데이터는 얼마나 실시간인가요?', en: 'How real-time is the chart data?' },
+        'lp.faq.a4':    { ko: 'KRX 데이터를 기반으로 당일 현재가를 마지막 봉에 실시간 반영합니다. 패턴 검색에 사용되는 과거 데이터는 일봉 기준 종가 데이터입니다.',
+                            en: 'We display KRX data with the latest intraday price applied to the most recent candle in real time. Pattern searches use historical daily closing prices.' },
+
+        // CTA Band
+        'lp.ctaband.title':   { ko: '지금 <em>그려보세요</em>. 16초면 충분합니다.', en: '<em>Start drawing</em> now. It takes 16 seconds.' },
+        'lp.ctaband.sub':     { ko: '신용카드 없이 무료 시작 · 무제한 패턴 검색.', en: 'Free to start, no credit card · unlimited pattern searches.' },
+        'lp.ctaband.cta':     { ko: '무료로 시작하기 →', en: 'Start free →' },
+
+        // Footer
+        'lp.footer.notices':  { ko: '공지사항', en: 'Notices' },
+        'lp.footer.terms':    { ko: '이용약관', en: 'Terms' },
+        'lp.footer.privacy':  { ko: '개인정보처리방침', en: 'Privacy' },
+        'lp.footer.contact':  { ko: '문의', en: 'Contact' },
+        'lp.footer.biz':      { ko: '상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566<br>사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동) &nbsp;|&nbsp; 전화번호 : 02-6015-9983 &nbsp;|&nbsp; 이메일 : <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>',
+                                 en: 'Business: FORMETA &nbsp;|&nbsp; CEO: Won Jun Kim &nbsp;|&nbsp; Business Reg. No.: 536-32-01566<br>Address: B1, 48-4 Pobangteo-gil, Seodaemun-gu, Seoul, Korea &nbsp;|&nbsp; Tel: +82-2-6015-9983 &nbsp;|&nbsp; Email: <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>' },
+        'lp.footer.disclaimer': { ko: '본 서비스는 투자 참고용 정보이며, 자본시장법상 투자자문에 해당하지 않습니다.',
+                                    en: 'This service provides reference information only and does not constitute investment advice.' },
       });
     </script>
 
@@ -508,19 +591,19 @@
       </button>
     </div>
 
-    <a href="/feed" class="community-card liquid-glass" aria-label="커뮤니티 보기">
+    <a href="/feed" class="community-card liquid-glass" aria-label="Community">
       <div class="lab"><span class="dot"></span> COMMUNITY</div>
-      <h3>그리는 투자자들의 <em>커뮤니티</em></h3>
-      <p>다른 트레이더의 패턴 시그널과 공시 인사이트를 모아 보세요.</p>
+      <h3 data-i18n-html data-i18n="lp.community.title">그리는 투자자들의 <em>커뮤니티</em></h3>
+      <p data-i18n="lp.community.desc">다른 트레이더의 패턴 시그널과 공시 인사이트를 모아 보세요.</p>
     </a>
 
-    <div class="notice-feed liquid-glass" aria-label="공지사항">
+    <div class="notice-feed liquid-glass" aria-label="Notices">
       <div class="notice-feed-head">
-        <div class="lab"><span class="dot"></span> NOTICES · 공지사항</div>
-        <a href="/notices" class="more">전체보기 →</a>
+        <div class="lab"><span class="dot"></span> <span data-i18n="lp.notices.label">NOTICES · 공지사항</span></div>
+        <a href="/notices" class="more" data-i18n="lp.notices.more">전체보기 →</a>
       </div>
       <div class="notice-feed-list" id="notice-feed-list">
-        <div class="notice-feed-empty">불러오는 중...</div>
+        <div class="notice-feed-empty" data-i18n="lp.notices.loading">불러오는 중...</div>
       </div>
     </div>
 
@@ -532,7 +615,7 @@
           </div>
           <div>
             <h4>AI <em>Pattern Match</em></h4>
-            <p>그린 패턴과 유사한 종목을 반환합니다.</p>
+            <p data-i18n="lp.feat.pattern_match.desc">그린 패턴과 유사한 종목을 반환합니다.</p>
           </div>
           <div class="stat">
             <span class="v">2,400+</span>
@@ -545,7 +628,7 @@
           </div>
           <div>
             <h4>AI <em>Fin Summary</em></h4>
-            <p>DART 공시·재무를 한국어로 요약,<br>핵심 지표와 리스크를 한 번에 정리합니다.</p>
+            <p data-i18n-html data-i18n="lp.feat.fin_summary.desc">DART 공시·재무를 한국어로 요약,<br>핵심 지표와 리스크를 한 번에 정리합니다.</p>
           </div>
           <div class="stat">
             <span class="v">KR</span>
@@ -568,9 +651,9 @@
           </svg>
         </div>
         <div class="pattern-info">
-          <div class="lab">QUICK START · 빈 캔버스</div>
-          <h5>패턴을 그리고 <em>유사 종목</em> 검색</h5>
-          <p>로그인 없이 바로 시작 · 결과는 0.2초 안에</p>
+          <div class="lab" data-i18n="lp.quickstart.label">QUICK START · 빈 캔버스</div>
+          <h5 data-i18n-html data-i18n="lp.quickstart.title">패턴을 그리고 <em>유사 종목</em> 검색</h5>
+          <p data-i18n="lp.quickstart.desc">로그인 없이 바로 시작 · 결과는 0.2초 안에</p>
         </div>
         <div class="plus-btn liquid-glass-mint" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -584,8 +667,8 @@
 <section class="section deferred" id="features">
   <div class="section-head">
     <div class="section-eyebrow">FEATURES</div>
-    <h2 class="section-title">트레이더를 위한 <em>정밀한</em> 도구</h2>
-    <p class="section-sub">전 종목 스캔부터 패턴 매칭까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.</p>
+    <h2 class="section-title" data-i18n-html data-i18n="lp.features.title">트레이더를 위한 <em>정밀한</em> 도구</h2>
+    <p class="section-sub" data-i18n="lp.features.sub">전 종목 스캔부터 패턴 매칭까지 — 차트 리서치에 필요한 도구를 한 화면에 모았습니다.</p>
   </div>
 
   <div class="features-grid">
@@ -615,10 +698,10 @@
         </svg>
       </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-      <h3>전 종목 <em>패턴 스캔</em></h3>
+      <h3 data-i18n-html data-i18n="lp.feat.scan.title">전 종목 <em>패턴 스캔</em></h3>
       <ul>
-        <li>KOSPI · KOSDAQ 2,400+ 종목 동시 검색</li>
-        <li>일봉 · 주봉 · 월봉 전 시간대 지원</li>
+        <li data-i18n="lp.feat.scan.li1">KOSPI · KOSDAQ 2,400+ 종목 동시 검색</li>
+        <li data-i18n="lp.feat.scan.li2">일봉 · 주봉 · 월봉 전 시간대 지원</li>
       </ul>
     </div>
 
@@ -643,12 +726,12 @@
         </svg>
       </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-8 4 5 3-3 7 9"/><circle cx="6" cy="6" r="2"/></svg></div>
-      <h3>4가지 <em>드로잉 도구</em></h3>
+      <h3 data-i18n-html data-i18n="lp.feat.tools.title">4가지 <em>드로잉 도구</em></h3>
       <ul>
-        <li>자유곡선 — 손으로 그리듯 자연스러운 패턴 입력</li>
-        <li>추세선 — 다중 포인트 연결</li>
-        <li>직선 — 두 점으로 간결하게</li>
-        <li>평행 채널 — 박스권 패턴 매칭에 최적화</li>
+        <li data-i18n="lp.feat.tools.li1">자유곡선 — 손으로 그리듯 자연스러운 패턴 입력</li>
+        <li data-i18n="lp.feat.tools.li2">추세선 — 다중 포인트 연결</li>
+        <li data-i18n="lp.feat.tools.li3">직선 — 두 점으로 간결하게</li>
+        <li data-i18n="lp.feat.tools.li4">평행 채널 — 박스권 패턴 매칭에 최적화</li>
       </ul>
     </div>
 
@@ -679,11 +762,11 @@
         </svg>
       </div>
       <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg></div>
-      <h3>유사도 <em>시각화</em></h3>
+      <h3 data-i18n-html data-i18n="lp.feat.rank.title">유사도 <em>시각화</em></h3>
       <ul>
-        <li>오렌지→시안 그라디언트 게이지로 한눈에 비교</li>
-        <li>Top 3에 금·은·동 랭크 뱃지 자동 부여</li>
-        <li>1위는 항상 100% 기준</li>
+        <li data-i18n="lp.feat.rank.li1">오렌지→시안 그라디언트 게이지로 한눈에 비교</li>
+        <li data-i18n="lp.feat.rank.li2">Top 3에 금·은·동 랭크 뱃지 자동 부여</li>
+        <li data-i18n="lp.feat.rank.li3">1위는 항상 100% 기준</li>
       </ul>
     </div>
 
@@ -694,40 +777,40 @@
 <section class="section deferred" id="pricing">
   <div class="section-head">
     <div class="section-eyebrow">PRICING</div>
-    <h2 class="section-title">필요한 만큼만 <em>지불</em>하세요</h2>
-    <p class="section-sub">무료로 시작하고, 더 깊은 분석이 필요할 때 Pro로 전환하세요.</p>
+    <h2 class="section-title" data-i18n-html data-i18n="lp.pricing.title">필요한 만큼만 <em>지불</em>하세요</h2>
+    <p class="section-sub" data-i18n="lp.pricing.sub">무료로 시작하고, 더 깊은 분석이 필요할 때 Pro로 전환하세요.</p>
   </div>
 
   <div class="pricing-grid">
     <div class="plan-card liquid-glass">
       <div class="plan-name">Free</div>
-      <div class="plan-price">₩0<small>/월</small></div>
-      <div class="plan-sub">부담 없이 시작하기</div>
+      <div class="plan-price" data-i18n-html data-i18n="lp.free.price">₩0<small>/월</small></div>
+      <div class="plan-sub" data-i18n="lp.free.sub">부담 없이 시작하기</div>
       <ul class="plan-features">
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>KR 시장 패턴 검색 · 무제한</li>
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>유사 종목 Top 11~50 결과</li>
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 최대 5개</li>
-        <li class="no"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>자동 패턴 검색</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.free.li1">KR 시장 패턴 검색 · 무제한</span></li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.free.li2">유사 종목 Top 11~50 결과</span></li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.free.li3">즐겨찾기·차트 저장 최대 5개</span></li>
+        <li class="no"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg><span data-i18n="lp.free.li4">자동 패턴 검색</span></li>
       </ul>
-      <a href="/app" class="plan-cta ghost">무료로 시작하기</a>
+      <a href="/app" class="plan-cta ghost" data-i18n="lp.free.cta">무료로 시작하기</a>
     </div>
 
     <div class="plan-card liquid-glass-mint featured">
-      <span class="plan-badge">이벤트 특가</span>
+      <span class="plan-badge" data-i18n="lp.pro.badge">이벤트 특가</span>
       <div class="plan-name pro">Pro</div>
-      <div class="plan-price">$6<small>/월</small></div>
-      <div class="plan-sub">PayPal로 바로 시작하세요</div>
+      <div class="plan-price" id="lp-pro-price" data-i18n-html data-i18n="lp.pro.price">₩8,900<small>/월</small></div>
+      <div class="plan-sub" id="lp-pro-sub" data-i18n="lp.pro.sub">계좌이체 또는 PayPal로 결제</div>
       <ul class="plan-features">
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>Top 1~50 전체 결과 (상위 10개 포함)</li>
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>자동 패턴 검색 (기간 지정 후 자동 분석)</li>
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>즐겨찾기·차트 저장 무제한</li>
-        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg>속도 우선 지원</li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.pro.li1">Top 1~50 전체 결과 (상위 10개 포함)</span></li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.pro.li2">자동 패턴 검색 (기간 지정 후 자동 분석)</span></li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.pro.li3">즐겨찾기·차트 저장 무제한</span></li>
+        <li class="yes"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,8.5 6.5,12 13,4.5"/></svg><span data-i18n="lp.pro.li4">속도 우선 지원</span></li>
       </ul>
-      <a href="/pricing" class="plan-cta primary">Pro 시작하기</a>
+      <a href="/pricing" class="plan-cta primary" data-i18n="lp.pro.cta">Pro 시작하기</a>
     </div>
   </div>
 
-  <div class="pricing-disclaimer">
+  <div class="pricing-disclaimer" data-i18n-html data-i18n="lp.pricing.disclaimer">
     본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.<br>
     패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.
   </div>
@@ -737,46 +820,46 @@
 <section class="section deferred" id="faq">
   <div class="section-head">
     <div class="section-eyebrow">FAQ</div>
-    <h2 class="section-title">자주 묻는 <em>질문</em></h2>
+    <h2 class="section-title" data-i18n-html data-i18n="lp.faq.title">자주 묻는 <em>질문</em></h2>
   </div>
 
   <div class="faq-list">
     <div class="faq-item open">
       <button type="button" class="faq-q" onclick="toggleFaq(this)">
-        <span class="faq-q-text">결제 후 언제 Pro가 되나요?</span>
+        <span class="faq-q-text" data-i18n="lp.faq.q1">결제 후 언제 Pro가 되나요?</span>
         <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
       </button>
-      <div class="faq-a"><div class="faq-a-inner"><span>이체 확인 후 24시간 이내 수동 전환됩니다. 평균적으로 수 시간 내에 Pro 기능이 활성화됩니다.</span></div></div>
+      <div class="faq-a"><div class="faq-a-inner"><span data-i18n="lp.faq.a1">이체 확인 후 24시간 이내 수동 전환됩니다. 평균적으로 수 시간 내에 Pro 기능이 활성화됩니다.</span></div></div>
     </div>
     <div class="faq-item">
       <button type="button" class="faq-q" onclick="toggleFaq(this)">
-        <span class="faq-q-text">무료 플랜에서도 패턴 검색이 되나요?</span>
+        <span class="faq-q-text" data-i18n="lp.faq.q2">무료 플랜에서도 패턴 검색이 되나요?</span>
         <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
       </button>
-      <div class="faq-a"><div class="faq-a-inner"><span>네, 무료 플랜도 검색 횟수 제한 없이 사용 가능합니다. 다만 상위 Top 10 결과는 Pro 전용이며, 무료 플랜에서는 11위부터 50위까지의 결과를 확인할 수 있습니다.</span></div></div>
+      <div class="faq-a"><div class="faq-a-inner"><span data-i18n="lp.faq.a2">네, 무료 플랜도 검색 횟수 제한 없이 사용 가능합니다. 다만 상위 Top 10 결과는 Pro 전용이며, 무료 플랜에서는 11위부터 50위까지의 결과를 확인할 수 있습니다.</span></div></div>
     </div>
     <div class="faq-item">
       <button type="button" class="faq-q" onclick="toggleFaq(this)">
-        <span class="faq-q-text">미국 주식(US)도 지원하나요?</span>
+        <span class="faq-q-text" data-i18n="lp.faq.q3">미국 주식(US)도 지원하나요?</span>
         <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
       </button>
-      <div class="faq-a"><div class="faq-a-inner"><span>현재는 KR(KOSPI/KOSDAQ) 시장만 지원합니다. 해외 시장 확장은 로드맵에 포함되어 있으나 구체적인 일정은 아직 공개되지 않았습니다.</span></div></div>
+      <div class="faq-a"><div class="faq-a-inner"><span data-i18n="lp.faq.a3">현재는 KR(KOSPI/KOSDAQ) 시장만 지원합니다. 해외 시장 확장은 로드맵에 포함되어 있으나 구체적인 일정은 아직 공개되지 않았습니다.</span></div></div>
     </div>
     <div class="faq-item">
       <button type="button" class="faq-q" onclick="toggleFaq(this)">
-        <span class="faq-q-text">차트 데이터는 얼마나 실시간인가요?</span>
+        <span class="faq-q-text" data-i18n="lp.faq.q4">차트 데이터는 얼마나 실시간인가요?</span>
         <svg class="faq-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
       </button>
-      <div class="faq-a"><div class="faq-a-inner"><span>KRX 데이터를 기반으로 당일 현재가를 마지막 봉에 실시간 반영합니다. 패턴 검색에 사용되는 과거 데이터는 일봉 기준 종가 데이터입니다.</span></div></div>
+      <div class="faq-a"><div class="faq-a-inner"><span data-i18n="lp.faq.a4">KRX 데이터를 기반으로 당일 현재가를 마지막 봉에 실시간 반영합니다. 패턴 검색에 사용되는 과거 데이터는 일봉 기준 종가 데이터입니다.</span></div></div>
     </div>
   </div>
 </section>
 
 <!-- ==================== CTA BAND ==================== -->
 <section class="cta-band">
-  <h2>지금 <em>그려보세요</em>. 16초면 충분합니다.</h2>
-  <p>신용카드 없이 무료 시작 · 무제한 패턴 검색.</p>
-  <a href="/login" data-loggedin-href="/app" class="plan-cta primary" style="display:inline-flex">무료로 시작하기 →</a>
+  <h2 data-i18n-html data-i18n="lp.ctaband.title">지금 <em>그려보세요</em>. 16초면 충분합니다.</h2>
+  <p data-i18n="lp.ctaband.sub">신용카드 없이 무료 시작 · 무제한 패턴 검색.</p>
+  <a href="/login" data-loggedin-href="/app" class="plan-cta primary" style="display:inline-flex" data-i18n="lp.ctaband.cta">무료로 시작하기 →</a>
 </section>
 
 <!-- ==================== FOOTER ==================== -->
@@ -788,13 +871,13 @@
         Draw2Trade
       </a>
       <div class="footer-links">
-        <a href="/notices">공지사항</a>
-        <a href="/terms">이용약관</a>
-        <a href="/privacy">개인정보처리방침</a>
-        <a href="mailto:kwj15934@formeta.kr">문의</a>
+        <a href="/notices" data-i18n="lp.footer.notices">공지사항</a>
+        <a href="/terms" data-i18n="lp.footer.terms">이용약관</a>
+        <a href="/privacy" data-i18n="lp.footer.privacy">개인정보처리방침</a>
+        <a href="mailto:kwj15934@formeta.kr" data-i18n="lp.footer.contact">문의</a>
       </div>
     </div>
-    <div class="footer-biz">
+    <div class="footer-biz" data-i18n-html data-i18n="lp.footer.biz">
       상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566<br>
       사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동) &nbsp;|&nbsp;
       전화번호 : 02-6015-9983 &nbsp;|&nbsp;
@@ -802,7 +885,7 @@
     </div>
     <div class="footer-bottom">
       <span>© 2026 Draw2Trade. All rights reserved.</span>
-      <span>본 서비스는 투자 참고용 정보이며, 자본시장법상 투자자문에 해당하지 않습니다.</span>
+      <span data-i18n="lp.footer.disclaimer">본 서비스는 투자 참고용 정보이며, 자본시장법상 투자자문에 해당하지 않습니다.</span>
     </div>
   </div>
 </footer>

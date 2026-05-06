@@ -75,11 +75,11 @@
 
   <!-- 뉴스 / 피드 / 공지 탭 -->
   <div class="d2t-nav-tabs">
-    <a href="/market" class="d2t-nav-link">시장</a>
-    <a href="/news" class="d2t-nav-link">뉴스</a>
-    <a href="/feed" class="d2t-nav-link">피드</a>
-    <a href="/notices" class="d2t-nav-link">공지</a>
-    <a href="/pricing" class="d2t-nav-link">요금제</a>
+    <a href="/market" class="d2t-nav-link" data-i18n="nav.market">시장</a>
+    <a href="/news" class="d2t-nav-link" data-i18n="nav.news">뉴스</a>
+    <a href="/feed" class="d2t-nav-link" data-i18n="nav.feed">피드</a>
+    <a href="/notices" class="d2t-nav-link" data-i18n="nav.notices">공지</a>
+    <a href="/pricing" class="d2t-nav-link" data-i18n="nav.pricing">요금제</a>
   </div>
 
   <!-- 우측 밀기 -->
@@ -100,21 +100,26 @@
       <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.3px;"></span>
     </a>
     <button class="btn-d2t" id="btn-nav-logout"
-      style="height:26px;font-size:11px;padding:0 8px;border-color:#ef5350;color:#ef5350;">
+      style="height:26px;font-size:11px;padding:0 8px;border-color:#ef5350;color:#ef5350;"
+      data-i18n="nav.logout">
       로그아웃
     </button>
   </div>
 
+  <!-- 언어 토글 -->
+  <button type="button" data-i18n-toggle
+    style="height:26px;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:0 11px;margin-left:8px;border-radius:13px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);color:#C9CFDA;cursor:pointer;font-family:inherit;"></button>
+
   <!-- 로그인 -->
-  <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;">로그인</a>
+  <a href="/login" id="btn-nav-login" class="btn-nav-login" style="display:none;" data-i18n="nav.login">로그인</a>
 
   <!-- 마이페이지 (로그인 시) -->
   <a href="/account" id="btn-nav-account"
-     class="d2t-nav-link d2t-nav-link-right" style="display:none;">마이페이지</a>
+     class="d2t-nav-link d2t-nav-link-right" style="display:none;" data-i18n="nav.account">마이페이지</a>
 
   <!-- 문의 -->
   <a id="btn-nav-contact" href="#" onclick="openContactModal();return false;"
-     class="d2t-nav-link d2t-nav-link-right">문의</a>
+     class="d2t-nav-link d2t-nav-link-right" data-i18n="nav.contact">문의</a>
 
 </div>
 

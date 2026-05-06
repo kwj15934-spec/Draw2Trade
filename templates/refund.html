@@ -148,16 +148,16 @@
   </a>
   <div class="nav-links">
     <button type="button" class="btn-outline" data-i18n-toggle style="cursor:pointer;font-family:inherit;"></button>
-    <a href="/pricing" class="btn-outline">← 요금제</a>
+    <a href="/pricing" class="btn-outline" data-i18n="rf.back_pricing">← 요금제</a>
   </div>
 </nav>
 
 <div class="page-wrap">
-  <div class="page-label">REFUND · 환불 신청</div>
-  <h1 class="page-title">환불 신청</h1>
-  <p class="page-desc">결제하신 계좌이체 금액의 환불을 신청합니다. 영업일 기준 <b style="color:var(--teal)">3일 이내</b> 검토 후 처리해드립니다.</p>
+  <div class="page-label" data-i18n="rf.label">REFUND · 환불 신청</div>
+  <h1 class="page-title" data-i18n="rf.title">환불 신청</h1>
+  <p class="page-desc" data-i18n-html data-i18n="rf.desc">결제하신 계좌이체 금액의 환불을 신청합니다. 영업일 기준 <b style="color:var(--teal)">3일 이내</b> 검토 후 처리해드립니다.</p>
 
-  <div class="info-box">
+  <div class="info-box" data-i18n-html data-i18n="rf.info_box">
     <b>환불 가능 조건 (전자상거래법 + 자체 규정)</b>
     <ul>
       <li>결제 후 <b>7일 이내</b> 신청한 경우 — Pro 사용 이력이 없으면 전액 환불</li>
@@ -170,15 +170,15 @@
   <form id="refund-form" class="card" onsubmit="submitRefund(event)">
 
     <div class="form-row">
-      <label class="form-label" for="rf-reason">환불 사유 <span class="req">*</span></label>
-      <textarea id="rf-reason" class="form-textarea" placeholder="환불 사유를 자세히 적어주세요. (예: 7일 이내 미사용, 서비스 결함 등)" required></textarea>
+      <label class="form-label" for="rf-reason" data-i18n-html data-i18n="rf.reason_label">환불 사유 <span class="req">*</span></label>
+      <textarea id="rf-reason" class="form-textarea" data-i18n-placeholder="rf.reason_ph" placeholder="환불 사유를 자세히 적어주세요. (예: 7일 이내 미사용, 서비스 결함 등)" required></textarea>
     </div>
 
     <div class="form-row">
-      <label class="form-label">환불 받을 계좌 <span class="req">*</span></label>
+      <label class="form-label" data-i18n-html data-i18n="rf.account_label">환불 받을 계좌 <span class="req">*</span></label>
       <div class="form-grid-2">
         <select id="rf-bank" class="form-select" required>
-          <option value="">은행 선택</option>
+          <option value="" data-i18n="rf.bank_pick">은행 선택</option>
           <option>우리은행</option>
           <option>KB국민은행</option>
           <option>신한은행</option>
@@ -200,17 +200,17 @@
           <option>카카오뱅크</option>
           <option>케이뱅크</option>
         </select>
-        <input id="rf-account" class="form-input" placeholder="계좌번호 (하이픈 없이 숫자만)" pattern="[0-9-]+" required>
+        <input id="rf-account" class="form-input" data-i18n-placeholder="rf.acct_ph" placeholder="계좌번호 (하이픈 없이 숫자만)" pattern="[0-9-]+" required>
       </div>
     </div>
 
     <div class="form-row">
-      <label class="form-label" for="rf-holder">예금주 <span class="req">*</span></label>
-      <input id="rf-holder" class="form-input" placeholder="실명 입력 (계좌 등록 명의와 동일)" required>
-      <div class="form-hint">결제하신 본인 명의 계좌만 환불 가능합니다.</div>
+      <label class="form-label" for="rf-holder" data-i18n-html data-i18n="rf.holder_label">예금주 <span class="req">*</span></label>
+      <input id="rf-holder" class="form-input" data-i18n-placeholder="rf.holder_ph" placeholder="실명 입력 (계좌 등록 명의와 동일)" required>
+      <div class="form-hint" data-i18n="rf.holder_hint">결제하신 본인 명의 계좌만 환불 가능합니다.</div>
     </div>
 
-    <button type="submit" id="btn-submit" class="btn-submit">환불 신청 제출</button>
+    <button type="submit" id="btn-submit" class="btn-submit" data-i18n="rf.submit">환불 신청 제출</button>
     <div id="err-msg" class="err-msg"></div>
 
   </form>
@@ -218,20 +218,20 @@
   <!-- 성공 -->
   <div id="success" class="card success-box" style="display:none;">
     <div class="ico">✅</div>
-    <div class="t">환불 신청이 접수되었습니다</div>
-    <div class="d">
+    <div class="t" data-i18n="rf.success.title">환불 신청이 접수되었습니다</div>
+    <div class="d" data-i18n-html data-i18n="rf.success.body">
       신청 번호 <b id="success-id" style="color:var(--teal)">—</b><br>
       영업일 기준 3일 이내 등록 이메일로 처리 결과 안내드립니다.
     </div>
-    <a href="/pricing" class="btn-outline">요금제로 돌아가기</a>
+    <a href="/pricing" class="btn-outline" data-i18n="rf.success.cta">요금제로 돌아가기</a>
   </div>
 
   <!-- 비로그인 -->
   <div id="login-required" class="card" style="display:none;text-align:center;">
     <div style="font-size:42px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--tealGlow));">🔐</div>
-    <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:10px;">로그인이 필요합니다</div>
-    <div style="font-size:13px;color:var(--fg2);margin-bottom:22px;">환불 신청은 로그인 후 이용할 수 있습니다.</div>
-    <a href="/login" class="btn-submit" style="display:block;text-decoration:none;text-align:center;box-sizing:border-box;">로그인하기</a>
+    <div style="font-size:18px;font-weight:600;color:#fff;margin-bottom:10px;" data-i18n="rf.login.title">로그인이 필요합니다</div>
+    <div style="font-size:13px;color:var(--fg2);margin-bottom:22px;" data-i18n="rf.login.sub">환불 신청은 로그인 후 이용할 수 있습니다.</div>
+    <a href="/login" class="btn-submit" style="display:block;text-decoration:none;text-align:center;box-sizing:border-box;" data-i18n="rf.login.cta">로그인하기</a>
   </div>
 
 </div>
@@ -248,16 +248,18 @@
     var acct   = document.getElementById('rf-account').value.trim();
     var holder = document.getElementById('rf-holder').value.trim();
 
+    var en = (D2T_I18N.getLocale() === 'en');
     if (!reason || !bank || !acct || !holder) {
-      errEl.textContent = '모든 항목을 입력해주세요.';
+      errEl.textContent = en ? 'Please fill in all fields.' : '모든 항목을 입력해주세요.';
       return;
     }
     if (reason.length < 10) {
-      errEl.textContent = '환불 사유는 10자 이상 작성해주세요.';
+      errEl.textContent = en ? 'Please describe your refund reason in 10 characters or more.' : '환불 사유는 10자 이상 작성해주세요.';
       return;
     }
 
-    btn.disabled = true; btn.textContent = '제출 중...';
+    btn.disabled = true;
+    btn.textContent = en ? 'Submitting...' : '제출 중...';
     try {
       var r = await fetch('/api/refund/request', {
         method: 'POST',
@@ -272,33 +274,55 @@
       });
       var d = await r.json();
       if (!r.ok) {
-        errEl.textContent = d.detail || '제출 실패';
+        errEl.textContent = d.detail || (en ? 'Submission failed' : '제출 실패');
         return;
       }
       document.getElementById('refund-form').style.display = 'none';
       document.getElementById('success').style.display = 'block';
       document.getElementById('success-id').textContent = '#' + d.id;
     } catch (e2) {
-      errEl.textContent = '네트워크 오류: ' + (e2.message || e2);
+      errEl.textContent = (en ? 'Network error: ' : '네트워크 오류: ') + (e2.message || e2);
     } finally {
-      btn.disabled = false; btn.textContent = '환불 신청 제출';
+      btn.disabled = false;
+      btn.textContent = D2T_I18N.get('rf.submit');
     }
   }
 
-  fetch('/api/auth/me', { credentials: 'same-origin' })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){
-      if (!d || !d.authenticated) {
-        document.getElementById('refund-form').style.display = 'none';
-        document.getElementById('login-required').style.display = 'block';
-      }
-    })
-    .catch(function(){});
+  // i18n 사전
+  D2T_I18N.add({
+    'rf.back_pricing':  { ko: '← 요금제', en: '← Pricing' },
+    'rf.label':         { ko: 'REFUND · 환불 신청', en: 'REFUND · Request' },
+    'rf.title':         { ko: '환불 신청', en: 'Refund Request' },
+    'rf.desc':          { ko: '결제하신 계좌이체 금액의 환불을 신청합니다. 영업일 기준 <b style="color:var(--teal)">3일 이내</b> 검토 후 처리해드립니다.',
+                          en: 'Request a refund for your payment. We review and process within <b style="color:var(--teal)">3 business days</b>.' },
+    'rf.info_box':      { ko: '<b>환불 가능 조건 (전자상거래법 + 자체 규정)</b><ul><li>결제 후 <b>7일 이내</b> 신청한 경우 — Pro 사용 이력이 없으면 전액 환불</li><li>결제 후 7일 이상이거나 사용 이력이 있는 경우 — 잔여 기간 일할 계산 환불</li><li>서비스 결함으로 인한 환불은 사용 이력과 무관하게 전액 환불</li></ul>',
+                          en: '<b>Refund eligibility (Korean E-Commerce Act + our policy)</b><ul><li>Within <b>7 days</b> of payment — full refund if no Pro features have been used</li><li>After 7 days or with usage history — pro-rated refund based on remaining period</li><li>Service defects — full refund regardless of usage</li></ul>' },
+    'rf.reason_label':  { ko: '환불 사유 <span class="req">*</span>', en: 'Reason <span class="req">*</span>' },
+    'rf.reason_ph':     { ko: '환불 사유를 자세히 적어주세요. (예: 7일 이내 미사용, 서비스 결함 등)', en: 'Please describe your refund reason in detail (e.g. unused within 7 days, service defect, etc.)' },
+    'rf.account_label': { ko: '환불 받을 계좌 <span class="req">*</span>', en: 'Refund account <span class="req">*</span>' },
+    'rf.bank_pick':     { ko: '은행 선택', en: 'Choose bank' },
+    'rf.acct_ph':       { ko: '계좌번호 (하이픈 없이 숫자만)', en: 'Account number (digits only, no hyphens)' },
+    'rf.holder_label':  { ko: '예금주 <span class="req">*</span>', en: 'Account holder <span class="req">*</span>' },
+    'rf.holder_ph':     { ko: '실명 입력 (계좌 등록 명의와 동일)', en: 'Real name (must match bank account)' },
+    'rf.holder_hint':   { ko: '결제하신 본인 명의 계좌만 환불 가능합니다.', en: 'Refunds are only issued to an account in the payer\'s name.' },
+    'rf.submit':        { ko: '환불 신청 제출', en: 'Submit refund request' },
+    'rf.success.title': { ko: '환불 신청이 접수되었습니다', en: 'Refund request received' },
+    'rf.success.body':  { ko: '신청 번호 <b id="success-id" style="color:var(--teal)">—</b><br>영업일 기준 3일 이내 등록 이메일로 처리 결과 안내드립니다.',
+                          en: 'Request ID <b id="success-id" style="color:var(--teal)">—</b><br>You\'ll receive an email update within 3 business days.' },
+    'rf.success.cta':   { ko: '요금제로 돌아가기', en: 'Back to Pricing' },
+    'rf.login.title':   { ko: '로그인이 필요합니다', en: 'Sign in required' },
+    'rf.login.sub':     { ko: '환불 신청은 로그인 후 이용할 수 있습니다.', en: 'Please sign in to submit a refund request.' },
+    'rf.login.cta':     { ko: '로그인하기', en: 'Sign in' },
+    'rf.footer.links':  { ko: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a>',
+                          en: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a>' },
+    'rf.footer.biz':    { ko: '상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>',
+                          en: 'FORMETA · CEO Won Jun Kim · Business Reg. No. 536-32-01566 · +82-2-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>' },
+  });
 </script>
 
 <footer>
-  <p>&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a></p>
-  <p style="font-size:11px">상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a></p>
+  <p data-i18n-html data-i18n="rf.footer.links">&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a></p>
+  <p style="font-size:11px" data-i18n-html data-i18n="rf.footer.biz">상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a></p>
 </footer>
 </body>
 </html>
