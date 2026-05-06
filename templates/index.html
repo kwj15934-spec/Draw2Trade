@@ -146,10 +146,10 @@
       <span id="thb-time"  class="thb-time"></span>
       <a href="#" id="thb-main-info-link"
          onclick="toggleMainInfoOverlay();return false;"
-         title="메인 종목 정보 보기"
+         data-i18n-title="ca.stock_info.tip" title="메인 종목 정보 보기"
          style="margin-left:10px; font-size:12px; font-weight:600; color:#5BFFC6; text-decoration:none; padding:2px 8px; border:1px solid #5BFFC6; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
          onmouseover="this.style.background='#5BFFC6'; this.style.color='#fff';"
-         onmouseout="this.style.background='transparent'; this.style.color='#5BFFC6';">종목 정보 보기</a>
+         onmouseout="this.style.background='transparent'; this.style.color='#5BFFC6';" data-i18n="ca.stock_info">종목 정보 보기</a>
     </div>
 
     <!-- 우: 시장 상태 + LIVE + 공지 -->
@@ -172,8 +172,8 @@
     <div class="thb-controls">
       <!-- 카테고리 (KR/US 공통, JS가 show/hide) -->
       <div id="category-group" class="tb-pill-group" style="display:none;">
-        <select id="category-select" class="tb-pill-select" title="섹터/업종 필터">
-          <option value="">전체 섹터</option>
+        <select id="category-select" class="tb-pill-select" data-i18n-title="ca.sector_filter" title="섹터/업종 필터">
+          <option value="" data-i18n="ca.all_sectors">전체 섹터</option>
         </select>
       </div>
       <!-- KR 시장 필터 (KOSPI/KOSDAQ) -->
@@ -185,29 +185,29 @@
         </div>
       </div>
       <!-- 종목 드롭다운 (JS가 populate) -->
-      <select id="ticker-select" class="tb-pill-select tb-ticker-select" title="종목 선택">
-        <option value="">종목 선택</option>
+      <select id="ticker-select" class="tb-pill-select tb-ticker-select" data-i18n-title="ca.ticker_pick" title="종목 선택">
+        <option value="" data-i18n="ca.ticker_pick">종목 선택</option>
       </select>
       <!-- 검색 인풋 + 드롭다운 -->
       <div class="ticker-search-wrap" id="ticker-search-wrap">
-        <input type="text" id="ticker-search" placeholder="검색" title="종목명/티커 입력 후 선택" autocomplete="off">
+        <input type="text" id="ticker-search" data-i18n-placeholder="ca.search" placeholder="검색" data-i18n-title="ca.ticker_search.tip" title="종목명/티커 입력 후 선택" autocomplete="off">
         <div id="ticker-search-dropdown"></div>
       </div>
       <!-- 차트 로드 + 즐겨찾기 -->
-      <button id="btn-load"       class="btn-d2t btn-load-chart">차트 로드</button>
-      <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" title="현재 종목 즐겨찾기">☆</button>
-      <span id="us-list-hint" style="display:none;font-size:11px;color:#8C95A8;white-space:nowrap;">
+      <button id="btn-load"       class="btn-d2t btn-load-chart" data-i18n="ca.load_chart">차트 로드</button>
+      <button id="btn-fav-ticker" class="btn-d2t btn-fav-ticker" data-i18n-title="ca.fav_ticker.tip" title="현재 종목 즐겨찾기">☆</button>
+      <span id="us-list-hint" style="display:none;font-size:11px;color:#8C95A8;white-space:nowrap;" data-i18n="ca.us_hint">
         거래소 미선택 시 S&amp;P 500
       </span>
     </div>
 
     <!-- 우: 타임프레임 -->
     <div class="thb-tf">
-      <span class="thb-tf-label">타임프레임</span>
+      <span class="thb-tf-label" data-i18n="ca.timeframe">타임프레임</span>
       <div class="tb-btn-group tb-tf-group">
-        <button id="tf-monthly" class="btn-d2t timeframe-btn"        data-tf="monthly" title="월봉">월</button>
-        <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  title="주봉">주</button>
-        <button id="tf-daily"   class="btn-d2t timeframe-btn active" data-tf="daily"   title="일봉">일</button>
+        <button id="tf-monthly" class="btn-d2t timeframe-btn"        data-tf="monthly" data-i18n-title="ca.tf.monthly.tip" title="월봉" data-i18n="ca.tf.M">월</button>
+        <button id="tf-weekly"  class="btn-d2t timeframe-btn"        data-tf="weekly"  data-i18n-title="ca.tf.weekly.tip"  title="주봉" data-i18n="ca.tf.W">주</button>
+        <button id="tf-daily"   class="btn-d2t timeframe-btn active" data-tf="daily"   data-i18n-title="ca.tf.daily.tip"   title="일봉" data-i18n="ca.tf.D">일</button>
       </div>
     </div>
 
@@ -219,77 +219,77 @@
   <div class="toolbar-row">
 
     <!-- 드로잉 도구 -->
-    <label>드로잉</label>
-    <div class="draw-tool-grid" role="group" aria-label="드로잉 도구 선택">
+    <label data-i18n="ca.draw">드로잉</label>
+    <div class="draw-tool-grid" role="group" aria-label="Drawing tools">
       <button id="tool-pen" class="btn-d2t draw-tool-btn" data-tool="pen"
-        aria-label="자유곡선 드로잉" aria-pressed="false"
-        title="자유곡선: 마우스 드래그">
+        aria-label="Freehand" aria-pressed="false"
+        data-i18n-title="ca.tool.pen.tip" title="자유곡선: 마우스 드래그">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           <path d="m15 5 4 4"/>
         </svg>
-        자유곡선
+        <span data-i18n="ca.tool.pen">자유곡선</span>
       </button>
       <button id="tool-trend" class="btn-d2t draw-tool-btn" data-tool="trend"
-        aria-label="추세선 드로잉" aria-pressed="false"
-        title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료">
+        aria-label="Trendline" aria-pressed="false"
+        data-i18n-title="ca.tool.trend.tip" title="추세선: 클릭으로 점 추가, Ctrl+클릭 완료">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
           <polyline points="16 7 22 7 22 13"/>
         </svg>
-        추세선
+        <span data-i18n="ca.tool.trend">추세선</span>
       </button>
       <button id="tool-line" class="btn-d2t draw-tool-btn" data-tool="line"
-        aria-label="직선 드로잉" aria-pressed="false"
-        title="직선 (L): 시작점 클릭 → 끝점 클릭">
+        aria-label="Line" aria-pressed="false"
+        data-i18n-title="ca.tool.line.tip" title="직선 (L): 시작점 클릭 → 끝점 클릭">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"/>
           <polyline points="15 7 20 12 15 17"/>
         </svg>
-        직선
+        <span data-i18n="ca.tool.line">직선</span>
       </button>
       <button id="tool-parallel" class="btn-d2t draw-tool-btn" data-tool="parallel"
-        aria-label="평행선 채널 드로잉" aria-pressed="false"
-        title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">
+        aria-label="Parallel channel" aria-pressed="false"
+        data-i18n-title="ca.tool.parallel.tip" title="평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <line x1="3" y1="7" x2="21" y2="7"/>
           <line x1="3" y1="17" x2="21" y2="17"/>
         </svg>
-        평행선
+        <span data-i18n="ca.tool.parallel">평행선</span>
       </button>
     </div>
 
     <!-- 캔버스 관리: 지우기 · 빈캔버스 · 저장 -->
-    <div class="toolbar-canvas-btns" role="group" aria-label="캔버스 관리">
+    <div class="toolbar-canvas-btns" role="group" aria-label="Canvas">
       <button id="btn-clear" class="btn-d2t btn-d2t-danger"
-        aria-label="드로잉 지우기"
-        title="드로잉 지우기 (Delete)">
+        aria-label="Clear"
+        data-i18n-title="ca.btn.clear.tip" title="드로잉 지우기 (Delete)">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           <path d="M10 11v6M14 11v6"/>
           <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
         </svg>
-        지우기
+        <span data-i18n="ca.btn.clear">지우기</span>
       </button>
       <button id="btn-blank" class="btn-d2t btn-blank-canvas"
-        aria-label="빈 캔버스 모드 전환"
-        title="빈 캔버스 모드 전환">
+        aria-label="Blank canvas"
+        data-i18n-title="ca.btn.blank.tip" title="빈 캔버스 모드 전환">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <path d="M3 9h18M9 21V9"/>
         </svg>
-        빈 캔버스
+        <span data-i18n="ca.btn.blank">빈 캔버스</span>
       </button>
       <button id="btn-save-draw" class="btn-d2t"
-        aria-label="현재 그림 저장"
-        title="현재 그림 저장" onclick="showSaveModal()">
+        aria-label="Save"
+        data-i18n-title="ca.btn.save.tip" title="현재 그림 저장" onclick="showSaveModal()">
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
           <polyline points="17 21 17 13 7 13 7 21"/>
           <polyline points="7 3 7 8 15 8"/>
         </svg>
-        저장
+        <span data-i18n="ca.btn.save">저장</span>
       </button>
     </div>
 
@@ -299,29 +299,29 @@
     <!-- 검색 액션 -->
     <button id="btn-auto-pattern" class="btn-d2t"
       onclick="typeof toggleAutoMode==='function'&&toggleAutoMode()"
-      aria-label="자동 패턴 분석 (Pro 전용)"
-      title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">
+      aria-label="Auto pattern (Pro)"
+      data-i18n-title="ca.btn.auto.tip" title="자동 분석은 Pro 계정 전용 기능입니다" disabled style="opacity:0.4;cursor:not-allowed;">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21.3 8.7 8.7 21.3c-1 1-2.5 1-3.4 0l-2.6-2.6c-1-1-1-2.5 0-3.4L15.3 2.7c1-1 2.5-1 3.4 0l2.6 2.6c1 1 1 2.5 0 3.4Z"/>
         <path d="m7.5 10.5 2 2M10.5 7.5l2 2M13.5 4.5l2 2"/>
       </svg>
-      자동 분석
+      <span data-i18n="ca.btn.auto">자동 분석</span>
       <span class="btn-pro-mini">PRO</span>
     </button>
-    <button id="btn-search" class="btn-d2t btn-d2t-primary" aria-label="유사 종목 검색 실행">
+    <button id="btn-search" class="btn-d2t btn-d2t-primary" aria-label="Search similar stocks">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/>
         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      유사 종목 검색
+      <span data-i18n="ca.btn.search">유사 종목 검색</span>
     </button>
-    <button id="btn-ai-retouch" class="btn-d2t" aria-label="내가 그린 패턴을 정리"
-      title="패턴 정리는 빈 캔버스 모드에서만 사용할 수 있습니다"
+    <button id="btn-ai-retouch" class="btn-d2t" aria-label="Tidy pattern"
+      data-i18n-title="ca.btn.tidy.tip" title="패턴 정리는 빈 캔버스 모드에서만 사용할 수 있습니다"
       disabled style="opacity:0.4;cursor:not-allowed;">
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 12h3l3-8 4 16 3-8h5"/>
       </svg>
-      패턴 정리
+      <span data-i18n="ca.btn.tidy">패턴 정리</span>
     </button>
     <!-- 이미지 업로드 버튼은 UI에서 숨김 (백엔드 엔드포인트는 추후 다른 용도로 재활용 가능) -->
     <!-- 밈 차트 게시판 공유 버튼 제거 (게시판 기능 제거) -->
@@ -389,12 +389,12 @@
     </div>
 
     <div class="d2t-chart-footer">
-      <span id="chart-ticker-label" class="ticker-label">종목을 선택하고 차트를 로드하세요</span>
-      <span class="ticker-label" style="margin-left: auto;">
+      <span id="chart-ticker-label" class="ticker-label" data-i18n="ca.chart.empty">종목을 선택하고 차트를 로드하세요</span>
+      <span class="ticker-label" style="margin-left: auto;" data-i18n="ca.chart.draw_hint">
         드로잉 도구 선택 후 차트 위에서 패턴을 그리세요
       </span>
       <button id="mobile-results-btn" onclick="toggleMobileSidebar()"
-        style="margin-left:8px; height:22px; padding:0 10px; font-size:11px; background:#5BFFC6; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;">
+        style="margin-left:8px; height:22px; padding:0 10px; font-size:11px; background:#5BFFC6; border:none; border-radius:4px; color:#fff; cursor:pointer; font-weight:600;" data-i18n="ca.mobile_results">
         결과 보기 ▲
       </button>
     </div>
@@ -409,16 +409,16 @@
     <!-- 일별 체결 내역 -->
     <div id="trade-panel">
       <div id="trade-pane-daily" style="display:flex;flex-direction:column;flex:1;min-height:0;">
-        <div class="tl-panel-title">일자별 거래량</div>
+        <div class="tl-panel-title" data-i18n="ca.daily_volume">일자별 거래량</div>
         <div class="tl-header">
-          <span>날짜</span>
-          <span style="text-align:right">종가</span>
-          <span style="text-align:right">등락</span>
-          <span style="text-align:right">거래량</span>
+          <span data-i18n="ca.col.date">날짜</span>
+          <span style="text-align:right" data-i18n="ca.col.close">종가</span>
+          <span style="text-align:right" data-i18n="ca.col.chg">등락</span>
+          <span style="text-align:right" data-i18n="ca.col.volume">거래량</span>
           <span></span>
         </div>
         <div id="trade-list-daily" style="flex:1;overflow-y:auto;">
-          <div class="tl-empty">일별 데이터 대기 중...</div>
+          <div class="tl-empty" data-i18n="ca.daily.empty">일별 데이터 대기 중...</div>
         </div>
       </div>
     </div>
@@ -440,31 +440,31 @@
       <!-- 패널 헤더 -->
       <div class="info-panel-ticker-header">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span class="info-panel-header-label">유사 종목 비교</span>
+          <span class="info-panel-header-label" data-i18n="ca.compare_stock">유사 종목 비교</span>
         </div>
         <div class="info-panel-ticker-row">
-          <span class="info-panel-ticker-name" id="fiw-title-left">종목을 선택하세요</span>
+          <span class="info-panel-ticker-name" id="fiw-title-left" data-i18n="ca.pick_stock">종목을 선택하세요</span>
           <span class="info-panel-ticker-code" id="fiw-ticker-left"></span>
         </div>
       </div>
 
       <!-- 탭 헤더 -->
       <div class="info-panel-tabs">
-        <button class="info-tab-btn active" data-itab="finance"   onclick="switchFiwTab('finance')">재무</button>
-        <button class="info-tab-btn"        data-itab="news"      onclick="switchFiwTab('news')">뉴스</button>
-        <button class="info-tab-btn"        data-itab="community" onclick="switchFiwTab('community')">시장반응</button>
+        <button class="info-tab-btn active" data-itab="finance"   onclick="switchFiwTab('finance')" data-i18n="ca.tab.finance">재무</button>
+        <button class="info-tab-btn"        data-itab="news"      onclick="switchFiwTab('news')" data-i18n="ca.tab.news">뉴스</button>
+        <button class="info-tab-btn"        data-itab="community" onclick="switchFiwTab('community')" data-i18n="ca.tab.market">시장반응</button>
       </div>
 
       <!-- 탭 콘텐츠: fiw-panel-* 을 여기 렌더 -->
       <div id="fiw-body-left" style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
         <div id="fiw-panel-finance-left" class="fiw-panel active" style="flex:1;overflow-y:auto;padding:6px 8px;">
-          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;" data-i18n="ca.click_similar">유사 종목을 클릭하세요</div>
         </div>
         <div id="fiw-panel-news-left" class="fiw-panel" style="flex:1;overflow-y:auto;padding:6px 8px;display:none;">
-          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;" data-i18n="ca.click_similar">유사 종목을 클릭하세요</div>
         </div>
         <div id="fiw-panel-community-left" class="fiw-panel" style="flex:1;overflow-y:auto;padding:6px 8px;display:none;">
-          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;">유사 종목을 클릭하세요</div>
+          <div class="fiw-loading" style="color:#555;font-size:12px;padding:20px;text-align:center;" data-i18n="ca.click_similar">유사 종목을 클릭하세요</div>
         </div>
       </div>
 
@@ -484,59 +484,59 @@
     <!-- 오버레이 헤더 -->
     <div style="flex-shrink:0; padding:10px 12px 8px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between;">
       <div>
-        <div style="font-size:10px;color:#555;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">메인 종목 정보</div>
+        <div style="font-size:10px;color:#555;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;" data-i18n="ca.main_stock_info">메인 종목 정보</div>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:14px;font-weight:700;color:#e8eaef;" id="info-panel-name">—</span>
           <span style="font-size:11px;color:#8C95A8;" id="info-panel-code"></span>
         </div>
         <span id="info-panel-updated" style="font-size:10px;color:#555;"></span>
       </div>
-      <button onclick="toggleMainInfoOverlay()" style="background:none;border:none;color:#8C95A8;cursor:pointer;font-size:18px;line-height:1;padding:4px;" title="닫기">&times;</button>
+      <button onclick="toggleMainInfoOverlay()" style="background:none;border:none;color:#8C95A8;cursor:pointer;font-size:18px;line-height:1;padding:4px;" data-i18n-title="ca.close" title="닫기">&times;</button>
     </div>
     <!-- 탭 헤더 -->
     <div class="info-panel-tabs" style="flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);">
-      <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')">개요</button>
-      <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')">재무제표</button>
-      <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')">뉴스</button>
-      <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')">시장반응</button>
+      <button class="info-tab-btn active" data-itab="finance"   onclick="switchInfoTab('finance')" data-i18n="ca.tab.overview">개요</button>
+      <button class="info-tab-btn"        data-itab="detailed"  onclick="switchInfoTab('detailed')" data-i18n="ca.tab.financials">재무제표</button>
+      <button class="info-tab-btn"        data-itab="news"      onclick="switchInfoTab('news')" data-i18n="ca.tab.news">뉴스</button>
+      <button class="info-tab-btn"        data-itab="community" onclick="switchInfoTab('community')" data-i18n="ca.tab.market">시장반응</button>
     </div>
     <!-- 탭 콘텐츠 -->
     <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
       <!-- ── 재무 탭 ── -->
       <div id="info-pane-finance" class="info-pane active" style="flex:1;overflow-y:auto;">
         <div class="info-pane-loading" id="finance-loading" style="display:none;">
-          <div class="info-spinner"></div><span>로딩 중...</span>
+          <div class="info-spinner"></div><span data-i18n="ca.loading">로딩 중...</span>
         </div>
         <div id="finance-content">
-          <div class="info-empty">종목을 로드하면 재무 지표가 표시됩니다.</div>
+          <div class="info-empty" data-i18n="ca.finance_empty">종목을 로드하면 재무 지표가 표시됩니다.</div>
         </div>
       </div>
       <!-- ── 상세 재무제표 탭 ── -->
       <div id="info-pane-detailed" class="info-pane" style="display:none;flex-direction:column;padding:8px 10px;flex:1;overflow:hidden;">
         <div class="detfin-report-tabs" id="detfin-report-tabs">
-          <button class="detfin-report-tab active" data-report="annual">사업</button>
-          <button class="detfin-report-tab"        data-report="half">반기</button>
-          <button class="detfin-report-tab"        data-report="q1">1분기</button>
-          <button class="detfin-report-tab"        data-report="q3">3분기</button>
+          <button class="detfin-report-tab active" data-report="annual" data-i18n="ca.rep.annual">사업</button>
+          <button class="detfin-report-tab"        data-report="half" data-i18n="ca.rep.half">반기</button>
+          <button class="detfin-report-tab"        data-report="q1" data-i18n="ca.rep.q1">1분기</button>
+          <button class="detfin-report-tab"        data-report="q3" data-i18n="ca.rep.q3">3분기</button>
         </div>
         <div class="detfin-type-tabs" id="detfin-type-tabs"></div>
         <div id="detfin-loading" class="info-pane-loading" style="display:none;">
-          <div class="info-spinner"></div><span>재무제표 불러오는 중…</span>
+          <div class="info-spinner"></div><span data-i18n="ca.financials_loading">재무제표 불러오는 중…</span>
         </div>
         <div id="detfin-table-wrap" style="flex:1;overflow-y:auto;overflow-x:auto;min-height:0;">
-          <div class="info-empty">종목을 로드하면 상세 재무제표가 표시됩니다.</div>
+          <div class="info-empty" data-i18n="ca.financials_empty">종목을 로드하면 상세 재무제표가 표시됩니다.</div>
         </div>
       </div>
       <!-- ── 뉴스 탭 ── -->
       <div id="info-pane-news" class="info-pane" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
         <div id="info-news-feed" style="flex:1;overflow-y:auto;padding:6px 8px;">
-          <div class="info-empty">종목을 로드하면 뉴스가 표시됩니다.</div>
+          <div class="info-empty" data-i18n="ca.news_empty">종목을 로드하면 뉴스가 표시됩니다.</div>
         </div>
       </div>
       <!-- ── 시장반응 탭 ── -->
       <div id="info-pane-community" class="info-pane" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
         <div id="info-community-feed" style="flex:1;overflow-y:auto;padding:6px 8px;">
-          <div class="info-empty">종목을 로드하면 시장반응이 표시됩니다.</div>
+          <div class="info-empty" data-i18n="ca.market_empty">종목을 로드하면 시장반응이 표시됩니다.</div>
         </div>
       </div>
     </div>
@@ -571,22 +571,22 @@
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
           </svg>
-          위젯
+          <span data-i18n="ca.widget">위젯</span>
         </button>
-        <button class="widget-toolbar-btn" id="widget-reset-btn" type="button" title="기본 레이아웃으로 초기화">
+        <button class="widget-toolbar-btn" id="widget-reset-btn" type="button" data-i18n-title="ca.widget.reset.tip" title="기본 레이아웃으로 초기화">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="1 4 1 10 7 10"/>
             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
           </svg>
-          초기화
+          <span data-i18n="ca.widget.reset">초기화</span>
         </button>
         <div class="widget-toolbar-spacer"></div>
-        <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;">드래그로 정렬</span>
+        <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;" data-i18n="ca.widget.drag">드래그로 정렬</span>
 
         <div class="widget-menu" id="widget-menu" role="menu">
-          <label><input type="checkbox" data-widget-toggle="results" checked> 유사 종목</label>
-          <label><input type="checkbox" data-widget-toggle="favorites" checked> 즐겨찾기</label>
-          <label><input type="checkbox" data-widget-toggle="drawings" checked> 저장</label>
+          <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
+          <label><input type="checkbox" data-widget-toggle="favorites" checked> <span data-i18n="ca.w.favorites">즐겨찾기</span></label>
+          <label><input type="checkbox" data-widget-toggle="drawings" checked> <span data-i18n="ca.w.saved">저장</span></label>
         </div>
       </div>
 
@@ -597,18 +597,18 @@
       <section class="widget-card" data-widget="results">
         <header class="widget-header" draggable="true">
           <span class="widget-grip" aria-hidden="true"></span>
-          <span class="widget-title">유사 종목</span>
-          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+          <span class="widget-title" data-i18n="ca.w.similar">유사 종목</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" data-i18n-title="ca.collapse" title="접기/펼치기">
             <span class="widget-collapse-icon">▾</span>
           </button>
-          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" data-i18n-title="ca.hide" title="숨기기">×</button>
         </header>
         <div class="widget-body">
       <div id="sidebar-panel-results" class="sidebar-content-panel active">
         <div class="d2t-sidebar-header">
-          <span class="result-header-title">☰ 검색 결과</span>
+          <span class="result-header-title" data-i18n="ca.search_results">☰ 검색 결과</span>
           <span id="result-count" class="result-header-count" style="display:none;"></span>
-          <select id="top-n-select" title="검색 결과 최대 개수" aria-label="검색 결과 최대 개수"
+          <select id="top-n-select" data-i18n-title="ca.topn.tip" title="검색 결과 최대 개수" aria-label="Max results"
             style="height:24px;font-size:11px;padding:0 6px;background:#11141B;color:#C9CFDA;border:1px solid rgba(255,255,255,0.08);border-radius:4px;margin-left:auto;">
             <option value="10">Top 10</option>
             <option value="20" selected>Top 20</option>
@@ -616,39 +616,39 @@
             <option value="40">Top 40</option>
             <option value="50">Top 50</option>
           </select>
-          <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()" aria-label="검색 결과 저장">
+          <button id="btn-save-drawing" class="d2t-save-btn" style="display:none;" onclick="showSaveModal()" aria-label="Save results">
             <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
-            저장
+            <span data-i18n="ca.btn.save">저장</span>
           </button>
         </div>
         <div id="result-col-header" style="display:none;" class="result-col-header">
-          <span class="rch-rank">순위</span>
-          <span class="rch-name">종목</span>
-          <span class="rch-score">유사도</span>
+          <span class="rch-rank" data-i18n="ca.col.rank">순위</span>
+          <span class="rch-name" data-i18n="ca.col.ticker">종목</span>
+          <span class="rch-score" data-i18n="ca.col.similarity">유사도</span>
         </div>
-        <div id="result-historical-notice" style="display:none;" class="result-historical-notice">
+        <div id="result-historical-notice" style="display:none;" class="result-historical-notice" data-i18n="ca.historical_notice">
           과거 패턴 통계 데이터입니다 — 미래 수익을 보장하지 않습니다
         </div>
         <div id="backtest-card" class="backtest-card" style="display:none;"></div>
         <div id="d2t-disclaimer-banner" class="d2t-disclaimer-banner">
-          <span class="d2t-disclaimer-banner-text">
+          <span class="d2t-disclaimer-banner-text" data-i18n="ca.full_disclaimer">
             본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.
             제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.
             투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.
           </span>
-          <button class="d2t-disclaimer-close" onclick="d2tDismissDisclaimer()" aria-label="면책 고지 닫기">✕</button>
+          <button class="d2t-disclaimer-close" onclick="d2tDismissDisclaimer()" aria-label="Close">✕</button>
         </div>
         <div id="results-wrapper">
-          <div id="results-placeholder">
+          <div id="results-placeholder" data-i18n-html data-i18n="ca.results_placeholder">
             패턴을 그린 후<br>
             <strong style="color: #5BFFC6;">유사 종목 검색</strong>을 클릭하세요<br><br>
             <small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>
           </div>
           <div id="results-list" style="display: none;"></div>
         </div>
-        <div class="result-disclaimer">
+        <div class="result-disclaimer" data-i18n="ca.chart_disclaimer">
           본 서비스의 차트는 종가 기준(1일 지연)이며, 실시간 시세는 별도 페이지에서 확인 가능합니다.
         </div>
       </div>
@@ -661,11 +661,11 @@
       <section class="widget-card" data-widget="favorites">
         <header class="widget-header" draggable="true">
           <span class="widget-grip" aria-hidden="true"></span>
-          <span class="widget-title">즐겨찾기</span>
-          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+          <span class="widget-title" data-i18n="ca.w.favorites">즐겨찾기</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" data-i18n-title="ca.collapse" title="접기/펼치기">
             <span class="widget-collapse-icon">▾</span>
           </button>
-          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" data-i18n-title="ca.hide" title="숨기기">×</button>
         </header>
         <div class="widget-body">
           <div id="sidebar-panel-favorites" class="sidebar-content-panel">
@@ -678,11 +678,11 @@
       <section class="widget-card" data-widget="drawings">
         <header class="widget-header" draggable="true">
           <span class="widget-grip" aria-hidden="true"></span>
-          <span class="widget-title">저장한 검색</span>
-          <button type="button" class="widget-control" data-action="collapse" aria-label="접기/펼치기" title="접기/펼치기">
+          <span class="widget-title" data-i18n="ca.w.saved_search">저장한 검색</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" data-i18n-title="ca.collapse" title="접기/펼치기">
             <span class="widget-collapse-icon">▾</span>
           </button>
-          <button type="button" class="widget-control danger" data-action="hide" aria-label="숨기기" title="숨기기">×</button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" data-i18n-title="ca.hide" title="숨기기">×</button>
         </header>
         <div class="widget-body">
           <div id="sidebar-panel-drawings" class="sidebar-content-panel">
@@ -806,6 +806,115 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// ── 차트 앱 i18n 사전 ──────────────────────────────────────────
+D2T_I18N.add({
+  // 드로잉 툴바
+  'ca.draw':            { ko: '드로잉', en: 'Draw' },
+  'ca.tool.pen':        { ko: '자유곡선', en: 'Freehand' },
+  'ca.tool.pen.tip':    { ko: '자유곡선: 마우스 드래그', en: 'Freehand: drag the mouse' },
+  'ca.tool.trend':      { ko: '추세선', en: 'Trendline' },
+  'ca.tool.trend.tip':  { ko: '추세선: 클릭으로 점 추가, Ctrl+클릭 완료', en: 'Trendline: click to add points, Ctrl+click to finish' },
+  'ca.tool.line':       { ko: '직선', en: 'Line' },
+  'ca.tool.line.tip':   { ko: '직선 (L): 시작점 클릭 → 끝점 클릭', en: 'Line (L): click start, click end' },
+  'ca.tool.parallel':   { ko: '평행선', en: 'Channel' },
+  'ca.tool.parallel.tip':{ ko: '평행선 채널 (C): 1번선 그린 후 마우스로 채널 너비 조절 후 클릭', en: 'Parallel channel (C): draw first line, drag to set channel width, click' },
+  'ca.btn.clear':       { ko: '지우기', en: 'Clear' },
+  'ca.btn.clear.tip':   { ko: '드로잉 지우기 (Delete)', en: 'Clear drawing (Delete)' },
+  'ca.btn.blank':       { ko: '빈 캔버스', en: 'Blank canvas' },
+  'ca.btn.blank.tip':   { ko: '빈 캔버스 모드 전환', en: 'Toggle blank canvas mode' },
+  'ca.btn.save':        { ko: '저장', en: 'Save' },
+  'ca.btn.save.tip':    { ko: '현재 그림 저장', en: 'Save current drawing' },
+  'ca.btn.auto':        { ko: '자동 분석', en: 'Auto Analysis' },
+  'ca.btn.auto.tip':    { ko: '자동 분석은 Pro 계정 전용 기능입니다', en: 'Auto Analysis is a Pro-only feature' },
+  'ca.btn.search':      { ko: '유사 종목 검색', en: 'Find Similar' },
+  'ca.btn.tidy':        { ko: '패턴 정리', en: 'Tidy Pattern' },
+  'ca.btn.tidy.tip':    { ko: '패턴 정리는 빈 캔버스 모드에서만 사용할 수 있습니다', en: 'Tidy Pattern is only available in blank canvas mode' },
+
+  // 상단 종목 정보 바
+  'ca.stock_info':      { ko: '종목 정보 보기', en: 'View stock info' },
+  'ca.stock_info.tip':  { ko: '메인 종목 정보 보기', en: 'View main stock information' },
+  'ca.sector_filter':   { ko: '섹터/업종 필터', en: 'Sector filter' },
+  'ca.all_sectors':     { ko: '전체 섹터', en: 'All sectors' },
+  'ca.ticker_pick':     { ko: '종목 선택', en: 'Select ticker' },
+  'ca.search':          { ko: '검색', en: 'Search' },
+  'ca.ticker_search.tip':{ ko: '종목명/티커 입력 후 선택', en: 'Type a ticker or company name to select' },
+  'ca.load_chart':      { ko: '차트 로드', en: 'Load chart' },
+  'ca.fav_ticker.tip':  { ko: '현재 종목 즐겨찾기', en: 'Favorite this ticker' },
+  'ca.us_hint':         { ko: '거래소 미선택 시 S&P 500', en: 'Defaults to S&P 500 when no exchange selected' },
+  'ca.timeframe':       { ko: '타임프레임', en: 'Timeframe' },
+  'ca.tf.M':            { ko: '월', en: 'M' },
+  'ca.tf.W':            { ko: '주', en: 'W' },
+  'ca.tf.D':            { ko: '일', en: 'D' },
+  'ca.tf.monthly.tip':  { ko: '월봉', en: 'Monthly' },
+  'ca.tf.weekly.tip':   { ko: '주봉', en: 'Weekly' },
+  'ca.tf.daily.tip':    { ko: '일봉', en: 'Daily' },
+
+  // 차트 푸터
+  'ca.chart.empty':     { ko: '종목을 선택하고 차트를 로드하세요', en: 'Select a ticker and load the chart' },
+  'ca.chart.draw_hint': { ko: '드로잉 도구 선택 후 차트 위에서 패턴을 그리세요', en: 'Pick a drawing tool and sketch a pattern on the chart' },
+  'ca.mobile_results':  { ko: '결과 보기 ▲', en: 'View results ▲' },
+
+  // 일자별 거래량
+  'ca.daily_volume':    { ko: '일자별 거래량', en: 'Daily volume' },
+  'ca.col.date':        { ko: '날짜', en: 'Date' },
+  'ca.col.close':       { ko: '종가', en: 'Close' },
+  'ca.col.chg':         { ko: '등락', en: 'Chg' },
+  'ca.col.volume':      { ko: '거래량', en: 'Volume' },
+  'ca.daily.empty':     { ko: '일별 데이터 대기 중...', en: 'Awaiting daily data...' },
+
+  // 유사 종목 비교 패널
+  'ca.compare_stock':   { ko: '유사 종목 비교', en: 'Compare similar stock' },
+  'ca.pick_stock':      { ko: '종목을 선택하세요', en: 'Select a stock' },
+  'ca.tab.finance':     { ko: '재무', en: 'Financials' },
+  'ca.tab.news':        { ko: '뉴스', en: 'News' },
+  'ca.tab.market':      { ko: '시장반응', en: 'Market reaction' },
+  'ca.tab.overview':    { ko: '개요', en: 'Overview' },
+  'ca.tab.financials':  { ko: '재무제표', en: 'Statements' },
+  'ca.click_similar':   { ko: '유사 종목을 클릭하세요', en: 'Click a similar stock' },
+
+  // 메인 종목 정보 오버레이
+  'ca.main_stock_info': { ko: '메인 종목 정보', en: 'Main stock info' },
+  'ca.close':           { ko: '닫기', en: 'Close' },
+  'ca.loading':         { ko: '로딩 중...', en: 'Loading...' },
+  'ca.finance_empty':   { ko: '종목을 로드하면 재무 지표가 표시됩니다.', en: 'Load a stock to see financial metrics.' },
+  'ca.financials_loading': { ko: '재무제표 불러오는 중…', en: 'Loading statements…' },
+  'ca.financials_empty':{ ko: '종목을 로드하면 상세 재무제표가 표시됩니다.', en: 'Load a stock to see detailed statements.' },
+  'ca.news_empty':      { ko: '종목을 로드하면 뉴스가 표시됩니다.', en: 'Load a stock to see news.' },
+  'ca.market_empty':    { ko: '종목을 로드하면 시장반응이 표시됩니다.', en: 'Load a stock to see market reaction.' },
+  'ca.rep.annual':      { ko: '사업', en: 'Annual' },
+  'ca.rep.half':        { ko: '반기', en: 'Semi-annual' },
+  'ca.rep.q1':          { ko: '1분기', en: 'Q1' },
+  'ca.rep.q3':          { ko: '3분기', en: 'Q3' },
+
+  // 위젯 시스템
+  'ca.widget':          { ko: '위젯', en: 'Widgets' },
+  'ca.widget.reset':    { ko: '초기화', en: 'Reset' },
+  'ca.widget.reset.tip':{ ko: '기본 레이아웃으로 초기화', en: 'Reset to default layout' },
+  'ca.widget.drag':     { ko: '드래그로 정렬', en: 'Drag to reorder' },
+  'ca.w.similar':       { ko: '유사 종목', en: 'Similar stocks' },
+  'ca.w.favorites':     { ko: '즐겨찾기', en: 'Favorites' },
+  'ca.w.saved':         { ko: '저장', en: 'Saved' },
+  'ca.w.saved_search':  { ko: '저장한 검색', en: 'Saved searches' },
+  'ca.collapse':        { ko: '접기/펼치기', en: 'Collapse/expand' },
+  'ca.hide':            { ko: '숨기기', en: 'Hide' },
+
+  // 검색 결과
+  'ca.search_results':  { ko: '☰ 검색 결과', en: '☰ Search Results' },
+  'ca.topn.tip':        { ko: '검색 결과 최대 개수', en: 'Maximum number of results' },
+  'ca.col.rank':        { ko: '순위', en: 'Rank' },
+  'ca.col.ticker':      { ko: '종목', en: 'Ticker' },
+  'ca.col.similarity':  { ko: '유사도', en: 'Similarity' },
+  'ca.historical_notice':{ ko: '과거 패턴 통계 데이터입니다 — 미래 수익을 보장하지 않습니다',
+                            en: 'Historical pattern statistics — does not guarantee future returns' },
+  'ca.full_disclaimer': { ko: '본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다. 제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.',
+                            en: 'This service provides reference information only and does not constitute investment advice under the Capital Markets Act. Pattern similarity analysis is based on historical data and does not guarantee future returns. All investment outcomes are the user\'s sole responsibility.' },
+  'ca.results_placeholder': { ko: '패턴을 그린 후<br><strong style="color:#5BFFC6;">유사 종목 검색</strong>을 클릭하세요<br><br><small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>',
+                              en: 'Draw a pattern, then click<br><strong style="color:#5BFFC6;">Find Similar</strong><br><br><small>Click any similar stock to see a<br><strong>layered comparison</strong> with your drawing<br>and confirm where it matches</small>' },
+  'ca.chart_disclaimer':{ ko: '본 서비스의 차트는 종가 기준(1일 지연)이며, 실시간 시세는 별도 페이지에서 확인 가능합니다.',
+                            en: 'Charts use closing prices (1-day delayed). Real-time quotes are available on a separate page.' },
+});
+</script>
 <script>
 (function () {
   var KR = { label: '09:00~15:30 KST', tz: 'Asia/Seoul' };

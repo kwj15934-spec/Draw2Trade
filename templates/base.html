@@ -4487,9 +4487,9 @@
   ">
     <!-- 좌: 사업자 정보 + 링크 (3줄) -->
     <div style="line-height:1.6;">
-      <div>상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566</div>
-      <div>사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동)</div>
-      <div>
+      <div data-i18n="bf.biz1">상호 : FORMETA &nbsp;|&nbsp; 대표자 : 김원준 &nbsp;|&nbsp; 사업자등록번호 : 536-32-01566</div>
+      <div data-i18n="bf.biz2">사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동)</div>
+      <div data-i18n-html data-i18n="bf.biz3">
         전화번호 : 02-6015-9983 &nbsp;|&nbsp;
         이메일 : <a href="mailto:kwj15934@formeta.kr" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color='#5BFFC6'" onmouseout="this.style.color='#555d7a'">kwj15934@formeta.kr</a>
         &nbsp;|&nbsp;
@@ -4500,11 +4500,25 @@
     </div>
     <!-- 우: 면책조항 + copyright -->
     <div style="text-align:right;flex-shrink:0;font-size:10px;color:#555d7a;line-height:1.6;">
-      <div>본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.</div>
-      <div>제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.</div>
+      <div data-i18n="bf.disc1">본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.</div>
+      <div data-i18n="bf.disc2">제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.</div>
       <div style="margin-top:2px;">&copy; 2026 Draw2Trade</div>
     </div>
   </footer>
+  <script>
+    if (window.D2T_I18N) D2T_I18N.add({
+      'bf.biz1': { ko: '상호 : FORMETA  |  대표자 : 김원준  |  사업자등록번호 : 536-32-01566',
+                   en: 'Business: FORMETA  |  CEO: Won Jun Kim  |  Reg. No.: 536-32-01566' },
+      'bf.biz2': { ko: '사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동)',
+                   en: 'Address: B1, 48-4 Pobangteo-gil, Seodaemun-gu, Seoul, Korea' },
+      'bf.biz3': { ko: '전화번호 : 02-6015-9983 &nbsp;|&nbsp; 이메일 : <a href="mailto:kwj15934@formeta.kr" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">kwj15934@formeta.kr</a> &nbsp;|&nbsp; <a href="/terms" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">이용약관</a> &nbsp;|&nbsp; <a href="/privacy" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">개인정보처리방침</a>',
+                   en: 'Tel: +82-2-6015-9983 &nbsp;|&nbsp; Email: <a href="mailto:kwj15934@formeta.kr" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">kwj15934@formeta.kr</a> &nbsp;|&nbsp; <a href="/terms" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">Terms</a> &nbsp;|&nbsp; <a href="/privacy" style="color:#555d7a;text-decoration:none;" onmouseover="this.style.color=\'#5BFFC6\'" onmouseout="this.style.color=\'#555d7a\'">Privacy</a>' },
+      'bf.disc1':{ ko: '본 서비스는 투자 참고용 정보 제공을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다.',
+                   en: 'This service provides reference information only and does not constitute investment advice under the Capital Markets Act.' },
+      'bf.disc2':{ ko: '제공되는 패턴 유사도 분석은 과거 데이터 기반이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.',
+                   en: 'Pattern similarity analysis is based on historical data and does not guarantee future returns. All investment outcomes are the user\'s sole responsibility.' },
+    });
+  </script>
 
   <!-- 팝업 -->
   <div id="d2t-popup-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)d2tClosePopup()">
