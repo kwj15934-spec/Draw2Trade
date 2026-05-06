@@ -17,6 +17,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>요금제 — Draw2Trade</title>
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <script src="/static/js/i18n.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -338,6 +339,27 @@
       margin-top:14px;text-decoration:none;letter-spacing:0.02em;
     }
     .refund-link:hover{color:var(--fg1)}
+
+    /* ── Language toggle 버튼 ─────────────────────────────────────── */
+    .lang-toggle{
+      padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.04em;
+      border:1px solid var(--border2);background:rgba(255,255,255,0.04);
+      color:var(--fg1);cursor:pointer;font-family:var(--font);
+      transition:border-color .18s ease,color .18s ease,background .18s ease;
+      margin-right:6px;
+    }
+    .lang-toggle:hover{border-color:var(--tealDim);color:var(--teal);background:rgba(91,255,198,0.06)}
+
+    /* ── PayPal 모달 전용 ────────────────────────────────────────── */
+    .pp-summary{
+      background:rgba(255,255,255,0.03);border:1px solid var(--border1);
+      border-radius:12px;padding:16px 18px;margin-bottom:14px;
+    }
+    .pp-summary table{width:100%;border-collapse:collapse;font-size:13px}
+    .pp-summary td{padding:6px 0}
+    .pp-summary td:first-child{color:var(--fg2);width:130px;font-size:12px;letter-spacing:0.02em}
+    .pp-summary td:last-child{color:var(--fg0);font-weight:500}
+    .pp-summary .amt{color:var(--teal);font-weight:600;font-size:18px;font-family:var(--mono)}
   </style>
 </head>
 <body>
@@ -348,55 +370,56 @@
     Draw2Trade
   </a>
   <div class="nav-links">
-    <a href="/" class="btn-outline">← 메인</a>
-    <a href="/login" data-loggedin-href="/app" class="btn-primary-nav">시작하기</a>
+    <button type="button" class="lang-toggle" data-i18n-toggle></button>
+    <a href="/" class="btn-outline" data-i18n="nav.back_main">← 메인</a>
+    <a href="/login" data-loggedin-href="/app" class="btn-primary-nav" data-i18n="nav.signup">시작하기</a>
   </div>
 </nav>
 
 <div class="page-wrap">
-  <div class="page-label">PRICING · 요금제</div>
-  <h1 class="page-title">합리적인 가격으로<br><em>Pro</em>를 시작하세요</h1>
-  <p class="page-desc">월 <strong>₩8,900</strong> · 연 <strong>₩85,000</strong> (20% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 결제는 <strong>계좌이체</strong>로 진행되며 자동으로 Pro가 활성화됩니다.</p>
+  <div class="page-label" data-i18n="pricing.label">PRICING · 요금제</div>
+  <h1 class="page-title" data-i18n-html data-i18n="pricing.title">합리적인 가격으로<br><em>Pro</em>를 시작하세요</h1>
+  <p class="page-desc" id="pricing-desc" data-i18n-html data-i18n="pricing.desc.kr">월 <strong>₩8,900</strong> · 연 <strong>₩85,000</strong> (20% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 결제는 <strong>계좌이체</strong>로 진행되며 자동으로 Pro가 활성화됩니다.</p>
 
   <div class="plans-grid">
 
     <div class="plan-card">
       <div class="plan-name">Free</div>
-      <div class="plan-price">₩0 <span>/ 월</span></div>
-      <div class="plan-desc">패턴 검색을 가볍게 시작해보세요</div>
+      <div class="plan-price" id="plan-free-price">₩0 <span data-i18n="plan.per_month">/ 월</span></div>
+      <div class="plan-desc" data-i18n="plan.free.desc">패턴 검색을 가볍게 시작해보세요</div>
       <ul class="plan-features">
-        <li>KR 시장 패턴 검색</li>
-        <li>무제한 검색</li>
-        <li>유사 종목 Top 11~50 결과</li>
-        <li class="disabled">자동 패턴 검색</li>
-        <li>즐겨찾기 · 차트 저장 최대 5개</li>
+        <li data-i18n="plan.feat.kr_pattern">KR 시장 패턴 검색</li>
+        <li data-i18n="plan.feat.unlimited">무제한 검색</li>
+        <li data-i18n="plan.free.feat.top">유사 종목 Top 11~50 결과</li>
+        <li class="disabled" data-i18n="plan.feat.auto">자동 패턴 검색</li>
+        <li data-i18n="plan.free.feat.fav">즐겨찾기 · 차트 저장 최대 5개</li>
       </ul>
-      <a href="/login" data-loggedin-href="/app" class="btn-plan btn-free">무료로 시작하기</a>
+      <a href="/login" data-loggedin-href="/app" class="btn-plan btn-free" data-i18n="plan.free.cta">무료로 시작하기</a>
     </div>
 
     <div class="plan-card featured">
-      <div class="plan-event-badge">🎉 연간 결제 시 20% 할인</div>
+      <div class="plan-event-badge" data-i18n="plan.pro.event">🎉 연간 결제 시 20% 할인</div>
       <div class="plan-name">Pro</div>
 
       <div class="billing-toggle" role="tablist" aria-label="결제 주기 선택">
-        <button type="button" class="bt-opt active" data-period="monthly" role="tab" aria-selected="true" onclick="selectBillingPeriod('monthly')">월간</button>
-        <button type="button" class="bt-opt" data-period="annual" role="tab" aria-selected="false" onclick="selectBillingPeriod('annual')">연간 <span class="bt-save">−20%</span></button>
+        <button type="button" class="bt-opt active" data-period="monthly" role="tab" aria-selected="true" onclick="selectBillingPeriod('monthly')" data-i18n="plan.bt.monthly">월간</button>
+        <button type="button" class="bt-opt" data-period="annual" role="tab" aria-selected="false" onclick="selectBillingPeriod('annual')" data-i18n-html data-i18n="plan.bt.annual">연간 <span class="bt-save">−20%</span></button>
       </div>
 
-      <div class="plan-price" id="plan-price-display">₩8,900 <span>/ 월</span></div>
-      <div class="plan-note" id="plan-price-sub">월 단위 결제 · 언제든 해지 가능</div>
-      <div class="plan-desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
+      <div class="plan-price" id="plan-price-display">₩8,900 <span data-i18n="plan.per_month">/ 월</span></div>
+      <div class="plan-note" id="plan-price-sub" data-i18n="plan.pro.note">월 단위 결제 · 언제든 해지 가능</div>
+      <div class="plan-desc" data-i18n="plan.pro.desc">더 깊이 분석하고 싶은 트레이더를 위해</div>
       <ul class="plan-features">
-        <li>KR 시장 패턴 검색</li>
-        <li>무제한 검색</li>
-        <li>Top 1~50 전체 결과</li>
-        <li>AI 리터치 — 내 그림을 AI가 보정 + 거래량 질문</li>
-        <li>AI 차트 요청 — 글로 패턴 묘사 → 자동 생성</li>
-        <li>과거 흐름 백테스팅 (+1M/3M/6M 수익률)</li>
-        <li>즐겨찾기 · 차트 저장 무제한</li>
-        <li>속도 우선 지원</li>
+        <li data-i18n="plan.feat.kr_pattern">KR 시장 패턴 검색</li>
+        <li data-i18n="plan.feat.unlimited">무제한 검색</li>
+        <li data-i18n="plan.pro.feat.top_full">Top 1~50 전체 결과</li>
+        <li data-i18n="plan.pro.feat.ai_retouch">AI 리터치 — 내 그림을 AI가 보정 + 거래량 질문</li>
+        <li data-i18n="plan.pro.feat.ai_chart">AI 차트 요청 — 글로 패턴 묘사 → 자동 생성</li>
+        <li data-i18n="plan.pro.feat.backtest">과거 흐름 백테스팅 (+1M/3M/6M 수익률)</li>
+        <li data-i18n="plan.pro.feat.fav_unlimited">즐겨찾기 · 차트 저장 무제한</li>
+        <li data-i18n="plan.pro.feat.priority">속도 우선 지원</li>
       </ul>
-      <a href="#" onclick="openProModal();return false;" class="btn-plan btn-pro">Pro 신청하기</a>
+      <a href="#" onclick="openProModal();return false;" class="btn-plan btn-pro" data-i18n="plan.pro.cta">Pro 신청하기</a>
     </div>
 
   </div>
@@ -453,47 +476,72 @@
 
     <!-- step1: 결제 주기 + 입금자명 + 계좌/QR 동시 노출 -->
     <div id="pro-step1">
-      <div class="pro-modal-title">Pro 결제 신청</div>
-      <div class="pro-modal-sub">아래 계좌로 입금하시면 자동으로 Pro 가 활성화됩니다.</div>
+      <div class="pro-modal-title" data-i18n="modal.title">Pro 결제 신청</div>
+      <div class="pro-modal-sub" id="modal-sub" data-i18n="modal.sub.kr">아래 계좌로 입금하시면 자동으로 Pro 가 활성화됩니다.</div>
 
       <div class="form-group">
-        <label class="form-label">결제 주기 <span class="req">*</span></label>
+        <label class="form-label" data-i18n-html data-i18n="modal.period_label">결제 주기 <span class="req">*</span></label>
         <div class="billing-toggle" style="display:flex;width:100%;margin-bottom:0;">
-          <button type="button" class="bt-opt active" data-period="monthly" onclick="selectModalPeriod('monthly')" style="flex:1;justify-content:center;">월간 <b style="margin-left:4px;">₩8,900</b></button>
-          <button type="button" class="bt-opt" data-period="annual" onclick="selectModalPeriod('annual')" style="flex:1;justify-content:center;">연간 <b style="margin-left:4px;">₩85,000</b> <span class="bt-save">−20%</span></button>
+          <button type="button" class="bt-opt active" data-period="monthly" onclick="selectModalPeriod('monthly')" style="flex:1;justify-content:center;" id="modal-bt-monthly" data-i18n-html data-i18n="modal.bt.monthly_kr">월간 <b style="margin-left:4px;">₩8,900</b></button>
+          <button type="button" class="bt-opt" data-period="annual" onclick="selectModalPeriod('annual')" style="flex:1;justify-content:center;" id="modal-bt-annual" data-i18n-html data-i18n="modal.bt.annual_kr">연간 <b style="margin-left:4px;">₩85,000</b> <span class="bt-save">−20%</span></button>
         </div>
       </div>
 
-      <!-- 계좌 정보 + QR (즉시 노출) -->
-      <div class="bank-info">
-        <table>
-          <tr><td>은행</td><td>우리은행</td></tr>
-          <tr><td>계좌번호</td><td>
-            <span id="s1-acct" class="acct-num" onclick="copyText('s1-acct', this)">1005-004-889621</span>
-            <button class="copy-btn" onclick="copyText('s1-acct', this)">복사</button>
-          </td></tr>
-          <tr><td>예금주</td><td>김원준(포르메타)</td></tr>
-          <tr><td>입금 금액</td><td>
-            <span id="s1-amount" class="amt-pay">₩8,900</span>
-            <button class="copy-btn" onclick="copyText('s1-amount-raw', this)">복사</button>
-            <input type="hidden" id="s1-amount-raw" value="8900">
-          </td></tr>
-        </table>
+      <!-- ── KR (계좌이체) 영역 ─────────────────────────────────────── -->
+      <div id="kr-payment-section">
 
-        <div class="qr-wrap">
-          <img src="/static/img/payment-qr.png" alt="결제 QR" onerror="this.style.display='none';this.nextElementSibling.textContent='QR 이미지를 찾을 수 없습니다'">
-          <div class="qr-cap">📱 QR 스캔으로 빠르게 송금</div>
+        <!-- 계좌 정보 + QR (즉시 노출) -->
+        <div class="bank-info">
+          <table>
+            <tr><td data-i18n="bank.bank_name">은행</td><td>우리은행</td></tr>
+            <tr><td data-i18n="bank.acct_num">계좌번호</td><td>
+              <span id="s1-acct" class="acct-num" onclick="copyText('s1-acct', this)">1005-004-889621</span>
+              <button class="copy-btn" onclick="copyText('s1-acct', this)" data-i18n="bank.copy">복사</button>
+            </td></tr>
+            <tr><td data-i18n="bank.holder">예금주</td><td>김원준(포르메타)</td></tr>
+            <tr><td data-i18n="bank.amount">입금 금액</td><td>
+              <span id="s1-amount" class="amt-pay">₩8,900</span>
+              <button class="copy-btn" onclick="copyText('s1-amount-raw', this)" data-i18n="bank.copy">복사</button>
+              <input type="hidden" id="s1-amount-raw" value="8900">
+            </td></tr>
+          </table>
+
+          <div class="qr-wrap">
+            <img src="/static/img/payment-qr.png" alt="결제 QR" onerror="this.style.display='none';this.nextElementSibling.textContent='QR 이미지를 찾을 수 없습니다'">
+            <div class="qr-cap" data-i18n="bank.qr_cap">📱 QR 스캔으로 빠르게 송금</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="depositor-name" data-i18n-html data-i18n="bank.depositor_label">입금자명 <span class="req">*</span></label>
+          <input id="depositor-name" type="text" class="pay-input" placeholder="예: 홍길동" maxlength="16" autocomplete="off" data-i18n-placeholder="bank.depositor_ph">
+          <div class="pay-hint" data-i18n-html data-i18n="bank.depositor_hint">계좌이체 시 <b style="color:#FF9F5B">입금자명 칸에 동일하게</b> 입력해 주세요.</div>
+        </div>
+
+        <button id="btn-create-request" onclick="createPaymentRequest()" class="pay-submit" data-i18n="bank.submit">신청 완료 (입금 대기)</button>
+        <div id="step1-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
+      </div>
+
+      <!-- ── EN (PayPal) 영역 ──────────────────────────────────────── -->
+      <div id="en-payment-section" style="display:none;">
+        <div class="pp-summary">
+          <table>
+            <tr><td data-i18n="pp.plan">Plan</td><td id="pp-plan-label">Monthly — Draw2Trade Pro</td></tr>
+            <tr><td data-i18n="pp.price">Price</td><td id="pp-price-label">$6.00 / month</td></tr>
+            <tr><td data-i18n="pp.tax">Tax (10%)</td><td id="pp-tax-label">+$0.60</td></tr>
+            <tr><td><strong data-i18n="pp.total">Total</strong></td><td class="amt" id="pp-total-label">$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ month</span></td></tr>
+          </table>
+        </div>
+
+        <div id="paypal-button-container" style="margin-top:12px;min-height:50px;"></div>
+        <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;" data-i18n="pp.loading">Loading payment button...</div>
+        <div id="pp-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
+
+        <div style="margin-top:12px;font-size:11px;color:var(--fg3);text-align:center;line-height:1.6;" data-i18n-html data-i18n="pp.disclaimer">
+          PayPal is for international customers.<br>
+          Korean customers, please switch to 🇰🇷 KR for bank transfer.
         </div>
       </div>
-
-      <div class="form-group">
-        <label class="form-label" for="depositor-name">입금자명 <span class="req">*</span></label>
-        <input id="depositor-name" type="text" class="pay-input" placeholder="예: 홍길동" maxlength="16" autocomplete="off">
-        <div class="pay-hint">계좌이체 시 <b style="color:#FF9F5B">입금자명 칸에 동일하게</b> 입력해 주세요.</div>
-      </div>
-
-      <button id="btn-create-request" onclick="createPaymentRequest()" class="pay-submit">신청 완료 (입금 대기)</button>
-      <div id="step1-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
     </div>
 
     <!-- step2: 입금 대기 -->
@@ -559,10 +607,79 @@
 </div>
 
 <script>
+  // ── i18n 사전 등록 ─────────────────────────────────────────────────
+  D2T_I18N.add({
+    'pricing.label':       { ko: 'PRICING · 요금제',                en: 'PRICING' },
+    'pricing.title':       { ko: '합리적인 가격으로<br><em>Pro</em>를 시작하세요',
+                              en: 'Affordable pricing<br>for serious <em>traders</em>' },
+    'pricing.desc.kr':     { ko: '월 <strong>₩8,900</strong> · 연 <strong>₩85,000</strong> (20% 할인) — 가입 시 <strong>7일 무료체험</strong> 자동 적용. 결제는 <strong>계좌이체</strong>로 진행되며 자동으로 Pro가 활성화됩니다.',
+                              en: '<strong>$6</strong>/mo · <strong>$60</strong>/yr (17% off) — Includes <strong>7-day free trial</strong>. Secure subscription billing via <strong>PayPal</strong>; cancel anytime.' },
+    // Free / Pro feature labels
+    'plan.per_month':      { ko: '/ 월', en: '/ mo' },
+    'plan.per_year':       { ko: '/ 년', en: '/ yr' },
+    'plan.free.desc':      { ko: '패턴 검색을 가볍게 시작해보세요', en: 'Start exploring pattern matching' },
+    'plan.feat.kr_pattern':{ ko: 'KR 시장 패턴 검색',              en: 'Korean market pattern search' },
+    'plan.feat.unlimited': { ko: '무제한 검색',                     en: 'Unlimited searches' },
+    'plan.free.feat.top':  { ko: '유사 종목 Top 11~50 결과',        en: 'Similar stocks rank 11–50' },
+    'plan.feat.auto':      { ko: '자동 패턴 검색',                  en: 'Auto pattern search' },
+    'plan.free.feat.fav':  { ko: '즐겨찾기 · 차트 저장 최대 5개',    en: 'Favorites · saved charts up to 5' },
+    'plan.free.cta':       { ko: '무료로 시작하기',                 en: 'Start free' },
+    'plan.pro.event':      { ko: '🎉 연간 결제 시 20% 할인',         en: '🎉 17% off with annual billing' },
+    'plan.bt.monthly':     { ko: '월간',                            en: 'Monthly' },
+    'plan.bt.annual':      { ko: '연간 <span class="bt-save">−20%</span>', en: 'Annual <span class="bt-save">−17%</span>' },
+    'plan.pro.note':       { ko: '월 단위 결제 · 언제든 해지 가능', en: 'Billed monthly · cancel anytime' },
+    'plan.pro.desc':       { ko: '더 깊이 분석하고 싶은 트레이더를 위해', en: 'For traders who want deeper analysis' },
+    'plan.pro.feat.top_full':   { ko: 'Top 1~50 전체 결과', en: 'Full Top 1–50 results' },
+    'plan.pro.feat.ai_retouch': { ko: 'AI 리터치 — 내 그림을 AI가 보정 + 거래량 질문',
+                                  en: 'AI Retouch — refine your drawing + volume Q&A' },
+    'plan.pro.feat.ai_chart':   { ko: 'AI 차트 요청 — 글로 패턴 묘사 → 자동 생성',
+                                  en: 'AI Chart Request — describe a pattern, auto-generate' },
+    'plan.pro.feat.backtest':   { ko: '과거 흐름 백테스팅 (+1M/3M/6M 수익률)',
+                                  en: 'Historical backtest (+1M/3M/6M returns)' },
+    'plan.pro.feat.fav_unlimited': { ko: '즐겨찾기 · 차트 저장 무제한', en: 'Unlimited favorites & saved charts' },
+    'plan.pro.feat.priority':   { ko: '속도 우선 지원', en: 'Priority performance' },
+    'plan.pro.cta':        { ko: 'Pro 신청하기', en: 'Start Pro' },
+
+    // 모달 (공통)
+    'modal.title':         { ko: 'Pro 결제 신청', en: 'Subscribe to Pro' },
+    'modal.sub.kr':        { ko: '아래 계좌로 입금하시면 자동으로 Pro 가 활성화됩니다.',
+                              en: 'Pay securely via PayPal subscription. Cancel anytime.' },
+    'modal.period_label':  { ko: '결제 주기 <span class="req">*</span>', en: 'Billing period <span class="req">*</span>' },
+    'modal.bt.monthly_kr': { ko: '월간 <b style="margin-left:4px;">₩8,900</b>', en: 'Monthly <b style="margin-left:4px;">$6</b>' },
+    'modal.bt.annual_kr':  { ko: '연간 <b style="margin-left:4px;">₩85,000</b> <span class="bt-save">−20%</span>',
+                              en: 'Annual <b style="margin-left:4px;">$60</b> <span class="bt-save">−17%</span>' },
+
+    // KR 계좌이체 영역
+    'bank.bank_name':      { ko: '은행', en: 'Bank' },
+    'bank.acct_num':       { ko: '계좌번호', en: 'Account #' },
+    'bank.holder':         { ko: '예금주', en: 'Holder' },
+    'bank.amount':         { ko: '입금 금액', en: 'Amount' },
+    'bank.copy':           { ko: '복사', en: 'Copy' },
+    'bank.qr_cap':         { ko: '📱 QR 스캔으로 빠르게 송금', en: '📱 Scan QR to transfer' },
+    'bank.depositor_label':{ ko: '입금자명 <span class="req">*</span>', en: 'Depositor name <span class="req">*</span>' },
+    'bank.depositor_ph':   { ko: '예: 홍길동', en: 'e.g. Hong Gildong' },
+    'bank.depositor_hint': { ko: '계좌이체 시 <b style="color:#FF9F5B">입금자명 칸에 동일하게</b> 입력해 주세요.',
+                              en: 'Use this exact name in the bank transfer depositor field.' },
+    'bank.submit':         { ko: '신청 완료 (입금 대기)', en: 'Submit (await deposit)' },
+
+    // PayPal 영역
+    'pp.plan':             { ko: '플랜',  en: 'Plan' },
+    'pp.price':            { ko: '가격',  en: 'Price' },
+    'pp.tax':              { ko: '결제 세금 (10%)', en: 'Tax (10%)' },
+    'pp.total':            { ko: '최종 결제액', en: 'Total' },
+    'pp.loading':          { ko: '결제 버튼 불러오는 중...', en: 'Loading payment button...' },
+    'pp.disclaimer':       { ko: 'PayPal은 해외 결제용입니다.<br>국내 결제는 🇰🇷 KR 로 전환해 주세요.',
+                              en: 'PayPal is for international customers.<br>Korean customers, please switch to 🇰🇷 KR for bank transfer.' },
+  });
+
   var _billingPeriod = 'monthly';
   var _bankInfo = null;
   var _activeRequest = null;
   var _statusPoll = null;
+  var _paypalConfig = null;
+  var _paypalSDKLoaded = false;
+  var _paypalButtonInstance = null;
+  var _currentLocale = D2T_I18N.getLocale();
 
   /** 외부(카드) 토글 */
   function selectBillingPeriod(period) {
@@ -575,12 +692,23 @@
     }
     var priceEl = document.getElementById('plan-price-display');
     var subEl   = document.getElementById('plan-price-sub');
-    if (_billingPeriod === 'annual') {
-      if (priceEl) priceEl.innerHTML = '₩85,000 <span>/ 년</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>₩7,083</b> · 20% 할인 적용';
+    var loc = D2T_I18N.getLocale();
+    if (loc === 'en') {
+      if (_billingPeriod === 'annual') {
+        if (priceEl) priceEl.innerHTML = '$60 <span>/ yr</span>';
+        if (subEl)   subEl.innerHTML = 'Equivalent to <b>$5/mo</b> · 17% off';
+      } else {
+        if (priceEl) priceEl.innerHTML = '$6 <span>/ mo</span>';
+        if (subEl)   subEl.innerHTML = 'Billed monthly · cancel anytime';
+      }
     } else {
-      if (priceEl) priceEl.innerHTML = '₩8,900 <span>/ 월</span>';
-      if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
+      if (_billingPeriod === 'annual') {
+        if (priceEl) priceEl.innerHTML = '₩85,000 <span>/ 년</span>';
+        if (subEl)   subEl.innerHTML = '월 단위 환산 시 <b>₩7,083</b> · 20% 할인 적용';
+      } else {
+        if (priceEl) priceEl.innerHTML = '₩8,900 <span>/ 월</span>';
+        if (subEl)   subEl.innerHTML = '월 단위 결제 · 언제든 해지 가능';
+      }
     }
   }
 
@@ -593,13 +721,157 @@
     }
     selectBillingPeriod(_billingPeriod);  // 카드도 동기화
 
-    // step1 계좌 정보 박스의 금액도 동기화
-    var amount = (_billingPeriod === 'annual') ? 85000 : 8900;
-    var amtEl  = document.getElementById('s1-amount');
-    var amtRaw = document.getElementById('s1-amount-raw');
-    if (amtEl)  amtEl.textContent = '₩' + amount.toLocaleString();
-    if (amtRaw) amtRaw.value = String(amount);
+    if (_currentLocale === 'en') {
+      _updatePayPalAmount();
+      if (_paypalSDKLoaded) _renderPayPalButton();
+    } else {
+      // step1 계좌 정보 박스의 금액도 동기화
+      var amount = (_billingPeriod === 'annual') ? 85000 : 8900;
+      var amtEl  = document.getElementById('s1-amount');
+      var amtRaw = document.getElementById('s1-amount-raw');
+      if (amtEl)  amtEl.textContent = '₩' + amount.toLocaleString();
+      if (amtRaw) amtRaw.value = String(amount);
+    }
   }
+
+  // ── PayPal 통합 ──────────────────────────────────────────────────
+  function _updatePayPalAmount() {
+    var planEl  = document.getElementById('pp-plan-label');
+    var priceEl = document.getElementById('pp-price-label');
+    var taxEl   = document.getElementById('pp-tax-label');
+    var totalEl = document.getElementById('pp-total-label');
+    if (_billingPeriod === 'annual') {
+      if (planEl)  planEl.textContent = 'Annual — Draw2Trade Pro';
+      if (priceEl) priceEl.textContent = '$60.00 / year';
+      if (taxEl)   taxEl.textContent  = '+$6.00';
+      if (totalEl) totalEl.innerHTML  = '$66.00 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ year</span>';
+    } else {
+      if (planEl)  planEl.textContent = 'Monthly — Draw2Trade Pro';
+      if (priceEl) priceEl.textContent = '$6.00 / month';
+      if (taxEl)   taxEl.textContent  = '+$0.60';
+      if (totalEl) totalEl.innerHTML  = '$6.60 <span style="font-size:11px;font-weight:400;color:var(--fg2);">/ month</span>';
+    }
+  }
+
+  function _loadPayPalSDK() {
+    if (_paypalSDKLoaded) return Promise.resolve();
+    return fetch('/api/payment/config')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (cfg) {
+        if (!cfg || !cfg.configured || !cfg.client_id) {
+          throw new Error('Payment system not configured. Please contact support.');
+        }
+        _paypalConfig = cfg;
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(cfg.client_id)
+                + '&vault=true&intent=subscription&currency=USD&enable-funding=card';
+          s.setAttribute('data-sdk-integration-source', 'button-factory');
+          s.onload  = function () { _paypalSDKLoaded = true; resolve(); };
+          s.onerror = function () { reject(new Error('PayPal SDK failed to load')); };
+          document.head.appendChild(s);
+        });
+      });
+  }
+
+  function _renderPayPalButton() {
+    var container = document.getElementById('paypal-button-container');
+    var loading   = document.getElementById('pp-loading');
+    var errEl     = document.getElementById('pp-error');
+    if (!container) return;
+    container.innerHTML = '';
+    if (errEl) errEl.textContent = '';
+    if (loading) loading.style.display = 'block';
+
+    if (!_paypalConfig) return;
+    var planId = (_billingPeriod === 'annual')
+      ? _paypalConfig.plan_annual
+      : _paypalConfig.plan_monthly;
+    if (!planId) {
+      if (errEl) errEl.textContent = 'Plan not configured. Please contact support.';
+      if (loading) loading.style.display = 'none';
+      return;
+    }
+
+    var period = _billingPeriod;
+    _paypalButtonInstance = window.paypal.Buttons({
+      fundingSource: window.paypal.FUNDING.CARD,
+      style: { shape: 'pill', color: 'black', layout: 'vertical' },
+      createSubscription: function (_data, actions) {
+        return actions.subscription.create({ plan_id: planId });
+      },
+      onApprove: function (data) {
+        return fetch('/api/payment/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ subscription_id: data.subscriptionID, billing_period: period }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.data && res.data.detail) || 'Server verification failed');
+            _showStep('pro-step3');
+          })
+          .catch(function (e) {
+            if (errEl) errEl.textContent = 'Payment succeeded but server processing failed. Please contact support. (' + (e.message || e) + ')';
+          });
+      },
+      onError: function (err) {
+        if (errEl) errEl.textContent = 'Payment error. Please try again.';
+        console.error('PayPal error:', err);
+      },
+      onCancel: function () {
+        if (errEl) errEl.textContent = 'Payment cancelled.';
+      },
+    });
+    _paypalButtonInstance.render('#paypal-button-container').then(function () {
+      if (loading) loading.style.display = 'none';
+    });
+  }
+
+  // ── locale 변경 시 결제 영역 토글 ─────────────────────────────────
+  function _applyLocaleToPayment() {
+    _currentLocale = D2T_I18N.getLocale();
+    var krSec = document.getElementById('kr-payment-section');
+    var enSec = document.getElementById('en-payment-section');
+    if (!krSec || !enSec) return;
+    if (_currentLocale === 'en') {
+      krSec.style.display = 'none';
+      enSec.style.display = 'block';
+      _updatePayPalAmount();
+      _loadPayPalSDK()
+        .then(function () { _renderPayPalButton(); })
+        .catch(function (e) {
+          var errEl = document.getElementById('pp-error');
+          var loading = document.getElementById('pp-loading');
+          if (loading) loading.style.display = 'none';
+          if (errEl) errEl.textContent = e.message || 'PayPal load failed';
+        });
+    } else {
+      krSec.style.display = 'block';
+      enSec.style.display = 'none';
+    }
+
+    // 가격 카드의 plan-price-display 도 통화 단위 동기화
+    var priceEl = document.getElementById('plan-price-display');
+    var freeEl  = document.getElementById('plan-free-price');
+    if (_currentLocale === 'en') {
+      if (freeEl)  freeEl.innerHTML  = '$0 <span data-i18n="plan.per_month">/ mo</span>';
+      if (priceEl) {
+        priceEl.innerHTML = (_billingPeriod === 'annual')
+          ? '$60 <span>/ yr</span>'
+          : '$6 <span>/ mo</span>';
+      }
+    } else {
+      if (freeEl)  freeEl.innerHTML  = '₩0 <span data-i18n="plan.per_month">/ 월</span>';
+      if (priceEl) {
+        priceEl.innerHTML = (_billingPeriod === 'annual')
+          ? '₩85,000 <span>/ 년</span>'
+          : '₩8,900 <span>/ 월</span>';
+      }
+    }
+  }
+  window.addEventListener('d2t:locale', _applyLocaleToPayment);
 
   function copyText(elId, btn) {
     var el = document.getElementById(elId);
@@ -652,6 +924,15 @@
 
     var loggedIn = await _checkLogin();
     if (!loggedIn) { _showStep('pro-step-login'); return; }
+
+    // 모달 열릴 때 현재 locale에 맞춰 결제 영역 토글
+    _applyLocaleToPayment();
+
+    // EN 모드는 step1에서 PayPal 직접 결제 → 기존 활성 신청 체크 skip
+    if (_currentLocale === 'en') {
+      _showStep('pro-step1');
+      return;
+    }
 
     // 기존 활성 신청 있으면 step2 로 점프
     try {
@@ -807,6 +1088,19 @@
   document.getElementById('pro-modal').addEventListener('click', function(e) {
     if (e.target === this) closeProModal();
   });
+
+  // 페이지 로드 시 가격 카드 통화 단위 동기화 (locale 자동감지 결과 반영)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      _currentLocale = D2T_I18N.getLocale();
+      var priceEl = document.getElementById('plan-price-display');
+      var freeEl  = document.getElementById('plan-free-price');
+      if (_currentLocale === 'en') {
+        if (freeEl)  freeEl.innerHTML  = '$0 <span>/ mo</span>';
+        if (priceEl) priceEl.innerHTML = '$6 <span>/ mo</span>';
+      }
+    });
+  }
 
   // 인증 분기
   fetch('/api/auth/me', { credentials: 'same-origin' })

@@ -34,6 +34,7 @@
   <meta name="twitter:image"       content="https://draw2trade.com/static/img/og-card.png">
 
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <script src="/static/js/i18n.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -426,6 +427,10 @@
         <div class="logo-text">Draw2Trade</div>
       </a>
       <div class="nav-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button type="button" data-i18n-toggle
+          style="padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.04em;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);color:rgba(250,251,252,0.78);cursor:pointer;font-family:inherit;transition:all .18s ease;"
+          onmouseover="this.style.borderColor='rgba(91,255,198,0.55)';this.style.color='#5BFFC6';this.style.background='rgba(91,255,198,0.06)';"
+          onmouseout="this.style.borderColor='rgba(255,255,255,0.14)';this.style.color='rgba(250,251,252,0.78)';this.style.background='rgba(255,255,255,0.04)';"></button>
         <div class="ticker-strip liquid-glass" id="ticker-strip">
           <span class="item">KOSPI <span id="kospi-val" class="up">—</span></span>
           <span class="item">KOSDAQ <span id="kosdaq-val" class="dn">—</span></span>
@@ -437,26 +442,39 @@
       <div class="badge liquid-glass" style="border-radius:999px">
         <span class="dot"></span> AI Pattern Match · BETA
       </div>
-      <h1>
+      <h1 data-i18n-html data-i18n="hero.title">
         Draw the chart.<br/>
         <span class="mint">차트를 그려보세요.</span>
       </h1>
-      <p class="hero-sub">
+      <p class="hero-sub" data-i18n-html data-i18n="hero.sub">
         마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.
       </p>
       <div class="cta-row">
-        <a class="cta-primary liquid-glass-strong" href="/login" id="cta-draw-now" data-loggedin-href="/app">
+        <a class="cta-primary liquid-glass-strong" href="/login" id="cta-draw-now" data-loggedin-href="/app" data-i18n-html data-i18n="hero.cta_primary">
           지금 그려보기 · Draw Now
           <span class="cta-circle">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </span>
         </a>
-        <a class="cta-secondary liquid-glass" href="/app">
+        <a class="cta-secondary liquid-glass" href="/app" data-i18n-html data-i18n="hero.cta_secondary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg>
           차트 모드 열기
         </a>
       </div>
     </div>
+    <script>
+      // 랜딩 페이지 i18n 사전
+      D2T_I18N.add({
+        'hero.title':         { ko: 'Draw the chart.<br/><span class="mint">차트를 그려보세요.</span>',
+                                en: 'Draw the chart.<br/><span class="mint">Find similar stocks.</span>' },
+        'hero.sub':           { ko: '마우스로 차트 패턴을 그리면, <em>AI가 KOSPI·KOSDAQ 2,400+</em> 종목 중 가장 비슷하게 움직인 종목을 빠르게 찾아드립니다.',
+                                en: 'Sketch a price pattern with your mouse — our AI scans <em>2,400+ KOSPI &amp; KOSDAQ tickers</em> and surfaces the stocks that historically moved the same way.' },
+        'hero.cta_primary':   { ko: '지금 그려보기 · Draw Now <span class="cta-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>',
+                                en: 'Draw Now <span class="cta-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>' },
+        'hero.cta_secondary': { ko: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg> 차트 모드 열기',
+                                en: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8V4z"/></svg> Open Chart App' },
+      });
+    </script>
 
   </section>
 
