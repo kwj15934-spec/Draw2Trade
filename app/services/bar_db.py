@@ -144,14 +144,19 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
     if not bars:
         return []
 
+    def _r(x) -> float:
+        """가격 동적 반올림: 1 이상은 1자리, 1 미만은 8자리 (저가 코인 호환)."""
+        v = float(x or 0)
+        return round(v, 1) if abs(v) >= 1 else round(v, 8)
+
     if timeframe == "daily":
         return [
             {
                 "time":        _fmt_date(b["trade_date"]),
-                "open":        round(float(b["open"] or 0),   1),
-                "high":        round(float(b["high"] or 0),   1),
-                "low":         round(float(b["low"] or 0),    1),
-                "close":       round(float(b["close"] or 0),  1),
+                "open":        _r(b["open"]),
+                "high":        _r(b["high"]),
+                "low":         _r(b["low"]),
+                "close":       _r(b["close"]),
                 # 크립토 거래량은 소수 (BTC 470.65...) — float 유지, 주식은 정수에 가까움
                 "volume":      float(b["volume"] or 0),
                 "trade_value": float(b.get("trade_value") or 0),
@@ -190,10 +195,10 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
     return [
         {
             "time":        k,
-            "open":        round(v["open"],  1),
-            "high":        round(v["high"],  1),
-            "low":         round(v["low"],   1),
-            "close":       round(v["close"], 1),
+            "open":        _r(v["open"]),
+            "high":        _r(v["high"]),
+            "low":         _r(v["low"]),
+            "close":       _r(v["close"]),
             "volume":      v["volume"],
             "trade_value": v["trade_value"],
         }
@@ -245,7 +250,13 @@ def get_daily_ohlcv_all(market_group: str, years: int = 2) -> dict[str, dict]:
             raw[symbol] = []
         d = str(trade_date)
         date_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 else d  # "YYYYMMDD" → "YYYY-MM-DD"
-        raw[symbol].append((date_str, o or 0.0, h or 0.0, lo or 0.0, c or 0.0, int(v or 0)))
+        # 거래량은 float 유지 (BTC 470.65 같은 소수 손실 방지)
+        raw[symbol].append((date_str, o or 0.0, h or 0.0, lo or 0.0, c or 0.0, float(v or 0)))
+
+    def _r(x: float) -> float:
+        """가격 동적 반올림: 1 이상은 1자리, 1 미만은 8자리 (저가 코인 BTT/SHIB/PEPE 호환)."""
+        v = float(x)
+        return round(v, 1) if abs(v) >= 1 else round(v, 8)
 
     result: dict[str, dict] = {}
     for symbol, bars in raw.items():
@@ -253,10 +264,10 @@ def get_daily_ohlcv_all(market_group: str, years: int = 2) -> dict[str, dict]:
             continue
         result[symbol] = {
             "dates":  [b[0] for b in bars],
-            "open":   [round(float(b[1]), 1) for b in bars],
-            "high":   [round(float(b[2]), 1) for b in bars],
-            "low":    [round(float(b[3]), 1) for b in bars],
-            "close":  [round(float(b[4]), 1) for b in bars],
+            "open":   [_r(b[1]) for b in bars],
+            "high":   [_r(b[2]) for b in bars],
+            "low":    [_r(b[3]) for b in bars],
+            "close":  [_r(b[4]) for b in bars],
             "volume": [b[5] for b in bars],
             "freq":   "d",
         }
@@ -351,12 +362,14 @@ def get_monthly_ohlcv_all(market_group: str, years: int = 10) -> dict[str, dict]
             continue
 
         dates = list(months.keys())
+        def _rm(x: float) -> float:
+            return round(float(x), 1) if abs(float(x)) >= 1 else round(float(x), 8)
         result[symbol] = {
             "dates":      dates,
-            "open":       [round(months[d]["open"],  1) for d in dates],
-            "high":       [round(months[d]["high"],  1) for d in dates],
-            "low":        [round(months[d]["low"],   1) for d in dates],
-            "close":      [round(months[d]["close"], 1) for d in dates],
+            "open":       [_rm(months[d]["open"])  for d in dates],
+            "high":       [_rm(months[d]["high"])  for d in dates],
+            "low":        [_rm(months[d]["low"])   for d in dates],
+            "close":      [_rm(months[d]["close"]) for d in dates],
             "volume":     [months[d]["volume"] for d in dates],
             "freq":       "m",
             "last_month": dates[-1],

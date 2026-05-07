@@ -397,7 +397,12 @@ def search_similar(
             skipped_illiquid += 1
             continue
         if close and len(close) >= 2:
-            mn, mx = min(c for c in close if c), max(close)
+            _non_zero = [c for c in close if c]
+            if len(_non_zero) < 2:
+                # 모든 close 값이 0/None — 데이터 부재 (신규 상장 코인 등)
+                skipped_illiquid += 1
+                continue
+            mn, mx = min(_non_zero), max(close)
             if mx - mn < _EPS:  # 완전 평탄 (상장폐지 대기 등)
                 skipped_illiquid += 1
                 continue
