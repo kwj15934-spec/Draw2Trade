@@ -140,14 +140,22 @@ async def chart_data(
             raise HTTPException(status_code=404, detail=f"크립토 {ticker} 데이터 없음 ({market_up})")
         candles = bar_db.bars_to_candles(bars, tf)
 
-        # 실시간 마지막 봉 overlay (CCXT)
+        # 실시간 마지막 봉 overlay (CCXT) — 코인은 24시간 시장이라 모든 timeframe 적용
         live = crypto_data_service.get_recent_candle(ticker, market=market_up)
         if live and candles:
             today = datetime.now().strftime("%Y-%m-%d")
-            if tf == "daily" and candles[-1].get("time") != today:
-                candles.append(live)
-            elif tf == "daily":
-                candles[-1] = {**candles[-1], **live}
+            last = candles[-1]
+            if tf == "daily":
+                if last.get("time") != today:
+                    candles.append(live)
+                else:
+                    candles[-1] = {**last, **live}
+            elif tf in ("weekly", "monthly"):
+                # 주봉/월봉: 마지막 버킷의 close 만 라이브로 교체 (high/low 확장)
+                last["close"] = live["close"]
+                last["high"]  = max(float(last.get("high", 0) or 0), live["high"])
+                last["low"]   = min(float(last.get("low",  0) or 0), live["low"]) if last.get("low") else live["low"]
+                candles[-1] = last
 
         return {
             "ticker":    ticker,
