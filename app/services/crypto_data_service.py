@@ -1,123 +1,136 @@
 """
-crypto_data_service.py — 업비트 KRW 페어 OHLCV 캐시 (CCXT 기반).
+crypto_data_service.py — 다중 거래소 크립토 OHLCV 캐시 (CCXT 기반).
+
+지원 마켓:
+  CRYPTO_KRW  : Upbit + Bithumb (KRW 페어 통합, 같은 심볼은 거래량 큰 쪽 우선)
+  CRYPTO_USDT : Binance (USDT 페어)
 
 기존 data_service.py / us_data_service.py 와 동일한 인터페이스를 제공하여
 similarity_service / pattern router 에서 동일하게 사용 가능.
 
-함수:
-  build_crypto_cache()         — 서버 시작 시 호출. bar_db 에서 모든 KRW 페어 일봉 로드.
-  all_crypto_ohlcv()           — { 'BTC': {dates,open,high,low,close,volume,freq}, ... }
-  all_crypto_names()           — { 'BTC': 'Bitcoin', 'ETH': 'Ethereum', ... }
-  get_recent_candle(symbol)    — CCXT 라이브 호출 (last bar realtime overlay).
-  fetch_all_upbit_krw_daily()  — 시드/스케줄러 — 모든 Upbit KRW 페어 일봉 → bar_db 저장.
+거래대금 (trade_value):
+  ccxt fetch_ohlcv 는 base 단위 volume 만 반환 → trade_value ≈ close * volume 로 근사.
+  일봉에서 ~99% 정확도. 정확한 trade_value 가 필요하면 거래소 native API 사용.
 
 저장:
-  bar_db daily_bars 테이블에 market_group='CRYPTO_KRW' 로 저장.
-  symbol 은 base currency (예: 'BTC', 'ETH', 'XRP') — 거래소 스키마 차이 회피.
+  bar_db daily_bars 테이블에 market_group 으로 저장.
+  symbol = base currency (BTC/ETH/...) — 거래소 스키마 차이 회피.
+  같은 (market_group, symbol, trade_date) 충돌 시: volume 큰 쪽 우선 (UPSERT).
 """
 from __future__ import annotations
 
 import logging
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-MARKET_GROUP = "CRYPTO_KRW"
+# ── 마켓 그룹 상수 ────────────────────────────────────────────────────────────
+KRW_GROUP  = "CRYPTO_KRW"
+USDT_GROUP = "CRYPTO_USDT"
 
-# ── 메모리 캐시 ──────────────────────────────────────────────────────────────
+ALL_MARKETS = (KRW_GROUP, USDT_GROUP)
+
+
+# ── 메모리 캐시 (마켓별 분리) ────────────────────────────────────────────────
 _cache_lock = threading.RLock()
-_ohlcv_cache: dict[str, dict] = {}      # symbol → {dates, open, high, low, close, volume, freq}
-_name_cache:  dict[str, str]  = {}       # symbol → name (예: 'BTC' → 'Bitcoin')
-_cache_built = False
+_ohlcv_cache: dict[str, dict[str, dict]] = {KRW_GROUP: {}, USDT_GROUP: {}}
+_name_cache:  dict[str, dict[str, str]]  = {KRW_GROUP: {}, USDT_GROUP: {}}
+_cache_built: dict[str, bool]            = {KRW_GROUP: False, USDT_GROUP: False}
 
 
-# ── CCXT 거래소 핸들 ──────────────────────────────────────────────────────────
+# ── CCXT 거래소 핸들 (lazy) ──────────────────────────────────────────────────
+_exchanges: dict[str, object] = {}
 
-_upbit = None
-
-def _get_upbit():
-    """ccxt.upbit() 인스턴스 — lazy init. ccxt 미설치 시 None 반환."""
-    global _upbit
-    if _upbit is not None:
-        return _upbit
+def _get_exchange(name: str):
+    """ccxt 거래소 인스턴스 반환. ccxt 미설치 시 None."""
+    if name in _exchanges:
+        return _exchanges[name]
     try:
         import ccxt
-        _upbit = ccxt.upbit({"enableRateLimit": True, "timeout": 15000})
-        return _upbit
+        cls = getattr(ccxt, name, None)
+        if cls is None:
+            logger.warning("ccxt 거래소 미지원: %s", name)
+            return None
+        ex = cls({"enableRateLimit": True, "timeout": 15000})
+        _exchanges[name] = ex
+        return ex
     except ImportError:
-        logger.warning("ccxt 미설치 — pip install ccxt 필요. 크립토 기능 비활성화.")
+        logger.warning("ccxt 미설치 — pip install ccxt 필요")
         return None
     except Exception as e:
-        logger.error("ccxt.upbit 초기화 실패: %s", e)
+        logger.error("ccxt.%s 초기화 실패: %s", name, e)
         return None
 
 
 # ── 빌드 (서버 시작 시) ───────────────────────────────────────────────────────
 
-def build_crypto_cache(years: int = 2) -> int:
+def build_crypto_cache(years: int = 2) -> dict:
     """
-    bar_db 에서 CRYPTO_KRW 일봉을 한 번에 로드 → 메모리 캐시.
-    similarity_service 의 ohlcv_cache 형태로 변환.
-
-    Returns: 로드된 종목 수.
+    bar_db 에서 모든 크립토 마켓 일봉 → 메모리 캐시 로드.
+    Returns: {market_group: 로드된 종목 수}
     """
-    global _cache_built
     from app.services.bar_db import get_daily_ohlcv_all, get_all_names_from_db
 
-    raw = get_daily_ohlcv_all(MARKET_GROUP, years=years)
-    names = get_all_names_from_db(MARKET_GROUP)
-
+    result: dict = {}
     with _cache_lock:
-        _ohlcv_cache.clear()
-        _name_cache.clear()
-        _ohlcv_cache.update(raw)
-        for sym, nm in names.items():
-            if nm:
-                _name_cache[sym] = nm
-        # 이름이 없으면 심볼 자체를 사용 (BTC → BTC)
-        for sym in raw.keys():
-            if sym not in _name_cache:
-                _name_cache[sym] = sym
-        _cache_built = True
-
-    logger.info("CRYPTO_KRW 캐시 빌드 완료: %d 페어 로드", len(_ohlcv_cache))
-    return len(_ohlcv_cache)
-
-
-def is_built() -> bool:
-    return _cache_built
+        for mkt in ALL_MARKETS:
+            raw   = get_daily_ohlcv_all(mkt, years=years)
+            names = get_all_names_from_db(mkt)
+            _ohlcv_cache[mkt] = raw
+            _name_cache[mkt]  = {}
+            for sym, nm in names.items():
+                if nm:
+                    _name_cache[mkt][sym] = nm
+            for sym in raw.keys():
+                if sym not in _name_cache[mkt]:
+                    _name_cache[mkt][sym] = sym
+            _cache_built[mkt] = True
+            result[mkt] = len(raw)
+    logger.info("크립토 캐시 빌드 완료: %s", result)
+    return result
 
 
-def all_crypto_ohlcv() -> dict[str, dict]:
-    """similarity_service 의 ohlcv_cache 와 동일 포맷."""
+def is_built(market: str = KRW_GROUP) -> bool:
+    return _cache_built.get(market, False)
+
+
+def all_crypto_ohlcv(market: str = KRW_GROUP) -> dict[str, dict]:
     with _cache_lock:
-        return dict(_ohlcv_cache)
+        return dict(_ohlcv_cache.get(market, {}))
 
 
-def all_crypto_names() -> dict[str, str]:
+def all_crypto_names(market: str = KRW_GROUP) -> dict[str, str]:
     with _cache_lock:
-        return dict(_name_cache)
+        return dict(_name_cache.get(market, {}))
 
 
-def get_company_name(symbol: str) -> str:
-    return _name_cache.get(symbol, symbol)
+def get_company_name(symbol: str, market: str = KRW_GROUP) -> str:
+    return _name_cache.get(market, {}).get(symbol, symbol)
 
 
 # ── 라이브 데이터 (실시간 마지막 봉) ───────────────────────────────────────────
 
-def get_recent_candle(symbol: str) -> Optional[dict]:
+def get_recent_candle(symbol: str, market: str = KRW_GROUP) -> Optional[dict]:
     """
-    Upbit 에서 최신 일봉 1개 조회 (last bar overlay 용).
+    각 마켓 메인 거래소에서 최신 일봉 1개 조회 (last bar overlay 용).
+      KRW  → Upbit (메이저 거래량)
+      USDT → Binance
+    """
+    if market == KRW_GROUP:
+        ex = _get_exchange("upbit")
+        pair = f"{symbol}/KRW"
+    elif market == USDT_GROUP:
+        ex = _get_exchange("binance")
+        pair = f"{symbol}/USDT"
+    else:
+        return None
 
-    Returns: { time: 'YYYY-MM-DD', open, high, low, close, volume } 또는 None.
-    """
-    ex = _get_upbit()
     if ex is None:
         return None
     try:
-        pair = f"{symbol}/KRW"
         ohlcv = ex.fetch_ohlcv(pair, timeframe="1d", limit=1)
         if not ohlcv:
             return None
@@ -132,113 +145,251 @@ def get_recent_candle(symbol: str) -> Optional[dict]:
             "volume": float(v),
         }
     except Exception as e:
-        logger.debug("get_recent_candle(%s) 실패: %s", symbol, e)
+        logger.debug("get_recent_candle(%s, %s) 실패: %s", symbol, market, e)
         return None
 
 
-# ── 시드/스케줄러: 모든 Upbit KRW 페어 일봉 → bar_db 저장 ─────────────────────
+# ── 공통: 거래소별 OHLCV 수집 + DB 저장 ────────────────────────────────────────
 
-def fetch_all_upbit_krw_daily(years: int = 2, max_pairs: int | None = None) -> dict:
-    """
-    Upbit 의 모든 KRW 페어를 가져와 (years)년치 일봉을 daily_bars 테이블에 upsert.
-
-    실행 환경: 시드 스크립트 또는 스케줄러에서 호출. 동기 함수 (ccxt.sync).
-
-    Returns: {"pairs": N, "rows": M, "errors": K}
-    """
-    ex = _get_upbit()
-    if ex is None:
-        return {"pairs": 0, "rows": 0, "errors": 1, "msg": "ccxt unavailable"}
-
-    # 시장 데이터 로드 → KRW 페어만 필터
-    try:
-        markets = ex.load_markets(reload=False)
-    except Exception as e:
-        logger.error("Upbit markets 로드 실패: %s", e)
-        return {"pairs": 0, "rows": 0, "errors": 1, "msg": str(e)}
-
-    krw_pairs = [
-        s for s, info in markets.items()
-        if info.get("quote") == "KRW" and info.get("active", True)
-    ]
-    if max_pairs:
-        krw_pairs = krw_pairs[:max_pairs]
-
-    logger.info("Upbit KRW 페어 %d개 일봉 수집 시작", len(krw_pairs))
-
-    # 시작일: years 년 전
-    since_ms = int((datetime.now() - timedelta(days=365 * years)).timestamp() * 1000)
-
-    # bar_db 직접 INSERT
-    from app.services.bar_db import _DB_PATH as BAR_DB_PATH
-    import sqlite3
-
-    BAR_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(BAR_DB_PATH)
+def _ensure_table(conn) -> None:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS daily_bars (
-            market_group TEXT NOT NULL,
-            symbol       TEXT NOT NULL,
-            trade_date   TEXT NOT NULL,
-            open         REAL,
-            high         REAL,
-            low          REAL,
-            close        REAL,
-            volume       REAL,
-            name         TEXT,
+            market_group     TEXT NOT NULL,
+            symbol           TEXT NOT NULL,
+            name             TEXT,
+            trade_date       TEXT NOT NULL,
+            open             REAL,
+            high             REAL,
+            low              REAL,
+            close            REAL,
+            volume           REAL,
+            trade_value      REAL,
+            change_rate      REAL,
+            collected_at_utc TEXT,
             PRIMARY KEY (market_group, symbol, trade_date)
         )
     """)
     conn.commit()
 
-    rows_inserted = 0
-    errors = 0
-    pairs_done = 0
 
-    for pair in krw_pairs:
-        symbol = pair.split("/")[0]   # 'BTC/KRW' → 'BTC'
-        name   = markets[pair].get("info", {}).get("korean_name") \
-              or markets[pair].get("info", {}).get("english_name") \
-              or symbol
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _fetch_pair_history(ex, pair: str, since_ms: int, sleep_ms: int = 0) -> list[list]:
+    """ccxt fetch_ohlcv 페이지네이션 — 모든 일봉 캔들 수집."""
+    all_candles: list[list] = []
+    cursor = since_ms
+    while True:
+        batch = ex.fetch_ohlcv(pair, timeframe="1d", since=cursor, limit=200)
+        if not batch:
+            break
+        all_candles.extend(batch)
+        last_ts = batch[-1][0]
+        if last_ts <= cursor:
+            break
+        cursor = last_ts + 86400000
+        if len(batch) < 200:
+            break
+        if sleep_ms:
+            time.sleep(sleep_ms / 1000.0)
+    return all_candles
+
+
+def _upsert_candles(conn, market_group: str, symbol: str, name: str,
+                    candles: list[list], compare_volume: bool) -> int:
+    """
+    candles 를 daily_bars 에 upsert.
+
+    compare_volume=True : 같은 키 존재 시 volume 큰 쪽으로 갱신 (KRW 마켓 통합용)
+    compare_volume=False: 무조건 덮어쓰기 (USDT 단일 거래소)
+
+    Returns: insert/update 된 행 수.
+    """
+    inserted = 0
+    now_str = _now_utc()
+    for ts, o, h, lo, c, v in candles:
+        if c is None or c <= 0:
+            continue
+        d = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime("%Y%m%d")
+        close_f  = float(c)
+        vol_f    = float(v or 0.0)
+        tv       = close_f * vol_f   # trade_value 근사 (KRW 또는 USDT)
+        params = (market_group, symbol, name, d,
+                  float(o or 0.0), float(h or 0.0), float(lo or 0.0), close_f,
+                  vol_f, tv, 0.0, now_str)
+
+        if compare_volume:
+            # 기존 행 volume 보다 클 때만 교체
+            cur = conn.execute(
+                """SELECT volume FROM daily_bars
+                   WHERE market_group=? AND symbol=? AND trade_date=?""",
+                (market_group, symbol, d),
+            ).fetchone()
+            if cur is not None and (cur[0] or 0) >= vol_f:
+                continue   # 기존이 더 크거나 같음 → 유지
+
+        conn.execute(
+            """INSERT OR REPLACE INTO daily_bars
+               (market_group, symbol, name, trade_date,
+                open, high, low, close, volume, trade_value, change_rate,
+                collected_at_utc)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            params,
+        )
+        inserted += 1
+    return inserted
+
+
+# ── Upbit KRW 수집 ────────────────────────────────────────────────────────────
+
+def fetch_all_upbit_krw_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """
+    Upbit 의 모든 KRW 페어 → CRYPTO_KRW 에 upsert (volume 비교 통합).
+    """
+    return _fetch_exchange_daily(
+        exchange_name="upbit", quote="KRW", market_group=KRW_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: info.get("korean_name") or info.get("english_name"),
+    )
+
+
+def fetch_all_bithumb_krw_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """
+    Bithumb 의 모든 KRW 페어 → CRYPTO_KRW 에 upsert (volume 비교 통합).
+    """
+    return _fetch_exchange_daily(
+        exchange_name="bithumb", quote="KRW", market_group=KRW_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None,  # bithumb 한글명 미제공 → 심볼 사용
+    )
+
+
+def fetch_all_binance_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """
+    Binance 의 모든 USDT spot 페어 → CRYPTO_USDT 에 upsert.
+    """
+    return _fetch_exchange_daily(
+        exchange_name="binance", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=False,
+        name_extractor=lambda info: None,
+        spot_only=True,
+    )
+
+
+# ── 공통 수집 엔진 ────────────────────────────────────────────────────────────
+
+def _fetch_exchange_daily(*, exchange_name: str, quote: str, market_group: str,
+                          years: int, max_pairs: int | None, compare_volume: bool,
+                          name_extractor, spot_only: bool = False) -> dict:
+    """거래소 일반화 수집 함수."""
+    ex = _get_exchange(exchange_name)
+    if ex is None:
+        return {"exchange": exchange_name, "pairs": 0, "rows": 0, "errors": 1,
+                "msg": "ccxt unavailable"}
+
+    try:
+        markets = ex.load_markets(reload=False)
+    except Exception as e:
+        logger.error("%s markets 로드 실패: %s", exchange_name, e)
+        return {"exchange": exchange_name, "pairs": 0, "rows": 0, "errors": 1, "msg": str(e)}
+
+    pairs = []
+    for s, info in markets.items():
+        if info.get("quote") != quote:
+            continue
+        if not info.get("active", True):
+            continue
+        if spot_only and not info.get("spot", True):
+            continue
+        pairs.append(s)
+    if max_pairs:
+        pairs = pairs[:max_pairs]
+
+    logger.info("%s %s 페어 %d개 일봉 수집 시작 → %s",
+                exchange_name, quote, len(pairs), market_group)
+
+    since_ms = int((datetime.now() - timedelta(days=365 * years)).timestamp() * 1000)
+
+    from app.services.bar_db import _DB_PATH as BAR_DB_PATH
+    import sqlite3
+    BAR_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(BAR_DB_PATH)
+    _ensure_table(conn)
+
+    rows_total = 0
+    pairs_done = 0
+    errors = 0
+    errors_429 = 0   # rate limit 사례 별도 카운트
+
+    # rate limit 스로틀: 매 5 페어마다 추가 sleep
+    THROTTLE_EVERY = 5
+    THROTTLE_MS    = 600
+
+    for i, pair in enumerate(pairs):
+        symbol = pair.split("/")[0]
+        info   = markets[pair].get("info", {})
+        name   = name_extractor(info) or symbol
 
         try:
-            # ccxt fetch_ohlcv: 한 번에 최대 200봉 (Upbit 제한)
-            all_candles: list[list] = []
-            cursor = since_ms
-            while True:
-                batch = ex.fetch_ohlcv(pair, timeframe="1d", since=cursor, limit=200)
-                if not batch:
-                    break
-                all_candles.extend(batch)
-                last_ts = batch[-1][0]
-                if last_ts <= cursor:  # 진행 없으면 중단
-                    break
-                cursor = last_ts + 86400000  # +1일
-                if len(batch) < 200:
-                    break
-
-            # daily_bars 에 upsert
+            candles = _fetch_pair_history(ex, pair, since_ms, sleep_ms=200)
             with conn:
-                for ts, o, h, lo, c, v in all_candles:
-                    if c is None or c <= 0:
-                        continue
-                    d = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime("%Y%m%d")
-                    conn.execute(
-                        """INSERT OR REPLACE INTO daily_bars
-                           (market_group, symbol, trade_date, open, high, low, close, volume, name)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (MARKET_GROUP, symbol, d, o, h, lo, c, v, name),
-                    )
-                    rows_inserted += 1
+                inserted = _upsert_candles(conn, market_group, symbol, name,
+                                           candles, compare_volume=compare_volume)
+            rows_total += inserted
             pairs_done += 1
+
             if pairs_done % 20 == 0:
-                logger.info("  진행: %d/%d 페어 완료, %d행 insert",
-                            pairs_done, len(krw_pairs), rows_inserted)
+                logger.info("  %s 진행: %d/%d 페어, %d행", exchange_name,
+                            pairs_done, len(pairs), rows_total)
+
+            # 페어 간 짧은 sleep (rate limit 회피)
+            if (i + 1) % THROTTLE_EVERY == 0:
+                time.sleep(THROTTLE_MS / 1000.0)
         except Exception as e:
             errors += 1
-            logger.warning("Upbit %s 수집 실패: %s", pair, e)
+            msg = str(e)
+            if "429" in msg or "Too Many" in msg:
+                errors_429 += 1
+                # 429 시 5초 휴식 후 1회 재시도
+                time.sleep(5.0)
+                try:
+                    candles = _fetch_pair_history(ex, pair, since_ms, sleep_ms=400)
+                    with conn:
+                        inserted = _upsert_candles(conn, market_group, symbol, name,
+                                                   candles, compare_volume=compare_volume)
+                    rows_total += inserted
+                    pairs_done += 1
+                    errors -= 1   # 재시도 성공
+                    errors_429 -= 1
+                    logger.info("  %s %s 재시도 성공", exchange_name, pair)
+                except Exception as e2:
+                    logger.warning("%s %s 재시도 실패: %s", exchange_name, pair, e2)
+            else:
+                logger.warning("%s %s 수집 실패: %s", exchange_name, pair, e)
 
     conn.close()
-    logger.info("Upbit KRW 일봉 수집 완료: %d페어, %d행, %d실패",
-                pairs_done, rows_inserted, errors)
-    return {"pairs": pairs_done, "rows": rows_inserted, "errors": errors}
+    logger.info("%s 수집 완료: %d페어, %d행, %d실패 (429: %d)",
+                exchange_name, pairs_done, rows_total, errors, errors_429)
+    return {
+        "exchange": exchange_name,
+        "market_group": market_group,
+        "pairs": pairs_done,
+        "rows": rows_total,
+        "errors": errors,
+        "errors_429": errors_429,
+    }
+
+
+# ── 모든 마켓 한 번에 수집 (스케줄러/시드 통합용) ────────────────────────────
+
+def fetch_all_crypto_daily(years: int = 2) -> dict:
+    """
+    Upbit + Bithumb + Binance 를 순차 수집한다.
+    Returns: {거래소명: 결과 dict}
+    """
+    out = {}
+    out["upbit"]   = fetch_all_upbit_krw_daily(years=years)
+    out["bithumb"] = fetch_all_bithumb_krw_daily(years=years)
+    out["binance"] = fetch_all_binance_usdt_daily(years=years)
+    return out

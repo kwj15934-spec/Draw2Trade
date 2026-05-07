@@ -974,8 +974,9 @@
     if (!sel) return;
 
     // CRYPTO 시장 분기
-    if ((D2T.market || 'KR') === 'CRYPTO_KRW') {
-      fetch('/api/crypto/list')
+    if (((D2T.market || 'KR') === 'CRYPTO_KRW') || (D2T.market === 'CRYPTO_USDT')) {
+      var _mkt = D2T.market || 'CRYPTO_KRW';
+      fetch('/api/crypto/list?market=' + encodeURIComponent(_mkt))
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var items = data.items || [];
@@ -1069,9 +1070,10 @@
       return;
     }
 
-    var isCrypto = ((window.D2T && D2T.market) === 'CRYPTO_KRW');
+    var _mkt = (window.D2T && D2T.market) || 'KR';
+    var isCrypto = (_mkt === 'CRYPTO_KRW' || _mkt === 'CRYPTO_USDT');
     var searchEndpoint = isCrypto
-      ? '/api/crypto/list'
+      ? ('/api/crypto/list?market=' + encodeURIComponent(_mkt))
       : ('/api/kospi/search?q=' + encodeURIComponent(q) + '&limit=30');
 
     clearTimeout(searchDebounce);
@@ -1166,12 +1168,18 @@
     var catGroup = document.getElementById('category-group');
     var krMktGroup = document.getElementById('kr-market-group');
     var searchInp = document.getElementById('ticker-search');
-    var isCrypto = (market === 'CRYPTO_KRW');
+    var isCrypto = (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT');
 
     if (catGroup) catGroup.style.display = isCrypto ? 'none' : 'flex';
     if (krMktGroup) krMktGroup.style.display = isCrypto ? 'none' : 'flex';
     if (searchInp) {
-      searchInp.placeholder = isCrypto ? 'BTC / ETH / 코인 심볼 검색' : '종목명/티커 검색 (KR)';
+      if (market === 'CRYPTO_USDT') {
+        searchInp.placeholder = 'BTC / ETH / USDT 페어 검색';
+      } else if (market === 'CRYPTO_KRW') {
+        searchInp.placeholder = 'BTC / ETH / 코인 심볼 검색 (KRW)';
+      } else {
+        searchInp.placeholder = '종목명/티커 검색 (KR)';
+      }
     }
     // 시장 필터 초기화
     D2T.exchange = '';

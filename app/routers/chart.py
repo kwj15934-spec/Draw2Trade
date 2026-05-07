@@ -131,17 +131,17 @@ async def chart_data(
 
     market_up = (market or "KR").upper()
 
-    # ── CRYPTO_KRW 분기 ──────────────────────────────────────────────────────
-    if market_up == "CRYPTO_KRW":
+    # ── CRYPTO 분기 (KRW: Upbit+Bithumb 통합 / USDT: Binance) ────────────────
+    if market_up in ("CRYPTO_KRW", "CRYPTO_USDT"):
         from app.services import crypto_data_service
         _db_end = datetime.now().strftime("%Y%m%d")
-        bars = bar_db.get_daily_bars("CRYPTO_KRW", ticker, "19900101", _db_end)
+        bars = bar_db.get_daily_bars(market_up, ticker, "19900101", _db_end)
         if not bars:
-            raise HTTPException(status_code=404, detail=f"크립토 {ticker} 데이터 없음")
+            raise HTTPException(status_code=404, detail=f"크립토 {ticker} 데이터 없음 ({market_up})")
         candles = bar_db.bars_to_candles(bars, tf)
 
         # 실시간 마지막 봉 overlay (CCXT)
-        live = crypto_data_service.get_recent_candle(ticker)
+        live = crypto_data_service.get_recent_candle(ticker, market=market_up)
         if live and candles:
             today = datetime.now().strftime("%Y-%m-%d")
             if tf == "daily" and candles[-1].get("time") != today:
@@ -151,11 +151,11 @@ async def chart_data(
 
         return {
             "ticker":    ticker,
-            "name":      crypto_data_service.get_company_name(ticker),
+            "name":      crypto_data_service.get_company_name(ticker, market=market_up),
             "candles":   candles,
             "timeframe": tf,
             "prevClose": 0,
-            "market":    "CRYPTO_KRW",
+            "market":    market_up,
         }
 
     # Redis 캐시 히트 (daily timeframe만 캐시 — 실시간 봉은 캐시 우회)
@@ -222,13 +222,19 @@ async def chart_data(
 
 
 @router.get("/crypto/list")
-async def crypto_list(limit: int = Query(2000, le=5000)):
-    """업비트 KRW 페어 전체 목록 (UI 종목 셀렉트박스용)."""
+async def crypto_list(market: str = Query("CRYPTO_KRW"), limit: int = Query(5000, le=10000)):
+    """크립토 종목 목록 (UI 종목 셀렉트박스용).
+
+    market: CRYPTO_KRW (Upbit+Bithumb 통합) | CRYPTO_USDT (Binance)
+    """
     from app.services import crypto_data_service
-    names = crypto_data_service.all_crypto_names()
+    market_up = market.upper()
+    if market_up not in ("CRYPTO_KRW", "CRYPTO_USDT"):
+        raise HTTPException(status_code=400, detail=f"알 수 없는 마켓: {market}")
+    names = crypto_data_service.all_crypto_names(market=market_up)
     items = [{"ticker": sym, "name": nm} for sym, nm in names.items()]
     items.sort(key=lambda x: x["ticker"])
-    return {"market": "CRYPTO_KRW", "count": len(items), "items": items[:limit]}
+    return {"market": market_up, "count": len(items), "items": items[:limit]}
 
 
 @router.get("/v1/stock/news/{symbol}")

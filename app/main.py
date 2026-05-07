@@ -106,13 +106,13 @@ async def lifespan(app: FastAPI):
         logger.info("US 이름 캐시 완료.")
     except Exception as e:
         logger.error("US 캐시 빌드 실패: %s", e)
-    # 크립토 캐시 (Upbit KRW 페어, 2년 일봉) — bar_db에 데이터 있으면 메모리로 로드
+    # 크립토 캐시 (Upbit/Bithumb KRW + Binance USDT, 2년 일봉) — bar_db에 데이터 있으면 메모리로 로드
     try:
         from app.services import crypto_data_service
         loaded = crypto_data_service.build_crypto_cache(years=2)
-        logger.info("CRYPTO_KRW 캐시: %d개 페어 로드", loaded)
+        logger.info("크립토 캐시: %s", loaded)
     except Exception as e:
-        logger.warning("CRYPTO_KRW 캐시 빌드 실패 (시드 미실행 가능): %s", e)
+        logger.warning("크립토 캐시 빌드 실패 (시드 미실행 가능): %s", e)
     # 패턴 검색용 ProcessPoolExecutor (GIL 우회 — CPU 병렬 처리)
     from app.routers.pattern import init_process_pool
     init_process_pool()
@@ -197,9 +197,9 @@ async def _crypto_scheduler():
             await asyncio.sleep(wait_sec)
 
             from app.services import crypto_data_service
-            logger.info("크립토 일봉 자동 수집 시작 (Upbit KRW)")
+            logger.info("크립토 일봉 자동 수집 시작 (Upbit + Bithumb + Binance)")
             result = await asyncio.get_event_loop().run_in_executor(
-                None, crypto_data_service.fetch_all_upbit_krw_daily, 2
+                None, crypto_data_service.fetch_all_crypto_daily, 2
             )
             logger.info("크립토 일봉 수집 완료: %s", result)
             # 메모리 캐시 갱신
