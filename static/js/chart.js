@@ -1439,8 +1439,8 @@
   var _pollTimer = null;
   // interval_min → 폴링 주기(ms)
   var _POLL_INTERVAL = { '1m': 15000, '5m': 30000, '15m': 60000, '30m': 60000, '60m': 120000, '240m': 300000 };
-  // 코인 일/주/월봉 폴링 — 24시간 시장이라 마지막 봉 라이브 갱신
-  var _CRYPTO_POLL_INTERVAL = { 'daily': 30000, 'weekly': 30000, 'monthly': 30000 };
+  // 코인 일/주/월봉 폴링 — 24시간 시장이라 마지막 봉 라이브 갱신 (서버측 1초 TTL 캐시)
+  var _CRYPTO_POLL_INTERVAL = { 'daily': 5000, 'weekly': 5000, 'monthly': 5000 };
 
   function _startIntraydayPoll(ticker, tf) {
     _stopIntradayPoll();

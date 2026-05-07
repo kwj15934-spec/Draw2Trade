@@ -111,14 +111,33 @@ def get_company_name(symbol: str, market: str = KRW_GROUP) -> str:
     return _name_cache.get(market, {}).get(symbol, symbol)
 
 
-# ── 라이브 데이터 (실시간 마지막 봉) ───────────────────────────────────────────
+# ── 라이브 데이터 (실시간 마지막 봉) + 1초 TTL 캐시 ─────────────────────────
+
+# (market, symbol) → (timestamp, candle) — 거래소 호출 fan-in 캐시
+_live_cache: dict[tuple[str, str], tuple[float, dict]] = {}
+_live_cache_lock = threading.Lock()
+_LIVE_TTL_SEC = 1.0   # 1초 TTL — 사용자 N명이 동시 폴링해도 거래소엔 초당 1회만
+
 
 def get_recent_candle(symbol: str, market: str = KRW_GROUP) -> Optional[dict]:
     """
     각 마켓 메인 거래소에서 최신 일봉 1개 조회 (last bar overlay 용).
       KRW  → Upbit (메이저 거래량)
       USDT → Binance
+
+    1초 TTL 메모리 캐시로 fan-in: 사용자가 5초 폴링이어도 거래소엔
+    종목별 초당 1회만 호출 → rate limit 안전.
     """
+    cache_key = (market, symbol)
+    now = time.time()
+
+    # 캐시 hit
+    with _live_cache_lock:
+        cached = _live_cache.get(cache_key)
+        if cached and (now - cached[0]) < _LIVE_TTL_SEC:
+            return cached[1]
+
+    # 거래소 호출
     if market == KRW_GROUP:
         ex = _get_exchange("upbit")
         pair = f"{symbol}/KRW"
@@ -136,7 +155,7 @@ def get_recent_candle(symbol: str, market: str = KRW_GROUP) -> Optional[dict]:
             return None
         ts, o, h, lo, c, v = ohlcv[0]
         d = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
-        return {
+        candle = {
             "time":   d,
             "open":   round(float(o),  4),
             "high":   round(float(h),  4),
@@ -144,8 +163,14 @@ def get_recent_candle(symbol: str, market: str = KRW_GROUP) -> Optional[dict]:
             "close":  round(float(c),  4),
             "volume": float(v),
         }
+        with _live_cache_lock:
+            _live_cache[cache_key] = (now, candle)
+        return candle
     except Exception as e:
         logger.debug("get_recent_candle(%s, %s) 실패: %s", symbol, market, e)
+        # 캐시 stale 사용 (네트워크 일시 장애 시 마지막 값 유지)
+        if cached:
+            return cached[1]
         return None
 
 
