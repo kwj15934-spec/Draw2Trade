@@ -1439,11 +1439,16 @@
   var _pollTimer = null;
   // interval_min → 폴링 주기(ms)
   var _POLL_INTERVAL = { '1m': 15000, '5m': 30000, '15m': 60000, '30m': 60000, '60m': 120000, '240m': 300000 };
+  // 코인 일/주/월봉 폴링 — 24시간 시장이라 마지막 봉 라이브 갱신
+  var _CRYPTO_POLL_INTERVAL = { 'daily': 30000, 'weekly': 30000, 'monthly': 30000 };
 
   function _startIntraydayPoll(ticker, tf) {
     _stopIntradayPoll();
-    var interval = _POLL_INTERVAL[tf];
-    if (!interval) return;  // 분봉이 아니면 폴링 안 함
+    // 분봉 인터벌 또는 (코인일 때) 일/주/월봉 인터벌
+    var mkt = (window.D2T && D2T.market) || 'KR';
+    var isCrypto = (mkt === 'CRYPTO_KRW' || mkt === 'CRYPTO_USDT');
+    var interval = _POLL_INTERVAL[tf] || (isCrypto ? _CRYPTO_POLL_INTERVAL[tf] : null);
+    if (!interval) return;  // 폴링 대상 아님
 
     _pollTimer = setInterval(function () {
       if (!D2T.ticker || D2T.timeframe !== tf || D2T.loading) return;
@@ -1474,9 +1479,13 @@
               }
               D2T.series.update(displayC);
               if (D2T.volumeSeries) {
+                // 코인은 base 단위 거래량(BTC) 대신 거래대금(KRW/USDT) 사용 → 막대 시각화
+                var _mktP = (window.D2T && D2T.market) || 'KR';
+                var _useTV = (_mktP === 'CRYPTO_KRW' || _mktP === 'CRYPTO_USDT');
+                var _vRaw = c.fill ? 0 : (_useTV ? (c.trade_value || c.volume || 0) : (c.volume || 0));
                 D2T.volumeSeries.update({
                   time:  c.time,
-                  value: c.fill ? 0 : (c.volume || 0),
+                  value: _vRaw,
                   color: c.fill ? 'rgba(0,0,0,0)'
                     : c.overtime
                       ? (c.close >= c.open ? 'rgba(38,166,154,0.2)' : 'rgba(239,83,80,0.2)')
@@ -1497,9 +1506,13 @@
                 (latest.close !== existing.close || latest.high !== existing.high || latest.low !== existing.low)) {
               D2T.series.update(latest);
               if (D2T.volumeSeries) {
+                // 코인은 거래대금 사용
+                var _mktP2 = (window.D2T && D2T.market) || 'KR';
+                var _useTV2 = (_mktP2 === 'CRYPTO_KRW' || _mktP2 === 'CRYPTO_USDT');
+                var _vLast = _useTV2 ? (latest.trade_value || latest.volume || 0) : (latest.volume || 0);
                 D2T.volumeSeries.update({
                   time:  latest.time,
-                  value: latest.volume || 0,
+                  value: _vLast,
                   color: (latest.close >= latest.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)',
                 });
               }
@@ -1519,13 +1532,16 @@
     }
   }
 
-  // loadChart 호출 시 분봉 폴링 시작/중지
+  // loadChart 호출 시 분봉 + 코인 일/주/월봉 폴링 시작/중지
   var _origLoadChart = loadChart;
   loadChart = function (ticker, timeframe) {
     _stopIntradayPoll();
     _origLoadChart(ticker, timeframe);
     var tf = timeframe || D2T.timeframe;
-    if (INTRADAY_TF[tf]) {
+    var mkt = (window.D2T && D2T.market) || 'KR';
+    var isCrypto = (mkt === 'CRYPTO_KRW' || mkt === 'CRYPTO_USDT');
+    var shouldPoll = !!INTRADAY_TF[tf] || (isCrypto && _CRYPTO_POLL_INTERVAL[tf]);
+    if (shouldPoll) {
       // 로드 완료 후 폴링 시작 (로딩 딜레이 고려)
       setTimeout(function () {
         if (D2T.ticker === ticker && D2T.timeframe === tf) {
