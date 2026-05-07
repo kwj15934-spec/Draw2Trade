@@ -433,12 +433,16 @@
   // ── 거래량 데이터 세팅 헬퍼 ──────────────────────────────────────────────
   function setVolumeData(candles) {
     if (!D2T.volumeSeries || !candles) return;
+    // 크립토는 base 단위 volume이 작아서 막대가 안 보임 → trade_value(KRW/USDT) 사용
+    var mkt = (window.D2T && D2T.market) || 'KR';
+    var useTV = (mkt === 'CRYPTO_KRW' || mkt === 'CRYPTO_USDT');
     D2T.volumeSeries.setData(candles.map(function (c) {
       // fill-forward 캔들은 거래량 없음 → 투명
       if (c.fill) return { time: c.time, value: 0, color: 'rgba(0,0,0,0)' };
+      var v = useTV ? (c.trade_value || c.volume || 0) : (c.volume || 0);
       return {
         time:  c.time,
-        value: c.volume || 0,
+        value: v,
         color: c.overtime
           ? ((c.close >= c.open) ? 'rgba(38,166,154,0.25)' : 'rgba(239,83,80,0.25)')
           : ((c.close >= c.open) ? 'rgba(38,166,154,0.45)' : 'rgba(239,83,80,0.45)'),
@@ -1409,7 +1413,20 @@
       thbChg.innerHTML = html;
     }
     var thbVol = document.getElementById('thb-vol');
-    if (thbVol) thbVol.textContent = '거래량 ' + volStr;
+    if (thbVol) {
+      // 크립토는 거래대금(KRW/USDT) 표시 — base 단위 거래량보다 의미 있음
+      var mkt2 = (window.D2T && D2T.market) || 'KR';
+      if ((mkt2 === 'CRYPTO_KRW' || mkt2 === 'CRYPTO_USDT') && last.trade_value) {
+        var tv = last.trade_value;
+        var tvLabel;
+        if (tv >= 100000000) tvLabel = (tv / 100000000).toFixed(1) + '억';
+        else if (tv >= 10000) tvLabel = (tv / 10000).toFixed(1) + '만';
+        else tvLabel = tv.toLocaleString();
+        thbVol.textContent = '거래대금 ' + tvLabel + (mkt2 === 'CRYPTO_USDT' ? '$' : '원');
+      } else {
+        thbVol.textContent = '거래량 ' + volStr;
+      }
+    }
     var thbTime = document.getElementById('thb-time');
     if (thbTime) {
       var dateStr = typeof last.time === 'string' ? last.time : '';

@@ -255,14 +255,22 @@
 
   function _loadDailyTrades() {
     var ticker = window.D2T && window.D2T.ticker;
-    var market = window.D2T && window.D2T.market;
+    var market = (window.D2T && window.D2T.market) || 'KR';
     if (!ticker) return;
 
     var list = document.getElementById('trade-list-daily');
     if (!list) return;
     list.innerHTML = '<div class="tl-empty">로딩 중...</div>';
 
-    var url = '/api/chart/' + encodeURIComponent(ticker) + '?timeframe=daily';
+    // 마켓 파라미터 필수 (CRYPTO_KRW / CRYPTO_USDT 도 동일 엔드포인트 사용)
+    var url = '/api/chart/' + encodeURIComponent(ticker)
+            + '?timeframe=daily&market=' + encodeURIComponent(market);
+
+    var isCrypto = (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT');
+    var volSuffix = '';
+    if (market === 'CRYPTO_KRW')  volSuffix = '원';
+    else if (market === 'CRYPTO_USDT') volSuffix = '$';
+    // 주식은 단위 없음 (주)
 
     fetch(url)
       .then(function(r) { return r.ok ? r.json() : null; })
@@ -284,11 +292,18 @@
             dir    = pct >= 0 ? 'tl-buy' : 'tl-sell';
           }
           var dateDisp = typeof c.time === 'string' ? c.time.replace(/-/g, '.') : c.time;
+          // 코인은 거래대금(KRW/USDT)을 메인 표시, 주식은 거래량(주)
+          var displayVol;
+          if (isCrypto && c.trade_value > 0) {
+            displayVol = _fmtVol(c.trade_value) + volSuffix;
+          } else {
+            displayVol = _fmtVol(c.volume || 0);
+          }
           html += '<div class="tl-row tl-row--visible ' + dir + '">' +
             '<span class="tl-date">' + dateDisp + '</span>' +
             '<span class="tl-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
             '<span class="tl-chg">'   + chgStr + '</span>' +
-            '<span class="tl-vol">'   + _fmtVol(c.volume || 0) + '</span>' +
+            '<span class="tl-vol">'   + displayVol + '</span>' +
             '<span></span>' +
             '</div>';
         }

@@ -37,3 +37,16 @@ draw2trade_web/
 
 # 임시 파일
 nul
+
+# 대용량 DB / 캐시
+data/*.db
+data/*.csv
+data/bars_checkpoint.json
+data/public_checkpoint.json
+*.save
+
+# 가상환경
+venv/
+
+# 빌드 부산물 캐시
+static/dist/.vite/

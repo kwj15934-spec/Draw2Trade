@@ -57,9 +57,15 @@ def get_daily_bars(
     if conn is None:
         return []
     try:
+        # trade_value 컬럼은 옵션 (예전 KR_STOCK 스키마에는 없을 수 있음)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(daily_bars)").fetchall()}
+        has_tv = "trade_value" in cols
+        select_cols = "trade_date, open, high, low, close, volume"
+        if has_tv:
+            select_cols += ", trade_value"
         rows = conn.execute(
-            """
-            SELECT trade_date, open, high, low, close, volume
+            f"""
+            SELECT {select_cols}
             FROM daily_bars
             WHERE market_group = ? AND symbol = ?
               AND trade_date >= ? AND trade_date <= ?
@@ -69,12 +75,13 @@ def get_daily_bars(
         ).fetchall()
         return [
             {
-                "trade_date": r[0],
-                "open":       r[1],
-                "high":       r[2],
-                "low":        r[3],
-                "close":      r[4],
-                "volume":     r[5],
+                "trade_date":  r[0],
+                "open":        r[1],
+                "high":        r[2],
+                "low":         r[3],
+                "close":       r[4],
+                "volume":      r[5],
+                "trade_value": (r[6] if has_tv else 0) or 0,
             }
             for r in rows
             if r[4] and r[4] > 0  # close > 0 인 유효 데이터만
@@ -140,12 +147,14 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
     if timeframe == "daily":
         return [
             {
-                "time":   _fmt_date(b["trade_date"]),
-                "open":   round(float(b["open"] or 0),   1),
-                "high":   round(float(b["high"] or 0),   1),
-                "low":    round(float(b["low"] or 0),    1),
-                "close":  round(float(b["close"] or 0),  1),
-                "volume": int(b["volume"] or 0),
+                "time":        _fmt_date(b["trade_date"]),
+                "open":        round(float(b["open"] or 0),   1),
+                "high":        round(float(b["high"] or 0),   1),
+                "low":         round(float(b["low"] or 0),    1),
+                "close":       round(float(b["close"] or 0),  1),
+                # 크립토 거래량은 소수 (BTC 470.65...) — float 유지, 주식은 정수에 가까움
+                "volume":      float(b["volume"] or 0),
+                "trade_value": float(b.get("trade_value") or 0),
             }
             for b in bars
         ]
@@ -158,30 +167,35 @@ def bars_to_candles(bars: list[dict], timeframe: str = "daily") -> list[dict]:
         key = _bucket_key(b["trade_date"], timeframe)
         if not key:
             continue
+        vol = float(b["volume"] or 0)
+        tv  = float(b.get("trade_value") or 0)
         if key not in buckets:
             buckets[key] = {
-                "time":   key,
-                "open":   float(b["open"] or 0),
-                "high":   float(b["high"] or 0),
-                "low":    float(b["low"] or 0),
-                "close":  float(b["close"] or 0),
-                "volume": int(b["volume"] or 0),
+                "time":        key,
+                "open":        float(b["open"] or 0),
+                "high":        float(b["high"] or 0),
+                "low":         float(b["low"] or 0),
+                "close":       float(b["close"] or 0),
+                "volume":      vol,
+                "trade_value": tv,
             }
         else:
             c = buckets[key]
-            c["high"]   = max(c["high"],  float(b["high"] or 0))
-            c["low"]    = min(c["low"],   float(b["low"] or 0))
-            c["close"]  = float(b["close"] or 0)
-            c["volume"] += int(b["volume"] or 0)
+            c["high"]        = max(c["high"], float(b["high"] or 0))
+            c["low"]         = min(c["low"],  float(b["low"] or 0))
+            c["close"]       = float(b["close"] or 0)
+            c["volume"]      += vol
+            c["trade_value"] += tv
 
     return [
         {
-            "time":   k,
-            "open":   round(v["open"],  1),
-            "high":   round(v["high"],  1),
-            "low":    round(v["low"],   1),
-            "close":  round(v["close"], 1),
-            "volume": v["volume"],
+            "time":        k,
+            "open":        round(v["open"],  1),
+            "high":        round(v["high"],  1),
+            "low":         round(v["low"],   1),
+            "close":       round(v["close"], 1),
+            "volume":      v["volume"],
+            "trade_value": v["trade_value"],
         }
         for k, v in buckets.items()
         if v["close"] > 0
