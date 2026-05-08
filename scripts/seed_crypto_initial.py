@@ -38,32 +38,47 @@ from app.services import crypto_data_service
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="크립토 다중 거래소 일봉 시드")
-    parser.add_argument("--only", default="upbit,bithumb,binance",
-                        help="쉼표 구분 거래소: upbit, bithumb, binance")
+    parser.add_argument(
+        "--only",
+        default="upbit,bithumb,coinone,binance,bybit,okx,gateio,mexc,kucoin",
+        help="쉼표 구분 거래소 (KRW: upbit, bithumb, coinone / USDT: binance, bybit, okx, gateio, mexc, kucoin)",
+    )
     parser.add_argument("--years", type=int, default=2)
     args = parser.parse_args()
 
-    targets = {x.strip().lower() for x in args.only.split(",") if x.strip()}
+    targets = [x.strip().lower() for x in args.only.split(",") if x.strip()]
+
+    # 거래소 → fetch 함수 매핑
+    fetchers = {
+        "upbit":    crypto_data_service.fetch_all_upbit_krw_daily,
+        "bithumb":  crypto_data_service.fetch_all_bithumb_krw_daily,
+        "coinone":  crypto_data_service.fetch_all_coinone_krw_daily,
+        "binance":  crypto_data_service.fetch_all_binance_usdt_daily,
+        "bybit":    crypto_data_service.fetch_all_bybit_usdt_daily,
+        "okx":      crypto_data_service.fetch_all_okx_usdt_daily,
+        "gateio":   crypto_data_service.fetch_all_gateio_usdt_daily,
+        "mexc":     crypto_data_service.fetch_all_mexc_usdt_daily,
+        "kucoin":   crypto_data_service.fetch_all_kucoin_usdt_daily,
+    }
 
     print("\n" + "═" * 64)
     print(f"  Draw2Trade · 크립토 일봉 시드 ({args.years}년)")
-    print(f"  대상 거래소: {sorted(targets)}")
+    print(f"  대상 거래소: {targets}")
     print("═" * 64)
 
     results = {}
     t0 = time.time()
 
-    if "upbit" in targets:
-        print("\n[1/3] Upbit KRW 수집 ...")
-        results["upbit"] = crypto_data_service.fetch_all_upbit_krw_daily(years=args.years)
-
-    if "bithumb" in targets:
-        print("\n[2/3] Bithumb KRW 수집 ...")
-        results["bithumb"] = crypto_data_service.fetch_all_bithumb_krw_daily(years=args.years)
-
-    if "binance" in targets:
-        print("\n[3/3] Binance USDT 수집 ...")
-        results["binance"] = crypto_data_service.fetch_all_binance_usdt_daily(years=args.years)
+    for i, ex_name in enumerate(targets, 1):
+        if ex_name not in fetchers:
+            print(f"\n[{i}/{len(targets)}] {ex_name}: 미지원 — 건너뜀")
+            continue
+        print(f"\n[{i}/{len(targets)}] {ex_name} 수집 ...")
+        try:
+            results[ex_name] = fetchers[ex_name](years=args.years)
+        except Exception as e:
+            print(f"  ❌ {ex_name} 실패: {e}")
+            results[ex_name] = {"pairs": 0, "rows": 0, "errors": 1, "msg": str(e)}
 
     elapsed = time.time() - t0
 

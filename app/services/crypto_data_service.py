@@ -291,14 +291,65 @@ def fetch_all_bithumb_krw_daily(years: int = 2, max_pairs: int | None = None) ->
 
 
 def fetch_all_binance_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
-    """
-    Binance 의 모든 USDT spot 페어 → CRYPTO_USDT 에 upsert.
-    """
+    """Binance USDT spot → CRYPTO_USDT (volume 비교 통합 — 다중 거래소)."""
     return _fetch_exchange_daily(
         exchange_name="binance", quote="USDT", market_group=USDT_GROUP,
-        years=years, max_pairs=max_pairs, compare_volume=False,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
+    )
+
+
+def fetch_all_coinone_krw_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """Coinone KRW → CRYPTO_KRW 에 upsert (volume 비교 통합)."""
+    return _fetch_exchange_daily(
+        exchange_name="coinone", quote="KRW", market_group=KRW_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
         name_extractor=lambda info: None,
-        spot_only=True,
+    )
+
+
+def fetch_all_bybit_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """Bybit USDT spot → CRYPTO_USDT 통합."""
+    return _fetch_exchange_daily(
+        exchange_name="bybit", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
+    )
+
+
+def fetch_all_okx_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """OKX USDT spot → CRYPTO_USDT 통합."""
+    return _fetch_exchange_daily(
+        exchange_name="okx", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
+    )
+
+
+def fetch_all_gateio_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """Gate.io USDT spot → CRYPTO_USDT 통합 (~1500+ 페어)."""
+    return _fetch_exchange_daily(
+        exchange_name="gateio", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
+    )
+
+
+def fetch_all_mexc_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """MEXC USDT spot → CRYPTO_USDT 통합 (~1700+ 페어)."""
+    return _fetch_exchange_daily(
+        exchange_name="mexc", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
+    )
+
+
+def fetch_all_kucoin_usdt_daily(years: int = 2, max_pairs: int | None = None) -> dict:
+    """KuCoin USDT spot → CRYPTO_USDT 통합 (~700+ 페어)."""
+    return _fetch_exchange_daily(
+        exchange_name="kucoin", quote="USDT", market_group=USDT_GROUP,
+        years=years, max_pairs=max_pairs, compare_volume=True,
+        name_extractor=lambda info: None, spot_only=True,
     )
 
 
@@ -410,11 +461,23 @@ def _fetch_exchange_daily(*, exchange_name: str, quote: str, market_group: str,
 
 def fetch_all_crypto_daily(years: int = 2) -> dict:
     """
-    Upbit + Bithumb + Binance 를 순차 수집한다.
+    모든 지원 거래소 순차 수집.
+
+    KRW (CRYPTO_KRW): Upbit, Bithumb, Coinone
+    USDT (CRYPTO_USDT): Binance, Bybit, OKX, Gate.io, MEXC, KuCoin
+
     Returns: {거래소명: 결과 dict}
     """
     out = {}
-    out["upbit"]   = fetch_all_upbit_krw_daily(years=years)
-    out["bithumb"] = fetch_all_bithumb_krw_daily(years=years)
-    out["binance"] = fetch_all_binance_usdt_daily(years=years)
+    # ── KRW 마켓 ──
+    out["upbit"]    = fetch_all_upbit_krw_daily(years=years)
+    out["bithumb"]  = fetch_all_bithumb_krw_daily(years=years)
+    out["coinone"]  = fetch_all_coinone_krw_daily(years=years)
+    # ── USDT 마켓 ──
+    out["binance"]  = fetch_all_binance_usdt_daily(years=years)
+    out["bybit"]    = fetch_all_bybit_usdt_daily(years=years)
+    out["okx"]      = fetch_all_okx_usdt_daily(years=years)
+    out["gateio"]   = fetch_all_gateio_usdt_daily(years=years)
+    out["mexc"]     = fetch_all_mexc_usdt_daily(years=years)
+    out["kucoin"]   = fetch_all_kucoin_usdt_daily(years=years)
     return out
