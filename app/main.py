@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
     # 크립토 캐시 (Upbit/Bithumb KRW + Binance USDT, 2년 일봉) — bar_db에 데이터 있으면 메모리로 로드
     try:
         from app.services import crypto_data_service
-        loaded = crypto_data_service.build_crypto_cache(years=2)
+        loaded = crypto_data_service.build_crypto_cache(years=5)
         logger.info("크립토 캐시: %s", loaded)
     except Exception as e:
         logger.warning("크립토 캐시 빌드 실패 (시드 미실행 가능): %s", e)
@@ -204,7 +204,7 @@ async def _crypto_scheduler():
             logger.info("크립토 일봉 수집 완료: %s", result)
             # 메모리 캐시 갱신
             await asyncio.get_event_loop().run_in_executor(
-                None, crypto_data_service.build_crypto_cache, 2
+                None, crypto_data_service.build_crypto_cache, 5
             )
         except asyncio.CancelledError:
             break
