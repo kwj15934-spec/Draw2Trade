@@ -2097,16 +2097,21 @@ function _escHtml(s) {
     if (!info || !target) return;
     var ccy = info.currency || 'KRW';
     var ccySym = ccy === 'KRW' ? '원' : '$';
+    var _trimZ = function (s) { return String(s).replace(/\.?0+$/, ''); };
     var fmtMoney = function (v) {
       if (v == null) return 'N/A';
       var abs = Math.abs(v);
       if (ccy === 'KRW') {
-        if (abs >= 1e12) return (v / 1e12).toFixed(1) + '조원';
-        if (abs >= 1e8)  return (v / 1e8).toFixed(0) + '억원';
+        // 정확도 우선: 단위가 큰 자릿수에서도 반올림 손실 최소화
+        if (abs >= 1e16) return _trimZ((v / 1e16).toFixed(2)) + '경원';
+        if (abs >= 1e12) return _trimZ((v / 1e12).toFixed(2)) + '조원';
+        if (abs >= 1e8)  return _trimZ((v / 1e8).toFixed(2))  + '억원';
+        if (abs >= 1e4)  return _trimZ((v / 1e4).toFixed(1))  + '만원';
         return v.toLocaleString() + '원';
       } else {
-        if (abs >= 1e9)  return '$' + (v / 1e9).toFixed(2) + 'B';
-        if (abs >= 1e6)  return '$' + (v / 1e6).toFixed(1) + 'M';
+        if (abs >= 1e9)  return '$' + _trimZ((v / 1e9).toFixed(2)) + 'B';
+        if (abs >= 1e6)  return '$' + _trimZ((v / 1e6).toFixed(2)) + 'M';
+        if (abs >= 1e3)  return '$' + _trimZ((v / 1e3).toFixed(2)) + 'K';
         return '$' + v.toLocaleString();
       }
     };

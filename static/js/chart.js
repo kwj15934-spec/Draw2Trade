@@ -1203,6 +1203,16 @@
       window.updateMarketHoursChip();
     }
 
+    // 코인이면 메인 종목 정보 오버레이의 '재무제표' 탭 숨김 + active 상태 보정
+    var detailedBtn = document.querySelector('#main-info-overlay .info-tab-btn[data-itab="detailed"]');
+    if (detailedBtn) detailedBtn.style.display = isCrypto ? 'none' : '';
+    if (isCrypto) {
+      var activeBtn = document.querySelector('#main-info-overlay .info-tab-btn.active');
+      if (activeBtn && activeBtn.dataset.itab === 'detailed' && typeof window.switchInfoTab === 'function') {
+        window.switchInfoTab('finance');
+      }
+    }
+
     // 종목 리스트 로드 (마켓별 분기는 loadTickerList 내부에서 처리)
     if (!isCrypto) {
       var catSel = document.getElementById('category-select');
