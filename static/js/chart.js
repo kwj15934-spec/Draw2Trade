@@ -1208,6 +1208,8 @@
     }
     // 기존 차트 ticker 초기화 → 신규 마켓 첫 종목 자동 로드
     D2T.ticker = '';
+    // 이전 마켓의 prevClose 잔류 방지 (등락률 오계산 차단)
+    D2T.prevClose = 0;
     loadTickerList('');
 
     // 날짜 범위 입력 초기화
@@ -1388,11 +1390,15 @@
     var dispPrice = close >= 1000 ? close.toLocaleString() : close;
     var color = '#888', sign = '', chgAmt = '', chgPct = '';
     if (baseClose > 0) {
-      var pct = ((close - baseClose) / baseClose * 100).toFixed(2);
-      var amt = (close - baseClose).toFixed(close >= 1000 ? 0 : 2);
-      sign = pct >= 0 ? '+' : '';
-      color = pct >= 0 ? '#26a69a' : '#ef5350';
-      chgAmt = amt; chgPct = pct;
+      var diff = close - baseClose;
+      var pct  = (diff / baseClose * 100).toFixed(2);
+      // 등락폭에 천단위 콤마 적용 (BTC 4,149,000 같이)
+      var fixDigits = close >= 1000 ? 0 : 2;
+      var amt = Math.abs(diff).toLocaleString('ko-KR', { maximumFractionDigits: fixDigits });
+      sign  = diff >= 0 ? '+' : '-';
+      color = diff >= 0 ? '#26a69a' : '#ef5350';
+      chgAmt = sign + amt;
+      chgPct = (diff >= 0 ? '+' : '') + pct;
     }
     var volStr = vol >= 10000 ? (vol / 10000).toFixed(1) + '만' : vol.toLocaleString();
 
@@ -1401,8 +1407,8 @@
     var thbChg = document.getElementById('thb-chg');
     if (thbChg && chgPct !== '') {
       // 실시간 등락 (전봉 대비)
-      var html = '<span style="color:' + color + '">' + sign + chgAmt + '</span>'
-        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + sign + chgPct + '%)</span>';
+      var html = '<span style="color:' + color + '">' + chgAmt + '</span>'
+        + '&nbsp;<span style="color:' + color + ';font-size:11px;">(' + chgPct + '%)</span>';
 
       // 타임프레임 전체 기간 등락 — 월봉/주봉에서만 표시 (일봉은 생략)
       if (candles.length > 1 && D2T.timeframe !== 'daily') {
@@ -1499,7 +1505,8 @@
               }
             });
             D2T.candles = data.candles;
-            if (data.prevClose) D2T.prevClose = data.prevClose;
+            // 폴링 응답으로 prevClose 항상 동기화 (이전 마켓 잔류값 방지)
+            D2T.prevClose = data.prevClose || 0;
             _initHeaderBar(data.candles);
             // NXT 배경 음영 갱신
             if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
@@ -1523,6 +1530,10 @@
               }
               D2T.candles[D2T.candles.length - 1] = latest;
               _initHeaderBar(D2T.candles);
+              // 우측 '일자별 거래량' 패널 마지막 행도 같이 라이브 갱신
+              if (typeof window._refreshDailyTradesLastRow === 'function') {
+                window._refreshDailyTradesLastRow(latest);
+              }
             }
           }
         })

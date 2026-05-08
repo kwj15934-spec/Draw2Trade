@@ -314,6 +314,61 @@
       });
   }
 
+  /**
+   * 우측 '일자별 거래량' 패널의 첫 번째(가장 최근) 행을 라이브 데이터로 갱신.
+   * 폴링 callback에서 호출되어 차트 헤더와 우측 패널의 가격 동기화.
+   *
+   * @param {Object} latest - 최신 candle ({time, open, high, low, close, volume, trade_value})
+   */
+  window._refreshDailyTradesLastRow = function (latest) {
+    if (!latest) return;
+    var list = document.getElementById('trade-list-daily');
+    if (!list) return;
+    var firstRow = list.querySelector('.tl-row');
+    if (!firstRow) return;   // 아직 데이터 미로드
+
+    var market = (window.D2T && window.D2T.market) || 'KR';
+    var isCrypto = (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT');
+    var volSuffix = market === 'CRYPTO_KRW' ? '원'
+                  : market === 'CRYPTO_USDT' ? '$' : '';
+
+    // 가격 셀
+    var priceEl = firstRow.querySelector('.tl-price');
+    if (priceEl && latest.close != null) {
+      priceEl.textContent = latest.close >= 1000
+        ? Number(latest.close).toLocaleString()
+        : latest.close;
+    }
+
+    // 등락률 셀 — 두 번째 행과 비교
+    var allRows = list.querySelectorAll('.tl-row');
+    if (allRows.length >= 2) {
+      var prev = allRows[1];
+      var prevPriceText = (prev.querySelector('.tl-price') || {}).textContent || '';
+      var prevClose = parseFloat(prevPriceText.replace(/,/g, ''));
+      var chgEl = firstRow.querySelector('.tl-chg');
+      if (chgEl && prevClose > 0) {
+        var pct = ((latest.close - prevClose) / prevClose * 100).toFixed(2);
+        var sg  = pct >= 0 ? '+' : '';
+        chgEl.textContent = sg + pct + '%';
+        firstRow.classList.remove('tl-buy', 'tl-sell');
+        firstRow.classList.add(pct >= 0 ? 'tl-buy' : 'tl-sell');
+      }
+    }
+
+    // 거래량/거래대금 셀
+    var volEl = firstRow.querySelector('.tl-vol');
+    if (volEl) {
+      var displayVol;
+      if (isCrypto && latest.trade_value > 0) {
+        displayVol = _fmtVol(latest.trade_value) + volSuffix;
+      } else {
+        displayVol = _fmtVol(latest.volume || 0);
+      }
+      volEl.textContent = displayVol;
+    }
+  };
+
   // ── 초기 틱 데이터 로드 (오직 /api/ticks API만 사용) ──────────────────────
 
   var _isLoading     = false;       // 로딩 락: 중복 fetch 방지
