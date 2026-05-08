@@ -1605,6 +1605,7 @@
   window.D2T.loadChart       = loadChart;
   window.D2T.loadResultChart = loadResultChart;
   window.D2T.switchMarket    = switchMarket;
+  window._initHeaderBar      = _initHeaderBar;   // quote.js 일자별 탭에서 헤더 동기화용
 
   // ══════════════════════════════════════════════════════════════════════════
   // 매물대 (Supply/Demand Price Cluster) 오버레이

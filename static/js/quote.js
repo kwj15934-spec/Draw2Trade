@@ -279,6 +279,17 @@
           list.innerHTML = '<div class="tl-empty">데이터 없음</div>';
           return;
         }
+        // ── 헤더 ↔ 우측 패널 동기화 ─────────────────────────────────
+        // 우측 패널이 받은 같은 응답으로 차트 헤더(가격/등락률)도 갱신.
+        // KR 은 자동 폴링이 없어 시간 흐르면 헤더(차트 로드 시점) 와
+        // 우측 패널(탭 클릭 시점) 가격이 분 단위로 어긋날 수 있음.
+        if (window.D2T) {
+          window.D2T.candles   = data.candles;
+          window.D2T.prevClose = data.prevClose || 0;
+        }
+        if (typeof window._initHeaderBar === 'function') {
+          try { window._initHeaderBar(data.candles); } catch (_) {}
+        }
         var candles = data.candles.slice().reverse();
         var html = '';
         for (var i = 0; i < candles.length; i++) {
