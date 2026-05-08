@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Draw2Trade — KOSPI 패턴 유사도 검색{% endblock %}
+{% block title %}Draw2Trade — KR 주식 + 코인 패턴 유사도 검색{% endblock %}
 {% block footer_align %}left{% endblock %}
 {% block popup_page %}app{% endblock %}
 
@@ -8,8 +8,8 @@
 
 {% block seo %}
   <!-- ── SEO 기본 태그 ──────────────────────────────────── -->
-  <meta name="description" content="차트 패턴을 직접 그리면 KOSPI/KOSDAQ 전 종목에서 유사한 구간을 찾아주는 주식 패턴 검색 서비스. 유사 종목 자동 탐색, 패턴 비교, 실시간 시세 제공.">
-  <meta name="keywords" content="주식 패턴 검색, 유사 종목, KOSPI, KOSDAQ, 차트 분석, 패턴 매칭, 주식 차트, 기술적 분석, Draw2Trade">
+  <meta name="description" content="차트 패턴을 직접 그리면 KR 주식·CRYPTO(KRW/USDT) 4,500+ 종목에서 유사한 구간을 찾는 패턴 검색 도구. 유사 종목 자동 탐색, 패턴 비교, 라이브 시세 제공.">
+  <meta name="keywords" content="주식 패턴 검색, 코인 패턴 검색, 유사 종목, KOSPI, KOSDAQ, 비트코인, Upbit, Bithumb, Binance, 차트 분석, 패턴 매칭, Draw2Trade">
   <meta name="author" content="Draw2Trade">
 
   <!-- ── Canonical ────────────────────────────────────── -->
@@ -654,7 +654,7 @@
           <div id="results-list" style="display: none;"></div>
         </div>
         <div class="result-disclaimer" data-i18n="ca.chart_disclaimer">
-          본 서비스의 차트는 종가 기준(1일 지연)이며, 실시간 시세는 별도 페이지에서 확인 가능합니다.
+          KR 주식은 종가 기준(D+1 지연), 장중 실시간 시세는 증권사를 이용하세요. CRYPTO 마켓은 5초 간격 라이브 갱신됩니다.
         </div>
         <div class="result-disclaimer" style="margin-top:6px;font-size:10px;color:#6E7689;">
           Data: KRX (KOSPI/KOSDAQ) · Upbit · Bithumb · Binance — 거래소 공개 데이터.
@@ -919,8 +919,8 @@ D2T_I18N.add({
                             en: 'This service provides reference information only and does not constitute investment advice under the Capital Markets Act. Pattern similarity analysis is based on historical data and does not guarantee future returns. All investment outcomes are the user\'s sole responsibility.' },
   'ca.results_placeholder': { ko: '패턴을 그린 후<br><strong style="color:#5BFFC6;">유사 종목 검색</strong>을 클릭하세요<br><br><small>유사 종목을 클릭하면<br>내가 그린 패턴과 <strong>레이어드 비교</strong>로<br>어디가 닮았는지 바로 확인됩니다</small>',
                               en: 'Draw a pattern, then click<br><strong style="color:#5BFFC6;">Find Similar</strong><br><br><small>Click any similar stock to see a<br><strong>layered comparison</strong> with your drawing<br>and confirm where it matches</small>' },
-  'ca.chart_disclaimer':{ ko: '본 서비스의 차트는 종가 기준(1일 지연)이며, 실시간 시세는 별도 페이지에서 확인 가능합니다.',
-                            en: 'Charts use closing prices (1-day delayed). Real-time quotes are available on a separate page.' },
+  'ca.chart_disclaimer':{ ko: 'KR 주식은 종가 기준(D+1 지연), 장중 실시간 시세는 증권사를 이용하세요. CRYPTO 마켓은 5초 간격 라이브 갱신됩니다.',
+                            en: 'KR stocks: closing price (D+1 delay) — use your broker for live intraday. CRYPTO: refreshed live every 5 seconds.' },
 });
 </script>
 <script>
