@@ -1571,6 +1571,24 @@ D2T_I18N.add({
   // 시장 반응 — 네이버+토스 통합 피드
   function _fetchCommunity(ticker) {
     _loadingPanel('community');
+
+    // 코인 분기: StockTwits sentiment 사용
+    var mkt = (window.D2T && window.D2T.market) || 'KR';
+    if (mkt === 'CRYPTO_KRW' || mkt === 'CRYPTO_USDT') {
+      fetch('/api/crypto/sentiment/' + encodeURIComponent(ticker)
+            + '?market=' + encodeURIComponent(mkt))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) { _errorPanel('community', '시장반응 데이터 없음'); return; }
+          var pane = document.getElementById('fiw-panel-community-left');
+          if (pane && typeof window._renderCryptoSentiment === 'function') {
+            window._renderCryptoSentiment(d, pane);
+          }
+        })
+        .catch(function () { _errorPanel('community', '시장반응 로드 실패'); });
+      return;
+    }
+
     fetch('/api/v1/stock/community/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
@@ -2665,15 +2683,118 @@ function _escHtml(s) {
   };
 
   // ── 커뮤니티(시장반응) 데이터 로드 ───────────────────────────────
+  // ── 코인 시장반응 렌더 (StockTwits + CryptoPanic) ───────────────────────
+  window._renderCryptoSentiment = function (data, target) {
+    if (!data || !target) return;
+    var st = data.stocktwits || {};
+    var cp = data.cryptopanic;
+    var total = st.total || 0;
+    var bull = st.bullish || 0, bear = st.bearish || 0;
+    var bullPct = total ? Math.round(bull / total * 100) : 0;
+    var bearPct = total ? Math.round(bear / total * 100) : 0;
+
+    // ── 헤더: Bullish/Bearish 비율 바 ──
+    var headerHtml = ''
+      + '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:10px;">'
+      +   '<div style="font-size:11px;color:#8C95A8;margin-bottom:6px;">'
+      +     'StockTwits 최근 ' + total + '건 · '
+      +     '<a href="' + (st.source_url || '#') + '" target="_blank" rel="noopener" style="color:#5BFFC6;text-decoration:none;">전체 보기 →</a>'
+      +   '</div>'
+      +   '<div style="display:flex;height:18px;border-radius:4px;overflow:hidden;background:#1a1a1e;">'
+      +     (bull > 0 ? '<div style="background:#26a69a;width:' + bullPct + '%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">' + (bullPct >= 12 ? '🟢 ' + bull : '') + '</div>' : '')
+      +     (total - bull - bear > 0 ? '<div style="background:#3a3a3e;width:' + (100 - bullPct - bearPct) + '%;"></div>' : '')
+      +     (bear > 0 ? '<div style="background:#ef5350;width:' + bearPct + '%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">' + (bearPct >= 12 ? bear + ' 🔴' : '') + '</div>' : '')
+      +   '</div>'
+      +   '<div style="display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:3px;">'
+      +     '<span style="color:#26a69a;">Bullish ' + bullPct + '%</span>'
+      +     '<span>중립 ' + (st.neutral || 0) + '</span>'
+      +     '<span style="color:#ef5350;">Bearish ' + bearPct + '%</span>'
+      +   '</div>'
+      + '</div>';
+
+    // ── 메시지 리스트 ──
+    var msgs = st.messages || [];
+    var msgsHtml = '';
+    if (msgs.length === 0) {
+      msgsHtml = '<div style="padding:20px;text-align:center;color:#666;font-size:11px;">메시지가 없습니다.</div>';
+    } else {
+      msgsHtml = msgs.map(function (m) {
+        var sentBadge = '';
+        if (m.sentiment === 'Bullish') {
+          sentBadge = '<span style="background:rgba(38,166,154,0.2);color:#26a69a;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-right:4px;">▲ BULL</span>';
+        } else if (m.sentiment === 'Bearish') {
+          sentBadge = '<span style="background:rgba(239,83,80,0.2);color:#ef5350;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-right:4px;">▼ BEAR</span>';
+        }
+        var date = (m.created_at || '').slice(0, 16).replace('T', ' ');
+        return '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,0.05);">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+          +   '<a href="' + m.user_url + '" target="_blank" rel="noopener" style="color:#5BFFC6;font-size:11px;font-weight:600;text-decoration:none;">@' + _esc(m.user) + '</a>'
+          +   '<span style="font-size:10px;color:#555;">' + _esc(date) + '</span>'
+          + '</div>'
+          + '<div style="font-size:11px;color:#c9cdd6;line-height:1.4;">' + sentBadge + _esc(m.body) + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // ── CryptoPanic 뉴스 (있으면) ──
+    var cpHtml = '';
+    if (cp && cp.posts && cp.posts.length) {
+      cpHtml = '<div style="padding:8px 4px;margin-top:10px;border-top:1px solid rgba(255,255,255,0.08);">'
+        + '<div style="font-size:11px;color:#8C95A8;margin-bottom:6px;">CryptoPanic 뉴스</div>'
+        + cp.posts.map(function (p) {
+            var v = p.votes || {};
+            var voteHtml = (v.positive || v.negative || v.important)
+              ? '<span style="font-size:9px;color:#666;">'
+                + (v.positive ? '<span style="color:#26a69a;margin-right:4px;">▲' + v.positive + '</span>' : '')
+                + (v.negative ? '<span style="color:#ef5350;margin-right:4px;">▼' + v.negative + '</span>' : '')
+                + (v.important ? '<span style="color:#ffaa00;">★' + v.important + '</span>' : '')
+                + '</span>'
+              : '';
+            var date = (p.published_at || '').slice(0, 10);
+            return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);">'
+              + '<a href="' + p.url + '" target="_blank" rel="noopener" style="color:#c9cdd6;font-size:11px;text-decoration:none;line-height:1.4;display:block;">'
+              + _esc(p.title) + '</a>'
+              + '<div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:#555;">'
+              +   '<span>' + _esc(p.domain) + ' · ' + date + '</span>'
+              +   voteHtml
+              + '</div>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+    target.innerHTML = headerHtml + msgsHtml + cpHtml
+      + '<div style="font-size:9px;color:#555;text-align:right;margin-top:8px;">Data: ' + (data.data_source || 'StockTwits') + '</div>';
+  };
+
   window.loadCommunityData = function (ticker, market) {
     if (!ticker) return;
     var feedEl = document.getElementById('info-community-feed');
     if (!feedEl) return;
-    if (market && market !== 'KR') {
-      feedEl.innerHTML = '<div class="info-empty">시장반응은 KR 종목만 지원합니다.</div>';
+    feedEl.innerHTML = '<div class="info-empty"><div class="info-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 8px;"></div>로딩 중…</div>';
+
+    // ── 코인 분기: StockTwits + CryptoPanic ───────────────────────────
+    if (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT') {
+      fetch('/api/crypto/sentiment/' + encodeURIComponent(ticker)
+            + '?market=' + encodeURIComponent(market))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) {
+            feedEl.innerHTML = '<div class="info-empty">시장반응 데이터 없음</div>';
+            return;
+          }
+          window._renderCryptoSentiment(d, feedEl);
+        })
+        .catch(function () {
+          feedEl.innerHTML = '<div class="info-empty">시장반응 로드 실패</div>';
+        });
       return;
     }
-    feedEl.innerHTML = '<div class="info-empty"><div class="info-spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 8px;"></div>로딩 중…</div>';
+
+    if (market && market !== 'KR') {
+      feedEl.innerHTML = '<div class="info-empty">시장반응은 KR/CRYPTO 종목만 지원합니다.</div>';
+      return;
+    }
 
     fetch('/api/v1/stock/community/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })

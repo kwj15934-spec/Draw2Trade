@@ -229,6 +229,16 @@ async def chart_data(
     }
 
 
+@router.get("/crypto/sentiment/{symbol}")
+async def crypto_sentiment(symbol: str, market: str = Query("CRYPTO_KRW")):
+    """코인 시장 반응 (StockTwits + 옵션: CryptoPanic)."""
+    from app.services import crypto_sentiment_service
+    market_up = market.upper()
+    if market_up not in ("CRYPTO_KRW", "CRYPTO_USDT"):
+        raise HTTPException(status_code=400, detail=f"알 수 없는 마켓: {market}")
+    return crypto_sentiment_service.get_sentiment(symbol, market=market_up)
+
+
 @router.get("/crypto/info/{symbol}")
 async def crypto_info(symbol: str, market: str = Query("CRYPTO_KRW")):
     """코인 메타데이터 + 시장 지표 (CoinGecko)."""
