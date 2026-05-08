@@ -444,7 +444,9 @@
 
     <div class="faq-item">
       <div class="faq-q" data-i18n="faq.q4">구독 기간 / 자동 갱신은 어떻게 되나요?</div>
-      <div class="faq-a" data-i18n-html data-i18n="faq.a4">월간은 <b>30일</b>, 연간은 <b>365일</b> 동안 Pro 가 유지됩니다. 자동 갱신은 없으며, 만료 전 다시 결제하시면 기간이 연장됩니다. 갱신 알림 메일을 만료 3일 전 발송해드립니다.</div>
+      <div class="faq-a" data-i18n-html data-i18n="faq.a4">월간은 <b>30일</b>, 연간은 <b>365일</b> 동안 Pro 가 유지됩니다.<br><br>
+        <b>· 한국 계좌이체</b> : 자동 갱신 없음. 만료 전 다시 결제하시면 기간이 연장됩니다.<br>
+        <b>· PayPal (해외)</b> : PayPal 약정에 따라 자동 갱신될 수 있으며, 사용자가 PayPal 또는 마이페이지에서 언제든지 구독을 해지하실 수 있습니다. 해지 시 잔여 기간 동안 Pro 가 유지된 후 종료됩니다.</div>
     </div>
 
     <div class="faq-item">
@@ -518,9 +520,43 @@
           <div class="pay-hint" data-i18n-html data-i18n="bank.depositor_hint">계좌이체 시 <b style="color:#FF9F5B">입금자명 칸에 동일하게</b> 입력해 주세요.</div>
         </div>
 
-        <button id="btn-create-request" onclick="createPaymentRequest()" class="pay-submit" data-i18n="bank.submit">신청 완료 (입금 대기)</button>
+        <!-- ── 필수 약관 동의 (전자상거래법) ────────────────────────── -->
+        <div class="form-group" style="margin-top:6px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:#e8eaed;line-height:1.55;">
+            <input id="agree-terms" type="checkbox" style="margin-top:3px;width:14px;height:14px;cursor:pointer;flex-shrink:0;accent-color:#5BFFC6;">
+            <span data-i18n-html data-i18n="bank.agree_terms">
+              <a href="/terms" target="_blank" style="color:#5BFFC6;text-decoration:underline;">이용약관</a>,
+              <a href="/privacy" target="_blank" style="color:#5BFFC6;text-decoration:underline;">개인정보 처리방침</a>,
+              <a href="/refund" target="_blank" style="color:#5BFFC6;text-decoration:underline;">환불 정책</a>에 동의하며,
+              본 서비스는 자본시장법상 투자자문업이 아닌 차트 패턴 매칭 도구임을 확인합니다. <span class="req">*</span>
+            </span>
+          </label>
+        </div>
+
+        <button id="btn-create-request" onclick="createPaymentRequest()" class="pay-submit" data-i18n="bank.submit" disabled style="opacity:0.5;cursor:not-allowed;">신청 완료 (입금 대기)</button>
         <div id="step1-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
       </div>
+
+      <script>
+        // 약관 체크 시 결제 버튼 활성화
+        (function () {
+          var _agree = document.getElementById('agree-terms');
+          var _btn   = document.getElementById('btn-create-request');
+          if (_agree && _btn) {
+            _agree.addEventListener('change', function () {
+              if (_agree.checked) {
+                _btn.disabled = false;
+                _btn.style.opacity = '';
+                _btn.style.cursor = '';
+              } else {
+                _btn.disabled = true;
+                _btn.style.opacity = '0.5';
+                _btn.style.cursor = 'not-allowed';
+              }
+            });
+          }
+        })();
+      </script>
 
       <!-- ── EN (PayPal) 영역 ──────────────────────────────────────── -->
       <div id="en-payment-section" style="display:none;">
@@ -533,9 +569,41 @@
           </table>
         </div>
 
-        <div id="paypal-button-container" style="margin-top:12px;min-height:50px;"></div>
+        <!-- 약관 동의 (PayPal) -->
+        <div style="margin-top:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:#e8eaed;line-height:1.55;">
+            <input id="agree-terms-pp" type="checkbox" style="margin-top:3px;width:14px;height:14px;cursor:pointer;flex-shrink:0;accent-color:#5BFFC6;">
+            <span data-i18n-html data-i18n="bank.agree_terms">
+              I agree to the <a href="/terms" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Terms</a>,
+              <a href="/privacy" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Privacy Policy</a>,
+              <a href="/refund" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Refund Policy</a>,
+              and acknowledge that this service is a chart pattern matching tool, not licensed investment advisory. <span class="req">*</span>
+            </span>
+          </label>
+        </div>
+
+        <div id="paypal-button-container" style="margin-top:12px;min-height:50px;pointer-events:none;opacity:0.5;"></div>
         <div id="pp-loading" style="text-align:center;color:var(--fg2);font-size:12px;padding:16px 0;" data-i18n="pp.loading">Loading payment button...</div>
         <div id="pp-error" style="margin-top:10px;font-size:12px;color:#ff7a7a;text-align:center;min-height:16px;"></div>
+
+        <script>
+          // PayPal 버튼: 약관 체크 시에만 클릭 가능 (pointer-events 토글)
+          (function () {
+            var _agreePp = document.getElementById('agree-terms-pp');
+            var _ppCont  = document.getElementById('paypal-button-container');
+            if (_agreePp && _ppCont) {
+              _agreePp.addEventListener('change', function () {
+                if (_agreePp.checked) {
+                  _ppCont.style.pointerEvents = '';
+                  _ppCont.style.opacity = '';
+                } else {
+                  _ppCont.style.pointerEvents = 'none';
+                  _ppCont.style.opacity = '0.5';
+                }
+              });
+            }
+          })();
+        </script>
 
         <div style="margin-top:12px;font-size:11px;color:var(--fg3);text-align:center;line-height:1.6;" data-i18n-html data-i18n="pp.disclaimer">
           PayPal is for international customers.<br>
@@ -657,6 +725,8 @@
     'bank.copy':           { ko: '복사', en: 'Copy' },
     'bank.qr_cap':         { ko: '📱 QR 스캔으로 빠르게 송금', en: '📱 Scan QR to transfer' },
     'bank.depositor_label':{ ko: '입금자명 <span class="req">*</span>', en: 'Depositor name <span class="req">*</span>' },
+    'bank.agree_terms':    { ko: '<a href="/terms" target="_blank" style="color:#5BFFC6;text-decoration:underline;">이용약관</a>, <a href="/privacy" target="_blank" style="color:#5BFFC6;text-decoration:underline;">개인정보 처리방침</a>, <a href="/refund" target="_blank" style="color:#5BFFC6;text-decoration:underline;">환불 정책</a>에 동의하며, 본 서비스는 자본시장법상 투자자문업이 아닌 차트 패턴 매칭 도구임을 확인합니다. <span class="req">*</span>',
+                             en: 'I agree to the <a href="/terms" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Terms</a>, <a href="/privacy" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Privacy Policy</a>, <a href="/refund" target="_blank" style="color:#5BFFC6;text-decoration:underline;">Refund Policy</a>, and acknowledge that this service is a chart pattern matching tool, not licensed investment advisory. <span class="req">*</span>' },
     'bank.depositor_ph':   { ko: '예: 홍길동', en: 'e.g. Hong Gildong' },
     'bank.depositor_hint': { ko: '계좌이체 시 <b style="color:#FF9F5B">입금자명 칸에 동일하게</b> 입력해 주세요.',
                               en: 'Use this exact name in the bank transfer depositor field.' },
@@ -721,12 +791,12 @@
     'login_required.cta':   { ko: '로그인하기', en: 'Sign in' },
 
     // footer 공통
-    'footer.links':        { ko: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/refund">환불 신청</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a>',
-                              en: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/refund">Refund</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a>' },
+    'footer.links':        { ko: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">이용약관</a> &nbsp;·&nbsp; <a href="/refund">환불 신청</a> &nbsp;·&nbsp; <a href="/privacy">개인정보 처리방침</a> &nbsp;·&nbsp; <a href="/qna">Q&amp;A</a>',
+                              en: '&copy; 2026 Draw2Trade · FORMETA &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/refund">Refund</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/qna">Q&amp;A</a>' },
     'footer.disclaimer':   { ko: '본 서비스는 투자 참고 정보를 제공하며, 투자 결과에 대한 책임은 이용자에게 있습니다.',
                               en: 'This service provides reference information only. All investment decisions and outcomes are the user\'s responsibility.' },
-    'footer.business':     { ko: '상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>',
-                              en: 'Business: FORMETA · CEO: Won Jun Kim · Business Reg. No. 536-32-01566 · +82-2-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a>' },
+    'footer.business':     { ko: '상호 FORMETA · 대표 김원준 · 사업자등록번호 536-32-01566 · 통신판매업 신고번호 [신고 진행 중] · 사업장 주소 : 서울특별시 서대문구 포방터길 48-4, B1층(홍은동) · 전화 02-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a> · 호스팅 제공자 [입력 필요]',
+                              en: 'Business: FORMETA · CEO: Won Jun Kim · Business Reg. No. 536-32-01566 · Mail-Order Business Reg. [Pending] · Address: B1, 48-4 Pobangteo-gil, Seodaemun-gu, Seoul, Korea · Tel +82-2-6015-9983 · <a href="mailto:kwj15934@formeta.kr">kwj15934@formeta.kr</a> · Hosting Provider [TBD]' },
   });
 
   var _billingPeriod = 'monthly';
@@ -1026,10 +1096,17 @@
     var btn = document.getElementById('btn-create-request');
     var errEl = document.getElementById('step1-error');
     var nameEl = document.getElementById('depositor-name');
+    var agreeEl = document.getElementById('agree-terms');
     var name = (nameEl.value || '').trim();
     errEl.textContent = '';
     var en = (D2T_I18N.getLocale() === 'en');
 
+    // 약관 동의 필수 (disabled 우회 방어)
+    if (!agreeEl || !agreeEl.checked) {
+      errEl.textContent = en ? 'Please agree to the terms before subscribing.' : '약관에 동의해주세요.';
+      if (agreeEl) agreeEl.focus();
+      return;
+    }
     if (!name) {
       errEl.textContent = en ? 'Please enter the depositor name.' : '입금자명을 입력해주세요.';
       nameEl.focus(); return;

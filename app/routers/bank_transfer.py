@@ -77,19 +77,40 @@ class BankTransferRequest(BaseModel):
 
 @router.post("/api/bank-transfer/request")
 async def request_transfer(body: BankTransferRequest, user=Depends(require_user)):
+    # plan_type 화이트리스트 검증 (음수/0원/임의금액 차단)
     if body.plan_type not in ("monthly", "annual"):
         raise HTTPException(400, "plan_type must be 'monthly' or 'annual'")
     name = (body.depositor_name or "").strip()
     if not name or len(name) > 16:
         raise HTTPException(400, "입금자명을 1~16자로 입력해주세요.")
+    # 한국어 이름은 보통 한글/영문/공백만. 특수문자/숫자 차단 (자동 매칭 정확도)
+    import re as _re
+    if not _re.match(r"^[A-Za-z가-힣\s]{1,16}$", name):
+        raise HTTPException(400, "입금자명은 한글 또는 영문만 입력 가능합니다.")
 
-    req = payment_request_service.create_request(
-        uid=user["uid"],
-        name=user.get("name", ""),
-        email=user.get("email", ""),
-        depositor_name=name,
-        plan_type=body.plan_type,
-    )
+    # ── 중복 결제 방지 (idempotency) ───────────────────────────────────────
+    # 동일 사용자가 이미 pending 상태의 결제 신청이 있으면 새 신청 차단.
+    existing = payment_request_service.get_active_request_by_uid(user["uid"])
+    if existing and existing.get("status") == "pending":
+        raise HTTPException(
+            409,
+            "이미 진행 중인 결제 신청이 있습니다. 마이페이지에서 확인하시거나 취소 후 재시도해주세요."
+        )
+
+    try:
+        req = payment_request_service.create_request(
+            uid=user["uid"],
+            name=user.get("name", ""),
+            email=user.get("email", ""),
+            depositor_name=name,
+            plan_type=body.plan_type,
+        )
+    except Exception as e:
+        logger.error("결제 신청 생성 실패: uid=%s err=%s", user["uid"], e)
+        raise HTTPException(
+            500,
+            "결제 신청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도하시거나 kwj15934@formeta.kr 로 문의해주세요."
+        )
     if not req:
         raise HTTPException(503, "결제 신청 슬롯이 부족합니다. 잠시 후 다시 시도해주세요.")
     return req
@@ -124,6 +145,26 @@ class RefundRequestBody(BaseModel):
 
 @router.post("/api/refund/request")
 async def refund_request(body: RefundRequestBody, user=Depends(require_user)):
+    # ── 자동 검증 1: 결제 후 7일 이내 여부 (환불 정책 명시) ───────────────────
+    import time as _time
+    if body.payment_id:
+        pay = payment_request_service.get_request(body.payment_id)
+        if pay and pay.get("matched_at"):
+            try:
+                # matched_at 은 Unix timestamp (REAL)
+                matched_ts = float(pay["matched_at"])
+                elapsed_days = (_time.time() - matched_ts) / 86400.0
+                if elapsed_days > 7.0:
+                    raise HTTPException(
+                        400,
+                        f"결제 후 7일이 경과하여 자동 환불이 불가합니다 (경과: {int(elapsed_days)}일). "
+                        f"특별 사유는 kwj15934@formeta.kr 로 문의해주세요."
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning("환불 자동검증 실패 (계속 진행): %s", e)
+
     rid = payment_request_service.create_refund_request(
         uid=user["uid"],
         name=user.get("name", ""),

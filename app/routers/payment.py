@@ -43,27 +43,50 @@ async def subscribe(body: SubscribeBody, user=Depends(require_user)):
     검증 성공 시 set_user_plan('pro') + paypal_subscription_id 저장.
     """
     if body.billing_period not in ("monthly", "annual"):
-        raise HTTPException(400, "billing_period must be 'monthly' or 'annual'")
+        raise HTTPException(400, "Invalid billing period. Please refresh and try again.")
+    if not body.subscription_id or len(body.subscription_id) < 4:
+        raise HTTPException(400, "Invalid subscription ID. Please retry the PayPal flow.")
+
     expected_plan = paypal_service.get_plan_id(body.billing_period)
     if not expected_plan:
-        raise HTTPException(503, "Plan ID 미설정 — 관리자에게 문의")
+        raise HTTPException(503, "Payment temporarily unavailable. Please contact support@formeta.kr")
 
-    sub = await paypal_service.get_subscription(body.subscription_id)
-    if not sub:
-        raise HTTPException(404, "구독 정보를 찾을 수 없습니다")
-    if sub.get("status") not in ("ACTIVE", "APPROVAL_PENDING", "APPROVED"):
-        raise HTTPException(400, f"구독 상태 오류: {sub.get('status')}")
-    if sub.get("plan_id") != expected_plan:
-        raise HTTPException(400, "Plan ID 불일치")
-
+    # ── 중복 결제 방지: 같은 subscription_id 가 이미 등록됐는지 검사 ─────────
     uid = user["uid"]
-    next_billing = sub.get("billing_info", {}).get("next_billing_time")
-    set_user_plan(uid, "pro", pro_expires_at=next_billing, billing_period=body.billing_period)
-
     users = _load_users()
-    if uid in users:
-        users[uid]["paypal_subscription_id"] = body.subscription_id
-        _save_users(users)
+    for _u, _data in users.items():
+        if _data.get("paypal_subscription_id") == body.subscription_id and _u != uid:
+            logger.warning("PayPal subscription_id 중복 사용 시도: %s by %s", body.subscription_id, uid)
+            raise HTTPException(409, "This subscription is already linked to another account.")
+
+    try:
+        sub = await paypal_service.get_subscription(body.subscription_id)
+    except Exception as e:
+        logger.error("PayPal API 호출 실패: %s", e)
+        raise HTTPException(
+            502,
+            "Could not reach PayPal. Please retry in a moment or contact support@formeta.kr"
+        )
+    if not sub:
+        raise HTTPException(404, "Subscription not found on PayPal. Please retry.")
+    if sub.get("status") not in ("ACTIVE", "APPROVAL_PENDING", "APPROVED"):
+        raise HTTPException(400, f"Subscription status invalid: {sub.get('status')}. Please retry.")
+    if sub.get("plan_id") != expected_plan:
+        raise HTTPException(400, "Plan mismatch. Please retry from the beginning.")
+
+    next_billing = sub.get("billing_info", {}).get("next_billing_time")
+    try:
+        set_user_plan(uid, "pro", pro_expires_at=next_billing, billing_period=body.billing_period)
+        if uid in users:
+            users[uid]["paypal_subscription_id"] = body.subscription_id
+            _save_users(users)
+    except Exception as e:
+        logger.error("Pro 활성화 실패 (수동 처리 필요): uid=%s sub=%s err=%s",
+                     uid, body.subscription_id, e)
+        raise HTTPException(
+            500,
+            "Payment received but activation failed. We'll fix it within 24h. Contact support@formeta.kr"
+        )
 
     logger.info("Pro 구독 활성화: uid=%s, subscription=%s, period=%s",
                 uid, body.subscription_id, body.billing_period)
