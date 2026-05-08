@@ -244,7 +244,7 @@
         borderVisible: false,
         fontSize: window.innerWidth <= 640 ? 9 : 12,
         autoScale: true,
-        width: 80,
+        width: 100,   /* 큰 숫자(억대 KRW)/소수점이 차트 영역을 침범하지 않도록 확장 */
       },
       timeScale: {
         borderColor: '#2a2e39',

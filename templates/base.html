@@ -807,7 +807,7 @@
     .d2t-main {
       display: grid;
       /* 차트(유동) | 스플리터(5px) | 호가(고정) | 컨텍스트패널(접기가능) | 사이드바스플리터(4px) | 사이드바(고정) */
-      grid-template-columns: 1fr 5px var(--quote-w, 200px) var(--info-panel-w, 320px) 4px var(--sidebar-w, 260px);
+      grid-template-columns: 1fr 5px var(--quote-w, 200px) var(--info-panel-w, 320px) 4px var(--sidebar-w, 340px);
       grid-template-rows: 1fr;
       flex: 1;
       min-height: 0;
@@ -827,33 +827,17 @@
       border-right: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* ── 드래그 핸들 (차트 ↔ 호가 사이) ─────────────────── */
+    /* ── 드래그 핸들 (차트 ↔ 호가 사이) — 비활성 (조절 미지원) ─── */
     #quote-resize-handle {
       grid-column: 2;
       width: 5px;
       background: transparent;
-      cursor: col-resize;
+      cursor: default;          /* col-resize 표시 제거 */
       position: relative;
-      z-index: 10;
-      transition: background 0.15s;
-      touch-action: none;
+      z-index: 1;
+      pointer-events: none;     /* 클릭/드래그 자체 차단 */
     }
-    #quote-resize-handle::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 2px;
-      height: 40px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 2px;
-      transition: background 0.15s, height 0.15s;
-    }
-    #quote-resize-handle:hover { background: rgba(91,255,198,0.08); }
-    #quote-resize-handle:hover::after { background: #5BFFC6; height: 60px; }
-    #quote-resize-handle.dragging { background: rgba(91,255,198,0.12); }
-    #quote-resize-handle.dragging::after { background: #5BFFC6; height: 80px; }
+    #quote-resize-handle::after { content: none; }    /* 시각 효과 제거 */
 
     #chart-wrapper {
       flex: 1;
@@ -2549,8 +2533,8 @@
     .widget-card.drag-over-top { box-shadow: 0 -2px 0 0 #5BFFC6, 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.10); }
     .widget-card.drag-over-bottom { box-shadow: 0 2px 0 0 #5BFFC6, 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.10); }
 
-    /* 결과 위젯은 flex로 늘어나서 남은 공간 차지 */
-    .widget-card[data-widget="results"] { flex: 1; min-height: 220px; }
+    /* 결과 위젯은 flex로 늘어나 남은 공간 차지 — 초기 가독성 위해 min-height 확대 */
+    .widget-card[data-widget="results"] { flex: 1 1 auto; min-height: 460px; }
 
     /* 접힘 상태 */
     .widget-card.collapsed { flex: 0 0 auto !important; }
