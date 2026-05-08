@@ -1213,6 +1213,13 @@
       }
     }
 
+    // 유사종목 비교 패널 'finance' 탭 라벨: 코인은 '개요', 주식은 '재무'
+    var fiwFinanceBtn = document.querySelector('#info-side-panel .info-tab-btn[data-itab="finance"]');
+    if (fiwFinanceBtn) {
+      fiwFinanceBtn.textContent = isCrypto ? '개요' : '재무';
+      fiwFinanceBtn.setAttribute('data-i18n', isCrypto ? 'ca.tab.overview' : 'ca.tab.finance');
+    }
+
     // 종목 리스트 로드 (마켓별 분기는 loadTickerList 내부에서 처리)
     if (!isCrypto) {
       var catSel = document.getElementById('category-select');
