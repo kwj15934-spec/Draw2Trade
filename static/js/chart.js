@@ -528,9 +528,12 @@
         D2T.candles = paintedCandles;
         D2T.prevClose = data.prevClose || 0;
         setVolumeData(paintedCandles);
+        // 데이터 전체를 화면에 fit (좌측 빈공간 방지)
         D2T.chart.timeScale().fitContent();
-        // 오른쪽에 여백을 두어 실시간 캔들이 바로 보이도록
-        D2T.chart.timeScale().scrollToRealTime();
+        // 분봉만 우측 끝으로 스크롤 (일/주/월봉은 fitContent 후 그대로 둠)
+        if (isIntraday) {
+          D2T.chart.timeScale().scrollToRealTime();
+        }
         // NXT 배경 음영 렌더 (분봉인 경우)
         requestAnimationFrame(function () {
           if (typeof D2T.drawNxtOverlay === 'function') D2T.drawNxtOverlay();
