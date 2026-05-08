@@ -229,6 +229,19 @@ async def chart_data(
     }
 
 
+@router.get("/crypto/info/{symbol}")
+async def crypto_info(symbol: str, market: str = Query("CRYPTO_KRW")):
+    """코인 메타데이터 + 시장 지표 (CoinGecko)."""
+    from app.services import crypto_meta_service
+    market_up = market.upper()
+    if market_up not in ("CRYPTO_KRW", "CRYPTO_USDT"):
+        raise HTTPException(status_code=400, detail=f"알 수 없는 마켓: {market}")
+    info = crypto_meta_service.get_coin_info(symbol, market=market_up)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"코인 {symbol} 메타데이터 없음")
+    return info
+
+
 @router.get("/crypto/list")
 async def crypto_list(market: str = Query("CRYPTO_KRW"), limit: int = Query(5000, le=10000)):
     """크립토 종목 목록 (UI 종목 셀렉트박스용).

@@ -1195,6 +1195,11 @@
     // 차트 앱 클래스 토글 — CSS 로 크립토/주식 화면 차이 구분 가능
     document.body.classList.toggle('market-crypto', isCrypto);
 
+    // 시장 시간 칩 즉시 갱신
+    if (typeof window.updateMarketHoursChip === 'function') {
+      window.updateMarketHoursChip();
+    }
+
     // 종목 리스트 로드 (마켓별 분기는 loadTickerList 내부에서 처리)
     if (!isCrypto) {
       var catSel = document.getElementById('category-select');

@@ -927,7 +927,7 @@ D2T_I18N.add({
 (function () {
   var KR = { label: '09:00~15:30 KST', tz: 'Asia/Seoul' };
 
-  function isOpen() {
+  function isKrOpen() {
     try {
       var now = new Date();
       var parts = new Intl.DateTimeFormat('en-US', {
@@ -945,16 +945,33 @@ D2T_I18N.add({
   }
 
   window.updateMarketHoursChip = function () {
+    var market = (window.D2T && window.D2T.market) || 'KR';
+    var label, statusOn, statusText;
+
+    if (market === 'CRYPTO_KRW') {
+      label = '24시간 거래 · Upbit/Bithumb (KST)';
+      statusOn = true;
+      statusText = '거래중';
+    } else if (market === 'CRYPTO_USDT') {
+      label = '24시간 거래 · Binance (UTC)';
+      statusOn = true;
+      statusText = '거래중';
+    } else {
+      label = KR.label;
+      statusOn = isKrOpen();
+      statusText = statusOn ? '개장' : '마감';
+    }
+
     ['market-hours-chip', 'market-hours-chip2'].forEach(function (id) {
       var chip = document.getElementById(id);
       if (!chip) return;
-      var on = isOpen();
+      var dotColor = statusOn ? '#5BFFC6' : '#555';
+      var textColor = statusOn ? '#5BFFC6' : '#555';
       var dot = '<span style="width:7px;height:7px;border-radius:50%;background:'
-        + (on ? '#5BFFC6' : '#555') + ';display:inline-block;flex-shrink:0;"></span>';
-      var status = on
-        ? '<span style="color:#5BFFC6;font-weight:700;">개장</span>'
-        : '<span style="color:#555;">마감</span>';
-      chip.innerHTML = dot + '&nbsp;' + KR.label + '&nbsp;·&nbsp;' + status;
+        + dotColor + ';display:inline-block;flex-shrink:0;"></span>';
+      var status = '<span style="color:' + textColor + ';font-weight:'
+        + (statusOn ? '700' : '400') + ';">' + statusText + '</span>';
+      chip.innerHTML = dot + '&nbsp;' + label + '&nbsp;·&nbsp;' + status;
     });
   };
 
@@ -1364,9 +1381,31 @@ D2T_I18N.add({
     else if (tab === 'community') _fetchCommunity(ticker);
   }
 
-  // 재무 — FnGuide 스타일
+  // 재무 — FnGuide 스타일 (단, 코인이면 시장 지표 카드로 대체)
   function _fetchFinance(ticker) {
     _loadingPanel('finance');
+
+    // 마켓이 코인이면 CoinGecko 정보 사용
+    var mkt = (window.D2T && window.D2T.market) || 'KR';
+    if (mkt === 'CRYPTO_KRW' || mkt === 'CRYPTO_USDT') {
+      fetch('/api/crypto/info/' + encodeURIComponent(ticker)
+            + '?market=' + encodeURIComponent(mkt))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (info) {
+          if (!info) { _errorPanel('finance', '코인 정보 없음'); return; }
+          // 헤더 갱신
+          if (typeof _updateHeader === 'function') {
+            _updateHeader(info.symbol, info.name_ko || info.name);
+          }
+          var pane = document.getElementById('fiw-panel-finance-left');
+          if (pane && typeof window._renderCryptoInfo === 'function') {
+            window._renderCryptoInfo(info, pane);
+          }
+        })
+        .catch(function () { _errorPanel('finance', '코인 정보 로드 실패'); });
+      return;
+    }
+
     fetch('/api/v1/stock/finance/' + encodeURIComponent(ticker))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
@@ -2036,8 +2075,117 @@ function _escHtml(s) {
   }
 
   // ── 재무 데이터 로드 ─────────────────────────────────────────────
+  // ── 코인 정보 카드 렌더 (재무 탭 / 유사종목 비교 탭에서 공용) ─────────
+  function _renderCryptoInfo(info, target) {
+    if (!info || !target) return;
+    var ccy = info.currency || 'KRW';
+    var ccySym = ccy === 'KRW' ? '원' : '$';
+    var fmtMoney = function (v) {
+      if (v == null) return 'N/A';
+      var abs = Math.abs(v);
+      if (ccy === 'KRW') {
+        if (abs >= 1e12) return (v / 1e12).toFixed(1) + '조원';
+        if (abs >= 1e8)  return (v / 1e8).toFixed(0) + '억원';
+        return v.toLocaleString() + '원';
+      } else {
+        if (abs >= 1e9)  return '$' + (v / 1e9).toFixed(2) + 'B';
+        if (abs >= 1e6)  return '$' + (v / 1e6).toFixed(1) + 'M';
+        return '$' + v.toLocaleString();
+      }
+    };
+    var fmtNum = function (v) {
+      if (v == null) return 'N/A';
+      if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(2) + 'B';
+      if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+      return v.toLocaleString();
+    };
+    var fmtPct = function (v) {
+      if (v == null) return '<span style="color:#666">—</span>';
+      var c = v >= 0 ? '#26a69a' : '#ef5350';
+      return '<span style="color:' + c + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+    };
+    var fmtDate = function (s) {
+      if (!s) return '';
+      try { return s.slice(0, 10); } catch (e) { return ''; }
+    };
+
+    var pc = info.price_change || {};
+    var rows1 = [
+      { label: '시가총액',  value: fmtMoney(info.market_cap) },
+      { label: '24h 거래대금', value: fmtMoney(info.volume_24h) },
+      { label: '시총 순위',  value: info.rank ? '#' + info.rank : 'N/A' },
+      { label: '유통량',     value: fmtNum(info.circulating_supply) + ' ' + info.symbol },
+      { label: '총 발행량',  value: info.total_supply ? fmtNum(info.total_supply) + ' ' + info.symbol : 'N/A' },
+      { label: '최대 공급량', value: info.max_supply ? fmtNum(info.max_supply) + ' ' + info.symbol : '무제한' },
+    ];
+    var rows2 = [
+      { label: '24h',  value: fmtPct(pc['24h']) },
+      { label: '7d',   value: fmtPct(pc['7d']) },
+      { label: '30d',  value: fmtPct(pc['30d']) },
+      { label: '1y',   value: fmtPct(pc['1y']) },
+    ];
+    var rows3 = [
+      { label: '역대 최고가', value: fmtMoney(info.ath) + (info.ath_date ? ' <span style="color:#666">(' + fmtDate(info.ath_date) + ')</span>' : '') },
+      { label: '역대 최저가', value: fmtMoney(info.atl) + (info.atl_date ? ' <span style="color:#666">(' + fmtDate(info.atl_date) + ')</span>' : '') },
+    ];
+
+    var rowHtml = function (rs) {
+      return rs.map(function (r) {
+        return '<div class="finance-row">'
+          + '<span class="finance-row-label">' + r.label + '</span>'
+          + '<span class="finance-row-value">' + r.value + '</span>'
+          + '</div>';
+      }).join('');
+    };
+    var nameLine = (info.name_ko ? info.name_ko + ' (' + info.name + ')' : info.name) || info.symbol;
+    var logo = info.logo ? '<img src="' + info.logo + '" style="width:18px;height:18px;vertical-align:middle;margin-right:4px;"/>' : '';
+    var desc = info.description ? '<div style="font-size:11px;color:#8C95A8;margin:6px 0 10px;line-height:1.5;">' + info.description + '</div>' : '';
+    var links = '';
+    if (info.website)    links += '<a href="' + info.website + '" target="_blank" rel="noopener" style="color:#5BFFC6;font-size:11px;text-decoration:none;margin-right:8px;">홈페이지 →</a>';
+    if (info.whitepaper) links += '<a href="' + info.whitepaper + '" target="_blank" rel="noopener" style="color:#5BFFC6;font-size:11px;text-decoration:none;margin-right:8px;">백서 →</a>';
+    if (info.twitter)    links += '<a href="https://twitter.com/' + info.twitter + '" target="_blank" rel="noopener" style="color:#5BFFC6;font-size:11px;text-decoration:none;">𝕏 ' + info.twitter + '</a>';
+
+    target.innerHTML = ''
+      + '<div style="padding:6px 4px 10px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:10px;">'
+      +   '<div style="font-size:13px;font-weight:600;color:#e8eaef;">' + logo + nameLine + '</div>'
+      +   desc
+      +   (links ? '<div style="margin-top:4px;">' + links + '</div>' : '')
+      + '</div>'
+      + '<div class="finance-card"><div class="finance-card-title">시장 지표</div>' + rowHtml(rows1) + '</div>'
+      + '<div class="finance-card"><div class="finance-card-title">기간별 수익률</div>' + rowHtml(rows2) + '</div>'
+      + '<div class="finance-card"><div class="finance-card-title">최고·최저가</div>' + rowHtml(rows3) + '</div>'
+      + '<div style="font-size:9px;color:#555;text-align:right;margin-top:8px;">Data: CoinGecko</div>';
+  }
+  window._renderCryptoInfo = _renderCryptoInfo;
+
   window.loadFinanceData = function (ticker, market) {
     if (!ticker) return;
+
+    // ── 코인 분기: 재무제표 대신 시장 지표 / 코인 메타데이터 ────────────
+    if (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT') {
+      var loadingEl = document.getElementById('finance-loading');
+      var contentEl = document.getElementById('finance-content');
+      if (loadingEl) loadingEl.style.display = 'flex';
+      if (contentEl) contentEl.innerHTML = '';
+      fetch('/api/crypto/info/' + encodeURIComponent(ticker)
+            + '?market=' + encodeURIComponent(market))
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (info) {
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (!info) {
+            if (contentEl) contentEl.innerHTML = '<div class="info-empty">코인 정보 없음</div>';
+            return;
+          }
+          _updateInfoPanelHeader(ticker, info.name_ko || info.name);
+          if (contentEl) _renderCryptoInfo(info, contentEl);
+        })
+        .catch(function () {
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) contentEl.innerHTML = '<div class="info-empty">코인 정보 로드 실패</div>';
+        });
+      return;
+    }
+
     if (market && market !== 'KR') {
       document.getElementById('finance-content').innerHTML =
         '<div class="info-empty">재무 데이터는 KR 종목만 지원합니다.</div>';
@@ -2679,9 +2827,21 @@ function _escHtml(s) {
 
     window.loadDetailedFinancials = function (ticker, market) {
       if (!ticker) return;
-      if (market && market !== 'KR') {
+      // 코인은 재무제표 대신 토큰 정보(개요와 동일 데이터) 표시
+      if (market === 'CRYPTO_KRW' || market === 'CRYPTO_USDT') {
         var wrap = document.getElementById('detfin-table-wrap');
-        if (wrap) wrap.innerHTML = '<div class="info-empty">상세 재무제표는 KR 종목만 지원합니다.</div>';
+        if (wrap) {
+          wrap.innerHTML = '<div style="padding:20px;text-align:center;color:#8C95A8;font-size:12px;">'
+            + '코인은 재무제표 대신 <strong style="color:#5BFFC6;">개요</strong> 탭의<br>'
+            + '시장 지표 / 발행량 / 수익률을 확인하세요.<br><br>'
+            + '<small style="color:#555;">발행기관(예: 비트코인은 분산형 네트워크)에<br>중앙 회계 보고가 없는 자산 특성상<br>전통적 재무제표가 존재하지 않습니다.</small>'
+            + '</div>';
+        }
+        return;
+      }
+      if (market && market !== 'KR') {
+        var wrap2 = document.getElementById('detfin-table-wrap');
+        if (wrap2) wrap2.innerHTML = '<div class="info-empty">상세 재무제표는 KR 종목만 지원합니다.</div>';
         return;
       }
       _loadDetailed(ticker, _detfinReport);
