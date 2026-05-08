@@ -427,6 +427,17 @@ async def notices_page(request: Request):
     return templates.TemplateResponse("notices.html", {"request": request})
 
 
+@app.get("/qna", response_class=HTMLResponse)
+async def qna_page(request: Request):
+    return templates.TemplateResponse("qna.html", {"request": request})
+
+
+@app.get("/faq", response_class=HTMLResponse)
+async def faq_page_alias(request: Request):
+    """`/faq` → `/qna` 별칭."""
+    return templates.TemplateResponse("qna.html", {"request": request})
+
+
 @app.get("/news", response_class=HTMLResponse)
 async def news_page(request: Request):
     return templates.TemplateResponse("news.html", {"request": request})

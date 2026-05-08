@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PKQR1QHPH9"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PKQR1QHPH9');
+  </script>
+  <!-- End Google tag -->
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1328581051952921"
+       crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q&amp;A · 자주 묻는 질문 — Draw2Trade</title>
+  <meta name="description" content="Draw2Trade 서비스 소개, 자본시장법상 법적 지위, 데이터 출처, 요금제, 기능에 대한 자주 묻는 질문과 답변">
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <script src="/static/js/i18n.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg0:#06070A;
+      --teal:#5BFFC6;
+      --teal2:#A8FFE0;
+      --tealDim:rgba(91,255,198,0.55);
+      --tealGlow:rgba(91,255,198,0.18);
+      --orange:#FF9F5B;
+      --fg0:#FAFBFC;
+      --fg1:rgba(250,251,252,0.78);
+      --fg2:rgba(250,251,252,0.55);
+      --fg3:rgba(250,251,252,0.35);
+      --border1:rgba(255,255,255,0.08);
+      --border2:rgba(255,255,255,0.14);
+      --font:'Space Grotesk','Pretendard Variable','Pretendard',system-ui,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{margin:0;padding:0;background:var(--bg0);color:var(--fg1);font-family:var(--font);-webkit-font-smoothing:antialiased}
+    body{
+      min-height:100vh;line-height:1.6;font-size:13px;
+      background:
+        radial-gradient(ellipse 60% 50% at 30% 10%, rgba(91,255,198,0.06), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(91,141,255,0.04), transparent 70%),
+        var(--bg0);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:
+        linear-gradient(rgba(91,255,198,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,255,198,0.035) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
+      -webkit-mask-image:radial-gradient(circle at 50% 30%, #000 30%, transparent 80%);
+    }
+
+    /* ── 통일 네비게이션 ─────────── */
+    .d2t-nav{
+      position:sticky;top:0;z-index:100;height:46px;
+      background:rgba(6,7,10,0.72);
+      backdrop-filter:blur(18px) saturate(140%);
+      -webkit-backdrop-filter:blur(18px) saturate(140%);
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      display:flex;align-items:center;padding:0 20px;gap:0;
+      box-sizing:border-box;
+    }
+    .d2t-brand{
+      font-family:var(--font);font-size:16px;font-weight:800;
+      color:#ff6b35;letter-spacing:-0.2px;
+      text-decoration:none;display:flex;align-items:center;gap:8px;white-space:nowrap;
+      flex-shrink:0;margin-right:16px;
+    }
+    .d2t-brand img{height:24px;width:24px;object-fit:contain}
+    .d2t-nav-sep{width:1px;height:16px;background:#3f3f46;flex-shrink:0;margin:0 20px 0 0}
+    .d2t-nav-tabs{display:flex;align-items:center;gap:30px;flex-shrink:0}
+    .nav-spacer{flex:1;min-width:0}
+    .nav-link{
+      font-size:14px;font-weight:500;color:#8C95A8;text-decoration:none;
+      background:none;border:none;border-bottom:2px solid transparent;
+      padding:0;margin:0;white-space:nowrap;
+      transition:color .15s,border-color .15s;
+      line-height:46px;display:inline-block;letter-spacing:0;
+    }
+    .nav-link:hover{color:#C9CFDA;border-bottom-color:#3f3f46}
+    .nav-link.active{color:#5BFFC6;border-bottom:2px solid #5BFFC6;font-weight:700}
+
+    /* 페이지 */
+    .page-wrap{position:relative;z-index:1;max-width:880px;margin:0 auto;padding:48px 22px 80px}
+    .page-label{
+      font-size:10px;font-weight:600;letter-spacing:0.18em;
+      color:var(--teal);text-transform:uppercase;margin-bottom:12px;
+      font-family:var(--mono);
+    }
+    .page-title{font-size:clamp(28px,4.4vw,40px);font-weight:600;letter-spacing:-0.025em;color:#fff;margin-bottom:10px}
+    .page-desc{font-size:13px;color:var(--fg2);margin-bottom:32px}
+
+    /* 카테고리 필터 */
+    .filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+    .filter-tab{
+      padding:6px 14px;border-radius:999px;font-size:12px;font-weight:500;letter-spacing:0.02em;
+      border:1px solid var(--border2);background:rgba(255,255,255,0.03);
+      color:var(--fg2);cursor:pointer;font-family:var(--font);
+      transition:all .18s ease;
+    }
+    .filter-tab:hover{border-color:var(--tealDim);color:var(--teal)}
+    .filter-tab.active{border-color:var(--tealDim);color:var(--teal);background:rgba(91,255,198,0.08);box-shadow:0 0 16px rgba(91,255,198,0.12)}
+
+    /* 섹션 */
+    .qna-section{margin-bottom:36px}
+    .qna-section-title{
+      font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+      color:var(--teal);margin-bottom:14px;font-family:var(--mono);
+      display:flex;align-items:center;gap:10px;
+    }
+    .qna-section-title::before{
+      content:"";width:5px;height:5px;border-radius:50%;background:var(--teal);
+      box-shadow:0 0 8px rgba(91,255,198,0.5);
+    }
+
+    /* Q&A 카드 (accordion) */
+    details.qna-card{
+      background:rgba(255,255,255,0.025);
+      border:1px solid var(--border1);
+      border-radius:14px;margin-bottom:10px;
+      transition:border-color .18s ease,background .18s ease;
+      overflow:hidden;
+    }
+    details.qna-card[open]{
+      border-color:var(--tealDim);
+      background:rgba(91,255,198,0.04);
+      box-shadow:0 0 24px rgba(91,255,198,0.06);
+    }
+    details.qna-card summary{
+      cursor:pointer;padding:18px 22px;
+      list-style:none;outline:none;
+      display:flex;align-items:flex-start;gap:14px;
+      font-size:14px;font-weight:600;color:#fff;letter-spacing:-0.005em;line-height:1.5;
+      transition:color .15s ease;
+    }
+    details.qna-card summary::-webkit-details-marker{display:none}
+    details.qna-card summary:hover{color:var(--teal)}
+    .q-mark{
+      flex-shrink:0;
+      width:22px;height:22px;border-radius:6px;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(91,255,198,0.12);color:var(--teal);
+      font-family:var(--mono);font-size:11px;font-weight:700;
+      margin-top:1px;
+    }
+    .q-text{flex:1}
+    .q-arrow{
+      flex-shrink:0;color:var(--fg3);font-size:14px;
+      transition:transform .2s ease,color .15s ease;
+      margin-top:2px;
+    }
+    details[open] .q-arrow{transform:rotate(90deg);color:var(--teal)}
+
+    .qna-body{
+      padding:0 22px 20px 58px;
+      font-size:13px;color:var(--fg1);line-height:1.85;
+    }
+    .qna-body p{margin-bottom:10px}
+    .qna-body p:last-child{margin-bottom:0}
+    .qna-body strong{color:var(--teal2);font-weight:600}
+    .qna-body code{
+      font-family:var(--mono);font-size:12px;
+      background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px;
+      color:var(--orange);
+    }
+    .qna-body ul{margin:8px 0 10px 18px}
+    .qna-body li{margin-bottom:4px}
+    .qna-body table{
+      width:100%;margin:10px 0;font-size:12px;
+      border-collapse:collapse;
+    }
+    .qna-body th{
+      text-align:left;padding:8px 10px;
+      background:rgba(91,255,198,0.06);color:var(--teal);font-weight:600;
+      border-bottom:1px solid var(--border1);
+    }
+    .qna-body td{
+      padding:8px 10px;border-bottom:1px solid var(--border1);color:var(--fg1);
+    }
+    .qna-callout{
+      background:rgba(255,159,91,0.06);
+      border-left:3px solid var(--orange);
+      padding:10px 14px;border-radius:6px;
+      margin:10px 0;color:var(--fg1);
+    }
+    .qna-callout strong{color:var(--orange)}
+
+    footer{
+      position:relative;z-index:1;
+      padding:36px 24px;text-align:center;color:var(--fg3);font-size:11px;
+      border-top:1px solid var(--border1);line-height:1.9;
+    }
+    footer a{color:var(--fg2);text-decoration:none;transition:color .15s ease}
+    footer a:hover{color:var(--teal)}
+
+    @media (max-width:600px){
+      .d2t-nav{padding:0 14px;height:44px}
+      .d2t-brand{font-size:14px;gap:6px;margin-right:12px}
+      .d2t-brand img{height:20px;width:20px}
+      .d2t-nav-tabs{gap:18px}
+      .d2t-nav-sep{margin:0 12px 0 0}
+      .nav-link{font-size:12px;line-height:44px}
+      .page-wrap{padding:32px 16px 60px}
+      details.qna-card summary{padding:14px 16px;font-size:13px}
+      .qna-body{padding:0 16px 18px 46px}
+      .qna-body table{font-size:11px}
+      .qna-body th,.qna-body td{padding:6px 8px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 네비게이션 ───────────────────────────────── -->
+<nav class="d2t-nav">
+  <a href="/" class="d2t-brand">
+    <img src="/static/img/logo.png" alt="Draw2Trade" onerror="this.src='/static/img/favicon.svg'">
+    Draw2Trade
+  </a>
+  <span class="d2t-nav-sep"></span>
+  <div class="d2t-nav-tabs">
+    <a href="/market"  class="nav-link">시장</a>
+    <a href="/news"    class="nav-link">뉴스</a>
+    <a href="/feed"    class="nav-link">피드</a>
+    <a href="/notices" class="nav-link">공지</a>
+    <a href="/qna"     class="nav-link active">Q&amp;A</a>
+    <a href="/pricing" class="nav-link">요금제</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <a href="/app" class="nav-link">차트 앱 →</a>
+</nav>
+
+<!-- ── 본문 ─────────────────────────────────────── -->
+<div class="page-wrap">
+  <div class="page-label">FAQ · 자주 묻는 질문</div>
+  <h1 class="page-title">Q&amp;A · 알아두면 좋은 정보</h1>
+  <p class="page-desc">Draw2Trade가 제공하는 서비스의 성격, 법적 지위, 데이터 출처, 요금제, 핵심 기능에 대한 답변을 정리했습니다.</p>
+
+  <!-- 카테고리 필터 -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" onclick="filterCat('all', this)">전체</button>
+    <button class="filter-tab" onclick="filterCat('service', this)">서비스</button>
+    <button class="filter-tab" onclick="filterCat('legal', this)">법적 지위</button>
+    <button class="filter-tab" onclick="filterCat('data', this)">데이터</button>
+    <button class="filter-tab" onclick="filterCat('pricing', this)">요금·결제</button>
+    <button class="filter-tab" onclick="filterCat('feature', this)">기능</button>
+  </div>
+
+  <!-- ════════════════ 서비스 ════════════════ -->
+  <section class="qna-section" data-cat="service">
+    <h2 class="qna-section-title">서비스 소개</h2>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">Draw2Trade는 어떤 서비스인가요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>Draw2Trade는 사용자가 차트 위에 직접 그린 가격 패턴(곡선)과 가장 유사한 과거 종목·구간을 통계적으로 찾아주는 <strong>차트 패턴 매칭 도구</strong>입니다.</p>
+        <p>본질은 <strong>"패턴 검색 엔진 + 시각화 도구"</strong>이며, 투자 자문이나 매매 추천 서비스가 아닙니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">어떤 사람들에게 유용한가요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>차트의 시각적 패턴(이중바닥·헤드앤숄더·삼각수렴 등)에 관심이 있는 투자자, 기술적 분석을 직접 학습하는 트레이더, 과거 사례 통계를 도구로 참고하고자 하는 사용자에게 유용합니다.</p>
+        <p>매매 의사결정은 항상 사용자 본인이 내리며, Draw2Trade는 <strong>분석을 보조하는 도구</strong>로 작동합니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">매매 시그널이나 종목 추천을 받을 수 있나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p><strong>제공하지 않습니다.</strong> Draw2Trade는 "지금 매수하세요" 같은 시점·종목 추천이나 시그널 메시지를 보내지 않습니다.</p>
+        <p>유사 종목 검색 결과는 <strong>"사용자가 그린 모양과 수학적으로 닮은 과거 사례"</strong> 일 뿐, 매수·매도 판단을 담고 있지 않습니다.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ════════════════ 법적 지위 ════════════════ -->
+  <section class="qna-section" data-cat="legal">
+    <h2 class="qna-section-title">법적 지위</h2>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">Draw2Trade는 자본시장법상 어떤 사업으로 분류되나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>Draw2Trade는 자본시장법상 <strong>투자자문업·유사투자자문업·투자일임업 어디에도 해당하지 않습니다.</strong></p>
+        <p>본질이 <strong>"사용자가 스스로 분석하는 데 사용하는 차트 도구·검색 엔진"</strong>이며, 특정 종목에 대한 투자판단(매매 시점·가격·종목)을 자문하지 않기 때문입니다. Microsoft Excel, TradingView, HTS(영웅문 등) 같은 분석 도구와 동일한 카테고리입니다.</p>
+        <div class="qna-callout">
+          <strong>참고:</strong> 본 답변은 자본시장법의 일반적 해석이며, 구체적 사업 운영에 대한 법적 자문은 변호사·법무법인의 자문을 권장합니다.
+        </div>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">"투자자문업"과 "유사투자자문업(=투자정보제공업)"이 정확히 무엇인가요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <table>
+          <tr><th>구분</th><th>정의</th><th>등록·신고</th></tr>
+          <tr>
+            <td><strong>투자자문업</strong><br><small>(자본시장법 §6)</small></td>
+            <td>특정 금융투자상품에 대한 투자판단(종목·매매 시점·가격 등)을 자문하는 영업</td>
+            <td>금융위 <strong>인가</strong> 필수</td>
+          </tr>
+          <tr>
+            <td><strong>유사투자자문업</strong><br><small>(=투자정보제공업, §101)</small></td>
+            <td>불특정 다수에게 정기·유료로 투자판단 자문이나 종목 추천을 제공하는 영업</td>
+            <td>금융위 <strong>신고</strong> 필수</td>
+          </tr>
+        </table>
+        <p>핵심은 <strong>"투자판단(매매 시점·종목·가격)에 대한 자문 제공"</strong> 여부입니다. Draw2Trade는 자문이나 추천을 하지 않고 사용자 분석 도구만 제공합니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">Draw2Trade는 왜 위 두 영역에 해당하지 않나요? (구체적 근거)</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>다음 7가지가 <strong>모두 부재</strong>하기 때문입니다:</p>
+        <ul>
+          <li>특정 종목 매수/매도 추천 — 없음</li>
+          <li>매매 시점·가격 자문 — 없음</li>
+          <li>목표 수익률·승률 약속 — 없음 (과거 통계만 표시)</li>
+          <li>회사가 작성한 종목 코멘터리·리포트 — 없음 (사용자가 직접 그림)</li>
+          <li>유료 시그널·VIP 채팅방 — 없음</li>
+          <li>불특정 다수에게 매매 추천 정기 발송 — 없음</li>
+          <li>사용자 자산 직접 운용 — 없음 (계좌 개입 없음)</li>
+        </ul>
+        <p>또한 자본시장법 시행령 제7조는 <strong>"통계자료·기술적 분석 결과 등 객관적 자료의 단순 제공"</strong>을 규제 대상에서 명시적으로 제외합니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">도구 결과를 보고 매매했다가 손실이 나면 회사가 책임지나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p><strong>책임은 전적으로 이용자 본인에게 있습니다.</strong></p>
+        <p>Draw2Trade는 차트앱 푸터에 다음과 같이 명시하고 있습니다:</p>
+        <div class="qna-callout">
+          본 서비스는 <strong>투자 참고용 정보 제공</strong>을 목적으로 하며, 투자 권유 또는 자본시장법상 투자자문에 해당하지 않습니다. 제공되는 패턴 유사도 분석은 <strong>과거 데이터 기반</strong>이며 미래 수익을 보장하지 않습니다. 투자 결과에 대한 책임은 전적으로 이용자에게 있습니다.
+        </div>
+        <p>엑셀로 주가를 분석한 사용자가 손실을 봤을 때 Microsoft가 책임지지 않는 것과 같은 원리입니다.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ════════════════ 데이터 ════════════════ -->
+  <section class="qna-section" data-cat="data">
+    <h2 class="qna-section-title">데이터 출처</h2>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">시세 데이터는 어디서 가져오나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <table>
+          <tr><th>마켓</th><th>거래소·출처</th><th>라이선스</th></tr>
+          <tr><td>KR (KOSPI/KOSDAQ)</td><td>KRX (한국거래소) · 공공데이터포털</td><td>공공데이터(상업 가능)</td></tr>
+          <tr><td>CRYPTO KRW</td><td>Upbit + Bithumb 통합 (거래량 큰 쪽 우선)</td><td>거래소 공식 무료 API</td></tr>
+          <tr><td>CRYPTO USDT</td><td>Binance USDT spot</td><td>거래소 공식 무료 API</td></tr>
+        </table>
+        <p>모든 시세는 거래소가 공개한 공식 API를 통해 수집되며, 차트 페이지 푸터에 출처를 명시합니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">실시간 시세인가요? 1일 지연이라는 표시가 보이는데?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>마켓별로 갱신 주기가 다릅니다:</p>
+        <ul>
+          <li><strong>KR (주식)</strong>: 종가 기준 차트(D+1 지연 가능). 장중 실시간 시세는 사용자의 증권사 HTS/MTS를 통해 확인하세요.</li>
+          <li><strong>CRYPTO (코인)</strong>: 24시간 거래되는 시장이므로 5초 간격으로 라이브 가격이 갱신됩니다.</li>
+        </ul>
+        <p>한국 주식 실시간 시세 라이선스(KOSCOM 등)는 별도의 정식 계약이 필요한 영역이며, 본 서비스는 패턴 매칭 도구라는 본질에 집중합니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">코인의 시가총액·발행량·로고 정보 출처는 어디인가요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p><strong>CoinGecko Public API</strong>를 사용합니다. 무료, 상업 이용 허용된 공개 데이터입니다. "종목 정보 보기" 패널 하단에 <code>Data: CoinGecko</code> 출처가 명시됩니다.</p>
+        <p>시장반응 탭의 메시지·sentiment 데이터는 <strong>StockTwits</strong>(무료, 상업 이용 가능 공개 API)를 사용합니다.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ════════════════ 요금·결제 ════════════════ -->
+  <section class="qna-section" data-cat="pricing">
+    <h2 class="qna-section-title">요금·결제</h2>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">PRO 요금제는 무엇을 제공하나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>PRO는 <strong>도구 기능 사용권</strong>을 확장합니다. 자세한 항목은 <a href="/pricing" style="color:var(--teal)">요금제 페이지</a>에서 확인하실 수 있습니다.</p>
+        <p>대표적인 차이는: 유사 종목 검색 결과 수 확장, 자동 분석(Auto-Analysis) 기능, 우선 응답 등입니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">PRO 결제 시 자문 서비스가 제공되나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p><strong>아닙니다.</strong> PRO는 도구 사용권 결제이며, 회사가 사용자에게 매매 추천이나 투자판단 자문을 보내지 않습니다.</p>
+        <p>Adobe Photoshop의 유료 구독이 사용자에게 디자인 의견을 보내지 않는 것과 같은 모델입니다. PRO 사용자 역시 분석과 판단은 본인이 수행합니다.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ════════════════ 기능 ════════════════ -->
+  <section class="qna-section" data-cat="feature">
+    <h2 class="qna-section-title">기능 / 알고리즘</h2>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">"유사 종목 검색"은 어떤 알고리즘으로 작동하나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>다음 3단계로 작동합니다:</p>
+        <ul>
+          <li>① 사용자가 그린 곡선을 0~1 범위로 정규화</li>
+          <li>② 후보 종목들의 과거 가격 시계열에서 길이별로 슬라이딩 윈도우를 만들어 동일하게 정규화</li>
+          <li>③ 형태 유사도 점수(피어슨 상관·모양 가중치·변동성 가중치 등 결합)를 계산해 상위 결과 반환</li>
+        </ul>
+        <p>본질적으로 <strong>이미지 유사도 검색을 시계열에 적용한 것</strong>이며, 결과는 "닮은 과거 사례"이지 "미래 예측"이 아닙니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">"패턴 매칭"이 미래 수익을 보장하나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p><strong>보장하지 않습니다.</strong> 과거의 유사 패턴이 미래에도 같은 방향으로 움직인다는 보장은 어떤 시장에도 존재하지 않습니다.</p>
+        <p>유사 종목 결과는 "이런 모양은 과거에 N번 나타났고 그 뒤로 평균 X% 움직였다"는 <strong>과거 통계</strong>일 뿐, 미래 가격을 예측·약속하는 것이 아닙니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">"자동 분석"은 어떤 기능인가요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <p>차트에서 사용자가 시작 날짜 한 점만 클릭하면, 그 시점부터 오늘까지의 가격 흐름을 자동으로 패턴화하여 유사 종목 검색의 입력으로 사용하는 PRO 기능입니다.</p>
+        <p>"종목을 추천하는" 기능이 아니라 "사용자가 직접 그리는 패턴 그리기 단계를 자동화"하는 도구입니다.</p>
+      </div>
+    </details>
+
+    <details class="qna-card">
+      <summary><span class="q-mark">Q</span><span class="q-text">차트 데이터는 얼마나 과거까지 제공되나요?</span><span class="q-arrow">▶</span></summary>
+      <div class="qna-body">
+        <ul>
+          <li><strong>KR 주식</strong>: 약 5년치 일봉 (월·주봉 자동 집계)</li>
+          <li><strong>CRYPTO (KRW/USDT)</strong>: 약 5년치 일봉 — 2021년 5월부터 현재까지의 사이클 전체 포함</li>
+        </ul>
+        <p>월봉 모드에서 BTC는 2021년 강세장 → 2022년 베어마켓 → 2024년 ATH → 2026년 조정의 전체 사이클을 한 화면에서 비교할 수 있습니다.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 추가 문의 -->
+  <div style="margin-top:48px;padding:24px;background:rgba(255,255,255,0.025);border:1px solid var(--border1);border-radius:14px;text-align:center;">
+    <p style="font-size:14px;color:var(--fg1);margin-bottom:6px;font-weight:600;">여기서 답을 찾지 못하셨나요?</p>
+    <p style="font-size:12px;color:var(--fg2);margin-bottom:16px;">아래 이메일로 문의 주시면 빠르게 답변드리겠습니다.</p>
+    <a href="mailto:isuwon1125@gmail.com" style="display:inline-block;padding:10px 20px;background:linear-gradient(180deg, var(--teal), #4FE6B3);color:#001810;font-size:13px;font-weight:700;border-radius:8px;text-decoration:none;box-shadow:0 6px 20px rgba(91,255,198,0.22);">isuwon1125@gmail.com</a>
+  </div>
+</div>
+
+<footer>
+  © 2026 Draw2Trade. All rights reserved.<br>
+  본 서비스는 투자자문업·유사투자자문업·투자일임업이 아니며, 차트 패턴 매칭 도구입니다.<br>
+  데이터 출처: KRX · Upbit · Bithumb · Binance · CoinGecko · StockTwits
+</footer>
+
+<script>
+  function filterCat(cat, btn) {
+    document.querySelectorAll('.filter-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.qna-section').forEach(function (s) {
+      s.style.display = (cat === 'all' || s.dataset.cat === cat) ? '' : 'none';
+    });
+  }
+  // 첫 카드 1개 자동 펼침 (사용자 가이드)
+  var firstCard = document.querySelector('details.qna-card');
+  if (firstCard) firstCard.open = true;
+</script>
+
+</body>
+</html>
