@@ -23,6 +23,7 @@
     'nav.news':     { ko: '뉴스',   en: 'News'      },
     'nav.feed':     { ko: '피드',   en: 'Feed'      },
     'nav.notices':  { ko: '공지',   en: 'Notices'   },
+    'nav.qna':      { ko: 'Q&A',    en: 'Q&A'       },
     'nav.pricing':  { ko: '요금제', en: 'Pricing'   },
     'nav.contact':  { ko: '문의',   en: 'Contact'   },
     'nav.login':    { ko: '로그인', en: 'Sign In'   },
