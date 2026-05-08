@@ -710,9 +710,12 @@
               scrollOffset = -(validCandles.length - 1 - matchCenter) + halfVisible;
             }
 
-            // ── 매칭 구간 Y축 로버스트 범위 계산(분위수 기반) ─────────
-            // 권리락/장중 스파이크로 전체 Y축이 왜곡되지 않도록, 매칭 구간
-            // 캔들의 low/high 각각을 정렬해 중앙 95% 분위수를 사용.
+            // ── 매칭 구간 Y축 범위 계산 ──────────────────────────────────
+            // 점선(0~1 정규화 패턴) 을 차트 가격으로 역정규화할 때, 캔들 close
+            // 라인과 정확히 겹치도록 close 값의 실제 min/max 를 사용.
+            // (이전 분위수 기반은 작은 절대값/단조 패턴에서 점선이 캔들 위/아래로 떠 보였음)
+            var closes = filtered.map(function (c) { return c.close; })
+                                 .filter(function (v) { return isFinite(v) && v > 0; });
             var highs = filtered.map(function (c) { return c.high; })
                                 .filter(function (v) { return isFinite(v) && v > 0; })
                                 .sort(function (a, b) { return a - b; });
@@ -725,6 +728,10 @@
               var idx = Math.min(arr.length - 1, Math.max(0, Math.round((arr.length - 1) * p)));
               return arr[idx];
             }
+            // close 실제 min/max — 점선이 캔들 close 라인을 정확히 추적
+            var closeMin = closes.length ? Math.min.apply(null, closes) : 0;
+            var closeMax = closes.length ? Math.max.apply(null, closes) : 1;
+            // winsorize용 분위수 (이상치 캔들 클립용)
             var q_lo, q_hi;
             if (lows.length && highs.length) {
               q_lo = _pct(lows,  0.025);
@@ -734,24 +741,29 @@
                 q_hi = highs[highs.length - 1];
               }
             } else {
-              q_lo = 0; q_hi = 100;
+              q_lo = closeMin; q_hi = closeMax;
             }
-            var finalMin = Math.max(0, q_lo);
-            var finalMax = q_hi;
+            // finalMin/Max = 점선 환산용 (close 기준), winsorize 는 별도
+            var finalMin = closeMin;
+            var finalMax = closeMax;
+            // 정렬 안전: max <= min 이면 약간 확장
+            if (finalMax <= finalMin) finalMax = finalMin + Math.max(1, Math.abs(finalMin) * 0.01);
 
-            // ── 매칭 구간 캔들 winsorize ────────────────────────────────
-            // 범위 밖(이상치) 캔들만 low/high/open/close를 finalMin~finalMax로 클립.
+            // ── 매칭 구간 캔들 winsorize (이상치 클립, 분위수 기준) ─────
+            // 범위 밖(이상치) 캔들만 low/high/open/close를 q_lo~q_hi로 클립.
             // 범위 내 캔들은 원본 그대로. 매칭 구간 밖은 전부 원본.
+            var winLo = isFinite(q_lo) ? q_lo : finalMin;
+            var winHi = isFinite(q_hi) ? q_hi : finalMax;
             displayCandles = validCandles.map(function (c, idx) {
               if (idx < fromIdx || idx > toIdx) return c;
-              if (c.low >= finalMin && c.high <= finalMax &&
-                  c.open >= finalMin && c.open <= finalMax &&
-                  c.close >= finalMin && c.close <= finalMax) {
+              if (c.low >= winLo && c.high <= winHi &&
+                  c.open >= winLo && c.open <= winHi &&
+                  c.close >= winLo && c.close <= winHi) {
                 return c;
               }
               function _clip(v) {
                 if (!isFinite(v)) return v;
-                return Math.min(finalMax, Math.max(finalMin, v));
+                return Math.min(winHi, Math.max(winLo, v));
               }
               return {
                 time:   c.time,
