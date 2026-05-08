@@ -912,7 +912,9 @@
           searchInp.value = '';
         }
 
-        // 3) 헤더바는 실시간 데이터 수신 후 표시 (prevClose 확정 후)
+        // 3) 헤더바 가격/등락률/거래량을 결과 종목 데이터로 즉시 갱신
+        //    (loadResultChart 는 _onChartLoaded 를 호출하지 않으므로 명시적으로 갱신)
+        try { _initHeaderBar(D2T.candles); } catch (_) {}
 
         // 4) 유사종목 결과 로드: 우측 FIW + 중앙 정보 오버레이(재무제표 등) 갱신
         //    _onChartLoaded 전체(_realtime 재구독 포함)는 호출하지 않음 — 원본 종목 실시간 유지
@@ -1437,7 +1439,7 @@
           var tfPct = ((close - first.close) / first.close * 100).toFixed(2);
           var tfSign = tfPct >= 0 ? '+' : '';
           var tfLabel = TF_LABELS[D2T.timeframe] || D2T.timeframe;
-          html += '&ensp;<span style="font-size:11px;color:#888;">'
+          html += '&ensp;<span style="font-size:11px;color:#c0c5d0;">'
             + tfLabel + '&nbsp;' + tfSign + tfPct + '%</span>';
         }
       }

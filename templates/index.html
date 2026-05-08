@@ -1148,11 +1148,11 @@ D2T_I18N.add({
       var color = TYPE_COLOR[n.type] || TYPE_COLOR.notice;
       var label = TYPE_LABEL[n.type] || '공지';
       var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:5px;background:#0f1320;border:1px solid #1e2535;border-radius:4px;padding:3px 7px 3px 6px;white-space:nowrap;max-width:240px;cursor:pointer;';
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;background:#1a1f2e;border:1px solid #2a3549;border-radius:4px;padding:3px 7px 3px 6px;white-space:nowrap;max-width:240px;cursor:pointer;';
       item.innerHTML =
-        '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid ' + color + '40;background:' + color + '20;color:' + color + ';flex-shrink:0;">' + label + '</span>' +
-        '<span style="font-size:11px;color:#c8ccd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + escHtml(n.title) + '</span>' +
-        '<button style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px 0 4px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
+        '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid ' + color + '60;background:' + color + '30;color:' + color + ';flex-shrink:0;">' + label + '</span>' +
+        '<span style="font-size:11px;color:#ffffff;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + escHtml(n.title) + '</span>' +
+        '<button style="background:none;border:none;color:#aaa;font-size:11px;cursor:pointer;flex-shrink:0;padding:0 2px 0 4px;line-height:1;" title="닫기" data-nid="' + n.id + '">✕</button>';
       item.querySelector('button').addEventListener('click', function (e) {
         e.stopPropagation();
         sessionStorage.setItem(dismissKey(parseInt(this.getAttribute('data-nid'), 10)), '1');
