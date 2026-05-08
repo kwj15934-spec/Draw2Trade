@@ -64,6 +64,8 @@
     for (var i = 0; i < nodes.length; i++) {
       var el  = nodes[i];
       var key = el.getAttribute('data-i18n');
+      // 사전에 키가 없으면 기존 HTML/텍스트를 그대로 두어 raw 키 노출 방지
+      if (!DICT[key]) continue;
       var val = get(key);
       if (el.hasAttribute('data-i18n-html')) {
         el.innerHTML = val;
