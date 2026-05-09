@@ -612,6 +612,34 @@
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
+  // ── 드로잉 상태 export/restore — chart.js 의 backToOrigin 에서 사용 ──────
+  window.exportDrawState = function () {
+    return {
+      drawPoints:           drawPoints.slice(),
+      parallelChannels:     parallelChannels.slice(),
+      drawChartCoords:      _drawChartCoords ? _drawChartCoords.slice() : null,
+      parallelChartCoords:  _parallelChartCoords.slice(),
+      autoMeta:             _autoMeta ? Object.assign({}, _autoMeta) : null,
+    };
+  };
+
+  window.restoreDrawState = function (state) {
+    if (!state) return;
+    drawPoints           = (state.drawPoints || []).slice();
+    parallelChannels     = (state.parallelChannels || []).slice();
+    _drawChartCoords     = state.drawChartCoords || null;
+    _parallelChartCoords = (state.parallelChartCoords || []).slice();
+    _autoMeta            = state.autoMeta || null;
+    trendPoints          = [];
+    linePoints           = [];
+    parallelPoints       = [];
+    matchPoints          = null;     // 매칭 점선은 결과 차트용이라 원본에선 제거
+    drawNormalized       = null;
+    if (D2T && D2T.series) try { D2T.series.setMarkers([]); } catch (_) {}
+    if (D2T) D2T.matchPeriodData = null;
+    if (typeof redraw === 'function') redraw();
+  };
+
   // ── 폴리라인 → 150포인트 변환 (추세선용) ─────────────────────────────────
   /**
    * 여러 점으로 이루어진 폴리라인을 경로 길이 기준으로

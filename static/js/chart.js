@@ -592,14 +592,22 @@
     _removePatternSeries();
     _hidePatternMiniChart();
 
-    // 원본 상태 저장 (처음 결과 로드 시에만)
+    // 원본 상태 저장 (처음 결과 로드 시에만) — 헤더 종목명 + 드로잉도 함께 저장
     if (!D2T.originState && D2T.ticker && D2T.candles) {
       var origLabel = document.getElementById('chart-ticker-label');
+      var origThbName     = document.getElementById('thb-name');
+      var origThbFullname = document.getElementById('thb-fullname');
       D2T.originState = {
-        ticker:    D2T.ticker,
-        candles:   D2T.candles.slice(),
-        timeframe: D2T.timeframe,
-        labelText: origLabel ? origLabel.textContent : D2T.ticker,
+        ticker:      D2T.ticker,
+        candles:     D2T.candles.slice(),
+        timeframe:   D2T.timeframe,
+        prevClose:   D2T.prevClose || 0,
+        labelText:   origLabel ? origLabel.textContent : D2T.ticker,
+        // 헤더 종목명/티커 — backToOrigin 시 thb-name / thb-fullname 복원
+        thbName:     origThbName ? origThbName.textContent : '',
+        thbFullname: origThbFullname ? origThbFullname.textContent : '',
+        // 사용자가 그렸던 패턴 보존 — '내 차트로' 시 화면에 그대로 복원
+        drawState:   (typeof window.exportDrawState === 'function') ? window.exportDrawState() : null,
       };
     }
 
@@ -975,6 +983,11 @@
     D2T.matchPeriodData = null;
     var label = document.getElementById('chart-ticker-label');
     if (label) label.textContent = o.labelText;
+    // 헤더 종목명/티커 복원 — 결과 차트에서 잔류하던 thb-name/thb-fullname 갱신
+    var thbName = document.getElementById('thb-name');
+    if (thbName && o.thbName) thbName.textContent = o.thbName;
+    var thbFullname = document.getElementById('thb-fullname');
+    if (thbFullname && o.thbFullname) thbFullname.textContent = o.thbFullname;
     _initHeaderBar(o.candles);
     D2T.originState = null;
     var backBtn = document.getElementById('btn-back-to-origin');
@@ -985,8 +998,13 @@
       window._onChartLoaded(o.ticker, D2T.market || 'KR');
     }
 
-    // 이전 패턴/매칭 오버레이 전부 정리 (원본 캔들 축과 맞지 않아 화면이 깨짐)
-    if (typeof window.clearDraw === 'function') window.clearDraw();
+    // 매칭 비교 시리즈는 위에서 _removePatternSeries 로 이미 제거됨.
+    // 사용자가 그렸던 원본 패턴은 복원 (clearDraw 대신).
+    if (o.drawState && typeof window.restoreDrawState === 'function') {
+      window.restoreDrawState(o.drawState);
+    } else if (typeof window.clearDraw === 'function') {
+      window.clearDraw();
+    }
   };
 
   // ── 종목 드롭다운 로딩 ────────────────────────────────────────────────────
