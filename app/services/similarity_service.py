@@ -415,10 +415,16 @@ def search_similar(
                 continue
 
         # ── 날짜 범위 지정 모드 ────────────────────────────────────────────
+        # date_from/date_to 가 "YYYY-MM" (월봉/주봉 검색) 또는 "YYYY-MM-DD" (일봉 검색) 양쪽 지원.
+        # "YYYY-MM" 일 때 prefix 비교로 해당 월 전체 캔들 포함. (이전: lex 비교로 "2024-05-31" <= "2024-05"
+        # 가 False 되어 그 달의 캔들이 모두 누락되던 버그)
         if use_date_range:
+            df_len = len(date_from) if date_from else 0
+            dt_len = len(date_to)   if date_to   else 0
             indices = [
                 i for i, d in enumerate(dates)
-                if (not date_from or d >= date_from) and (not date_to or d <= date_to)
+                if (not date_from or d[:df_len] >= date_from)
+                and (not date_to   or d[:dt_len] <= date_to)
             ]
             if len(indices) < 2:
                 continue
