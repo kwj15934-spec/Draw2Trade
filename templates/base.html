@@ -2636,9 +2636,11 @@
       text-overflow: ellipsis;
       /* 토스 스타일 — UPPERCASE 제거, 자연스러운 한글 */
     }
-    /* 드롭 위치 미리보기 — 드래그 중인 카드의 대상 위/아래 표시 */
+    /* 드롭 위치 미리보기 — 4 방향 모두 지원 (multi-column grid) */
     .widget-card.drag-over-top    { box-shadow: 0 -3px 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
     .widget-card.drag-over-bottom { box-shadow:  0 3px 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
+    .widget-card.drag-over-left   { box-shadow: -3px 0 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
+    .widget-card.drag-over-right  { box-shadow:  3px 0 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
     .widget-card.dragging { opacity: 0.5; transform: scale(0.97); transition: transform .15s ease, opacity .15s ease; }
     .widget-card.collapsed .widget-title { color: #8C95A8; }
     .widget-control {

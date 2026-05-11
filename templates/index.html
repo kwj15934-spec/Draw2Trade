@@ -3490,11 +3490,28 @@ function _escHtml(s) {
     header.addEventListener('dragend', function () {
       if (dragSrc) dragSrc.classList.remove('dragging');
       document.querySelectorAll('.widget-card').forEach(function (c) {
-        c.classList.remove('drag-over-top', 'drag-over-bottom');
+        c.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-left', 'drag-over-right');
       });
       dragSrc = null;
     });
   });
+
+  // 대상 카드 + 마우스 좌표 → 'before' 여부 + 시각 피드백 클래스 결정 (4방향).
+  // 마우스가 카드 중심에서 가로 거리(dx) 가 세로 거리(dy) 보다 크면 좌/우 모드,
+  // 그렇지 않으면 상/하 모드 — multi-column grid 에서도 자연스러운 swap.
+  function _computeDropPosition(target, mouseX, mouseY) {
+    var rect = target.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top  + rect.height / 2;
+    var dx = mouseX - cx;
+    var dy = mouseY - cy;
+    var horizontal = Math.abs(dx) > Math.abs(dy);
+    if (horizontal) {
+      return { before: dx < 0, cls: dx < 0 ? 'drag-over-left'  : 'drag-over-right' };
+    } else {
+      return { before: dy < 0, cls: dy < 0 ? 'drag-over-top'   : 'drag-over-bottom' };
+    }
+  }
 
   var container = document.getElementById('widget-container');
   if (container) {
@@ -3504,22 +3521,20 @@ function _escHtml(s) {
       try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
       var target = e.target.closest('.widget-card');
       container.querySelectorAll('.widget-card').forEach(function (c) {
-        c.classList.remove('drag-over-top', 'drag-over-bottom');
+        c.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-left', 'drag-over-right');
       });
       if (!target || target === dragSrc) return;
-      var rect = target.getBoundingClientRect();
-      var before = (e.clientY - rect.top) < (rect.height / 2);
-      target.classList.add(before ? 'drag-over-top' : 'drag-over-bottom');
+      var pos = _computeDropPosition(target, e.clientX, e.clientY);
+      target.classList.add(pos.cls);
     });
     container.addEventListener('drop', function (e) {
       if (!dragSrc) return;
       e.preventDefault();
       var target = e.target.closest('.widget-card');
       if (!target || target === dragSrc) return;
-      var rect = target.getBoundingClientRect();
-      var before = (e.clientY - rect.top) < (rect.height / 2);
-      if (before) container.insertBefore(dragSrc, target);
-      else        container.insertBefore(dragSrc, target.nextSibling);
+      var pos = _computeDropPosition(target, e.clientX, e.clientY);
+      if (pos.before) container.insertBefore(dragSrc, target);
+      else            container.insertBefore(dragSrc, target.nextSibling);
       persist();
     });
   }
