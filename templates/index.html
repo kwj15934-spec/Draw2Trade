@@ -3490,26 +3490,13 @@ function _escHtml(s) {
     });
   });
 
-  // 대상 카드 + 마우스 좌표 → 'before' 여부 + 시각 피드백 클래스 결정 (4방향).
-  // 가장자리 hit zone 방식: 카드 좌/우 가장자리 30% 영역에 들어오면 좌/우 모드 강제,
-  // 나머지 가운데 40% 영역에선 Y 축 기준으로 상/하 모드.
-  // → 세로로 긴 카드여도 좌우 드롭 민감도 충분.
+  // column-count masonry 에선 카드가 column 안에서 자연 흐름 → Y축 상/하만 의미.
+  // 사용자가 카드를 다른 column 으로 옮기려면 그 column 안의 위/아래 위치로 드롭하면
+  // masonry 가 자동으로 재배치.
   function _computeDropPosition(target, mouseX, mouseY) {
     var rect = target.getBoundingClientRect();
-    var relX = (mouseX - rect.left) / rect.width;   // 0~1
-    var relY = (mouseY - rect.top)  / rect.height;  // 0~1
-    // 좌측 30% → drag-over-left, 우측 30% → drag-over-right
-    if (relX < 0.30) {
-      return { before: true,  cls: 'drag-over-left'  };
-    }
-    if (relX > 0.70) {
-      return { before: false, cls: 'drag-over-right' };
-    }
-    // 가운데 40% → Y 기준 상/하
-    if (relY < 0.50) {
-      return { before: true,  cls: 'drag-over-top'    };
-    }
-    return   { before: false, cls: 'drag-over-bottom' };
+    var before = (mouseY - rect.top) < (rect.height / 2);
+    return { before: before, cls: before ? 'drag-over-top' : 'drag-over-bottom' };
   }
 
   var container = document.getElementById('widget-container');
