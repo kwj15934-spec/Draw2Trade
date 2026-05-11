@@ -1012,6 +1012,33 @@
     } else if (typeof window.clearDraw === 'function') {
       window.clearDraw();
     }
+
+    // 사용자 그림이 화면에 보이도록 그림 위치로 차트 자동 스크롤 (좌우 30% 여백).
+    var dc = (o.drawState && o.drawState.drawChartCoords) || null;
+    if (dc && Array.isArray(dc) && dc.length >= 2) {
+      var validC = dc.filter(function (c) { return c && c.time != null; });
+      if (validC.length >= 2) {
+        var firstTime = validC[0].time;
+        var lastTime  = validC[validC.length - 1].time;
+        // 패턴 양 끝에서 30% 씩 여백을 두고 시각 범위 설정
+        requestAnimationFrame(function () {
+          try {
+            // string 'YYYY-MM-DD' 또는 number(unix) 둘 다 setVisibleRange 가 받음
+            D2T.chart.timeScale().setVisibleRange({ from: firstTime, to: lastTime });
+          } catch (_) {
+            // 실패 시 logical range fallback
+            try {
+              var ts = D2T.chart.timeScale();
+              var lr = ts.getVisibleLogicalRange();
+              if (lr) {
+                var span = lr.to - lr.from;
+                ts.setVisibleLogicalRange({ from: lr.from, to: lr.from + span });
+              }
+            } catch (__) {}
+          }
+        });
+      }
+    }
   };
 
   // ── 종목 드롭다운 로딩 ────────────────────────────────────────────────────
