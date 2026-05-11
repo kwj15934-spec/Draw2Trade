@@ -610,6 +610,13 @@
         drawState:   (typeof window.exportDrawState === 'function') ? window.exportDrawState() : null,
       };
     }
+    // 결과 차트엔 사용자가 그렸던 그림(원본 종목 좌표 기반)이 새 차트의
+    // 시간/가격 축에 잘못 매핑되어 큰 곡선으로 보이는 버그 차단.
+    // 매칭 점선은 _patternDrawSeries 가 lightweight-charts 에 별도로 그리므로
+    // drawState 만 빈 상태로 복원하면 결과 차트엔 매칭만 표시.
+    if (typeof window.restoreDrawState === 'function') {
+      window.restoreDrawState({});
+    }
 
     // 결과 차트는 현재 타임프레임 유지 (월봉→월봉, 주봉→주봉, 일봉→일봉)
     // 단, 분봉으로 검색한 경우 일봉으로 폴백 (유사종목은 일봉 이상만 지원)
