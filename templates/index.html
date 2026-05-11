@@ -591,13 +591,13 @@
           </svg>
           <span data-i18n="ca.widget.reset">초기화</span>
         </button>
-        <button class="widget-toolbar-btn" id="widget-cols-btn" type="button" title="위젯 컬럼 수 (1→2→3→1)">
+        <button class="widget-toolbar-btn" id="widget-cols-btn" type="button" title="위젯 레이아웃 (자동 → 1열 → 2열 → 3열)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="3" width="6" height="18"/>
             <rect x="11" y="3" width="6" height="18"/>
             <rect x="19" y="3" width="2" height="18" stroke-dasharray="2 2"/>
           </svg>
-          <span id="widget-cols-label">1열</span>
+          <span id="widget-cols-label">자동</span>
         </button>
         <div class="widget-toolbar-spacer"></div>
         <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;" data-i18n="ca.widget.drag">드래그로 정렬</span>
@@ -3386,32 +3386,37 @@ function _escHtml(s) {
     });
   }
 
-  // ── 위젯 컬럼 수 토글 (1열 → 2열 → 3열 → 1열) ───────────────
-  var COLS_KEY = 'widget_cols';
+  // ── 위젯 컬럼 모드 토글 (자동 → 1열 → 2열 → 3열 → 자동) ──────
+  // 기본: '자동' — 사이드바 폭에 따라 auto-fit (280px 최소) 으로 1~N 열 자동
+  var COLS_KEY = 'widget_cols_mode';
+  var COLS_MODES = ['auto', '1', '2', '3'];
+  var COLS_LABEL = { 'auto': '자동', '1': '1열', '2': '2열', '3': '3열' };
   var colsBtn   = document.getElementById('widget-cols-btn');
   var colsLabel = document.getElementById('widget-cols-label');
-  var widgetCols = parseInt(localStorage.getItem(COLS_KEY) || '1', 10);
-  if (!(widgetCols >= 1 && widgetCols <= 3)) widgetCols = 1;
-  function applyWidgetCols(n) {
-    n = Math.max(1, Math.min(3, n | 0));
-    widgetCols = n;
-    document.documentElement.style.setProperty('--widget-cols', n);
+  var widgetColsMode = localStorage.getItem(COLS_KEY) || 'auto';
+  if (COLS_MODES.indexOf(widgetColsMode) < 0) widgetColsMode = 'auto';
+
+  function applyWidgetCols(mode) {
+    if (COLS_MODES.indexOf(mode) < 0) mode = 'auto';
+    widgetColsMode = mode;
     var cont = document.getElementById('widget-container');
     if (cont) {
-      cont.classList.remove('cols-1', 'cols-2', 'cols-3');
-      cont.classList.add('cols-' + n);
+      cont.classList.remove('cols-auto', 'cols-1', 'cols-2', 'cols-3');
+      cont.classList.add('cols-' + mode);
     }
-    if (colsLabel) colsLabel.textContent = n + '열';
-    try { localStorage.setItem(COLS_KEY, String(n)); } catch (_) {}
+    if (colsLabel) colsLabel.textContent = COLS_LABEL[mode] || mode;
+    try { localStorage.setItem(COLS_KEY, mode); } catch (_) {}
     // 차트 캔버스 리렌더 (위젯 폭 변경에 따라 사이드바 내부 폭 변동)
     if (typeof window.syncCanvas === 'function') {
       requestAnimationFrame(function () { try { window.syncCanvas(); } catch (_) {} });
     }
   }
-  applyWidgetCols(widgetCols);
+  applyWidgetCols(widgetColsMode);
   if (colsBtn) {
     colsBtn.addEventListener('click', function () {
-      applyWidgetCols((widgetCols % 3) + 1);  // 1 → 2 → 3 → 1
+      var idx = COLS_MODES.indexOf(widgetColsMode);
+      var next = COLS_MODES[(idx + 1) % COLS_MODES.length];   // auto → 1 → 2 → 3 → auto
+      applyWidgetCols(next);
     });
   }
 
