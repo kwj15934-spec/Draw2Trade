@@ -158,10 +158,10 @@
          onmouseout="this.style.background='transparent'; this.style.color='#5BFFC6';" data-i18n="ca.stock_info">종목 정보 보기</a>
       <a href="#" id="thb-ai-question-link"
          onclick="toggleAIQuestionWidget();return false;"
-         title="AI 질문 위젯 열기"
+         title="AI Analysis — 종목에 대해 자유롭게 질문하세요"
          style="margin-left:6px; font-size:12px; font-weight:600; color:#FF9F5B; text-decoration:none; padding:2px 8px; border:1px solid #FF9F5B; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
          onmouseover="this.style.background='#FF9F5B'; this.style.color='#fff';"
-         onmouseout="this.style.background='transparent'; this.style.color='#FF9F5B';" data-i18n="ca.ai_question">AI 질문</a>
+         onmouseout="this.style.background='transparent'; this.style.color='#FF9F5B';" data-i18n="ca.ai_analysis">AI Analysis</a>
     </div>
 
     <!-- 우: 시장 상태 + LIVE + 공지 -->
@@ -598,7 +598,7 @@
           <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
           <label><input type="checkbox" data-widget-toggle="similar-compare" checked> <span data-i18n="ca.w.similar_compare">유사 종목 비교</span></label>
           <label><input type="checkbox" data-widget-toggle="daily-trades" checked> <span data-i18n="ca.w.daily_trades">일자별 거래량</span></label>
-          <label><input type="checkbox" data-widget-toggle="ai-question"> <span data-i18n="ca.w.ai_question">AI 질문</span></label>
+          <label><input type="checkbox" data-widget-toggle="ai-question"> <span data-i18n="ca.w.ai_analysis">AI Analysis</span></label>
           <label><input type="checkbox" data-widget-toggle="favorites" checked> <span data-i18n="ca.w.favorites">즐겨찾기</span></label>
           <label><input type="checkbox" data-widget-toggle="drawings" checked> <span data-i18n="ca.w.saved">저장</span></label>
         </div>
@@ -709,27 +709,29 @@
         </div>
       </section>
 
-      <!-- ── AI 질문 위젯 (기본 hidden, 헤더 'AI 질문' 버튼이나 토글로 표시) ─── -->
+      <!-- ── AI Analysis 위젯 (기본 hidden, 헤더 'AI Analysis' 버튼/토글로 표시) ─── -->
       <section class="widget-card" data-widget="ai-question" hidden>
         <header class="widget-header" draggable="true">
           <span class="widget-grip" aria-hidden="true"></span>
-          <span class="widget-title" data-i18n="ca.w.ai_question">AI 질문</span>
+          <span class="widget-title" data-i18n="ca.w.ai_analysis">AI Analysis</span>
           <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" title="접기/펼치기">
             <span class="widget-collapse-icon">▾</span>
           </button>
           <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" title="숨기기">×</button>
         </header>
         <div class="widget-body" style="padding:10px 12px;">
-          <div style="font-size:11px;color:#8C95A8;margin-bottom:6px;line-height:1.5;">
-            <strong style="color:#FF9F5B;">AI ANALYSIS</strong> · DART 공시 데이터 기반 재무 답변 (KR 종목)
+          <div style="font-size:11px;color:#8C95A8;margin-bottom:8px;line-height:1.5;">
+            <strong style="color:#FF9F5B;">AI ANALYSIS</strong> · 종목에 대해 자유롭게 질문하세요. <span style="color:#FF7A7A;">종목 추천은 절대 제공하지 않습니다.</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
-            <button type="button" class="widget-ai-chip" data-chip="최근 실적">최근 실적</button>
-            <button type="button" class="widget-ai-chip" data-chip="부채 수준">부채 수준</button>
-            <button type="button" class="widget-ai-chip" data-chip="성장세">성장세</button>
-            <button type="button" class="widget-ai-chip" data-chip="수익성">수익성</button>
+            <button type="button" class="widget-ai-chip" data-chip="최근 실적은 어때?">최근 실적</button>
+            <button type="button" class="widget-ai-chip" data-chip="부채 수준은 안전한 편이야?">부채 수준</button>
+            <button type="button" class="widget-ai-chip" data-chip="비슷한 종목이나 경쟁사는 어떤 회사들이 있어?">비슷한 종목 · 경쟁사</button>
+            <button type="button" class="widget-ai-chip" data-chip="이 회사 사업 개요를 간단히 알려줘">사업 개요</button>
+            <button type="button" class="widget-ai-chip" data-chip="알려진 리스크 요인은 뭐가 있어?">리스크 요인</button>
+            <button type="button" class="widget-ai-chip" data-chip="성장세는 어떻게 되고 있어?">성장세</button>
           </div>
-          <input id="widget-ai-input" type="text" placeholder="재무에 대해 물어보세요 (예: 부채 안전한 편이야?)"
+          <input id="widget-ai-input" type="text" placeholder="자유롭게 질문하세요 (예: 비슷한 종목 있어? 경쟁사는 누구?)"
                  style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:6px;color:#fff;outline:none;margin-bottom:6px;font-family:inherit;">
           <button id="widget-ai-ask-btn" type="button"
                   style="width:100%;padding:8px;font-size:12px;font-weight:700;background:#5BFFC6;color:#001810;border:none;border-radius:6px;cursor:pointer;">
@@ -737,7 +739,7 @@
           </button>
           <div id="widget-ai-answer" style="margin-top:10px;font-size:12px;line-height:1.7;color:#C9CFDA;min-height:20px;"></div>
           <div style="margin-top:8px;font-size:10px;color:#5A6172;line-height:1.5;">
-            ⚠️ AI 답변은 DART 공시 재무 요약만 근거합니다. 투자 판단은 본인 책임입니다.
+            ⚠️ AI 답변은 객관적 정보 안내용이며, <strong style="color:#FF7A7A;">매수·매도 추천이 아닙니다</strong>. 투자 판단은 본인 책임입니다.
           </div>
         </div>
       </section>
@@ -3499,7 +3501,7 @@ function _escHtml(s) {
     var market = (window.D2T && window.D2T.market) || 'KR';
     if (!ticker) { ans.innerHTML = '<span style="color:#FF7A7A;">먼저 종목을 선택해주세요.</span>'; return; }
     if (market !== 'KR') {
-      ans.innerHTML = '<span style="color:#8C95A8;">AI 질문은 현재 KR 종목만 지원합니다.<br>(DART 공시 데이터 기반)</span>';
+      ans.innerHTML = '<span style="color:#8C95A8;">AI Analysis 는 현재 한국(KR) 종목만 지원합니다.<br>(DART 공시·사업 개요 데이터 기반)</span>';
       return;
     }
     ans.innerHTML = '<span style="color:#5BFFC6;">⏳ 답변 생성 중...</span>';
