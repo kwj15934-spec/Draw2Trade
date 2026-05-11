@@ -624,14 +624,8 @@
           </svg>
           <span data-i18n="ca.widget.reset">초기화</span>
         </button>
-        <button class="widget-toolbar-btn" id="widget-cols-btn" type="button" title="위젯 레이아웃 (자동 → 1열 → 2열 → 3열)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="6" height="18"/>
-            <rect x="11" y="3" width="6" height="18"/>
-            <rect x="19" y="3" width="2" height="18" stroke-dasharray="2 2"/>
-          </svg>
-          <span id="widget-cols-label">자동</span>
-        </button>
+        <!-- 컬럼 토글 버튼 제거 — 사이드바 폭에 따라 항상 자동 적응 -->
+        <span id="widget-cols-label" style="display:none;">자동</span>
         <button class="widget-toolbar-btn" id="widget-edit-btn" type="button" title="패널 편집 모드 (드래그 강조 + 추가 메뉴)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
@@ -1420,7 +1414,7 @@ D2T_I18N.add({
     var handle = document.getElementById('sidebar-resize-handle');
     if (!handle) return;
     var _dragging = false, startX, startW, _raf = null;
-    var MIN_W = 280, MAX_W = 820;   /* 위젯 전용 사이드바 — 폭 대폭 확장 */
+    var MIN_W = 280, MAX_W = 1200;  /* 위젯 폭 더 확장 — 최대 1200px (3~4열 펼침) */
     handle.addEventListener('mousedown', function (e) {
       e.preventDefault();
       _dragging = true;
@@ -3497,20 +3491,25 @@ function _escHtml(s) {
   });
 
   // 대상 카드 + 마우스 좌표 → 'before' 여부 + 시각 피드백 클래스 결정 (4방향).
-  // 마우스가 카드 중심에서 가로 거리(dx) 가 세로 거리(dy) 보다 크면 좌/우 모드,
-  // 그렇지 않으면 상/하 모드 — multi-column grid 에서도 자연스러운 swap.
+  // 가장자리 hit zone 방식: 카드 좌/우 가장자리 30% 영역에 들어오면 좌/우 모드 강제,
+  // 나머지 가운데 40% 영역에선 Y 축 기준으로 상/하 모드.
+  // → 세로로 긴 카드여도 좌우 드롭 민감도 충분.
   function _computeDropPosition(target, mouseX, mouseY) {
     var rect = target.getBoundingClientRect();
-    var cx = rect.left + rect.width / 2;
-    var cy = rect.top  + rect.height / 2;
-    var dx = mouseX - cx;
-    var dy = mouseY - cy;
-    var horizontal = Math.abs(dx) > Math.abs(dy);
-    if (horizontal) {
-      return { before: dx < 0, cls: dx < 0 ? 'drag-over-left'  : 'drag-over-right' };
-    } else {
-      return { before: dy < 0, cls: dy < 0 ? 'drag-over-top'   : 'drag-over-bottom' };
+    var relX = (mouseX - rect.left) / rect.width;   // 0~1
+    var relY = (mouseY - rect.top)  / rect.height;  // 0~1
+    // 좌측 30% → drag-over-left, 우측 30% → drag-over-right
+    if (relX < 0.30) {
+      return { before: true,  cls: 'drag-over-left'  };
     }
+    if (relX > 0.70) {
+      return { before: false, cls: 'drag-over-right' };
+    }
+    // 가운데 40% → Y 기준 상/하
+    if (relY < 0.50) {
+      return { before: true,  cls: 'drag-over-top'    };
+    }
+    return   { before: false, cls: 'drag-over-bottom' };
   }
 
   var container = document.getElementById('widget-container');
