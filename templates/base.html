@@ -2485,8 +2485,10 @@
     #widget-container {
       flex: 1;
       min-height: 0;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: repeat(var(--widget-cols, 1), minmax(0, 1fr));
+      grid-auto-rows: max-content;
+      align-items: start;
       gap: 8px;
       padding: 8px;
       overflow-y: auto;
@@ -2494,6 +2496,11 @@
     }
     #widget-container::-webkit-scrollbar { width: 4px; }
     #widget-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+    /* 2~3열일 때 위젯 카드가 grid item 으로 자연스럽게 들어가도록 */
+    #widget-container .widget-card { width: auto; }
+    /* 결과 위젯은 첫 행 전체 폭 차지 — 패턴 검색 결과는 보통 길어서 */
+    #widget-container.cols-2 .widget-card[data-widget="results"],
+    #widget-container.cols-3 .widget-card[data-widget="results"] { grid-column: 1 / -1; }
 
     .widget-card {
       position: relative;
