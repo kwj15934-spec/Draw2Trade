@@ -596,6 +596,7 @@
 
         <div class="widget-menu" id="widget-menu" role="menu">
           <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
+          <label><input type="checkbox" data-widget-toggle="similar-compare" checked> <span data-i18n="ca.w.similar_compare">유사 종목 비교</span></label>
           <label><input type="checkbox" data-widget-toggle="daily-trades" checked> <span data-i18n="ca.w.daily_trades">일자별 거래량</span></label>
           <label><input type="checkbox" data-widget-toggle="ai-question"> <span data-i18n="ca.w.ai_question">AI 질문</span></label>
           <label><input type="checkbox" data-widget-toggle="favorites" checked> <span data-i18n="ca.w.favorites">즐겨찾기</span></label>
@@ -672,6 +673,21 @@
 
         </div><!-- /.widget-body (results) -->
       </section><!-- /.widget-card results -->
+
+      <!-- ── 유사 종목 비교 위젯 (기존 #info-side-panel 내용을 JS 로 이동) ─── -->
+      <section class="widget-card" data-widget="similar-compare">
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title" data-i18n="ca.w.similar_compare">유사 종목 비교</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" title="숨기기">×</button>
+        </header>
+        <div class="widget-body" id="similar-compare-widget-body" style="padding:0;display:flex;flex-direction:column;min-height:0;max-height:560px;">
+          <!-- 페이지 로드 시 #info-side-panel .info-panel-body 컨텐츠가 이쪽으로 이동됨 -->
+        </div>
+      </section>
 
       <!-- ── 일자별 거래량 위젯 ────────────────────── -->
       <section class="widget-card" data-widget="daily-trades">
@@ -1355,7 +1371,7 @@ D2T_I18N.add({
     var handle = document.getElementById('sidebar-resize-handle');
     if (!handle) return;
     var _dragging = false, startX, startW, _raf = null;
-    var MIN_W = 200, MAX_W = 520;
+    var MIN_W = 280, MAX_W = 820;   /* 위젯 전용 사이드바 — 폭 대폭 확장 */
     handle.addEventListener('mousedown', function (e) {
       e.preventDefault();
       _dragging = true;
@@ -3406,6 +3422,24 @@ function _escHtml(s) {
       else        container.insertBefore(dragSrc, target.nextSibling);
       persist();
     });
+  }
+})();
+</script>
+
+<!-- ── 유사 종목 비교 → 위젯 이동 (DOMContentLoaded) ─────────────────── -->
+<script>
+(function () {
+  function moveInfoPanelToWidget() {
+    var src = document.querySelector('#info-side-panel .info-panel-body');
+    var dst = document.getElementById('similar-compare-widget-body');
+    if (!src || !dst) return;
+    if (dst.firstElementChild) return;  // 이미 이동 완료
+    while (src.firstChild) dst.appendChild(src.firstChild);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', moveInfoPanelToWidget);
+  } else {
+    moveInfoPanelToWidget();
   }
 })();
 </script>
