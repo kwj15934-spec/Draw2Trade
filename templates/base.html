@@ -2517,16 +2517,17 @@
       cursor: pointer;
     }
 
-    /* ── Grid 기반 Masonry (auto-fit + dense + 동적 row-span) ───────
-       각 카드의 자연 높이를 JS 가 row-span 으로 변환 → 빈 공간 자동 채움
-       동시에 좌/우 인접 swap 가능 (column 방식의 한계 해결) */
+    /* ── Grid 기반 자동 적응 (auto-fit + dense, 카드 자연 높이) ──────
+       동적 row-span 시도가 0으로 계산되는 버그가 있어 단순한 max-content 사용.
+       빈공간 약간 남지만 위젯 표시 안정성 우선. */
     #widget-container {
       flex: 1;
       min-height: 0;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      grid-auto-rows: 8px;          /* 미세 행 — JS row-span 정밀 계산용 */
-      grid-auto-flow: row dense;    /* 빈 공간 dense packing */
+      grid-auto-rows: max-content;
+      grid-auto-flow: row dense;
+      align-items: start;
       gap: 10px;
       padding: 10px;
       overflow-y: auto;
@@ -3826,7 +3827,7 @@
     .thb-name {
       font-size: 11px;
       font-weight: 500;
-      color: #ffffff;            /* 회색 글자 제거 — 직접 흰색 */
+      color: #ffffff !important;   /* 회색 글자 완전 제거 — !important 강제 */
       white-space: nowrap;
       letter-spacing: 0.2px;
       line-height: 1.2;
@@ -3969,8 +3970,8 @@
     }
 
     /* ── 공용 텍스트 헬퍼 ── */
-    .thb-vol  { font-size: 11px; color: #ffffff; flex-shrink: 0; }
-    .thb-time { font-size: 10px; color: #ffffff; flex-shrink: 0; }
+    .thb-vol  { font-size: 11px; color: #ffffff !important; flex-shrink: 0; }
+    .thb-time { font-size: 10px; color: #ffffff !important; flex-shrink: 0; }
 
     /* ── 드로잉 툴바 부속 ── */
     .toolbar-canvas-btns {

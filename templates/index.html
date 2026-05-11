@@ -3497,46 +3497,7 @@ function _escHtml(s) {
 
   var container = document.getElementById('widget-container');
 
-  // ── 동적 row-span 계산 (grid masonry) ──────────────────────
-  // 각 카드의 실제 높이를 grid row 단위로 변환 → grid-row-end: span N
-  // grid-auto-rows: 8px + gap: 10px (CSS) 와 일치하도록 계산.
-  var ROW_HEIGHT = 8, ROW_GAP = 10;
-  function updateRowSpans() {
-    if (!container) return;
-    container.querySelectorAll('.widget-card').forEach(function (card) {
-      if (card.hasAttribute('hidden')) return;
-      var h = card.getBoundingClientRect().height;
-      if (h <= 0) return;
-      var span = Math.ceil((h + ROW_GAP) / (ROW_HEIGHT + ROW_GAP));
-      card.style.gridRowEnd = 'span ' + span;
-    });
-  }
-  // 초기 + 리사이즈 시 재계산
-  if (window.ResizeObserver) {
-    var ro = new ResizeObserver(function () { updateRowSpans(); });
-    if (container) {
-      container.querySelectorAll('.widget-card').forEach(function (c) { ro.observe(c); });
-      // 새로 추가되는 카드에도 적용 (MutationObserver 간소화)
-      var mo = new MutationObserver(function (muts) {
-        muts.forEach(function (m) {
-          m.addedNodes && m.addedNodes.forEach(function (n) {
-            if (n.classList && n.classList.contains('widget-card')) ro.observe(n);
-          });
-        });
-        updateRowSpans();
-      });
-      mo.observe(container, { childList: true });
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateRowSpans);
-  } else {
-    setTimeout(updateRowSpans, 0);
-  }
-  window.addEventListener('resize', function () {
-    if (window._wrsTO) cancelAnimationFrame(window._wrsTO);
-    window._wrsTO = requestAnimationFrame(updateRowSpans);
-  });
+  // 동적 row-span 제거 — grid-auto-rows: max-content 가 자연스러운 카드 높이 사용
 
   if (container) {
     // dragover throttle — requestAnimationFrame 으로 렉 감소
@@ -3570,7 +3531,6 @@ function _escHtml(s) {
       if (pos.before) container.insertBefore(dragSrc, target);
       else            container.insertBefore(dragSrc, target.nextSibling);
       persist();
-      requestAnimationFrame(updateRowSpans);
     });
   }
 })();
