@@ -139,17 +139,17 @@
   <!-- ── 1행: 상태 표시창 ───────────────────────────── -->
   <div class="thb-row thb-row1">
 
-    <!-- 좌: 종목 아이덴티티 (티커 + 종목명) -->
+    <!-- 좌: 종목 아이덴티티 (티커 + 종목명) — inline style 로 흰색 강제 (캐시 무관) -->
     <div class="thb-identity">
-      <span id="thb-name"     class="thb-name">—</span>
-      <span id="thb-fullname" class="thb-fullname"></span>
+      <span id="thb-name"     class="thb-name"     style="color:#ffffff;">—</span>
+      <span id="thb-fullname" class="thb-fullname" style="color:#ffffff;"></span>
     </div>
 
     <!-- 중: 현재가 + 등락률 + 기준일자 + 종목 정보 보기 -->
     <div class="thb-center" id="thb-price-area">
-      <span id="thb-price" class="thb-price">—</span>
+      <span id="thb-price" class="thb-price" style="color:#ffffff;">—</span>
       <span id="thb-chg"   class="thb-chg">—</span>
-      <span id="thb-time"  class="thb-time"></span>
+      <span id="thb-time"  class="thb-time" style="color:#ffffff;"></span>
       <a href="#" id="thb-main-info-link"
          onclick="toggleMainInfoOverlay();return false;"
          data-i18n-title="ca.stock_info.tip" title="메인 종목 정보 보기"
@@ -183,25 +183,25 @@
     <div class="thb-controls">
       <!-- 카테고리 (KR/US 공통, JS가 show/hide) -->
       <div id="category-group" class="tb-pill-group" style="display:none;">
-        <select id="category-select" class="tb-pill-select" data-i18n-title="ca.sector_filter" title="섹터/업종 필터">
-          <option value="" data-i18n="ca.all_sectors">전체 섹터</option>
+        <select id="category-select" class="tb-pill-select" style="color:#ffffff;" data-i18n-title="ca.sector_filter" title="섹터/업종 필터">
+          <option value="" style="color:#1a1a1a;" data-i18n="ca.all_sectors">전체 섹터</option>
         </select>
       </div>
       <!-- KR 시장 필터 (KOSPI/KOSDAQ) -->
       <div id="kr-market-group" class="tb-pill-group" style="display:none;">
         <div class="tb-btn-group">
           <button class="btn-d2t kr-market-btn active" data-krmarket="">ALL</button>
-          <button class="btn-d2t kr-market-btn" data-krmarket="KOSPI">KOSPI</button>
-          <button class="btn-d2t kr-market-btn" data-krmarket="KOSDAQ">KOSDAQ</button>
+          <button class="btn-d2t kr-market-btn" style="color:#ffffff;" data-krmarket="KOSPI">KOSPI</button>
+          <button class="btn-d2t kr-market-btn" style="color:#ffffff;" data-krmarket="KOSDAQ">KOSDAQ</button>
         </div>
       </div>
       <!-- 종목 드롭다운 (JS가 populate) -->
-      <select id="ticker-select" class="tb-pill-select tb-ticker-select" data-i18n-title="ca.ticker_pick" title="종목 선택">
-        <option value="" data-i18n="ca.ticker_pick">종목 선택</option>
+      <select id="ticker-select" class="tb-pill-select tb-ticker-select" style="color:#ffffff;" data-i18n-title="ca.ticker_pick" title="종목 선택">
+        <option value="" style="color:#1a1a1a;" data-i18n="ca.ticker_pick">종목 선택</option>
       </select>
       <!-- 검색 인풋 + 드롭다운 -->
       <div class="ticker-search-wrap" id="ticker-search-wrap">
-        <input type="text" id="ticker-search" data-i18n-placeholder="ca.search" placeholder="검색" data-i18n-title="ca.ticker_search.tip" title="종목명/티커 입력 후 선택" autocomplete="off">
+        <input type="text" id="ticker-search" style="color:#ffffff;" data-i18n-placeholder="ca.search" placeholder="검색" data-i18n-title="ca.ticker_search.tip" title="종목명/티커 입력 후 선택" autocomplete="off">
         <div id="ticker-search-dropdown"></div>
       </div>
       <!-- 차트 로드 + 즐겨찾기 -->

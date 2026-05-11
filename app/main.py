@@ -412,9 +412,18 @@ async def landing(request: Request):
 
 
 # ── 차트 앱 ───────────────────────────────────────────────────────────────────
+def _no_cache_response(request, template_name: str):
+    """HTML 캐시 강제 무효화 — UI 변경 시 즉시 반영."""
+    resp = templates.TemplateResponse(template_name, {"request": request})
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
 @app.get("/app", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return _no_cache_response(request, "index.html")
 
 
 @app.get("/login", response_class=HTMLResponse)
