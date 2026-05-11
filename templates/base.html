@@ -327,10 +327,11 @@
        ══════════════════════════════════════════════════════ */
     .d2t-nav {
       height: 46px !important;
-      background: rgba(6,7,10,0.72) !important;
+      /* 톤 향상: 너무 어둡지 않게 (이전 rgba(6,7,10,0.72) → 약간 밝게 + opacity↑) */
+      background: rgba(22,26,34,0.92) !important;
       backdrop-filter: blur(18px) saturate(140%) !important;
       -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
-      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.10) !important;
       display: flex !important;
       align-items: center !important;
       padding: 0 20px !important;
@@ -382,7 +383,7 @@
     .d2t-nav-link {
       font-size: 14px !important;
       font-weight: 600 !important;
-      color: #D7DCE5 !important;
+      color: #ECEFF5 !important;   /* 더 밝게 (이전 #D7DCE5) — 헤더 어둠 대비 */
       text-decoration: none !important;
       background: none !important;
       border: none !important;
@@ -765,9 +766,11 @@
     .btn-d2t-primary {
       background: #5BFFC6;
       border-color: #5BFFC6;
-      color: #fff;
+      /* mint 배경에 흰 글씨 대비 부족 → 진한 색으로 (가독성↑) */
+      color: #001810;
+      font-weight: 700;
     }
-    .btn-d2t-primary:hover { background: #1f8f84; border-color: #1f8f84; color: #fff; }
+    .btn-d2t-primary:hover { background: #4FE6B0; border-color: #4FE6B0; color: #001810; }
     .btn-d2t-primary:disabled { opacity: 0.4; }
 
     /* Pro 미니 배지 (버튼 안에 표시) */
@@ -3770,8 +3773,9 @@
     #ticker-header-bar {
       display: flex;
       flex-direction: column;
-      background: #1f2027;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      /* 헤더 톤 향상 — 기존 #1f2027 너무 어두워 텍스트 대비 부족 */
+      background: #262932;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
       flex-shrink: 0;
       overflow: visible;
     }
