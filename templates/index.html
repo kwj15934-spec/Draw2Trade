@@ -626,14 +626,8 @@
         </button>
         <!-- 컬럼 토글 버튼 제거 — 사이드바 폭에 따라 항상 자동 적응 -->
         <span id="widget-cols-label" style="display:none;">자동</span>
-        <button class="widget-toolbar-btn" id="widget-edit-btn" type="button" title="패널 편집 모드 (드래그 강조 + 추가 메뉴)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-          </svg>
-          <span data-i18n="ca.widget.edit">패널 편집</span>
-        </button>
         <div class="widget-toolbar-spacer"></div>
-        <span id="widget-edit-hint" style="font-size:10px;color:#5A6172;letter-spacing:0.04em;display:none;" data-i18n="ca.widget.edit_hint">드래그로 자유롭게 이동</span>
+        <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;" data-i18n="ca.widget.drag">드래그로 자유롭게 이동</span>
 
         <div class="widget-menu" id="widget-menu" role="menu">
           <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
@@ -3419,23 +3413,6 @@ function _escHtml(s) {
     });
   }
 
-  // ── 패널 편집 모드 토글 (드래그 시각 피드백 강조) ─────────────
-  var EDIT_KEY = 'widget_edit_mode';
-  var editBtn  = document.getElementById('widget-edit-btn');
-  var editHint = document.getElementById('widget-edit-hint');
-  var editMode = localStorage.getItem(EDIT_KEY) === '1';
-  function applyEditMode(on) {
-    editMode = !!on;
-    document.body.classList.toggle('widget-edit-mode', editMode);
-    if (editBtn) editBtn.classList.toggle('active', editMode);
-    if (editHint) editHint.style.display = editMode ? '' : 'none';
-    try { localStorage.setItem(EDIT_KEY, editMode ? '1' : '0'); } catch (_) {}
-  }
-  applyEditMode(editMode);
-  if (editBtn) {
-    editBtn.addEventListener('click', function () { applyEditMode(!editMode); });
-  }
-
   // ── 위젯 컬럼 모드 토글 (자동 → 1열 → 2열 → 3열 → 자동) ──────
   // 기본: '자동' — 사이드바 폭에 따라 auto-fit (280px 최소) 으로 1~N 열 자동
   var COLS_KEY = 'widget_cols_mode';
@@ -3490,38 +3467,110 @@ function _escHtml(s) {
     });
   });
 
-  // column-count masonry 에선 카드가 column 안에서 자연 흐름 → Y축 상/하만 의미.
-  // 사용자가 카드를 다른 column 으로 옮기려면 그 column 안의 위/아래 위치로 드롭하면
-  // masonry 가 자동으로 재배치.
+  // Grid masonry — 가장자리 50% hit zone (좌/우 명확) + 카드 사이 빈 공간도 OK.
+  // 마우스가 카드 좌측 절반 → before(좌 또는 위), 우측 절반 → after(우 또는 아래).
+  // 가로 거리 > 세로 거리면 좌/우 표시, 아니면 상/하 표시.
   function _computeDropPosition(target, mouseX, mouseY) {
     var rect = target.getBoundingClientRect();
-    var before = (mouseY - rect.top) < (rect.height / 2);
-    return { before: before, cls: before ? 'drag-over-top' : 'drag-over-bottom' };
+    var dx = mouseX - (rect.left + rect.width  / 2);
+    var dy = mouseY - (rect.top  + rect.height / 2);
+    var horizontal = Math.abs(dx) > Math.abs(dy);
+    if (horizontal) {
+      return { before: dx < 0, cls: dx < 0 ? 'drag-over-left' : 'drag-over-right' };
+    }
+    return   { before: dy < 0, cls: dy < 0 ? 'drag-over-top'  : 'drag-over-bottom' };
+  }
+
+  // 빈 공간에 드롭된 경우 → 마우스 위치에서 가장 가까운 카드 찾기
+  function _findNearestCard(container, mouseX, mouseY) {
+    var nearest = null;
+    var minDist = Infinity;
+    container.querySelectorAll('.widget-card:not(.dragging):not([hidden])').forEach(function (c) {
+      var r = c.getBoundingClientRect();
+      var cx = r.left + r.width / 2;
+      var cy = r.top  + r.height / 2;
+      var d = Math.hypot(mouseX - cx, mouseY - cy);
+      if (d < minDist) { minDist = d; nearest = c; }
+    });
+    return nearest;
   }
 
   var container = document.getElementById('widget-container');
+
+  // ── 동적 row-span 계산 (grid masonry) ──────────────────────
+  // 각 카드의 실제 높이를 grid row 단위로 변환 → grid-row-end: span N
+  // grid-auto-rows: 8px + gap: 10px (CSS) 와 일치하도록 계산.
+  var ROW_HEIGHT = 8, ROW_GAP = 10;
+  function updateRowSpans() {
+    if (!container) return;
+    container.querySelectorAll('.widget-card').forEach(function (card) {
+      if (card.hasAttribute('hidden')) return;
+      var h = card.getBoundingClientRect().height;
+      if (h <= 0) return;
+      var span = Math.ceil((h + ROW_GAP) / (ROW_HEIGHT + ROW_GAP));
+      card.style.gridRowEnd = 'span ' + span;
+    });
+  }
+  // 초기 + 리사이즈 시 재계산
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { updateRowSpans(); });
+    if (container) {
+      container.querySelectorAll('.widget-card').forEach(function (c) { ro.observe(c); });
+      // 새로 추가되는 카드에도 적용 (MutationObserver 간소화)
+      var mo = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          m.addedNodes && m.addedNodes.forEach(function (n) {
+            if (n.classList && n.classList.contains('widget-card')) ro.observe(n);
+          });
+        });
+        updateRowSpans();
+      });
+      mo.observe(container, { childList: true });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateRowSpans);
+  } else {
+    setTimeout(updateRowSpans, 0);
+  }
+  window.addEventListener('resize', function () {
+    if (window._wrsTO) cancelAnimationFrame(window._wrsTO);
+    window._wrsTO = requestAnimationFrame(updateRowSpans);
+  });
+
   if (container) {
+    // dragover throttle — requestAnimationFrame 으로 렉 감소
+    var _doRaf = null, _lastEv = null;
     container.addEventListener('dragover', function (e) {
       if (!dragSrc) return;
       e.preventDefault();
       try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
-      var target = e.target.closest('.widget-card');
-      container.querySelectorAll('.widget-card').forEach(function (c) {
-        c.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-left', 'drag-over-right');
+      _lastEv = e;
+      if (_doRaf) return;
+      _doRaf = requestAnimationFrame(function () {
+        _doRaf = null;
+        var ev = _lastEv;
+        if (!ev || !dragSrc) return;
+        container.querySelectorAll('.widget-card').forEach(function (c) {
+          c.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-left', 'drag-over-right');
+        });
+        // 카드 위 또는 카드 사이 빈 공간 → 가장 가까운 카드 자동 선택
+        var target = ev.target.closest('.widget-card') || _findNearestCard(container, ev.clientX, ev.clientY);
+        if (!target || target === dragSrc) return;
+        var pos = _computeDropPosition(target, ev.clientX, ev.clientY);
+        target.classList.add(pos.cls);
       });
-      if (!target || target === dragSrc) return;
-      var pos = _computeDropPosition(target, e.clientX, e.clientY);
-      target.classList.add(pos.cls);
     });
     container.addEventListener('drop', function (e) {
       if (!dragSrc) return;
       e.preventDefault();
-      var target = e.target.closest('.widget-card');
+      var target = e.target.closest('.widget-card') || _findNearestCard(container, e.clientX, e.clientY);
       if (!target || target === dragSrc) return;
       var pos = _computeDropPosition(target, e.clientX, e.clientY);
       if (pos.before) container.insertBefore(dragSrc, target);
       else            container.insertBefore(dragSrc, target.nextSibling);
       persist();
+      requestAnimationFrame(updateRowSpans);
     });
   }
 })();

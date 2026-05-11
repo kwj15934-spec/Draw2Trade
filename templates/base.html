@@ -2517,15 +2517,17 @@
       cursor: pointer;
     }
 
-    /* ── Masonry 레이아웃 (CSS column-count) ─ 위젯 높이 자유로워도 공백 채움 */
+    /* ── Grid 기반 Masonry (auto-fit + dense + 동적 row-span) ───────
+       각 카드의 자연 높이를 JS 가 row-span 으로 변환 → 빈 공간 자동 채움
+       동시에 좌/우 인접 swap 가능 (column 방식의 한계 해결) */
     #widget-container {
       flex: 1;
       min-height: 0;
-      display: block;
-      /* column-width 기준 자동 — 사이드바 폭/280px 단위로 컬럼 자동 생성 */
-      column-width: 300px;
-      column-gap: 10px;
-      column-fill: balance;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-auto-rows: 8px;          /* 미세 행 — JS row-span 정밀 계산용 */
+      grid-auto-flow: row dense;    /* 빈 공간 dense packing */
+      gap: 10px;
       padding: 10px;
       overflow-y: auto;
       overflow-x: hidden;
@@ -2533,22 +2535,16 @@
     #widget-container::-webkit-scrollbar { width: 4px; }
     #widget-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
 
-    /* 위젯 카드 — column 안에서 자연스럽게 흐름 */
     #widget-container .widget-card {
-      display: inline-block;
-      width: 100%;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
-      page-break-inside: avoid;
-      margin: 0 0 10px 0;
       min-width: 0;
-      transition: box-shadow .2s ease, border-color .2s ease;
+      width: auto;
+      /* transition 제거/축소 — 드래그 시 렉 방지 */
+      transition: opacity .15s ease;
     }
 
-    /* '결과' 위젯은 컨텐츠가 길고 가로 폭이 충분해야 가독성 ↑ → 모든 column 가로지름 */
+    /* 결과 위젯은 모든 컬럼 가로지름 (검색 결과 가독성) */
     #widget-container .widget-card[data-widget="results"] {
-      column-span: all;
-      -webkit-column-span: all;
+      grid-column: 1 / -1;
     }
 
     .widget-card {
@@ -2611,15 +2607,8 @@
     .widget-card.collapsed .widget-header { border-bottom-color: transparent; }
     .widget-header:hover { background: rgba(91,255,198,0.04); }
     .widget-header:active { cursor: grabbing; }
-    /* 패널 편집 모드: 드래그 시각 피드백 강조 */
-    body.widget-edit-mode .widget-card {
-      border-color: rgba(91,255,198,0.25);
-      box-shadow: 0 0 0 1px rgba(91,255,198,0.18), 0 4px 16px rgba(91,255,198,0.06);
-    }
-    body.widget-edit-mode .widget-header {
-      background: rgba(91,255,198,0.08);
-    }
-    body.widget-edit-mode .widget-grip { color: #5BFFC6; transform: scale(1.2); }
+    /* 그립 hover 시 teal 강조 — 드래그 가능 신호 */
+    .widget-header:hover .widget-grip { color: #5BFFC6; }
     .widget-grip {
       flex-shrink: 0;
       width: 12px; height: 12px;
@@ -2646,7 +2635,8 @@
     .widget-card.drag-over-bottom { box-shadow:  0 3px 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
     .widget-card.drag-over-left   { box-shadow: -3px 0 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
     .widget-card.drag-over-right  { box-shadow:  3px 0 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
-    .widget-card.dragging { opacity: 0.5; transform: scale(0.97); transition: transform .15s ease, opacity .15s ease; }
+    /* 드래그 중 카드 — transform 제거(reflow 발생) → opacity 만 사용 (렉 감소) */
+    .widget-card.dragging { opacity: 0.4; }
     .widget-card.collapsed .widget-title { color: #8C95A8; }
     .widget-control {
       flex-shrink: 0;
