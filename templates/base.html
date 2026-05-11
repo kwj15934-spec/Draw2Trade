@@ -3775,11 +3775,11 @@
     #ticker-header-bar {
       display: flex;
       flex-direction: column;
-      /* 헤더 톤 대폭 향상 — 차트 영역(#121214)과 명확히 구분되는 회색 톤 */
-      background: #32384550;
-      background: linear-gradient(180deg, #353c4a 0%, #2d3340 100%);
-      border-bottom: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 3px 12px rgba(0,0,0,0.25);
+      /* 차트 영역(#121214)과 명확히 구분되는 회색 톤 + 한 단계 더 밝게 */
+      background: #3a4150;
+      background: linear-gradient(180deg, #404858 0%, #353c4a 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 14px rgba(0,0,0,0.30);
       flex-shrink: 0;
       overflow: visible;
     }
@@ -3927,7 +3927,8 @@
       min-height: 40px;
       gap: 6px;
       padding: 4px 16px;
-      background: #1a1b21;
+      /* 이전 #1a1b21 너무 어두워 → 부모 그라데이션 그대로 노출 */
+      background: rgba(0,0,0,0.10);   /* 1행과 약간 구분되도록 살짝 어두운 오버레이만 */
     }
 
     /* 좌: 종목 선택 컨트롤 */
