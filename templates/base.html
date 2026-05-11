@@ -209,10 +209,13 @@
         linear-gradient(180deg, rgba(6,7,10,0.55) 0%, rgba(6,7,10,0.4) 40%, rgba(6,7,10,0.7) 100%);
     }
     .d2t-bg-grain {
-      position: fixed; inset: 0; z-index: 1; pointer-events: none;
-      opacity: .06; mix-blend-mode: overlay;
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      opacity: .04; mix-blend-mode: overlay;
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
     }
+    /* 헤더 영역은 노이즈 그레인 영향 받지 않도록 새 stacking context 생성 */
+    #ticker-header-bar { position: relative; z-index: 2; isolation: isolate; }
+    .d2t-nav            { isolation: isolate; }
 
     .liquid-glass {
       position: relative; overflow: hidden;
