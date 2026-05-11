@@ -1,24 +1,24 @@
 {
-  "_draw.BG1Y7wga.js": {
-    "file": "js/draw.BG1Y7wga.js",
+  "_draw.CsHqa6nW.js": {
+    "file": "js/draw.CsHqa6nW.js",
     "name": "draw"
   },
   "static/js/entries/app.js": {
-    "file": "js/app.DB9drXoI.js",
+    "file": "js/app.BUIROlu4.js",
     "name": "app",
     "src": "static/js/entries/app.js",
     "isEntry": true,
     "imports": [
-      "_draw.BG1Y7wga.js"
+      "_draw.CsHqa6nW.js"
     ]
   },
   "static/js/entries/blank.js": {
-    "file": "js/blank.JEJ7blpB.js",
+    "file": "js/blank.BbNEDtvd.js",
     "name": "blank",
     "src": "static/js/entries/blank.js",
     "isEntry": true,
     "imports": [
-      "_draw.BG1Y7wga.js"
+      "_draw.CsHqa6nW.js"
     ]
   },
   "static/js/entries/login.js": {

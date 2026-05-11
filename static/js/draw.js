@@ -640,6 +640,21 @@
     if (typeof redraw === 'function') redraw();
   };
 
+  // 사용자가 그린 도형(곡선/평행선/추세선)만 비우고 매칭 데이터는 유지.
+  // chart.js loadResultChart 가 결과 차트 진입 시 사용 — 결과 차트엔 매칭만 보이도록.
+  window.clearUserDrawingsOnly = function () {
+    drawPoints           = [];
+    parallelChannels     = [];
+    _drawChartCoords     = null;
+    _parallelChartCoords = [];
+    trendPoints          = [];
+    linePoints           = [];
+    parallelPoints       = [];
+    _autoMeta            = null;
+    // ⚠️ matchPoints / drawNormalized / D2T.matchPeriodData 는 유지 — 매칭 점선용
+    if (typeof redraw === 'function') redraw();
+  };
+
   // ── 폴리라인 → 150포인트 변환 (추세선용) ─────────────────────────────────
   /**
    * 여러 점으로 이루어진 폴리라인을 경로 길이 기준으로
