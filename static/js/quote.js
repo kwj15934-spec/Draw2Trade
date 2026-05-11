@@ -258,9 +258,12 @@
     var market = (window.D2T && window.D2T.market) || 'KR';
     if (!ticker) return;
 
-    var list = document.getElementById('trade-list-daily');
-    if (!list) return;
-    list.innerHTML = '<div class="tl-empty">로딩 중...</div>';
+    var list       = document.getElementById('trade-list-daily');
+    var widgetList = document.getElementById('widget-daily-trades-list');
+    if (!list && !widgetList) return;
+    var loadingHtml = '<div class="tl-empty">로딩 중...</div>';
+    if (list)       list.innerHTML       = loadingHtml;
+    if (widgetList) widgetList.innerHTML = loadingHtml;
 
     // 마켓 파라미터 필수 (CRYPTO_KRW / CRYPTO_USDT 도 동일 엔드포인트 사용)
     var url = '/api/chart/' + encodeURIComponent(ticker)
@@ -276,13 +279,12 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (!data || !data.candles || !data.candles.length) {
-          list.innerHTML = '<div class="tl-empty">데이터 없음</div>';
+          var emptyHtml = '<div class="tl-empty">데이터 없음</div>';
+          if (list)       list.innerHTML       = emptyHtml;
+          if (widgetList) widgetList.innerHTML = emptyHtml;
           return;
         }
         // ── 헤더 ↔ 우측 패널 동기화 ─────────────────────────────────
-        // 우측 패널이 받은 같은 응답으로 차트 헤더(가격/등락률)도 갱신.
-        // KR 은 자동 폴링이 없어 시간 흐르면 헤더(차트 로드 시점) 와
-        // 우측 패널(탭 클릭 시점) 가격이 분 단위로 어긋날 수 있음.
         if (window.D2T) {
           window.D2T.candles   = data.candles;
           window.D2T.prevClose = data.prevClose || 0;
@@ -292,15 +294,17 @@
         }
         var candles = data.candles.slice().reverse();
         var html = '';
+        var widgetHtml = '';
         for (var i = 0; i < candles.length; i++) {
           var c    = candles[i];
           var prev = candles[i + 1];
-          var chgStr = '—', dir = '';
+          var chgStr = '—', dir = '', chgColor = '#8C95A8';
           if (prev && prev.close) {
             var pct  = ((c.close - prev.close) / prev.close * 100).toFixed(2);
             var sg   = pct >= 0 ? '+' : '';
             chgStr = sg + pct + '%';
             dir    = pct >= 0 ? 'tl-buy' : 'tl-sell';
+            chgColor = pct >= 0 ? '#26a69a' : '#ef5350';
           }
           var dateDisp = typeof c.time === 'string' ? c.time.replace(/-/g, '.') : c.time;
           // 코인은 거래대금(KRW/USDT)을 메인 표시, 주식은 거래량(주)
@@ -310,20 +314,34 @@
           } else {
             displayVol = _fmtVol(c.volume || 0);
           }
+          var priceText = (c.close >= 1000 ? c.close.toLocaleString() : c.close);
           html += '<div class="tl-row tl-row--visible ' + dir + '">' +
             '<span class="tl-date">' + dateDisp + '</span>' +
-            '<span class="tl-price">' + (c.close >= 1000 ? c.close.toLocaleString() : c.close) + '</span>' +
+            '<span class="tl-price">' + priceText + '</span>' +
             '<span class="tl-chg">'   + chgStr + '</span>' +
             '<span class="tl-vol">'   + displayVol + '</span>' +
             '<span></span>' +
             '</div>';
+          // 위젯용 row (grid 4열)
+          widgetHtml += '<div class="tl-row tl-row--visible ' + dir
+            + '" style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:6px;padding:5px 10px;font-size:11px;line-height:1.4;border-bottom:1px solid rgba(255,255,255,0.03);">'
+            + '<span style="color:#8C95A8;">' + dateDisp + '</span>'
+            + '<span style="text-align:right;color:#fff;font-weight:500;">' + priceText + '</span>'
+            + '<span style="text-align:right;color:' + chgColor + ';font-weight:600;">' + chgStr + '</span>'
+            + '<span style="text-align:right;color:#C9CFDA;">' + displayVol + '</span>'
+            + '</div>';
         }
-        list.innerHTML = html;
+        if (list)       list.innerHTML       = html;
+        if (widgetList) widgetList.innerHTML = widgetHtml;
       })
       .catch(function() {
-        list.innerHTML = '<div class="tl-empty">로드 실패</div>';
+        var errHtml = '<div class="tl-empty">로드 실패</div>';
+        if (list)       list.innerHTML       = errHtml;
+        if (widgetList) widgetList.innerHTML = errHtml;
       });
   }
+  // 외부에서 호출 가능하도록 노출 (chart.js loadChart 끝에서 호출)
+  window._loadDailyTrades = _loadDailyTrades;
 
   /**
    * 우측 '일자별 거래량' 패널의 첫 번째(가장 최근) 행을 라이브 데이터로 갱신.

@@ -156,6 +156,12 @@
          style="margin-left:10px; font-size:12px; font-weight:600; color:#5BFFC6; text-decoration:none; padding:2px 8px; border:1px solid #5BFFC6; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
          onmouseover="this.style.background='#5BFFC6'; this.style.color='#fff';"
          onmouseout="this.style.background='transparent'; this.style.color='#5BFFC6';" data-i18n="ca.stock_info">종목 정보 보기</a>
+      <a href="#" id="thb-ai-question-link"
+         onclick="toggleAIQuestionWidget();return false;"
+         title="AI 질문 위젯 열기"
+         style="margin-left:6px; font-size:12px; font-weight:600; color:#FF9F5B; text-decoration:none; padding:2px 8px; border:1px solid #FF9F5B; border-radius:4px; white-space:nowrap; transition:background .15s, color .15s;"
+         onmouseover="this.style.background='#FF9F5B'; this.style.color='#fff';"
+         onmouseout="this.style.background='transparent'; this.style.color='#FF9F5B';" data-i18n="ca.ai_question">AI 질문</a>
     </div>
 
     <!-- 우: 시장 상태 + LIVE + 공지 -->
@@ -590,6 +596,8 @@
 
         <div class="widget-menu" id="widget-menu" role="menu">
           <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
+          <label><input type="checkbox" data-widget-toggle="daily-trades" checked> <span data-i18n="ca.w.daily_trades">일자별 거래량</span></label>
+          <label><input type="checkbox" data-widget-toggle="ai-question"> <span data-i18n="ca.w.ai_question">AI 질문</span></label>
           <label><input type="checkbox" data-widget-toggle="favorites" checked> <span data-i18n="ca.w.favorites">즐겨찾기</span></label>
           <label><input type="checkbox" data-widget-toggle="drawings" checked> <span data-i18n="ca.w.saved">저장</span></label>
         </div>
@@ -664,6 +672,63 @@
 
         </div><!-- /.widget-body (results) -->
       </section><!-- /.widget-card results -->
+
+      <!-- ── 일자별 거래량 위젯 ────────────────────── -->
+      <section class="widget-card" data-widget="daily-trades">
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title" data-i18n="ca.w.daily_trades">일자별 거래량</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" title="숨기기">×</button>
+        </header>
+        <div class="widget-body" style="padding:0;">
+          <div class="tl-header" style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr 1fr;gap:6px;padding:8px 10px;font-size:10px;font-weight:600;color:#8C95A8;letter-spacing:0.04em;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <span>날짜</span><span style="text-align:right;">종가</span><span style="text-align:right;">등락</span><span style="text-align:right;">거래량</span>
+          </div>
+          <div id="widget-daily-trades-list" style="max-height:420px;overflow-y:auto;padding:4px 0;">
+            <div class="tl-empty" style="padding:20px;text-align:center;color:#5A6172;font-size:11px;">종목 선택 후 자동 로드됩니다.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── AI 질문 위젯 (기본 hidden, 헤더 'AI 질문' 버튼이나 토글로 표시) ─── -->
+      <section class="widget-card" data-widget="ai-question" hidden>
+        <header class="widget-header" draggable="true">
+          <span class="widget-grip" aria-hidden="true"></span>
+          <span class="widget-title" data-i18n="ca.w.ai_question">AI 질문</span>
+          <button type="button" class="widget-control" data-action="collapse" aria-label="Collapse" title="접기/펼치기">
+            <span class="widget-collapse-icon">▾</span>
+          </button>
+          <button type="button" class="widget-control danger" data-action="hide" aria-label="Hide" title="숨기기">×</button>
+        </header>
+        <div class="widget-body" style="padding:10px 12px;">
+          <div style="font-size:11px;color:#8C95A8;margin-bottom:6px;line-height:1.5;">
+            <strong style="color:#FF9F5B;">AI ANALYSIS</strong> · DART 공시 데이터 기반 재무 답변 (KR 종목)
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+            <button type="button" class="widget-ai-chip" data-chip="최근 실적">최근 실적</button>
+            <button type="button" class="widget-ai-chip" data-chip="부채 수준">부채 수준</button>
+            <button type="button" class="widget-ai-chip" data-chip="성장세">성장세</button>
+            <button type="button" class="widget-ai-chip" data-chip="수익성">수익성</button>
+          </div>
+          <input id="widget-ai-input" type="text" placeholder="재무에 대해 물어보세요 (예: 부채 안전한 편이야?)"
+                 style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:6px;color:#fff;outline:none;margin-bottom:6px;font-family:inherit;">
+          <button id="widget-ai-ask-btn" type="button"
+                  style="width:100%;padding:8px;font-size:12px;font-weight:700;background:#5BFFC6;color:#001810;border:none;border-radius:6px;cursor:pointer;">
+            질문
+          </button>
+          <div id="widget-ai-answer" style="margin-top:10px;font-size:12px;line-height:1.7;color:#C9CFDA;min-height:20px;"></div>
+          <div style="margin-top:8px;font-size:10px;color:#5A6172;line-height:1.5;">
+            ⚠️ AI 답변은 DART 공시 재무 요약만 근거합니다. 투자 판단은 본인 책임입니다.
+          </div>
+        </div>
+      </section>
+      <style>
+        .widget-ai-chip{padding:4px 10px;font-size:11px;font-weight:500;background:rgba(91,255,198,0.08);color:#5BFFC6;border:1px solid rgba(91,255,198,0.25);border-radius:999px;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;}
+        .widget-ai-chip:hover{background:#5BFFC6;color:#001810;}
+      </style>
 
       <!-- ── 즐겨찾기 위젯 ──────────────────────── -->
       <section class="widget-card" data-widget="favorites">
@@ -3345,5 +3410,93 @@ function _escHtml(s) {
 })();
 </script>
 
+<!-- ── AI 질문 위젯 동작 + 토글 ─────────────────────────────────────── -->
+<script>
+(function () {
+  // 헤더 'AI 질문' 버튼 → 위젯 표시 + 스크롤
+  window.toggleAIQuestionWidget = function () {
+    var card = document.querySelector('.widget-card[data-widget="ai-question"]');
+    if (!card) return;
+    // 숨김 상태면 표시 + 토글 체크박스 ON
+    if (card.hasAttribute('hidden')) {
+      card.removeAttribute('hidden');
+      var cb = document.querySelector('[data-widget-toggle="ai-question"]');
+      if (cb) cb.checked = true;
+    }
+    // 펼치기 + 스크롤
+    card.classList.remove('collapsed');
+    var body = card.querySelector('.widget-body');
+    if (body) body.style.display = '';
+    setTimeout(function () { card.scrollIntoView({ behavior:'smooth', block:'center' }); }, 50);
+    var inp = document.getElementById('widget-ai-input');
+    if (inp) inp.focus();
+  };
+
+  // 질문 칩 클릭 → 입력창에 채우고 질문
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest('.widget-ai-chip');
+    if (!chip) return;
+    var inp = document.getElementById('widget-ai-input');
+    if (inp) {
+      inp.value = chip.dataset.chip || chip.textContent.trim();
+      _askWidgetAI();
+    }
+  });
+
+  // 질문 버튼 / Enter 키
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.id === 'widget-ai-input' && e.key === 'Enter') {
+      e.preventDefault();
+      _askWidgetAI();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'widget-ai-ask-btn') _askWidgetAI();
+  });
+
+  function _askWidgetAI() {
+    var inp = document.getElementById('widget-ai-input');
+    var ans = document.getElementById('widget-ai-answer');
+    var btn = document.getElementById('widget-ai-ask-btn');
+    if (!inp || !ans) return;
+    var question = (inp.value || '').trim();
+    if (!question) { ans.innerHTML = '<span style="color:#FF7A7A;">질문을 입력해주세요.</span>'; return; }
+    var ticker = (window.D2T && window.D2T.ticker) || '';
+    var market = (window.D2T && window.D2T.market) || 'KR';
+    if (!ticker) { ans.innerHTML = '<span style="color:#FF7A7A;">먼저 종목을 선택해주세요.</span>'; return; }
+    if (market !== 'KR') {
+      ans.innerHTML = '<span style="color:#8C95A8;">AI 질문은 현재 KR 종목만 지원합니다.<br>(DART 공시 데이터 기반)</span>';
+      return;
+    }
+    ans.innerHTML = '<span style="color:#5BFFC6;">⏳ 답변 생성 중...</span>';
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    var t0 = Date.now();
+    fetch('/api/dart/qa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ ticker: ticker, question: question, market: market }),
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (d) {
+        var dur = ((Date.now() - t0) / 1000).toFixed(1);
+        var ansText = (d && d.answer) || '응답이 비어 있습니다.';
+        var years = (d && d.years && d.years.length) ? '<div style="margin-top:6px;font-size:10px;color:#5A6172;">근거: DART ' + d.years.join('/') + ' 사업연도 · ' + dur + 's</div>' : '';
+        ans.innerHTML = '<div style="white-space:pre-wrap;">' + _escape(ansText) + '</div>' + years;
+      })
+      .catch(function (err) {
+        var msg = (err === 401) ? '로그인이 필요한 기능입니다.'
+                : (err === 503) ? 'Q&A 기능 비활성화'
+                : ('AI 답변 실패 (' + err + ')');
+        ans.innerHTML = '<span style="color:#FF7A7A;">' + msg + '</span>';
+      })
+      .finally(function () {
+        if (btn) { btn.disabled = false; btn.textContent = '질문'; }
+      });
+  }
+
+  function _escape(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+})();
+</script>
 
 {% endblock %}

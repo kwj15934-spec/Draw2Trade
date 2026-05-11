@@ -550,6 +550,10 @@
         var thbFullname = document.getElementById('thb-fullname');
         if (thbFullname) thbFullname.textContent = data.name || '';
         _initHeaderBar(paintedCandles);
+        // 일자별 거래량 위젯도 자동 로드 (사이드바)
+        if (typeof window._loadDailyTrades === 'function') {
+          try { window._loadDailyTrades(); } catch (_) {}
+        }
         // 모바일: 검색 input placeholder를 현재 종목으로 업데이트
         var searchInp = document.getElementById('ticker-search');
         if (searchInp && window.getComputedStyle(searchInp).display !== 'none') {
