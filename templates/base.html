@@ -384,7 +384,7 @@
     .d2t-nav-link {
       font-size: 14px !important;
       font-weight: 600 !important;
-      color: #ECEFF5 !important;   /* 더 밝게 (이전 #D7DCE5) — 헤더 어둠 대비 */
+      color: #ffffff !important;   /* 흰색 통일 (회색 글자 제거) */
       text-decoration: none !important;
       background: none !important;
       border: none !important;
@@ -3783,6 +3783,24 @@
       flex-shrink: 0;
       overflow: visible;
     }
+
+    /* ── 헤더 영역 내 모든 텍스트 흰색 톤으로 통일 (회색 글자 제거) ────── */
+    #ticker-header-bar,
+    #ticker-header-bar .thb-name,
+    #ticker-header-bar .thb-fullname,
+    #ticker-header-bar .thb-price,
+    #ticker-header-bar .thb-vol,
+    #ticker-header-bar .thb-time {
+      color: #ffffff !important;
+    }
+    /* 셀렉트박스/인풋도 흰 글씨 */
+    #ticker-header-bar select,
+    #ticker-header-bar input[type="text"],
+    #ticker-header-bar .btn-d2t { color: #ffffff !important; }
+    /* 비활성 카테고리 버튼 (KOSPI / KOSDAQ 등) */
+    #ticker-header-bar .kr-market-btn:not(.active) { color: #E0E5EE !important; }
+    /* placeholder 도 잘 보이게 */
+    #ticker-header-bar ::placeholder { color: rgba(255,255,255,0.55) !important; }
 
     /* 공통 행 기본값 */
     .thb-row {
