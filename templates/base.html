@@ -2631,6 +2631,20 @@
       text-overflow: ellipsis;
       /* 토스 스타일 — UPPERCASE 제거, 자연스러운 한글 */
     }
+    /* 위젯 폭 토글 버튼 — '1칸/2칸/전체' 라벨 강조 */
+    .widget-width-btn {
+      min-width: 32px !important;
+      padding: 0 6px !important;
+      background: rgba(91,255,198,0.08) !important;
+      color: #5BFFC6 !important;
+      border: 1px solid rgba(91,255,198,0.25) !important;
+    }
+    .widget-width-btn:hover {
+      background: #5BFFC6 !important;
+      color: #001810 !important;
+    }
+    .widget-width-btn .widget-width-label { color: inherit !important; }
+
     /* 드롭 위치 미리보기 — 4 방향 모두 지원 (multi-column grid) */
     .widget-card.drag-over-top    { box-shadow: 0 -3px 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
     .widget-card.drag-over-bottom { box-shadow:  0 3px 0 0 #5BFFC6, 0 0 0 1px rgba(91,255,198,0.4) inset; }
@@ -3825,9 +3839,9 @@
     }
 
     .thb-name {
-      font-size: 11px;
-      font-weight: 500;
-      color: #ffffff !important;   /* 회색 글자 완전 제거 — !important 강제 */
+      font-size: 12px;             /* 11 → 12 (가독성↑) */
+      font-weight: 700;            /* 500 → 700 (굵게 — 회색처럼 보이지 않음) */
+      color: #ffffff !important;
       white-space: nowrap;
       letter-spacing: 0.2px;
       line-height: 1.2;
@@ -3970,8 +3984,8 @@
     }
 
     /* ── 공용 텍스트 헬퍼 ── */
-    .thb-vol  { font-size: 11px; color: #ffffff !important; flex-shrink: 0; }
-    .thb-time { font-size: 10px; color: #ffffff !important; flex-shrink: 0; }
+    .thb-vol  { font-size: 12px; font-weight: 600; color: #ffffff !important; flex-shrink: 0; }
+    .thb-time { font-size: 11px; font-weight: 600; color: #ffffff !important; flex-shrink: 0; }
 
     /* ── 드로잉 툴바 부속 ── */
     .toolbar-canvas-btns {
