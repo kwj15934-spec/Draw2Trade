@@ -409,6 +409,39 @@
         결과 보기 ▲
       </button>
     </div>
+
+    <!-- ── 하단 시장 지표 띠 (토스 스타일) ────────────────────────── -->
+    <div id="market-ticker-strip">
+      <span class="mts-item mts-warning" title="투자 유의사항"
+            onclick="window.open('/qna','_blank')">
+        ⚠️ <span data-i18n="ca.mts.warn">투자 참고용</span>
+      </span>
+      <span class="mts-item" data-symbol="USDKRW">
+        <span class="mts-label">달러</span>
+        <span class="mts-value" id="mts-usdkrw">—</span>
+        <span class="mts-delta" id="mts-usdkrw-d">—</span>
+      </span>
+      <span class="mts-item" data-symbol="KOSPI">
+        <span class="mts-label">코스피</span>
+        <span class="mts-value" id="mts-kospi">—</span>
+        <span class="mts-delta" id="mts-kospi-d">—</span>
+      </span>
+      <span class="mts-item" data-symbol="KOSDAQ">
+        <span class="mts-label">코스닥</span>
+        <span class="mts-value" id="mts-kosdaq">—</span>
+        <span class="mts-delta" id="mts-kosdaq-d">—</span>
+      </span>
+      <span class="mts-item" data-symbol="BTC">
+        <span class="mts-label">BTC</span>
+        <span class="mts-value" id="mts-btc">—</span>
+        <span class="mts-delta" id="mts-btc-d">—</span>
+      </span>
+      <span class="mts-item" data-symbol="ETH">
+        <span class="mts-label">ETH</span>
+        <span class="mts-value" id="mts-eth">—</span>
+        <span class="mts-delta" id="mts-eth-d">—</span>
+      </span>
+    </div>
   </div>
 
   <!-- ── 드래그 핸들 (차트 ↔ 호가) ──────────── -->
@@ -599,8 +632,14 @@
           </svg>
           <span id="widget-cols-label">자동</span>
         </button>
+        <button class="widget-toolbar-btn" id="widget-edit-btn" type="button" title="패널 편집 모드 (드래그 강조 + 추가 메뉴)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+          </svg>
+          <span data-i18n="ca.widget.edit">패널 편집</span>
+        </button>
         <div class="widget-toolbar-spacer"></div>
-        <span style="font-size:10px;color:#5A6172;letter-spacing:0.04em;" data-i18n="ca.widget.drag">드래그로 정렬</span>
+        <span id="widget-edit-hint" style="font-size:10px;color:#5A6172;letter-spacing:0.04em;display:none;" data-i18n="ca.widget.edit_hint">드래그로 자유롭게 이동</span>
 
         <div class="widget-menu" id="widget-menu" role="menu">
           <label><input type="checkbox" data-widget-toggle="results" checked> <span data-i18n="ca.w.similar">유사 종목</span></label>
@@ -3386,6 +3425,23 @@ function _escHtml(s) {
     });
   }
 
+  // ── 패널 편집 모드 토글 (드래그 시각 피드백 강조) ─────────────
+  var EDIT_KEY = 'widget_edit_mode';
+  var editBtn  = document.getElementById('widget-edit-btn');
+  var editHint = document.getElementById('widget-edit-hint');
+  var editMode = localStorage.getItem(EDIT_KEY) === '1';
+  function applyEditMode(on) {
+    editMode = !!on;
+    document.body.classList.toggle('widget-edit-mode', editMode);
+    if (editBtn) editBtn.classList.toggle('active', editMode);
+    if (editHint) editHint.style.display = editMode ? '' : 'none';
+    try { localStorage.setItem(EDIT_KEY, editMode ? '1' : '0'); } catch (_) {}
+  }
+  applyEditMode(editMode);
+  if (editBtn) {
+    editBtn.addEventListener('click', function () { applyEditMode(!editMode); });
+  }
+
   // ── 위젯 컬럼 모드 토글 (자동 → 1열 → 2열 → 3열 → 자동) ──────
   // 기본: '자동' — 사이드바 폭에 따라 auto-fit (280px 최소) 으로 1~N 열 자동
   var COLS_KEY = 'widget_cols_mode';
@@ -3467,6 +3523,74 @@ function _escHtml(s) {
       persist();
     });
   }
+})();
+</script>
+
+<!-- ── 하단 시장 지표 띠 데이터 fetch (60초 주기) ───────────────── -->
+<script>
+(function () {
+  function _fmt(v, digits) {
+    if (v == null || isNaN(v)) return '—';
+    return Number(v).toLocaleString('ko-KR', { maximumFractionDigits: digits || 2 });
+  }
+  function _setItem(id, value, delta, digits, currency) {
+    var elV = document.getElementById('mts-' + id);
+    var elD = document.getElementById('mts-' + id + '-d');
+    if (elV) {
+      var prefix = currency === 'KRW' ? '' : currency === 'USD' ? '$' : '';
+      elV.textContent = prefix + _fmt(value, digits);
+    }
+    if (elD && delta != null) {
+      var pct = (delta).toFixed(2);
+      var sg  = delta >= 0 ? '+' : '';
+      elD.textContent = sg + pct + '%';
+      elD.classList.remove('up', 'down');
+      elD.classList.add(delta >= 0 ? 'up' : 'down');
+    }
+  }
+
+  function _loadCryptoPrice(symbol, elId) {
+    // 우리 자체 차트 API 재사용 (CRYPTO_KRW, daily)
+    fetch('/api/chart/' + encodeURIComponent(symbol) + '?market=CRYPTO_KRW&timeframe=daily')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.candles || d.candles.length < 2) return;
+        var last = d.candles[d.candles.length - 1];
+        var prev = d.candles[d.candles.length - 2];
+        var pct  = ((last.close - prev.close) / prev.close) * 100;
+        _setItem(elId, last.close, pct, 0);
+      })
+      .catch(function () {});
+  }
+
+  function _loadKRStock(ticker, elId) {
+    // 코스피 005930(삼성전자) 같은 대표 종목으로 일단 사용 — 실제 지수는 별도 source 필요
+    // 여기선 placeholder: 코스피 지수는 외부 API 없으면 fallback
+    fetch('/api/chart/' + encodeURIComponent(ticker) + '?market=KR&timeframe=daily')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.candles || d.candles.length < 2) return;
+        var last = d.candles[d.candles.length - 1];
+        var prev = d.candles[d.candles.length - 2];
+        var pct  = ((last.close - prev.close) / prev.close) * 100;
+        _setItem(elId, last.close, pct, 0);
+      })
+      .catch(function () {});
+  }
+
+  function refreshTicker() {
+    _loadCryptoPrice('BTC', 'btc');
+    _loadCryptoPrice('ETH', 'eth');
+    // 코스피/코스닥/달러는 별도 외부 데이터 소스 없으면 placeholder 유지
+    // (실제 구현 시 yfinance / 한국은행 API 등 추가 가능)
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshTicker);
+  } else {
+    refreshTicker();
+  }
+  setInterval(refreshTicker, 60000);  // 60초마다 갱신
 })();
 </script>
 
