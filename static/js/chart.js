@@ -1494,6 +1494,11 @@
 
     var thbPrice = document.getElementById('thb-price');
     if (thbPrice) { thbPrice.textContent = dispPrice; thbPrice.style.color = '#ffffff'; }
+    // 헤더 영역 모든 회색 텍스트를 인라인 색으로 강제 — CSS 캐시 무관 즉시 적용
+    ['thb-name', 'thb-fullname', 'thb-time', 'thb-vol'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.color = '#ffffff';
+    });
     var thbChg = document.getElementById('thb-chg');
     if (thbChg && chgPct !== '') {
       // 실시간 등락 (전봉 대비)
